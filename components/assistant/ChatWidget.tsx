@@ -1,52 +1,59 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR, { mutate } from "swr";
+import { useSession }          from "next-auth/react";
+import useSWR, { mutate }      from "swr";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function ChatWidget() {
-  // drawer open?
-  const [open, setOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const shouldFetch               = status === "authenticated";
 
-  // first‑time greeting
+  const [open, setOpen]   = useState(false);
   const [greeted, setGreeted] = useState(false);
-
-  // chat history & input
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
 
-  // prefetch tasks & events for summary
-  const { data: tasks }  = useSWR("/api/tasks",  fetcher);
-  const { data: events } = useSWR("/api/calendar", fetcher);
+  // only fetch once authenticated
+  const { data: tasks }  = useSWR(shouldFetch ? "/api/tasks"    : null, fetcher);
+  const { data: events } = useSWR(shouldFetch ? "/api/calendar" : null, fetcher);
 
-  // when both loaded and not yet greeted, fire summary alert
+  // initial pop‑up summary
   useEffect(() => {
-    if (!greeted && tasks && events) {
+    if (
+      shouldFetch &&
+      !greeted &&
+      Array.isArray(tasks) &&
+      Array.isArray(events)
+    ) {
+      const todayStr = new Date().toDateString();
+
       const dueToday = tasks.filter((t: any) => {
         const d = new Date(t.due);
-        return d.toDateString() === new Date().toDateString() && !t.completed;
-      }).length;
-      const evtToday = events.filter((e: any) => {
-        const d = new Date(e.start.dateTime || e.start.date);
-        return d.toDateString() === new Date().toDateString();
+        return !t.completed && d.toDateString() === todayStr;
       }).length;
 
-      const hour = new Date().getHours();
-      const when = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+      const evtToday = events.filter((e: any) => {
+        const d = new Date(e.start.dateTime || e.start.date || "");
+        return d.toDateString() === todayStr;
+      }).length;
+
+      const h = new Date().getHours();
+      const when =
+        h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 
       alert(
         `${when}! I’m FloCat 🐱\n` +
-        `You have ${dueToday} task${dueToday===1?"":"s"} due today\n` +
-        `and ${evtToday} event${evtToday===1?"":"s"} scheduled today\n` +
-        `Let me know how I can help!`
+          `You have ${dueToday} task${dueToday === 1 ? "" : "s"} due today\n` +
+          `and ${evtToday} event${evtToday === 1 ? "" : "s"} scheduled today\n` +
+          `Let me know how I can help!`
       );
       setGreeted(true);
     }
-  }, [greeted, tasks, events]);
+  }, [shouldFetch, greeted, tasks, events]);
 
-  // send a message to your assistant endpoint
   const send = async () => {
     if (!input.trim()) return;
     const userMsg = { role: "user", content: input };
@@ -67,19 +74,21 @@ export default function ChatWidget() {
     setHistory((h) => [...h, botMsg]);
     setLoading(false);
 
-    // refresh widgets
+    // refresh other widgets
     mutate("/api/tasks");
     mutate("/api/calendar");
   };
 
   return (
     <>
-      {/* Chat drawer */}
       {open && (
         <div className="fixed bottom-20 right-6 w-80 h-96 bg-white shadow-lg rounded-lg flex flex-col z-50">
           <div className="flex-1 p-4 overflow-y-auto">
             {history.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
+              <div
+                key={i}
+                className={m.role === "user" ? "text-right" : "text-left"}
+              >
                 <span className={m.role === "assistant" ? "font-semibold" : ""}>
                   {m.content}
                 </span>
@@ -106,7 +115,6 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* FloCat bubble toggle */}
       <img
         src="/flohub_bubble.png"
         alt="FloCat"
