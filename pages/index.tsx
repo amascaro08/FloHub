@@ -1,22 +1,20 @@
 // pages/index.tsx
-"use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { GetServerSideProps } from "next";
+import { getSession } from "next-auth/react";
 
-export default function Home() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === "loading") return;           // wait
-    if (status === "authenticated") {
-      router.replace("/dashboard");             // go to your main app
-    } else {
-      router.replace("/api/auth/signin");       // go to NextAuth sign‑in
-    }
-  }, [status, router]);
-
-  return null;  // nothing to render while redirecting
+export default function Index() {
+  // This never actually renders—Next.js will redirect in getServerSideProps
+  return null;
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context);
+
+  return {
+    redirect: {
+      destination: session ? "/dashboard" : "/api/auth/signin",
+      permanent: false,
+    },
+  };
+};
