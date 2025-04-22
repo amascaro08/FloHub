@@ -1,7 +1,7 @@
-// components/ui/Layout.tsx
 "use client";
 
 import { ReactNode, useState } from "react";
+import { Menu } from "lucide-react";       // ← requires `npm install lucide-react`
 import Link from "next/link";
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -19,29 +19,30 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex h-screen overflow-hidden">
       {/* Mobile backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-20 transition-opacity 
-                    ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} md:hidden`}
+        className={`fixed inset-0 bg-black/50 z-20 transition-opacity
+          ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
+          md:hidden`}
         onClick={() => setDrawerOpen(false)}
       />
 
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-30 transform transition-transform
-                    ${drawerOpen ? "translate-x-0" : "-translate-x-full"} 
-                    md:translate-x-0 md:static md:shadow-none`}
+          ${drawerOpen ? "translate-x-0" : "-translate-x-full"} 
+          md:translate-x-0 md:static md:shadow-none`}
       >
         <div className="p-4 border-b">
           <img src="/flohub_logo.png" alt="FloHub" className="h-8" />
         </div>
         <nav className="p-4 space-y-1">
           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block px-3 py-2 rounded hover:bg-gray-100"
-              onClick={() => setDrawerOpen(false)}
-            >
-              {item.name}
+            <Link key={item.href} legacyBehavior href={item.href}>
+              <a
+                className="block px-3 py-2 rounded hover:bg-gray-100"
+                onClick={() => setDrawerOpen(false)}
+              >
+                {item.name}
+              </a>
             </Link>
           ))}
         </nav>
@@ -55,8 +56,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             onClick={() => setDrawerOpen((o) => !o)}
             className="p-2 rounded hover:bg-gray-100"
           >
-            {/* Unicode hamburger */}
-            <span className="text-2xl">☰</span>
+            <Menu className="w-6 h-6" />
           </button>
           <img src="/flohub_logo.png" alt="FloHub" className="h-6" />
         </header>
