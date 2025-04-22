@@ -1,11 +1,10 @@
-// components/ui/ThemeToggle.tsx
 'use client'
 import { useState, useEffect } from 'react'
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(false)
 
-  // On mount: read saved preference or OS fallback
+  // on mount: read saved or OS preference
   useEffect(() => {
     const saved = localStorage.getItem('theme')
     if (saved) {
@@ -15,7 +14,7 @@ export default function ThemeToggle() {
     }
   }, [])
 
-  // When `dark` changes: toggle class and persist
+  // toggle class + persist
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('theme', dark ? 'dark' : 'light')

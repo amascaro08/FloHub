@@ -1,10 +1,14 @@
-// tailwind.config.js
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    // './app/**/*.{js,ts,jsx,tsx}',  // if you use /app
+  ],
   theme: {
     extend: {
       colors: {
-        // Teal spectrum
         primary: {
           50:  '#f0fdfa',
           100: '#ccfbf1',
@@ -17,7 +21,6 @@ module.exports = {
           800: '#115e59',
           900: '#134e4a',
         },
-        // Orange spectrum
         accent: {
           50:  '#fff7ed',
           100: '#ffedd5',
@@ -52,4 +55,5 @@ module.exports = {
       },
     },
   },
-};
+  plugins: [],
+}
