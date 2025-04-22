@@ -1,17 +1,18 @@
 // components/ui/Layout.tsx
+"use client";
+
 import { ReactNode, useState } from "react";
-import { Menu } from "lucide-react";
 import Link from "next/link";
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
-    { name: "Hub", href: "/dashboard" },
-    { name: "Tasks",     href: "/dashboard/tasks" },
-    { name: "Habits",    href: "/dashboard/habits" },
-    { name: "Journal",   href: "/dashboard/journal" },
-    { name: "Meetings",  href: "/dashboard/meetings" },
+    { name: "Hub",      href: "/dashboard" },
+    { name: "Tasks",    href: "/dashboard/tasks" },
+    { name: "Habits",   href: "/dashboard/habits" },
+    { name: "Journal",  href: "/dashboard/journal" },
+    { name: "Meetings", href: "/dashboard/meetings" },
   ];
 
   return (
@@ -54,7 +55,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             onClick={() => setDrawerOpen((o) => !o)}
             className="p-2 rounded hover:bg-gray-100"
           >
-            <Menu className="w-6 h-6" />
+            {/* Unicode hamburger */}
+            <span className="text-2xl">☰</span>
           </button>
           <img src="/flohub_logo.png" alt="FloHub" className="h-6" />
         </header>
