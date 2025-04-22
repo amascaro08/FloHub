@@ -1,18 +1,10 @@
 // components/ui/Layout.tsx
-"use client";
-
-import Image from "next/image";
-import Link  from "next/link";
-import { ReactNode } from "react";
-import { useRouter }  from "next/router";
-import { useSession, signIn, signOut } from "next-auth/react";
-
-// **Import the ChatWidget exactly from where it lives**
-import ChatWidget from "@/components/assistant/ChatWidget";
+import { ReactNode, useState } from "react";
+import { Menu } from "lucide-react"; // or use your own SVG
+import Link from "next/link";
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { pathname }      = useRouter();
-  const { data: session, status } = useSession();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
     { name: "Hub", href: "/dashboard" },
@@ -23,49 +15,56 @@ export default function Layout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gray-100 text-gray-800">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 p-6 shadow-md">
-        <div className="mb-6 flex justify-center">
-          <Image src="/flohub_logo.png" alt="FloHub" width={140} height={40} priority />
+    <div className="flex h-screen">
+      {/* ─── SIDEBAR ─────────────────────────────────────────── */}
+      {/* Mobile overlay */}
+      <div
+        className={`fixed inset-0 bg-black/50 z-20 transition-opacity 
+                    ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} md:hidden`}
+        onClick={() => setDrawerOpen(false)}
+      />
+
+      {/* Sidebar drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-30 transform transition-transform
+                    ${drawerOpen ? "translate-x-0" : "-translate-x-full"} 
+                    md:translate-x-0 md:static md:shadow-none`}
+      >
+        <div className="p-4 border-b">
+          <img src="/flohub_logo.png" alt="FloHub" className="h-8"/>
         </div>
-        <nav className="flex flex-col gap-4">
+        <nav className="p-4 space-y-1">
           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`text-sm transition-colors duration-200 hover:text-indigo-600 ${
-                pathname === item.href ? "font-bold text-indigo-600" : "text-gray-700"
-              }`}
-            >
-              {item.name}
+            <Link key={item.href} href={item.href}>
+              <a
+                className="block px-3 py-2 rounded hover:bg-gray-100"
+                onClick={() => setDrawerOpen(false)} // close drawer on mobile nav
+              >
+                {item.name}
+              </a>
             </Link>
           ))}
         </nav>
-        <div className="mt-6">
-          {status === "loading" ? null : session ? (
-            <button
-              onClick={() => signOut()}
-              className="w-full text-left text-sm text-red-500 hover:underline"
-            >
-              Log out
-            </button>
-          ) : (
-            <button
-              onClick={() => signIn("google")}
-              className="w-full text-left text-sm text-indigo-600 hover:underline"
-            >
-              Sign in with Google
-            </button>
-          )}
-        </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 bg-gray-50">{children}</main>
+      {/* ─── MAIN CONTENT ────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col">
+        {/* Mobile header */}
+        <header className="md:hidden flex items-center justify-between p-4 bg-white shadow">
+          <button
+            onClick={() => setDrawerOpen((o) => !o)}
+            className="p-2 rounded hover:bg-gray-100"
+          >
+            <Menu className="w-6 h-6"/>
+          </button>
+          <img src="/flohub_logo.png" alt="FloHub" className="h-6"/>
+        </header>
 
-      {/* FloCat Chat Widget */}
-      <ChatWidget />
+        {/* Page body */}
+        <main className="flex-1 overflow-auto bg-gray-50 p-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
