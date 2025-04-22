@@ -18,7 +18,8 @@ export default function TaskWidget() {
   const shouldFetch               = status === "authenticated";
   const { data: tasks, mutate }   = useSWR<Task[]>(
     shouldFetch ? "/api/tasks" : null,
-    fetcher
+    fetcher,
+    { fallbackData: [] }
   );
 
   const [input, setInput]   = useState("");
