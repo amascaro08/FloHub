@@ -38,30 +38,21 @@ export default function Dashboard() {
   }
 
   return (
-    <ResponsiveGridLayout
-      layouts={layouts}
-      breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-      cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
-      rowHeight={30}
-      onLayoutChange={onLayoutChange}
-      draggableHandle=".widget-header"
-      resizeHandles={['se']}
-      isBounded
-    >
-      <div key="tasks" className="glass p-4 rounded-xl">
+    <div>
+      <div className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
         <TaskWidget/>
       </div>
 
-      <div key="calendar" className="glass p-4 rounded-xl">
+      <div className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
         <CalendarWidget/>
       </div>
 
-      <div key="chat" className="glass p-4 rounded-xl">
+      <div className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
         <ChatWidget/>
       </div>
-    </ResponsiveGridLayout>
+    </div>
   )
 }
