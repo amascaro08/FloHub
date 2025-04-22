@@ -11,13 +11,15 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
 
   // Compute greeting based on current hour
-  const greeting = useMemo(() => {
-    if (typeof window === "undefined") return "Loading..."; // Provide a default value
+  let greeting = "";
+  if (typeof window !== "undefined") {
     const hour = new Date().getHours();
-    if (hour < 12) return "☀️ Good Morning";
-    if (hour < 17) return "🌤️ Good Afternoon";
-    return "🌕 Good Evening";
-  }, []);
+    if (hour < 12) greeting = "☀️ Good Morning";
+    if (hour < 17) greeting = "🌤️ Good Afternoon";
+    else greeting = "🌕 Good Evening";
+  } else {
+    greeting = "Loading...";
+  }
 
   // Loading state
   if (status === "loading") {
