@@ -1,74 +1,93 @@
 // pages/dashboard/index.tsx
+"use client";
 
-import { useSession, signIn } from "next-auth/react";
-import Layout from "@/components/ui/Layout";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
-import { useMemo } from "react";
+
+//
+// Dynamically load the Responsive grid + width provider
+//
+const ResponsiveGridLayout = dynamic(
+  () =>
+    import("react-grid-layout").then((mod) =>
+      // inject width detection into the Responsive grid
+      mod.WidthProvider(mod.Responsive)
+    ),
+  { ssr: false }
+);
+
+//
+// Type defs for convenience
+//
+type Layout = { i: string; x: number; y: number; w: number; h: number };
+type Layouts = { [breakpoint: string]: Layout[] };
+
+//
+// Your “default” layout for every breakpoint
+//
+const defaultLayout: Layout[] = [
+  { i: "tasks",    x: 0, y: 0, w: 4, h: 6 },
+  { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
+  { i: "chat",     x: 8, y: 0, w: 4, h: 6 },
+];
+
+const defaultLayouts: Layouts = {
+  lg: defaultLayout,
+  md: defaultLayout,
+  sm: defaultLayout,
+  xs: defaultLayout,
+};
 
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
 
-  // Compute greeting based on current hour
-  let greeting = "";
-  if (typeof window !== "undefined") {
-    const hour = new Date().getHours();
-    if (hour < 12) greeting = "☀️ Good Morning";
-    if (hour < 17) greeting = "🌤️ Good Afternoon";
-    else greeting = "🌕 Good Evening";
-  } else {
-    greeting = "Loading...";
-  }
+  // Hydrate saved layouts on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("flohub-layouts");
+    if (saved) {
+      try {
+        setLayouts(JSON.parse(saved));
+      } catch {
+        console.warn("Invalid saved layouts, falling back to defaults");
+      }
+    }
+  }, []);
 
-  // Loading state
-  if (status === "loading") {
-    return (
-      <Layout>
-        <p className="text-center py-8">Loading…</p>
-      </Layout>
-    );
-  }
-
-  // Not signed in
-  if (!session?.user) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-64">
-          <p className="mb-4">Please sign in to access your dashboard.</p>
-          <button
-            onClick={() => signIn("google")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Sign in with Google
-          </button>
-        </div>
-      </Layout>
-    );
-  }
-
-  const name = session.user.name?.split(" ")[0] || session.user.email;
+  // Persist whenever any breakpoint’s layout changes
+  const onLayoutChange = (_: Layout[], allLayouts: Layouts) => {
+    setLayouts(allLayouts);
+    localStorage.setItem("flohub-layouts", JSON.stringify(allLayouts));
+  };
 
   return (
-    <Layout>
-      {/* FloCat bubble & greeting */}
-      <ChatWidget />
-
-      <h2 className="text-2xl font-semibold mb-2">
-        {greeting}, {name}!
-      </h2>
-      <p className="text-gray-700 mb-6">
-        Here’s your FlowHub overview. FloCat is ready to assist you 👀
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Pass session into TaskWidget */}
+    <ResponsiveGridLayout
+      className="layout"
+      layouts={layouts}
+      breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
+      cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+      rowHeight={30}
+      onLayoutChange={onLayoutChange}
+      draggableHandle=".widget-header"
+      resizeHandles={["se"]}
+      isBounded
+    >
+      <div key="tasks" className="glass p-4 rounded-xl">
+        <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
         <TaskWidget />
-
-        <CalendarWidget />
-
-        {/* future widgets… */}
       </div>
-    </Layout>
+
+      <div key="calendar" className="glass p-4 rounded-xl">
+        <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
+        <CalendarWidget />
+      </div>
+
+      <div key="chat" className="glass p-4 rounded-xl">
+        <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
+        <ChatWidget />
+      </div>
+    </ResponsiveGridLayout>
   );
 }

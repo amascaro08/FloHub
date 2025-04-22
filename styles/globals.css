@@ -1,3 +1,21 @@
+/* styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── YOUR THEME VARIABLES ── */
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --surface: #f5f5f5;
+  --primary: #14b8a6;
+  --accent: #f97316;
+}
+.dark {
+  --bg: #111827;
+  --fg: #f5f5f;
+  --surface: #1f2937;
+  --primary: #2dd4bf;
+  --accent: #fb923c;
+}
+/* ────────────────────────── */
