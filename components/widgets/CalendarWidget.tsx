@@ -23,21 +23,28 @@ export default function CalendarWidget() {
   );
 
   if (status === "loading") {
-    return <p>Loading calendar…</p>;
+    return (
+      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center">
+        Loading events…
+      </div>
+    );
   }
   if (!session) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-sm text-center text-gray-700">
+      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center text-[var(--fg)]">
         Please sign in to view your calendar.
       </div>
     );
   }
   if (error) {
-    return <p className="text-red-500">Failed to load calendar.</p>;
+    return (
+      <div className="glass p-4 rounded-xl shadow-elevate-sm text-red-500">
+        Failed to load calendar.
+      </div>
+    );
   }
-  // always coerce to array
-  const events: CalendarEvent[] = Array.isArray(data) ? data : [];
 
+  const events: CalendarEvent[] = Array.isArray(data) ? data : [];
   const [view, setView] = useState<"today"|"tomorrow"|"week">("today");
 
   const filtered = useMemo(() => {
@@ -68,20 +75,22 @@ export default function CalendarWidget() {
   });
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      <h3 className="text-lg font-medium mb-3">Events</h3>
+    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
+      <h3 className="text-lg font-semibold mb-3">Events</h3>
 
       <div className="flex gap-2 mb-4">
-        {(["today","tomorrow","week"] as const).map((v) => (
+        {(["today", "tomorrow", "week"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
             className={`
               px-3 py-1 rounded
-              ${view === v
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 text-gray-700"
+              ${
+                view === v
+                  ? "bg-primary-500 text-white"
+                  : "bg-[var(--neutral-200)] text-[var(--fg)]"
               }
+              hover:opacity-80 transition
             `}
           >
             {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -95,14 +104,19 @@ export default function CalendarWidget() {
             const s = e.start.dateTime || e.start.date;
             const d = s ? new Date(s) : null;
             return (
-              <li key={e.id} className="flex justify-between">
-                <span>{d ? fmt.format(d) : "—"}</span>
-                <span className="font-semibold">{e.summary}</span>
+              <li
+                key={e.id}
+                className="flex justify-between items-center"
+              >
+                <span>
+                  {d ? fmt.format(d) : "—"}
+                </span>
+                <span className="font-medium">{e.summary}</span>
               </li>
             );
           })
         ) : (
-          <li className="text-gray-500">No events.</li>
+          <li className="text-[var(--neutral-500)]">No events.</li>
         )}
       </ul>
     </div>

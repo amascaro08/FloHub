@@ -1,4 +1,4 @@
-import '@/styles/globals.css'                   // ← must be first
+import '@/styles/globals.css'                   // ← must come first
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import type { AppProps } from 'next/app'
@@ -12,7 +12,7 @@ export default function App({
   return (
     <SessionProvider session={session}>
       <Layout>
-        <Component {...pageProps} />
+        <Component {...pageProps}/>
       </Layout>
     </SessionProvider>
   )

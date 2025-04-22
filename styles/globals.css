@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme variables */
+/* Theme vars */
 :root {
   --bg: #ffffff;
   --fg: #111827;
@@ -18,7 +18,7 @@
   --accent: #fb923c;
 }
 
-/* Glass effect for widgets */
+/* Frosted‑glass for widgets */
 .glass {
   background: rgba(255,255,255,0.2);
   backdrop-filter: blur(8px);

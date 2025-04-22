@@ -2,47 +2,39 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import TaskWidget from '@/components/widgets/TaskWidget'
-import CalendarWidget from '@/components/widgets/CalendarWidget'
-import ChatWidget from '@/components/assistant/ChatWidget'
+import TaskWidget      from '@/components/widgets/TaskWidget'
+import CalendarWidget  from '@/components/widgets/CalendarWidget'
+import ChatWidget      from '@/components/assistant/ChatWidget'
 
+// load Responsive + WidthProvider on client only
 const ResponsiveGridLayout = dynamic(
   () =>
-    import('react-grid-layout').then((mod) =>
-      mod.WidthProvider(mod.Responsive)
-    ),
+    import('react-grid-layout')
+      .then((mod) => mod.WidthProvider(mod.Responsive)),
   { ssr: false }
 )
 
-type Layout = { i: string; x: number; y: number; w: number; h: number }
-type Layouts = Record<string, Layout[]>
+type Item = { i: string; x: number; y: number; w: number; h: number }
+type Layouts = Record<string, Item[]>
 
-const defaultLayout: Layout[] = [
+const base: Item[] = [
   { i: 'tasks',    x: 0, y: 0, w: 4, h: 6 },
   { i: 'calendar', x: 4, y: 0, w: 4, h: 6 },
   { i: 'chat',     x: 8, y: 0, w: 4, h: 6 },
 ]
-const defaultLayouts: Layouts = {
-  lg: defaultLayout,
-  md: defaultLayout,
-  sm: defaultLayout,
-  xs: defaultLayout,
-}
+const defaults: Layouts = { lg: base, md: base, sm: base, xs: base }
 
 export default function Dashboard() {
-  const [layouts, setLayouts] = useState<Layouts>(defaultLayouts)
+  const [layouts, setLayouts] = useState<Layouts>(defaults)
 
   useEffect(() => {
     const saved = localStorage.getItem('flohub-layouts')
-    if (saved) {
-      try { setLayouts(JSON.parse(saved)) }
-      catch { console.warn('Invalid saved layouts') }
-    }
+    if (saved) try { setLayouts(JSON.parse(saved)) } catch {}
   }, [])
 
-  const onLayoutChange = (_: Layout[], allLayouts: Layouts) => {
-    setLayouts(allLayouts)
-    localStorage.setItem('flohub-layouts', JSON.stringify(allLayouts))
+  const onLayoutChange = (_: Item[], all: Layouts) => {
+    setLayouts(all)
+    localStorage.setItem('flohub-layouts', JSON.stringify(all))
   }
 
   return (
@@ -58,17 +50,17 @@ export default function Dashboard() {
     >
       <div key="tasks" className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
-        <TaskWidget />
+        <TaskWidget/>
       </div>
 
       <div key="calendar" className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
-        <CalendarWidget />
+        <CalendarWidget/>
       </div>
 
       <div key="chat" className="glass p-4 rounded-xl">
         <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
-        <ChatWidget />
+        <ChatWidget/>
       </div>
     </ResponsiveGridLayout>
   )
