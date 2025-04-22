@@ -1,8 +1,10 @@
 // pages/dashboard/index.tsx
+
 import { useSession, signIn } from "next-auth/react";
 import Layout from "@/components/ui/Layout";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import ChatWidget from "@/components/assistant/ChatWidget";
 import { useMemo } from "react";
 
 export default function Dashboard() {
@@ -12,12 +14,12 @@ export default function Dashboard() {
   const greeting = useMemo(() => {
     if (typeof window === "undefined") return "";
     const hour = new Date().getHours();
-    if (hour < 12) return "☀️Good Morning";
-    if (hour < 17) return "🌤️Good Afternoon";
-    return "🌕Good Evening";
+    if (hour < 12) return "☀️ Good Morning";
+    if (hour < 17) return "🌤️ Good Afternoon";
+    return "🌕 Good Evening";
   }, []);
 
-  // While loading session
+  // Loading state
   if (status === "loading") {
     return (
       <Layout>
@@ -26,7 +28,7 @@ export default function Dashboard() {
     );
   }
 
-  // If not signed in, prompt
+  // Not signed in
   if (!session?.user) {
     return (
       <Layout>
@@ -47,6 +49,9 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* FloCat bubble & greeting */}
+      <ChatWidget />
+
       <h2 className="text-2xl font-semibold mb-2">
         {greeting}, {name}!
       </h2>
@@ -55,9 +60,12 @@ export default function Dashboard() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <TaskWidget />
+        {/* Pass session into TaskWidget */}
+        <TaskWidget session={session} />
+
         <CalendarWidget />
-        {/* future widgets like HabitWidget, JournalWidget… */}
+
+        {/* future widgets… */}
       </div>
     </Layout>
   );
