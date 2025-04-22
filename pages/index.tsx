@@ -1,9 +1,14 @@
+// pages/index.tsx
+import { GetServerSideProps } from "next";
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => ({
+  redirect: {
+    destination: "/dashboard",
+    permanent: false,
+  },
+});
+
 export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100">
-      <h1 className="text-4xl font-bold text-pastel-teal">
-        Tailwind is LIVE 🚀
-      </h1>
-    </main>
-  );
+  // this component will never actually render
+  return null;
 }
