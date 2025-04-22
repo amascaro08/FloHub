@@ -1,6 +1,4 @@
 import '@/styles/globals.css'                   // ← must come first
-import 'react-grid-layout/css/styles.css'
-import 'react-resizable/css/styles.css'
 import type { AppProps } from 'next/app'
 import { SessionProvider } from 'next-auth/react'
 import Layout from '@/components/ui/Layout'
