@@ -1,4 +1,6 @@
 // components/widgets/CalendarWidget.tsx
+"use client";
+
 import useSWR from "swr";
 import { useState, useMemo } from "react";
 

@@ -1,3 +1,4 @@
+// components/ui/Layout.tsx
 import { ReactNode, useState } from "react";
 import { Menu } from "lucide-react";
 import Link from "next/link";
@@ -6,7 +7,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard" },
+    { name: "Hub", href: "/dashboard" },
     { name: "Tasks",     href: "/dashboard/tasks" },
     { name: "Habits",    href: "/dashboard/habits" },
     { name: "Journal",   href: "/dashboard/journal" },
@@ -33,13 +34,13 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
         <nav className="p-4 space-y-1">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <a
-                className="block px-3 py-2 rounded hover:bg-gray-100"
-                onClick={() => setDrawerOpen(false)}
-              >
-                {item.name}
-              </a>
+            <Link
+              key={item.href}
+              href={item.href}
+              className="block px-3 py-2 rounded hover:bg-gray-100"
+              onClick={() => setDrawerOpen(false)}
+            >
+              {item.name}
             </Link>
           ))}
         </nav>
