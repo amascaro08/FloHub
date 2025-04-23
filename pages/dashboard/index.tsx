@@ -11,6 +11,9 @@ import ChatWidget     from "@/components/assistant/ChatWidget";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
+// bring in the prop interface
+import type { ResponsiveProps } from "react-grid-layout";
+
 type Item    = { i: string; x: number; y: number; w: number; h: number };
 type Layouts = Record<string, Item[]>;
 
@@ -26,12 +29,12 @@ const defaultLayouts: Layouts = {
   xs: defaultItems,
 };
 
-// Dynamically load react-grid-layout → wrap Responsive in WidthProvider
-const ResponsiveGridLayout = dynamic(
+// annotate dynamic with the ResponsiveProps interface
+const ResponsiveGridLayout = dynamic<ResponsiveProps>(
   () =>
     import("react-grid-layout").then((mod) => {
-      // mod may be a namespace with default = CJS exports
-      const pkg = (mod.default || mod) as any;
+      // handle CJS vs ESM default exports
+      const pkg = (mod as any).default || mod;
       return pkg.WidthProvider(pkg.Responsive);
     }),
   { ssr: false }
@@ -40,7 +43,7 @@ const ResponsiveGridLayout = dynamic(
 export default function Dashboard() {
   const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
 
-  // Hydrate saved layouts on mount
+  // hydrate saved layouts on first client render
   useEffect(() => {
     const saved = localStorage.getItem("flohub-layouts");
     if (saved) {
