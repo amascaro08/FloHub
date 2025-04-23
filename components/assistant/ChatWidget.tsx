@@ -13,7 +13,7 @@ export default function ChatWidget() {
   const [open, setOpen]       = useState(false);
   const [unread, setUnread]   = useState(false);
   const [history, setHistory] = useState<
-    { role: string; content: string }[]
+    { role: string; content: string | null }[]
   >([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
