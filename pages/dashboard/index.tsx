@@ -29,7 +29,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     const saved = localStorage.getItem('flohub-layouts')
-    if (saved) try { setLayouts(JSON.parse(saved)) } catch {}
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === 'object' && parsed !== null && Object.keys(defaults).every(key => key in parsed)) {
+          setLayouts(parsed as Layouts);
+        }
+      } catch {}
+    }
   }, [])
 
   const onLayoutChange = (_: Item[], all: Layouts) => {
