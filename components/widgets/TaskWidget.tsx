@@ -1,10 +1,11 @@
+// components/widgets/TaskWidget.tsx
 "use client";
 
 import { useSession } from "next-auth/react";
 import useSWR         from "swr";
 import { useState, FormEvent } from "react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 interface Task {
   id:        string;
@@ -18,22 +19,19 @@ export default function TaskWidget() {
   const shouldFetch               = status === "authenticated";
   const { data: tasks, mutate }   = useSWR<Task[]>(
     shouldFetch ? "/api/tasks" : null,
-    fetcher,
-    { fallbackData: [] }
+    fetcher
   );
 
-  const [input, setInput]   = useState("");
-  const [due, setDue]       = useState<"today"|"tomorrow"|"custom">("today");
+  const [input, setInput]     = useState("");
+  const [due, setDue]         = useState<"today"|"tomorrow"|"custom">("today");
   const [editing, setEditing] = useState<Task | null>(null);
 
+  // format ISO → "Mon 7/21"
   const fmt = (iso: string | null) => {
     if (!iso) return "No due";
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "Invalid date";
-    return d.toLocaleDateString(undefined, {
-      month: "short",
-      day:   "numeric",
-    });
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
   const addOrUpdate = async (e: FormEvent) => {
@@ -52,7 +50,6 @@ export default function TaskWidget() {
         ? dueDate.toISOString()
         : dueDate.toISOString(),
     };
-
     const url    = editing ? `/api/tasks/${editing.id}` : "/api/tasks";
     const method = editing ? "PUT" : "POST";
 
@@ -70,7 +67,7 @@ export default function TaskWidget() {
 
   const toggleComplete = async (t: Task) => {
     await fetch(`/api/tasks/${t.id}`, {
-      method:  "PATCH",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ completed: !t.completed }),
     });
@@ -118,12 +115,11 @@ export default function TaskWidget() {
             "
             placeholder="New task…"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
           />
-
           <select
             value={due}
-            onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
+            onChange={e => setDue(e.target.value as any)}
             className="
               border border-[var(--neutral-300)]
               px-3 py-2 rounded focus:outline-none
@@ -135,7 +131,6 @@ export default function TaskWidget() {
             <option value="custom">Custom</option>
           </select>
         </div>
-
         <button
           type="submit"
           className="
@@ -148,12 +143,9 @@ export default function TaskWidget() {
       </form>
 
       <ul className="space-y-2 text-sm">
-        {tasks?.length ? (
-          tasks.map((t) => (
-            <li
-              key={t.id}
-              className="flex justify-between items-center"
-            >
+        {tasks && tasks.length > 0 ? (
+          tasks.map(t => (
+            <li key={t.id} className="flex justify-between items-center">
               <div>
                 <input
                   type="checkbox"
@@ -161,18 +153,10 @@ export default function TaskWidget() {
                   onChange={() => toggleComplete(t)}
                   className="mr-2"
                 />
-                <span
-                  className={
-                    t.completed
-                      ? "line-through text-[var(--neutral-500)]"
-                      : ""
-                  }
-                >
+                <span className={t.completed ? "line-through text-[var(--neutral-500)]" : ""}>
                   {t.text}
                 </span>
-                <span className="ml-2 text-[var(--neutral-500)]">
-                  ({fmt(t.due)})
-                </span>
+                <span className="ml-2 text-[var(--neutral-500)]">({fmt(t.due)})</span>
               </div>
               <div className="flex gap-2">
                 <button

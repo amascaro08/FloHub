@@ -1,88 +1,102 @@
-// pages/dashboard/index.tsx
-'use client';
+// pages/dashboard/index.tsx tweak
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import TaskWidget      from "@/components/widgets/TaskWidget";
+import CalendarWidget  from "@/components/widgets/CalendarWidget";
+import ChatWidget      from "@/components/assistant/ChatWidget";
 
-import TaskWidget     from '@/components/widgets/TaskWidget';
-import CalendarWidget from '@/components/widgets/CalendarWidget';
-import ChatWidget     from '@/components/assistant/ChatWidget';
+// pull in the CSS for react-grid-layout
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+// dynamically import Responsive + wrap in WidthProvider, client-only
+const ResponsiveGridLayout = dynamic(
+  async () => {
+    const { Responsive, WidthProvider } = await import("react-grid-layout");
+    return WidthProvider(Responsive);
+  },
+  { ssr: false, loading: () => <p>Loading layout…</p> }
+);
 
+// types
 type Item    = { i: string; x: number; y: number; w: number; h: number };
 type Layouts = Record<string, Item[]>;
 
-const defaultLayout: Item[] = [
-  { i: 'tasks',    x: 0, y: 0, w: 4, h: 6 },
-  { i: 'calendar', x: 4, y: 0, w: 4, h: 6 },
-  { i: 'chat',     x: 8, y: 0, w: 4, h: 6 },
+// your default positions
+const defaultItems: Item[] = [
+  { i: "tasks",    x: 0, y: 0, w: 4, h: 6 },
+  { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
+  { i: "chat",     x: 8, y: 0, w: 4, h: 6 },
 ];
-
 const defaultLayouts: Layouts = {
-  lg: defaultLayout,
-  md: defaultLayout,
-  sm: defaultLayout,
-  xs: defaultLayout,
+  lg: defaultItems,
+  md: defaultItems,
+  sm: defaultItems,
+  xs: defaultItems,
 };
 
-// Wrap Responsive in WidthProvider
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
 export default function Dashboard() {
-  // These two hooks are ALWAYS called in the same order
-  const [mounted, setMounted]   = useState(false);
-  const [layouts, setLayouts]   = useState<Layouts>(defaultLayouts);
+  // HOOKS — always in this order
+  const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
+  const [isReady, setIsReady] = useState(false);
 
-  // mark that we’re now on the client
+  // run only once on the client
   useEffect(() => {
-    setMounted(true);
+    setIsReady(true);
 
-    // hydrate saved layouts
-    const saved = localStorage.getItem('flohub-layouts');
+    const saved = localStorage.getItem("flohub-layouts");
     if (saved) {
-      try { setLayouts(JSON.parse(saved)) }
-      catch { console.warn('Bad layout in localStorage, ignoring.') }
+      try {
+        setLayouts(JSON.parse(saved));
+      } catch {
+        console.warn("Ignoring invalid saved layouts");
+      }
     }
   }, []);
 
-  // persist whenever the user drags/resizes
-  const onLayoutChange = (_: Item[], all: Layouts) => {
+  // persists whenever layout changes
+  const onLayoutChange = (_current: Item[], all: Layouts) => {
     setLayouts(all);
-    localStorage.setItem('flohub-layouts', JSON.stringify(all));
+    localStorage.setItem("flohub-layouts", JSON.stringify(all));
   };
 
-  // until we’ve painted on the client, render nothing
-  if (!mounted) return null;
-
   return (
-    <ResponsiveGridLayout
-      layouts={layouts}
-      breakpoints={{ lg:1200, md:996, sm:768, xs:480 }}
-      cols={{ lg:12, md:10, sm:6, xs:4 }}
-      rowHeight={30}
-      onLayoutChange={onLayoutChange}
-      draggableHandle=".widget-header"
-      resizeHandles={['se']}
-      isBounded
-    >
-      <div key="tasks" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
-        <TaskWidget />
-      </div>
+    <>
+      {isReady && (
+        <ResponsiveGridLayout
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+          rowHeight={30}
+          onLayoutChange={onLayoutChange}
+          draggableHandle=".widget-header"
+          resizeHandles={["se"]}
+          isBounded
+        >
+          <div key="tasks" className="glass p-4 rounded-xl">
+            <div className="widget-header cursor-move mb-2 font-semibold">
+              Tasks
+            </div>
+            <TaskWidget />
+          </div>
 
-      <div key="calendar" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">
-          Calendar
-        </div>
-        <CalendarWidget />
-      </div>
+          <div key="calendar" className="glass p-4 rounded-xl">
+            <div className="widget-header cursor-move mb-2 font-semibold">
+              Calendar
+            </div>
+            <CalendarWidget />
+          </div>
 
-      <div key="chat" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
-        <ChatWidget />
-      </div>
-    </ResponsiveGridLayout>
+          <div key="chat" className="glass p-4 rounded-xl">
+            <div className="widget-header cursor-move mb-2 font-semibold">
+              Chat
+            </div>
+            <ChatWidget />
+          </div>
+        </ResponsiveGridLayout>
+      )}
+    </>
   );
 }
