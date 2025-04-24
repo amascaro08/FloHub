@@ -15,7 +15,7 @@
     "jsx": "preserve",
     "module": "esnext",
 
-    // ← This lets you import with "@/…"
+    // Enables "@/…" imports
     "baseUrl": ".",
     "paths": {
       "@/*": ["*"]
@@ -23,7 +23,7 @@
   },
   "include": [
     "next-env.d.ts",
-    "types/**/*.d.ts",   // your ambient declarations
+    "types/**/*.d.ts",    // your ambient declaration files
     "**/*.ts",
     "**/*.tsx"
   ],

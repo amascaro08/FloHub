@@ -21,16 +21,16 @@ export const authOptions = {
 
   // 2) JWT‐based sessions
   session: {
-    strategy: "jwt",
+    // ✨ Narrow the literal so TS treats it as `"jwt"`, not `string`
+    strategy: "jwt" as const,
     maxAge:   30 * 24 * 60 * 60, // 30 days
   },
 
   // 3) Secret for signing tokens
   secret: process.env.NEXTAUTH_SECRET,
 
-  // 4) Callbacks to store OAuth tokens in the JWT & expose them on session.user
+  // 4) Callbacks: persist OAuth tokens in the JWT & expose them on session.user
   callbacks: {
-    // Persist tokens in the JWT
     jwt: async ({
       token,
       account,
@@ -43,7 +43,6 @@ export const authOptions = {
       return token;
     },
 
-    // Expose tokens on session.user
     session: async ({
       session,
       token,
@@ -51,7 +50,7 @@ export const authOptions = {
       session: Session;
       token: JWT;
     }) => {
-      // session.user already has name/email—augment it:
+      // augment session.user with our tokens
       (session.user as any).accessToken  = token.accessToken;
       (session.user as any).refreshToken = token.refreshToken;
       return session;
