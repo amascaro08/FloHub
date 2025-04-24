@@ -4,22 +4,16 @@
 import { useSession } from "next-auth/react";
 import useSWR         from "swr";
 import { useState, useEffect, useMemo } from "react";
+import Link          from "next/link";
+import type { CalendarEvent } from "@/pages/api/calendar";
 
-type CalendarEvent = {
-  id:      string;
-  summary: string;
-  start:   { dateTime?: string; date?: string };
-  end?:    { dateTime?: string; date?: string };
-};
-
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function CalendarWidget() {
-  // 1) Auth
   const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
 
-  // 2) Load user settings
+  // 1) Load settings
   const [settings, setSettings] = useState<{
     selectedCals: string[];
     defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
@@ -27,7 +21,7 @@ export default function CalendarWidget() {
   }>({
     selectedCals: [],
     defaultView:  "month",
-    customRange:  {
+    customRange: {
       start: new Date().toISOString().slice(0, 10),
       end:   new Date().toISOString().slice(0, 10),
     },
@@ -37,19 +31,16 @@ export default function CalendarWidget() {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem("flohub.calendarSettings");
     if (raw) {
-      try {
-        setSettings(JSON.parse(raw));
-      } catch {}
+      try { setSettings(JSON.parse(raw)); } catch {}
     }
   }, []);
 
   const { selectedCals, defaultView, customRange } = settings;
 
-  // 3) Compute timeMin / timeMax
+  // 2) Compute timeMin/timeMax
   const { timeMin, timeMax } = useMemo(() => {
     const now = new Date();
     let start: Date, end: Date;
-
     switch (defaultView) {
       case "today":
         start = new Date(now); start.setHours(0,0,0,0);
@@ -71,14 +62,13 @@ export default function CalendarWidget() {
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         end   = new Date(start); end.setMonth(end.getMonth()+1);
     }
-
     return {
       timeMin: start.toISOString(),
       timeMax: end.toISOString(),
     };
   }, [defaultView, customRange]);
 
-  // 4) Build API URL
+  // 3) Build API URL
   const apiUrl =
     isAuthed && selectedCals.length > 0
       ? "/api/calendar?" +
@@ -89,10 +79,10 @@ export default function CalendarWidget() {
         ]).toString()
       : null;
 
-  // 5) Fetch events
+  // 4) Fetch events
   const { data, error } = useSWR<CalendarEvent[]>(apiUrl, fetcher);
 
-  // 6) Guards
+  // 5) Early returns
   if (status === "loading") {
     return <div>Loading calendar…</div>;
   }
@@ -100,7 +90,14 @@ export default function CalendarWidget() {
     return <div>Please sign in to view your calendar.</div>;
   }
   if (selectedCals.length === 0) {
-    return <div>No calendars selected. Configure them in Settings.</div>;
+    return (
+      <div>
+        No calendars selected.{" "}
+        <Link href="/dashboard/settings">
+          <a className="text-primary-500 hover:underline">Configure Settings</a>
+        </Link>
+      </div>
+    );
   }
   if (error) {
     return <div className="text-red-500">Failed to load events.</div>;
@@ -111,10 +108,16 @@ export default function CalendarWidget() {
     month: "short", day: "numeric", hour: "numeric", minute: "numeric"
   });
 
-  // 7) Render
+  // 6) Render
   return (
     <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
-      <h3 className="text-lg font-semibold mb-3">Events</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-lg font-semibold">Events</h3>
+        <Link href="/dashboard/settings">
+          <a className="text-sm text-primary-500 hover:underline">⚙️</a>
+        </Link>
+      </div>
+
       <ul className="space-y-2 text-sm max-h-80 overflow-auto">
         {events.length > 0 ? (
           events.map((e) => {
