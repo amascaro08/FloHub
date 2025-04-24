@@ -1,30 +1,42 @@
 // pages/api/tasks.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession }            from "next-auth/next";
-import { authOptions }                 from "./auth/[...nextauth]";
-import { firestore }                   from "@/lib/firebaseAdmin";
-import admin                           from "firebase-admin";
+import { getToken }                            from "next-auth/jwt";
+import { firestore }                          from "@/lib/firebaseAdmin";
+import admin                                  from "firebase-admin";
+
+type Task = {
+  id:        string;
+  text:      string;
+  done:      boolean;
+  dueDate:   string | null;
+  createdAt: string | null;
+};
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse  // ← no generic here
 ) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.email) {
+  // ── 1) Authenticate via JWT
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+  if (!token?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const email = session.user.email;
+  const email = token.email as string;
+
   const userTasks = firestore
     .collection("users")
     .doc(email)
     .collection("tasks");
 
   try {
-    // ─── GET: list tasks (with ISO dates) ───────────────────────────────
+    // ── GET: list tasks ──────────────────────────────────────────
     if (req.method === "GET") {
       const snap = await userTasks.orderBy("createdAt", "desc").get();
-      const tasks = snap.docs.map((d) => {
+      const tasks: Task[] = snap.docs.map((d) => {
         const data = d.data() as any;
         return {
           id:        d.id,
@@ -37,33 +49,34 @@ export default async function handler(
       return res.status(200).json(tasks);
     }
 
-    // ─── POST: create a new task ────────────────────────────────────────
+    // ── POST: create new task ────────────────────────────────────
     if (req.method === "POST") {
-      const { text, dueDate } = req.body;
+      const { text, dueDate } = req.body as { text: string; dueDate?: string };
       if (typeof text !== "string" || !text.trim()) {
         return res.status(400).json({ error: "Invalid text" });
       }
       const due = dueDate ? new Date(dueDate) : null;
       const ref = await userTasks.add({
-        text:       text.trim(),
-        done:       false,
-        dueDate:    due,
-        createdAt:  admin.firestore.FieldValue.serverTimestamp(),
+        text:      text.trim(),
+        done:      false,
+        dueDate:   due,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       const snap = await ref.get();
       const data = snap.data() as any;
-      return res.status(201).json({
+      const task: Task = {
         id:        snap.id,
         text:      data.text,
         done:      data.done,
         dueDate:   data.dueDate   ? data.dueDate.toDate().toISOString()   : null,
         createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-      });
+      };
+      return res.status(201).json(task);
     }
 
-    // ─── PATCH: toggle done state ────────────────────────────────────────
+    // ── PATCH: toggle done ───────────────────────────────────────
     if (req.method === "PATCH") {
-      const { id, done } = req.body;
+      const { id, done } = req.body as { id: string; done: boolean };
       if (!id || typeof done !== "boolean") {
         return res.status(400).json({ error: "Invalid payload" });
       }
@@ -71,9 +84,9 @@ export default async function handler(
       return res.status(200).json({ id, done });
     }
 
-    // ─── DELETE: remove a task ──────────────────────────────────────────
+    // ── DELETE: remove a task ─────────────────────────────────────
     if (req.method === "DELETE") {
-      const { id } = req.body;
+      const { id } = req.body as { id: string };
       if (!id) {
         return res.status(400).json({ error: "Missing id" });
       }
@@ -81,11 +94,11 @@ export default async function handler(
       return res.status(204).end();
     }
 
-    // ─── 405 for other methods ──────────────────────────────────────────
+    // ── 405 for other methods
     res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
-  } catch (error: any) {
-    console.error("Error in /api/tasks:", error);
-    return res.status(500).json({ error: error.message });
+  } catch (err: any) {
+    console.error("Error in /api/tasks:", err);
+    return res.status(500).json({ error: err.message });
   }
 }

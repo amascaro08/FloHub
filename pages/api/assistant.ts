@@ -1,5 +1,4 @@
 // pages/api/assistant.ts
-
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken }                            from "next-auth/jwt";
 
@@ -33,9 +32,9 @@ export default async function handler(
   }
 
   try {
-    // ── 3) Call your AI service (for example) ───────────────────────────
-    // e.g. const aiReply = await callOpenAI(history, prompt, accessToken)
-    const aiReply = `Echo: ${prompt}`;  
+    // ── 3) Call your AI service ────────────────────────────────────────
+    // e.g. const aiReply = await callOpenAI(history, prompt, accessToken);
+    const aiReply = `Echo: ${prompt}`;
 
     return res.status(200).json({ reply: aiReply });
   } catch (err: any) {
