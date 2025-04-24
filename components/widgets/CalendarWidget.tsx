@@ -3,112 +3,125 @@
 
 import { useSession } from "next-auth/react";
 import useSWR         from "swr";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-interface CalendarEvent {
+type CalendarEvent = {
   id:      string;
   summary: string;
   start:   { dateTime?: string; date?: string };
   end?:    { dateTime?: string; date?: string };
-}
+};
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function CalendarWidget() {
-  // ─── 1) Always run these hooks, in this exact order ─────────────
+  // 1) Auth
   const { data: session, status } = useSession();
-  const shouldFetch               = status === "authenticated";
-  const { data, error } = useSWR<CalendarEvent[]>(
-    shouldFetch ? "/api/calendar" : null,
-    fetcher
-  );
+  const isAuthed = status === "authenticated";
 
-  // Coerce to array
-  const events: CalendarEvent[] = Array.isArray(data) ? data : [];
-
-  // Pick a view and compute filtered events
-  const [view, setView] = useState<"today" | "tomorrow" | "week">("today");
-  const filtered = useMemo(() => {
-    const now = new Date();
-    return events.filter((e) => {
-      const s = e.start.dateTime || e.start.date;
-      if (!s) return false;
-      const d = new Date(s);
-      if (view === "today") {
-        return d.toDateString() === now.toDateString();
-      }
-      if (view === "tomorrow") {
-        const t = new Date(now);
-        t.setDate(now.getDate() + 1);
-        return d.toDateString() === t.toDateString();
-      }
-      const wk = new Date(now);
-      wk.setDate(now.getDate() + 7);
-      return d >= now && d <= wk;
-    });
-  }, [events, view]);
-
-  // ─── 2) Early returns, now that all hooks have run ───────────────
-  if (status === "loading") {
-    return (
-      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center">
-        Loading events…
-      </div>
-    );
-  }
-  if (!session) {
-    return (
-      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center text-[var(--fg)]">
-        Please sign in to view your calendar.
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="glass p-4 rounded-xl shadow-elevate-sm text-red-500 text-center">
-        Failed to load calendar.
-      </div>
-    );
-  }
-
-  // ─── 3) Final render ────────────────────────────────────────────
-  const fmt = new Intl.DateTimeFormat(undefined, {
-    month:  "short",
-    day:    "numeric",
-    hour:   "numeric",
-    minute: "numeric",
+  // 2) Load user settings
+  const [settings, setSettings] = useState<{
+    selectedCals: string[];
+    defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
+    customRange:  { start: string; end: string };
+  }>({
+    selectedCals: [],
+    defaultView:  "month",
+    customRange:  {
+      start: new Date().toISOString().slice(0, 10),
+      end:   new Date().toISOString().slice(0, 10),
+    },
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem("flohub.calendarSettings");
+    if (raw) {
+      try {
+        setSettings(JSON.parse(raw));
+      } catch {}
+    }
+  }, []);
+
+  const { selectedCals, defaultView, customRange } = settings;
+
+  // 3) Compute timeMin / timeMax
+  const { timeMin, timeMax } = useMemo(() => {
+    const now = new Date();
+    let start: Date, end: Date;
+
+    switch (defaultView) {
+      case "today":
+        start = new Date(now); start.setHours(0,0,0,0);
+        end   = new Date(start); end.setDate(end.getDate()+1);
+        break;
+      case "tomorrow":
+        start = new Date(now); start.setDate(start.getDate()+1); start.setHours(0,0,0,0);
+        end   = new Date(start); end.setDate(end.getDate()+1);
+        break;
+      case "week":
+        start = new Date(now); start.setHours(0,0,0,0);
+        end   = new Date(start); end.setDate(end.getDate()+7);
+        break;
+      case "custom":
+        start = new Date(customRange.start);
+        end   = new Date(customRange.end); end.setHours(23,59,59,999);
+        break;
+      default: // month
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end   = new Date(start); end.setMonth(end.getMonth()+1);
+    }
+
+    return {
+      timeMin: start.toISOString(),
+      timeMax: end.toISOString(),
+    };
+  }, [defaultView, customRange]);
+
+  // 4) Build API URL
+  const apiUrl =
+    isAuthed && selectedCals.length > 0
+      ? "/api/calendar?" +
+        new URLSearchParams([
+          ...selectedCals.map((id) => ["calendarId", id]),
+          ["timeMin", timeMin],
+          ["timeMax", timeMax],
+        ]).toString()
+      : null;
+
+  // 5) Fetch events
+  const { data, error } = useSWR<CalendarEvent[]>(apiUrl, fetcher);
+
+  // 6) Guards
+  if (status === "loading") {
+    return <div>Loading calendar…</div>;
+  }
+  if (!isAuthed) {
+    return <div>Please sign in to view your calendar.</div>;
+  }
+  if (selectedCals.length === 0) {
+    return <div>No calendars selected. Configure them in Settings.</div>;
+  }
+  if (error) {
+    return <div className="text-red-500">Failed to load events.</div>;
+  }
+
+  const events = data || [];
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    month: "short", day: "numeric", hour: "numeric", minute: "numeric"
+  });
+
+  // 7) Render
   return (
     <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
       <h3 className="text-lg font-semibold mb-3">Events</h3>
-
-      <div className="flex gap-2 mb-4">
-        {(["today","tomorrow","week"] as const).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`
-              px-3 py-1 rounded
-              ${view === v
-                ? "bg-primary-500 text-white"
-                : "bg-[var(--neutral-200)] text-[var(--fg)]"
-              }
-              hover:opacity-80 transition
-            `}
-          >
-            {v.charAt(0).toUpperCase() + v.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      <ul className="space-y-2 text-sm">
-        {filtered.length > 0 ? (
-          filtered.map((e) => {
+      <ul className="space-y-2 text-sm max-h-80 overflow-auto">
+        {events.length > 0 ? (
+          events.map((e) => {
             const s = e.start.dateTime || e.start.date;
             const d = s ? new Date(s) : null;
             return (
-              <li key={e.id} className="flex justify-between items-center">
+              <li key={e.id} className="flex justify-between">
                 <span>{d ? fmt.format(d) : "—"}</span>
                 <span className="font-medium">{e.summary}</span>
               </li>
