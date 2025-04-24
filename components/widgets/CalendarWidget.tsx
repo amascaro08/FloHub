@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import useSWR         from "swr";
 import { useState, useMemo } from "react";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface CalendarEvent {
   id:      string;
@@ -15,14 +15,40 @@ interface CalendarEvent {
 }
 
 export default function CalendarWidget() {
+  // ─── 1) Always run these hooks, in this exact order ─────────────
   const { data: session, status } = useSession();
   const shouldFetch               = status === "authenticated";
-
   const { data, error } = useSWR<CalendarEvent[]>(
     shouldFetch ? "/api/calendar" : null,
     fetcher
   );
 
+  // Coerce to array
+  const events: CalendarEvent[] = Array.isArray(data) ? data : [];
+
+  // Pick a view and compute filtered events
+  const [view, setView] = useState<"today" | "tomorrow" | "week">("today");
+  const filtered = useMemo(() => {
+    const now = new Date();
+    return events.filter((e) => {
+      const s = e.start.dateTime || e.start.date;
+      if (!s) return false;
+      const d = new Date(s);
+      if (view === "today") {
+        return d.toDateString() === now.toDateString();
+      }
+      if (view === "tomorrow") {
+        const t = new Date(now);
+        t.setDate(now.getDate() + 1);
+        return d.toDateString() === t.toDateString();
+      }
+      const wk = new Date(now);
+      wk.setDate(now.getDate() + 7);
+      return d >= now && d <= wk;
+    });
+  }, [events, view]);
+
+  // ─── 2) Early returns, now that all hooks have run ───────────────
   if (status === "loading") {
     return (
       <div className="glass p-4 rounded-xl shadow-elevate-sm text-center">
@@ -45,28 +71,12 @@ export default function CalendarWidget() {
     );
   }
 
-  const events: CalendarEvent[] = Array.isArray(data) ? data : [];
-  const [view, setView] = useState<"today"|"tomorrow"|"week">("today");
-
-  // filter by day/week
-  const filtered = useMemo(() => {
-    const now = new Date();
-    return events.filter(e => {
-      const s = e.start.dateTime || e.start.date;
-      if (!s) return false;
-      const d = new Date(s);
-      if (view === "today") return d.toDateString() === now.toDateString();
-      if (view === "tomorrow") {
-        const t = new Date(now); t.setDate(now.getDate()+1);
-        return d.toDateString() === t.toDateString();
-      }
-      const wk = new Date(now); wk.setDate(now.getDate()+7);
-      return d >= now && d <= wk;
-    });
-  }, [events, view]);
-
+  // ─── 3) Final render ────────────────────────────────────────────
   const fmt = new Intl.DateTimeFormat(undefined, {
-    month:  "short", day: "numeric", hour: "numeric", minute: "numeric"
+    month:  "short",
+    day:    "numeric",
+    hour:   "numeric",
+    minute: "numeric",
   });
 
   return (
@@ -74,7 +84,7 @@ export default function CalendarWidget() {
       <h3 className="text-lg font-semibold mb-3">Events</h3>
 
       <div className="flex gap-2 mb-4">
-        {(["today","tomorrow","week"] as const).map(v => (
+        {(["today","tomorrow","week"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -82,7 +92,8 @@ export default function CalendarWidget() {
               px-3 py-1 rounded
               ${view === v
                 ? "bg-primary-500 text-white"
-                : "bg-[var(--neutral-200)] text-[var(--fg)]"}
+                : "bg-[var(--neutral-200)] text-[var(--fg)]"
+              }
               hover:opacity-80 transition
             `}
           >
@@ -93,7 +104,7 @@ export default function CalendarWidget() {
 
       <ul className="space-y-2 text-sm">
         {filtered.length > 0 ? (
-          filtered.map(e => {
+          filtered.map((e) => {
             const s = e.start.dateTime || e.start.date;
             const d = s ? new Date(s) : null;
             return (
