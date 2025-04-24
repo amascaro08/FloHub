@@ -7,24 +7,30 @@ import ChatWidget      from "@/components/assistant/ChatWidget";
 
 export default function DashboardPage() {
   return (
-    <main className="h-full overflow-auto p-6 bg-[var(--bg)]">
+    <main className="min-h-screen bg-[var(--bg)] p-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Tasks */}
-        <div className="glass p-4 rounded-xl">
-          <div className="text-lg font-semibold mb-2">Tasks</div>
-          <TaskWidget />
+        {/* TASKS */}
+        <div className="glass flex flex-col p-4 rounded-xl overflow-hidden min-h-0">
+          <h3 className="text-lg font-semibold mb-2">Tasks</h3>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <TaskWidget />
+          </div>
         </div>
 
-        {/* Calendar */}
-        <div className="glass p-4 rounded-xl">
-          <div className="text-lg font-semibold mb-2">Calendar</div>
-          <CalendarWidget />
+        {/* CALENDAR */}
+        <div className="glass flex flex-col p-4 rounded-xl overflow-hidden min-h-0">
+          <h3 className="text-lg font-semibold mb-2">Calendar</h3>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <CalendarWidget />
+          </div>
         </div>
 
-        {/* Chat */}
-        <div className="glass p-4 rounded-xl flex flex-col">
-          <div className="text-lg font-semibold mb-2">Chat</div>
-          <ChatWidget />
+        {/* CHAT */}
+        <div className="glass flex flex-col p-4 rounded-xl overflow-hidden min-h-0">
+          <h3 className="text-lg font-semibold mb-2">Chat</h3>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <ChatWidget />
+          </div>
         </div>
       </div>
     </main>
