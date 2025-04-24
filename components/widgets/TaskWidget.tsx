@@ -5,13 +5,14 @@ import { useSession } from "next-auth/react";
 import useSWR         from "swr";
 import { useState, FormEvent } from "react";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface Task {
   id:        string;
   text:      string;
-  due:       string | null;
-  completed: boolean;
+  done:      boolean;
+  dueDate:   string | null;
+  createdAt: string | null;
 }
 
 export default function TaskWidget() {
@@ -22,82 +23,102 @@ export default function TaskWidget() {
     fetcher
   );
 
-  const [input, setInput]     = useState("");
-  const [due, setDue]         = useState<"today"|"tomorrow"|"custom">("today");
-  const [editing, setEditing] = useState<Task | null>(null);
+  const [input, setInput]         = useState("");
+  const [due, setDue]             = useState<"today"|"tomorrow"|"custom">("today");
+  const [customDate, setCustomDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [editing, setEditing]     = useState<Task | null>(null);
 
-  // format ISO → "Mon 7/21"
+  // Friendly formatter: "Jan 5"
   const fmt = (iso: string | null) => {
     if (!iso) return "No due";
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "Invalid date";
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day:   "numeric",
+    });
   };
 
   const addOrUpdate = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    let dueDate = new Date();
-    if (due === "tomorrow") dueDate.setDate(dueDate.getDate() + 1);
-    dueDate.setHours(0, 0, 0, 0);
+    // Determine the ISO dueDate string
+    let dueISO: string | null = null;
+    if (due === "today" || due === "tomorrow") {
+      const d = new Date();
+      if (due === "tomorrow") d.setDate(d.getDate() + 1);
+      d.setHours(0, 0, 0, 0);
+      dueISO = d.toISOString();
+    }
+    if (due === "custom") {
+      const d = new Date(customDate);
+      d.setHours(0, 0, 0, 0);
+      dueISO = d.toISOString();
+    }
 
-    const payload = {
-      text: input.trim(),
-      due:  editing
-        ? editing.due
-        : due === "custom"
-        ? dueDate.toISOString()
-        : dueDate.toISOString(),
+    // Build payload
+    const payload: any = {
+      text:    input.trim(),
+      dueDate: dueISO,
     };
-    const url    = editing ? `/api/tasks/${editing.id}` : "/api/tasks";
-    const method = editing ? "PUT" : "POST";
+    // If you're editing, send PATCH; else POST
+    const method = editing ? "PATCH" : "POST";
 
-    await fetch(url, {
+    // For PATCH, include id & done
+    if (editing) {
+      payload.id   = editing.id;
+      payload.done = editing.done;
+    }
+
+    await fetch("/api/tasks", {
       method,
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(payload),
     });
 
+    // Reset form
     setInput("");
     setDue("today");
+    setCustomDate(new Date().toISOString().slice(0, 10));
     setEditing(null);
     mutate();
   };
 
   const toggleComplete = async (t: Task) => {
-    await fetch(`/api/tasks/${t.id}`, {
+    await fetch("/api/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ completed: !t.completed }),
+      body:    JSON.stringify({ id: t.id, done: !t.done }),
     });
     mutate();
   };
 
   const remove = async (id: string) => {
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    await fetch("/api/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ id }),
+    });
     mutate();
   };
 
   const startEdit = (t: Task) => {
     setEditing(t);
     setInput(t.text);
-    setDue("custom");
+    setDue(t.dueDate ? "custom" : "today");
+    if (t.dueDate) {
+      setCustomDate(t.dueDate.slice(0, 10)); 
+    }
   };
 
   if (status === "loading") {
-    return (
-      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center">
-        Loading tasks…
-      </div>
-    );
+    return <p>Loading tasks…</p>;
   }
-  if (!session?.user?.email) {
-    return (
-      <div className="glass p-4 rounded-xl shadow-elevate-sm text-center text-[var(--fg)]">
-        Please sign in to see your tasks.
-      </div>
-    );
+  if (!session) {
+    return <p>Please sign in to see your tasks.</p>;
   }
 
   return (
@@ -115,11 +136,12 @@ export default function TaskWidget() {
             "
             placeholder="New task…"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
           />
+
           <select
             value={due}
-            onChange={e => setDue(e.target.value as any)}
+            onChange={(e) => setDue(e.target.value as any)}
             className="
               border border-[var(--neutral-300)]
               px-3 py-2 rounded focus:outline-none
@@ -130,7 +152,21 @@ export default function TaskWidget() {
             <option value="tomorrow">Tomorrow</option>
             <option value="custom">Custom</option>
           </select>
+
+          {due === "custom" && (
+            <input
+              type="date"
+              className="
+                border border-[var(--neutral-300)]
+                px-3 py-2 rounded focus:outline-none
+                focus:ring-2 focus:ring-[var(--primary)]
+              "
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+            />
+          )}
         </div>
+
         <button
           type="submit"
           className="
@@ -144,19 +180,24 @@ export default function TaskWidget() {
 
       <ul className="space-y-2 text-sm">
         {tasks && tasks.length > 0 ? (
-          tasks.map(t => (
-            <li key={t.id} className="flex justify-between items-center">
+          tasks.map((t) => (
+            <li
+              key={t.id}
+              className="flex justify-between items-center"
+            >
               <div>
                 <input
                   type="checkbox"
-                  checked={t.completed}
+                  checked={t.done}
                   onChange={() => toggleComplete(t)}
                   className="mr-2"
                 />
-                <span className={t.completed ? "line-through text-[var(--neutral-500)]" : ""}>
+                <span className={t.done ? "line-through text-[var(--neutral-500)]" : ""}>
                   {t.text}
                 </span>
-                <span className="ml-2 text-[var(--neutral-500)]">({fmt(t.due)})</span>
+                <span className="ml-2 text-[var(--neutral-500)]">
+                  ({fmt(t.dueDate)})
+                </span>
               </div>
               <div className="flex gap-2">
                 <button
