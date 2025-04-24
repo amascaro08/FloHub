@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession }          from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import useSWR                  from "swr";
 import Link                    from "next/link";
 
@@ -20,17 +20,18 @@ const fetcher = async (url: string) => {
 };
 
 export default function CalendarSettingsPage() {
-  // 1) Auth guard
+  // 1) Next-Auth session
   const { data: session, status } = useSession();
   const loadingSession = status === "loading";
 
-  // 2) SWR – only fetch once authenticated
+  // 2) Only fetch calendars once authenticated
   const { data: calendars, error: calError } = useSWR<CalItem[]>(
     session ? "/api/calendar/list" : null,
-    fetcher
+    fetcher,
+    { revalidateOnFocus: false }
   );
 
-  // 3) Local state for settings
+  // 3) Local settings state
   const [settings, setSettings] = useState<Settings>({
     selectedCals: [],
     defaultView:  "month",
@@ -40,7 +41,7 @@ export default function CalendarSettingsPage() {
     },
   });
 
-  // 4) Load saved settings
+  // 4) Load saved settings once
   useEffect(() => {
     const raw = localStorage.getItem("flohub.calendarSettings");
     if (raw) {
@@ -66,40 +67,40 @@ export default function CalendarSettingsPage() {
     alert("Settings saved!");
   };
 
-  // 6) Render guards
+  // 6) Early returns
   if (loadingSession) {
-    return <p>Loading…</p>;
+    return <main className="p-6">Loading session…</main>;
   }
+
   if (!session) {
     return (
       <main className="p-6">
-        <p>Please sign in to configure calendars.</p>
-      </main>
-    );
-  }
-  if (calError) {
-    return (
-      <main className="p-6">
-        <p className="text-red-500">Failed to load calendars: {calError.message}</p>
-      </main>
-    );
-  }
-  if (!calendars) {
-    return (
-      <main className="p-6">
-        <p>Loading calendars…</p>
-      </main>
-    );
-  }
-  if (!Array.isArray(calendars)) {
-    return (
-      <main className="p-6">
-        <p className="text-red-500">Unexpected response format from /api/calendar/list</p>
+        <p>You must sign in to configure your calendars.</p>
+        <button
+          onClick={() => signIn()}
+          className="mt-4 px-4 py-2 bg-primary-500 text-white rounded"
+        >
+          Sign In
+        </button>
       </main>
     );
   }
 
-  // 7) Actual settings UI
+  if (calError) {
+    return (
+      <main className="p-6">
+        <p className="text-red-500">
+          Failed to load calendars: {calError.message}
+        </p>
+      </main>
+    );
+  }
+
+  if (!calendars) {
+    return <main className="p-6">Loading your calendars…</main>;
+  }
+
+  // 7) Now calendars is a real array, safe to map
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Calendar Settings</h1>
