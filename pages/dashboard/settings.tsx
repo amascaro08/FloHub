@@ -1,91 +1,140 @@
+// pages/dashboard/settings.tsx
 "use client";
 
-import { useState, useEffect }  from "react";
-import { useSession }           from "next-auth/react";
-import useSWR                   from "swr";
-import Link                     from "next/link";
+import { useState, useEffect } from "react";
+import { useSession }          from "next-auth/react";
+import useSWR                  from "swr";
+import Link                    from "next/link";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+type CalItem = { id: string; summary: string };
+type Settings = {
+  selectedCals: string[];
+  defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
+  customRange:  { start: string; end: string };
+};
 
-export default function CalendarSettings() {
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+
+export default function CalendarSettingsPage() {
+  // 1) Auth guard
   const { data: session, status } = useSession();
-  const shouldFetch               = status === "authenticated";
+  const loadingSession = status === "loading";
 
-  // 1) Fetch available Google calendars
-  const { data: calendars } = useSWR<
-    { id: string; summary: string }[]
-  >(shouldFetch ? "/api/calendar/list" : null, fetcher);
+  // 2) SWR – only fetch once authenticated
+  const { data: calendars, error: calError } = useSWR<CalItem[]>(
+    session ? "/api/calendar/list" : null,
+    fetcher
+  );
 
-  // 2) Local state for user selections
-  const [selectedCals, setSelectedCals] = useState<string[]>([]);
-  const [defaultView, setDefaultView]   =
-    useState<"today"|"tomorrow"|"week"|"month"|"custom">("today");
-  const [customRange, setCustomRange]   =
-    useState<{ start: string; end: string }>({
+  // 3) Local state for settings
+  const [settings, setSettings] = useState<Settings>({
+    selectedCals: [],
+    defaultView:  "month",
+    customRange:  {
       start: new Date().toISOString().slice(0,10),
       end:   new Date().toISOString().slice(0,10),
-    });
+    },
+  });
 
-  // 3) Load saved settings (from localStorage or your backend)
+  // 4) Load saved settings
   useEffect(() => {
-    const saved    = localStorage.getItem("flohub.calendarSettings");
-    if (saved) {
-      const s = JSON.parse(saved);
-      setSelectedCals(s.selectedCals || []);
-      setDefaultView(s.defaultView || "today");
-      setCustomRange(s.customRange || customRange);
+    const raw = localStorage.getItem("flohub.calendarSettings");
+    if (raw) {
+      try {
+        setSettings(JSON.parse(raw));
+      } catch {
+        console.warn("Invalid calendarSettings in localStorage");
+      }
     }
   }, []);
 
-  // 4) Handlers
-  const toggleCal = (id: string) => {
-    setSelectedCals((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  // 5) Handlers
+  const toggleCal = (id: string) =>
+    setSettings((s) => ({
+      ...s,
+      selectedCals: s.selectedCals.includes(id)
+        ? s.selectedCals.filter((x) => x !== id)
+        : [...s.selectedCals, id],
+    }));
+
+  const save = () => {
+    localStorage.setItem("flohub.calendarSettings", JSON.stringify(settings));
+    alert("Settings saved!");
+  };
+
+  // 6) Render guards
+  if (loadingSession) {
+    return <p>Loading…</p>;
+  }
+  if (!session) {
+    return (
+      <main className="p-6">
+        <p>Please sign in to configure calendars.</p>
+      </main>
     );
-  };
+  }
+  if (calError) {
+    return (
+      <main className="p-6">
+        <p className="text-red-500">Failed to load calendars: {calError.message}</p>
+      </main>
+    );
+  }
+  if (!calendars) {
+    return (
+      <main className="p-6">
+        <p>Loading calendars…</p>
+      </main>
+    );
+  }
+  if (!Array.isArray(calendars)) {
+    return (
+      <main className="p-6">
+        <p className="text-red-500">Unexpected response format from /api/calendar/list</p>
+      </main>
+    );
+  }
 
-  const saveSettings = () => {
-    const payload = { selectedCals, defaultView, customRange };
-    localStorage.setItem("flohub.calendarSettings", JSON.stringify(payload));
-    alert("Calendar settings saved!");
-  };
-
-  if (status === "loading") return <p>Loading…</p>;
-  if (!session) return <p>Please sign in to configure calendars.</p>;
-
+  // 7) Actual settings UI
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-semibold">Calendar Settings</h2>
-
-      {/* Back link */}
+    <main className="p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">Calendar Settings</h1>
       <Link href="/dashboard">
         <a className="text-blue-500 hover:underline">&larr; Back to Dashboard</a>
       </Link>
 
-      {/* 1) Calendar selection */}
-      <section className="space-y-2">
-        <h3 className="text-lg font-medium">Choose Calendars</h3>
-        {!calendars && <p>Loading calendars…</p>}
-        {calendars?.map((cal) => (
-          <label key={cal.id} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={selectedCals.includes(cal.id)}
-              onChange={() => toggleCal(cal.id)}
-              className="h-4 w-4"
-            />
-            <span>{cal.summary}</span>
-          </label>
-        ))}
+      {/* Calendar selection */}
+      <section>
+        <h2 className="text-lg font-medium mb-2">Which calendars?</h2>
+        <div className="space-y-1">
+          {calendars.map((cal) => (
+            <label key={cal.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={settings.selectedCals.includes(cal.id)}
+                onChange={() => toggleCal(cal.id)}
+                className="h-4 w-4"
+              />
+              <span>{cal.summary}</span>
+            </label>
+          ))}
+        </div>
       </section>
 
-      {/* 2) Default view filter */}
-      <section className="space-y-2">
-        <h3 className="text-lg font-medium">Default Date Filter</h3>
+      {/* Default view filter */}
+      <section>
+        <h2 className="text-lg font-medium mb-2">Default date filter</h2>
         <select
-          value={defaultView}
+          value={settings.defaultView}
           onChange={(e) =>
-            setDefaultView(e.target.value as any)
+            setSettings((s) => ({
+              ...s,
+              defaultView: e.target.value as any,
+            }))
           }
           className="border px-3 py-2 rounded"
         >
@@ -96,16 +145,17 @@ export default function CalendarSettings() {
           <option value="custom">Custom Range</option>
         </select>
 
-        {defaultView === "custom" && (
-          <div className="flex gap-2">
+        {settings.defaultView === "custom" && (
+          <div className="mt-2 flex gap-4">
             <div>
               <label className="block text-sm">Start</label>
               <input
                 type="date"
-                value={customRange.start}
+                value={settings.customRange.start}
                 onChange={(e) =>
-                  setCustomRange((r) => ({
-                    ...r, start: e.target.value,
+                  setSettings((s) => ({
+                    ...s,
+                    customRange: { ...s.customRange, start: e.target.value },
                   }))
                 }
                 className="border px-2 py-1 rounded"
@@ -115,10 +165,11 @@ export default function CalendarSettings() {
               <label className="block text-sm">End</label>
               <input
                 type="date"
-                value={customRange.end}
+                value={settings.customRange.end}
                 onChange={(e) =>
-                  setCustomRange((r) => ({
-                    ...r, end: e.target.value,
+                  setSettings((s) => ({
+                    ...s,
+                    customRange: { ...s.customRange, end: e.target.value },
                   }))
                 }
                 className="border px-2 py-1 rounded"
@@ -129,11 +180,11 @@ export default function CalendarSettings() {
       </section>
 
       <button
-        onClick={saveSettings}
+        onClick={save}
         className="bg-primary-500 text-white px-4 py-2 rounded"
       >
         Save Settings
       </button>
-    </div>
+    </main>
   );
 }
