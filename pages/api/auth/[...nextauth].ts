@@ -1,50 +1,59 @@
-// pages/api/auth/[...nextauth].ts
-
-import NextAuth, { NextAuthOptions, Session, User } from "next-auth";
+import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { JWT } from "next-auth/jwt";
+import type { Session } from "next-auth";
+import type { JWT }     from "next-auth/jwt";
 
-export const authOptions: NextAuthOptions = {
-  // 1) Configure one or more authentication providers
+export const authOptions = {
+  // 1) OAuth providers
   providers: [
     GoogleProvider({
       clientId:     process.env.GOOGLE_OAUTH_ID!,
       clientSecret: process.env.GOOGLE_OAUTH_SECRET!,
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/calendar",
+          scope:       "openid email profile https://www.googleapis.com/auth/calendar",
           access_type: "offline",
-          prompt: "consent",
+          prompt:      "consent",
         },
       },
     }),
   ],
 
-  // 2) Use JSON Web Tokens for session instead of database sessions
+  // 2) JWT‐based sessions
   session: {
     strategy: "jwt",
     maxAge:   30 * 24 * 60 * 60, // 30 days
   },
 
-  // 3) A secret is used to sign the JWT
+  // 3) Secret for signing tokens
   secret: process.env.NEXTAUTH_SECRET,
 
-  // 4) Callbacks to persist the OAuth tokens into the JWT & session
+  // 4) Callbacks to store OAuth tokens in the JWT & expose them on session.user
   callbacks: {
-    // Persist the OAuth access_token, refresh_token and expiry date to the token right after signin
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken  = account.access_token;
-        token.refreshToken = account.refresh_token;
-      }
+    // Persist tokens in the JWT
+    jwt: async ({
+      token,
+      account,
+    }: {
+      token: JWT;
+      account?: { access_token?: string; refresh_token?: string };
+    }) => {
+      if (account?.access_token)  token.accessToken  = account.access_token;
+      if (account?.refresh_token) token.refreshToken = account.refresh_token;
       return token;
     },
 
-    // Make the tokens available in the client’s session
-    async session({ session, token }) {
-      session.user = session.user || {};
-      (session as Session & { user: any }).user.accessToken  = token.accessToken;
-      (session as Session & { user: any }).user.refreshToken = token.refreshToken;
+    // Expose tokens on session.user
+    session: async ({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }) => {
+      // session.user already has name/email—augment it:
+      (session.user as any).accessToken  = token.accessToken;
+      (session.user as any).refreshToken = token.refreshToken;
       return session;
     },
   },

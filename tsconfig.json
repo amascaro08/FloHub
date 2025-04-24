@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es5",                             
-    "lib": ["dom", "dom.iterable", "esnext"],    
-    "allowJs": true,                             
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,                              
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,                              
+    "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
@@ -15,7 +15,7 @@
     "jsx": "preserve",
     "module": "esnext",
 
-    // ⬇️ Base URL and path mapping for "@/..." imports
+    // ← This lets you import with "@/…"
     "baseUrl": ".",
     "paths": {
       "@/*": ["*"]
@@ -23,6 +23,7 @@
   },
   "include": [
     "next-env.d.ts",
+    "types/**/*.d.ts",   // your ambient declarations
     "**/*.ts",
     "**/*.tsx"
   ],

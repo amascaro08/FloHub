@@ -1,15 +1,9 @@
 // pages/api/assistant.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession }                   from "next-auth/next";
-import type { Session }                       from "next-auth";
-import { authOptions }                        from "./auth/[...nextauth]";
+import { getToken }                            from "next-auth/jwt";
 
-type ChatRequest = {
-  history: { role: string; content: string }[];
-  prompt: string;
-};
-
+type ChatRequest  = { history: { role: string; content: string }[]; prompt: string };
 type ChatResponse = { reply?: string; error?: string };
 
 export default async function handler(
@@ -21,25 +15,28 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // Cast getServerSession to the NextAuth Session type
-  const session = (await getServerSession(
+  // ── 1) Authenticate via JWT ───────────────────────────────────────────
+  const token = await getToken({
     req,
-    res,
-    authOptions
-  )) as Session | null;
-
-  if (!session?.user?.email || !session.user.accessToken) {
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+  if (!token?.email || !token.accessToken) {
     return res.status(401).json({ error: "Not signed in" });
   }
+  const email       = token.email as string;
+  const accessToken = token.accessToken as string;
 
+  // ── 2) Validate input ────────────────────────────────────────────────
   const { history, prompt } = req.body as ChatRequest;
   if (!Array.isArray(history) || typeof prompt !== "string") {
     return res.status(400).json({ error: "Invalid request body" });
   }
 
   try {
-    // TODO: call your AI service here, passing session.user.accessToken if needed
-    const aiReply = `Echo: ${prompt}`;
+    // ── 3) Call your AI service (for example) ───────────────────────────
+    // e.g. const aiReply = await callOpenAI(history, prompt, accessToken)
+    const aiReply = `Echo: ${prompt}`;  
+
     return res.status(200).json({ reply: aiReply });
   } catch (err: any) {
     console.error("Assistant error:", err);
