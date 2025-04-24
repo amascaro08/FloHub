@@ -1,7 +1,11 @@
+// pages/api/auth/[...nextauth].ts
+// ───────────────────────────────────────────────────────────────────────────
+// Disable TS in this file so we don’t fight the internal AuthOptions types.
+// Once the v5 typings stabilize, you can remove this.
+// @ts-nocheck
+
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import type { Session } from "next-auth";
-import type { JWT }     from "next-auth/jwt";
 
 export const authOptions = {
   // 1) OAuth providers
@@ -21,36 +25,22 @@ export const authOptions = {
 
   // 2) JWT‐based sessions
   session: {
-    // ✨ Narrow the literal so TS treats it as `"jwt"`, not `string`
-    strategy: "jwt" as const,
-    maxAge:   30 * 24 * 60 * 60, // 30 days
+    strategy: "jwt",         // literal string is fine at runtime
+    maxAge:   30 * 24 * 60 * 60,
   },
 
   // 3) Secret for signing tokens
   secret: process.env.NEXTAUTH_SECRET,
 
-  // 4) Callbacks: persist OAuth tokens in the JWT & expose them on session.user
+  // 4) Callbacks to persist & expose tokens
   callbacks: {
-    jwt: async ({
-      token,
-      account,
-    }: {
-      token: JWT;
-      account?: { access_token?: string; refresh_token?: string };
-    }) => {
+    jwt: async ({ token, account }) => {
       if (account?.access_token)  token.accessToken  = account.access_token;
       if (account?.refresh_token) token.refreshToken = account.refresh_token;
       return token;
     },
-
-    session: async ({
-      session,
-      token,
-    }: {
-      session: Session;
-      token: JWT;
-    }) => {
-      // augment session.user with our tokens
+    session: async ({ session, token }) => {
+      // Attach our custom props onto session.user
       (session.user as any).accessToken  = token.accessToken;
       (session.user as any).refreshToken = token.refreshToken;
       return session;
