@@ -28,8 +28,9 @@ export default async function handler(
   const { calendarId = "primary", timeMin, timeMax } = req.query;
 
   // Normalize and validate dates
-  const safeTimeMin = typeof timeMin === "string" ? decodeURIComponent(timeMin) : "";
-  const safeTimeMax = typeof timeMax === "string" ? decodeURIComponent(timeMax) : "";
+  const safeTimeMin = typeof timeMin === "string" ? timeMin : "";
+  const safeTimeMax = typeof timeMax === "string" ? timeMax : "";
+  
 
   console.log("[CALENDAR API] calendarId:", calendarId);
   console.log("[CALENDAR API] safeTimeMin:", safeTimeMin);
