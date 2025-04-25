@@ -1,4 +1,3 @@
-// components/dashboard/DashboardGrid.tsx
 "use client";
 
 import {
@@ -16,6 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { Resizable } from "re-resizable";
 import { useState } from "react";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
@@ -24,9 +24,7 @@ import { ReactElement } from "react";
 
 type WidgetType = "tasks" | "calendar" | "chat";
 
-
 const widgetComponents: Record<WidgetType, ReactElement> = {
-
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   chat: <ChatWidget />,
@@ -42,16 +40,26 @@ function SortableItem({ id }: { id: WidgetType }) {
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="glass p-4 rounded-xl mb-4 shadow-md cursor-move"
+    <Resizable
+      defaultSize={{
+        width: "100%",
+        height: 300,
+      }}
+      minWidth="300px"
+      minHeight={200}
+      className="mb-4"
     >
-      <div className="font-semibold capitalize mb-2">{id}</div>
-      {widgetComponents[id]}
-    </div>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="glass p-4 rounded-xl h-full shadow-md cursor-move flex flex-col"
+      >
+        <div className="font-semibold capitalize mb-2">{id}</div>
+        <div className="flex-1 overflow-auto">{widgetComponents[id]}</div>
+      </div>
+    </Resizable>
   );
 }
 
