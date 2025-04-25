@@ -5,13 +5,7 @@ module.exports = {
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
   ],
-  safelist: [
-    'react-resizable',
-    'react-resizable-handle',
-    'react-resizable-handle-se',
-    'react-resizable-handle-s',
-    'react-resizable-handle-e',
-  ],
+
   theme: {
     extend: {
       colors: {
