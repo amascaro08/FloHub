@@ -62,7 +62,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               Sign Out
             </a>
           </Link>
+:start_line:68
+-------
         </nav>
+        <button
+          className="block px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
+          onClick={() => toggleLock()}
+          aria-label="Toggle Lock"
+        >
+          {isLocked ? "Unlock Layout" : "Lock Layout"}
+        </button>
       </aside>
 
       {/* main */}
@@ -75,18 +84,11 @@ export default function Layout({ children }: { children: ReactNode }) {
               className="p-2 rounded hover:bg-[var(--neutral-200)] transition"
               aria-label="Toggle menu"
             >
-              <Menu className="w-6 h-6 text-[var(--fg)]"/>
+              <Menu className="w-6 h-6 text-[var(--fg)]" />
             </button>
-            <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2"/>
+            <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2" />
           </div>
           <ThemeToggle />
-          <button
-            className="p-2 rounded hover:bg-[var(--neutral-200)] transition"
-            onClick={() => toggleLock()}
-            aria-label="Toggle Lock"
-          >
-            {isLocked ? "Unlock Layout" : "Lock Layout"}
-          </button>
         </header>
 
         <main className="flex-1 overflow-auto p-6">
