@@ -6,7 +6,7 @@ import useSWR from "swr";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function CalendarWidget() {
-  const calendarId = "primary"; // Replace if your app pulls a dynamic calendarId
+  const calendarId = "primary"; // Using "primary" calendar
   const now = new Date();
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
@@ -15,7 +15,7 @@ export default function CalendarWidget() {
   const timeMax = nextWeek.toISOString();
 
   const { data, error } = useSWR(
-    `/api/calendar/list?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
+    `/api/calendar?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
     fetcher
   );
 
@@ -26,8 +26,8 @@ export default function CalendarWidget() {
     <div>
       <h2 className="text-lg font-semibold mb-2">Upcoming Events</h2>
       <ul className="space-y-2">
-        {data?.events?.length ? (
-          data.events.map((event: any) => (
+        {data?.length ? (
+          data.map((event: any) => (
             <li key={event.id} className="border-b pb-2">
               <div className="font-medium">{event.summary}</div>
               <div className="text-sm text-gray-600">
