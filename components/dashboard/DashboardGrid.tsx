@@ -20,10 +20,13 @@ import { useState } from "react";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
+import { ReactElement } from "react";
 
 type WidgetType = "tasks" | "calendar" | "chat";
 
-const widgetComponents: Record<WidgetType, JSX.Element> = {
+
+const widgetComponents: Record<WidgetType, ReactElement> = {
+
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   chat: <ChatWidget />,
