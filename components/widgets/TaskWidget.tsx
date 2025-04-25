@@ -7,7 +7,7 @@ import { useState, FormEvent } from "react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-interface Task {
+export interface Task {
   id:        string;
   text:      string;
   done:      boolean;

@@ -6,13 +6,13 @@ import Link from 'next/link'
 import ThemeToggle from './ThemeToggle'
 
 const nav = [
-  { name: 'Hub',      href: '/dashboard' },
-  { name: 'Tasks',    href: '/dashboard/tasks' },
-  { name: 'Habits',   href: '/dashboard/habits' },
-  { name: 'Journal',  href: '/dashboard/journal' },
-  { name: 'Meetings', href: '/dashboard/meetings' },
-  { name: 'Settings', href: '/dashboard/settings' },
-]
+  { name: "Hub", href: "/dashboard" },
+  { name: "Tasks", href: "/dashboard/tasks" },
+  { name: "Habits", href: "/dashboard/habits" },
+  { name: "Journal", href: "/dashboard/journal" },
+  { name: "Meetings", href: "/dashboard/meetings" },
+  { name: "Settings", href: "/dashboard/settings" },
+];
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)

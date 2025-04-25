@@ -32,13 +32,17 @@ const defaultLayouts: Layouts = {
 export default function DashboardGrid() {
   // ─── Hooks (always in the same order) ─────────────────────
   const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Hydrate once on mount
   useEffect(() => {
     const saved = localStorage.getItem("flohub-layouts");
     if (saved) {
-      try { setLayouts(JSON.parse(saved)); }
-      catch { console.warn("Ignoring invalid saved layouts"); }
+      try {
+        setLayouts(JSON.parse(saved));
+      } catch {
+        console.warn("Ignoring invalid saved layouts");
+      }
     }
   }, []);
 
@@ -49,37 +53,29 @@ export default function DashboardGrid() {
   };
 
   // ─── Render the grid ───────────────────────────────────────
-  const [chatOpen, setChatOpen] = useState(false);
-
   return (
-    <div className="relative h-full">
-      <ResponsiveGridLayout
-        layouts={layouts}
-        breakpoints={{ lg:1200, md:996, sm:768, xs:480 }}
-        cols={{ lg:12, md:10, sm:6, xs:4 }}
-        rowHeight={30}
-        onLayoutChange={onLayoutChange}
-        draggableHandle=".widget-header"
-        resizeHandles={["se"]}
-        isBounded
-      >
-        <div key="tasks" className="glass p-4 rounded-xl">
-          <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
-          <TaskWidget/>
+    <div className="relative h-full grid grid-cols-12 gap-4 p-4">
+      {/* Tasks Widget */}
+      <div className="col-span-4 glass p-4 rounded-xl">
+        <div className="widget-header cursor-move mb-2 font-semibold">
+          Tasks
         </div>
+        <TaskWidget />
+      </div>
 
-        <div key="calendar" className="glass p-4 rounded-xl">
-          <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
-          <CalendarWidget/>
+      {/* Calendar Widget */}
+      <div className="col-span-4 glass p-4 rounded-xl">
+        <div className="widget-header cursor-move mb-2 font-semibold">
+          Calendar
         </div>
-      </ResponsiveGridLayout>
+        <CalendarWidget />
+      </div>
 
       {/* Chat Widget Overlay */}
       <div
-        className={`
-          fixed bottom-4 right-4 z-50 rounded-xl shadow-lg transition-transform
-          ${chatOpen ? 'translate-y-0' : 'translate-y-[calc(100%+2rem)]'}
-        `}
+        className={`fixed bottom-4 right-4 z-50 rounded-xl shadow-lg transition-transform ${
+          chatOpen ? "translate-y-0" : "translate-y-[calc(100%+2rem)]"
+        }`}
       >
         <ChatWidget />
       </div>
@@ -90,7 +86,7 @@ export default function DashboardGrid() {
         onClick={() => setChatOpen(!chatOpen)}
         aria-label="Toggle Chat"
       >
-        {chatOpen ? 'Close Chat' : 'Open Chat'}
+        {chatOpen ? "Close Chat" : "Open Chat"}
       </button>
     </div>
   );
