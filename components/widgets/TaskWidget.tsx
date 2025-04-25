@@ -178,14 +178,14 @@ export default function TaskWidget() {
         </button>
       </form>
 
-      <ul className="space-y-2 text-sm">
+      <ul className="space-y-2 text-sm overflow-auto">
         {tasks && tasks.length > 0 ? (
           tasks.map((t) => (
             <li
               key={t.id}
-              className="flex justify-between items-center"
+              className="flex justify-between items-center py-1"
             >
-              <div>
+              <div className="flex items-center">
                 <input
                   type="checkbox"
                   checked={t.done}

@@ -49,31 +49,49 @@ export default function DashboardGrid() {
   };
 
   // ─── Render the grid ───────────────────────────────────────
+  const [chatOpen, setChatOpen] = useState(false);
+
   return (
-    <ResponsiveGridLayout
-      layouts={layouts}
-      breakpoints={{ lg:1200, md:996, sm:768, xs:480 }}
-      cols={{ lg:12, md:10, sm:6, xs:4 }}
-      rowHeight={30}
-      onLayoutChange={onLayoutChange}
-      draggableHandle=".widget-header"
-      resizeHandles={["se"]}
-      isBounded
-    >
-      <div key="tasks" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
-        <TaskWidget/>
+    <div className="relative h-full">
+      <ResponsiveGridLayout
+        layouts={layouts}
+        breakpoints={{ lg:1200, md:996, sm:768, xs:480 }}
+        cols={{ lg:12, md:10, sm:6, xs:4 }}
+        rowHeight={30}
+        onLayoutChange={onLayoutChange}
+        draggableHandle=".widget-header"
+        resizeHandles={["se"]}
+        isBounded
+      >
+        <div key="tasks" className="glass p-4 rounded-xl">
+          <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
+          <TaskWidget/>
+        </div>
+
+        <div key="calendar" className="glass p-4 rounded-xl">
+          <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
+          <CalendarWidget/>
+        </div>
+      </ResponsiveGridLayout>
+
+      {/* Chat Widget Overlay */}
+      <div
+        className={`
+          fixed bottom-4 right-4 z-50 rounded-xl shadow-lg transition-transform
+          ${chatOpen ? 'translate-y-0' : 'translate-y-[calc(100%+2rem)]'}
+        `}
+      >
+        <ChatWidget />
       </div>
 
-      <div key="calendar" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
-        <CalendarWidget/>
-      </div>
-
-      <div key="chat" className="glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
-        <ChatWidget/>
-      </div>
-    </ResponsiveGridLayout>
+      {/* Chat Toggle Button */}
+      <button
+        className="fixed bottom-4 right-4 z-50 bg-[var(--surface)] text-[var(--fg)] rounded-full p-2 shadow-md hover:bg-[var(--neutral-200)] transition"
+        onClick={() => setChatOpen(!chatOpen)}
+        aria-label="Toggle Chat"
+      >
+        {chatOpen ? 'Close Chat' : 'Open Chat'}
+      </button>
+    </div>
   );
 }

@@ -124,9 +124,15 @@ export default function CalendarWidget() {
             const s = e.start.dateTime || e.start.date;
             const d = s ? new Date(s) : null;
             return (
-              <li key={e.id} className="flex justify-between">
-                <span>{d ? fmt.format(d) : "—"}</span>
-                <span className="font-medium">{e.summary}</span>
+              <li key={e.id} className="flex items-center">
+                {d ? (
+                  <>
+                    <span className="w-24">{fmt.format(d)}</span>
+                    <span className="font-medium">{e.summary}</span>
+                  </>
+                ) : (
+                  <span>—</span>
+                )}
               </li>
             );
           })
