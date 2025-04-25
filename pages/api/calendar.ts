@@ -25,24 +25,25 @@ export default async function handler(
   }
 
   const accessToken = token.accessToken as string;
-
   const { calendarId = "primary", timeMin, timeMax } = req.query;
 
-  // LOG params for debugging
-  console.log("[API] calendarId:", calendarId);
-  console.log("[API] timeMin:", timeMin);
-  console.log("[API] timeMax:", timeMax);
+  // Normalize and validate dates
+  const safeTimeMin = typeof timeMin === "string" ? decodeURIComponent(timeMin) : "";
+  const safeTimeMax = typeof timeMax === "string" ? decodeURIComponent(timeMax) : "";
 
-  if (
-    !timeMin || !timeMax ||
-    typeof timeMin !== "string" ||
-    typeof timeMax !== "string" ||
-    isNaN(new Date(timeMin).getTime()) ||
-    isNaN(new Date(timeMax).getTime())
-  ) {
-    return res
-      .status(400)
-      .json({ error: "Missing or invalid timeMin/timeMax (must be valid ISO strings)" });
+  console.log("[CALENDAR API] calendarId:", calendarId);
+  console.log("[CALENDAR API] safeTimeMin:", safeTimeMin);
+  console.log("[CALENDAR API] safeTimeMax:", safeTimeMax);
+
+  if (!safeTimeMin || !safeTimeMax) {
+    return res.status(400).json({ error: "Missing timeMin or timeMax" });
+  }
+
+  const minDate = new Date(safeTimeMin);
+  const maxDate = new Date(safeTimeMax);
+
+  if (isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+    return res.status(400).json({ error: "Invalid date format for timeMin/timeMax" });
   }
 
   const calendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
@@ -53,8 +54,10 @@ export default async function handler(
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       id
     )}/events?timeMin=${encodeURIComponent(
-      timeMin
-    )}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime`;
+      safeTimeMin
+    )}&timeMax=${encodeURIComponent(
+      safeTimeMax
+    )}&singleEvents=true&orderBy=startTime`;
 
     try {
       const gres = await fetch(url, {
