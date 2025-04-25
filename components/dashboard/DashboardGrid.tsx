@@ -60,6 +60,12 @@ export default function DashboardGrid() {
     localStorage.setItem("flohub-layouts", JSON.stringify(all));
   };
 
+  useEffect(() => {
+    console.log("isLocked:", isLocked);
+    console.log("isDraggable:", !isLocked);
+    console.log("isResizable:", !isLocked);
+  }, [isLocked]);
+
   // ─── Render the grid ───────────────────────────────────────
   return (
     <>

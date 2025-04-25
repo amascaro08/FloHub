@@ -62,10 +62,6 @@ export default function Layout({ children }: { children: ReactNode }) {
               Sign Out
             </a>
           </Link>
-:start_line:68
--------
-:start_line:68
--------
         </nav>
       </aside>
 
