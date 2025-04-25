@@ -4,6 +4,7 @@ import { ReactNode, useState } from 'react'
 import { Menu } from 'lucide-react'       // npm install lucide-react
 import Link from 'next/link'
 import ThemeToggle from './ThemeToggle'
+import { useAuth } from "./AuthContext";
 
 const nav = [
   { name: "Hub", href: "/dashboard" },
@@ -15,7 +16,8 @@ const nav = [
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const { isLocked, toggleLock } = useAuth();
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
@@ -77,7 +79,14 @@ export default function Layout({ children }: { children: ReactNode }) {
             </button>
             <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2"/>
           </div>
-          <ThemeToggle/>
+          <ThemeToggle />
+          <button
+            className="p-2 rounded hover:bg-[var(--neutral-200)] transition"
+            onClick={() => toggleLock()}
+            aria-label="Toggle Lock"
+          >
+            {isLocked ? "Unlock Layout" : "Lock Layout"}
+          </button>
         </header>
 
         <main className="flex-1 overflow-auto p-6">

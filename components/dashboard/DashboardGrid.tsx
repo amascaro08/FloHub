@@ -4,22 +4,24 @@
 import { useState, useEffect } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 
-import TaskWidget     from "@/components/widgets/TaskWidget";
+import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
-import ChatWidget     from "@/components/assistant/ChatWidget";
+import ChatWidget from "@/components/assistant/ChatWidget";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
+import { useAuth } from "@/components/ui/AuthContext";
+
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type Item    = { i: string; x: number; y: number; w: number; h: number };
+type Item = { i: string; x: number; y: number; w: number; h: number };
 type Layouts = Record<string, Item[]>;
 
 const defaultItems: Item[] = [
-  { i: "tasks",    x: 0, y: 0, w: 4, h: 6 },
+  { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
   { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
-  { i: "chat",     x: 8, y: 0, w: 4, h: 6 },
+  { i: "chat", x: 8, y: 0, w: 4, h: 6 },
 ];
 
 const defaultLayouts: Layouts = {
@@ -33,6 +35,7 @@ export default function DashboardGrid() {
   // ─── Hooks (always in the same order) ─────────────────────
   const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
   const [chatOpen, setChatOpen] = useState(false);
+  const { isLocked } = useAuth();
 
   // Hydrate once on mount
   useEffect(() => {
@@ -54,22 +57,36 @@ export default function DashboardGrid() {
 
   // ─── Render the grid ───────────────────────────────────────
   return (
-    <div className="relative h-full grid grid-cols-12 gap-4 p-4">
-      {/* Tasks Widget */}
-      <div className="col-span-4 glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">
-          Tasks
+    <>
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={layouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+        rowHeight={30}
+        onLayoutChange={onLayoutChange}
+        isDraggable={!isLocked} // Disable dragging when locked
+        isResizable={!isLocked} // Disable resizing when locked
+      >
+        <div key="tasks" className="glass p-4 rounded-xl">
+          <div className="widget-header cursor-move mb-2 font-semibold">
+            Tasks
+          </div>
+          <TaskWidget />
         </div>
-        <TaskWidget />
-      </div>
-
-      {/* Calendar Widget */}
-      <div className="col-span-4 glass p-4 rounded-xl">
-        <div className="widget-header cursor-move mb-2 font-semibold">
-          Calendar
+        <div key="calendar" className="glass p-4 rounded-xl">
+          <div className="widget-header cursor-move mb-2 font-semibold">
+            Calendar
+          </div>
+          <CalendarWidget />
         </div>
-        <CalendarWidget />
-      </div>
+        <div key="chat" className="glass p-4 rounded-xl">
+          <div className="widget-header cursor-move mb-2 font-semibold">
+            Chat
+          </div>
+          <ChatWidget />
+        </div>
+      </ResponsiveGridLayout>
 
       {/* Chat Widget Overlay */}
       <div
@@ -88,6 +105,6 @@ export default function DashboardGrid() {
       >
         {chatOpen ? "Close Chat" : "Open Chat"}
       </button>
-    </div>
+    </>
   );
 }
