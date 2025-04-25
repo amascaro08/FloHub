@@ -1,78 +1,86 @@
 // components/dashboard/DashboardGrid.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Responsive, WidthProvider, Layouts, Layout } from "react-grid-layout";
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
+import { useState } from "react";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+type WidgetType = "tasks" | "calendar" | "chat";
 
-import { useAuth } from "@/components/ui/AuthContext";
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
-const defaultItems: Layout[] = [
-  { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
-  { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
-  { i: "chat", x: 8, y: 0, w: 4, h: 6 },
-];
-
-const defaultLayouts: Layouts = {
-  lg: defaultItems,
-  md: defaultItems,
-  sm: defaultItems,
-  xs: defaultItems,
+const widgetComponents: Record<WidgetType, JSX.Element> = {
+  tasks: <TaskWidget />,
+  calendar: <CalendarWidget />,
+  chat: <ChatWidget />,
 };
 
-export default function DashboardGrid() {
-  const { isLocked } = useAuth();
-  const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
+function SortableItem({ id }: { id: WidgetType }) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("flohub-layouts");
-    if (saved) {
-      try {
-        setLayouts(JSON.parse(saved));
-      } catch {
-        console.warn("Ignoring invalid saved layouts");
-      }
-    }
-  }, []);
-
-  const onLayoutChange = (_: Layout[], allLayouts: Layouts) => {
-    setLayouts(allLayouts);
-    localStorage.setItem("flohub-layouts", JSON.stringify(allLayouts));
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
   };
 
   return (
-    <div className="p-4">
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={30}
-        isDraggable={!isLocked}
-        isResizable={!isLocked}
-        onLayoutChange={onLayoutChange}
-      >
-        <div key="tasks" className="glass p-4 rounded-xl overflow-auto">
-          <div className="widget-header cursor-move mb-2 font-semibold">Tasks</div>
-          <TaskWidget />
-        </div>
-        <div key="calendar" className="glass p-4 rounded-xl overflow-auto">
-          <div className="widget-header cursor-move mb-2 font-semibold">Calendar</div>
-          <CalendarWidget />
-        </div>
-        <div key="chat" className="glass p-4 rounded-xl overflow-auto">
-          <div className="widget-header cursor-move mb-2 font-semibold">Chat</div>
-          <ChatWidget />
-        </div>
-      </ResponsiveGridLayout>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="glass p-4 rounded-xl mb-4 shadow-md cursor-move"
+    >
+      <div className="font-semibold capitalize mb-2">{id}</div>
+      {widgetComponents[id]}
     </div>
+  );
+}
+
+export default function DashboardGrid() {
+  const [widgets, setWidgets] = useState<WidgetType[]>([
+    "tasks",
+    "calendar",
+    "chat",
+  ]);
+
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = widgets.indexOf(active.id);
+      const newIndex = widgets.indexOf(over.id);
+      setWidgets((items) => arrayMove(items, oldIndex, newIndex));
+    }
+  };
+
+  return (
+    <DndContext
+      collisionDetection={closestCenter}
+      sensors={sensors}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={widgets} strategy={verticalListSortingStrategy}>
+        {widgets.map((id) => (
+          <SortableItem key={id} id={id} />
+        ))}
+      </SortableContext>
+    </DndContext>
   );
 }
