@@ -78,7 +78,7 @@ export default function DashboardGrid() {
         onLayoutChange={onLayoutChange}
         isDraggable={!isLocked} // Disable dragging when locked
         isResizable={!isLocked} // Disable resizing when locked
-        key={rerender}
+        key={String(isLocked)}
       >
         <div key="tasks" className="glass p-4 rounded-xl">
           <div className="widget-header cursor-move mb-2 font-semibold">
