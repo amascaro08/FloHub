@@ -52,6 +52,14 @@ export default function Layout({ children }: { children: ReactNode }) {
               </a>
             </Link>
           ))}
+          <Link href="/api/auth/signout" legacyBehavior>
+            <a
+              className="block px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
+              onClick={() => setOpen(false)}
+            >
+              Sign Out
+            </a>
+          </Link>
         </nav>
       </aside>
 
