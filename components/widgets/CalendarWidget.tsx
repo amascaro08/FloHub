@@ -3,7 +3,14 @@
 
 import useSWR from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'An unknown error occurred');
+  }
+  return data;
+};
 
 export default function CalendarWidget() {
   const calendarId = "primary"; // Using "primary" calendar
@@ -19,14 +26,20 @@ export default function CalendarWidget() {
     fetcher
   );
 
-  if (error) return <div>Failed to load calendar events.</div>;
+  if (error) {
+    if (error.message.includes('Not signed in') || error.message.includes('Invalid Credentials')) {
+      return <div className="text-red-500">Please re-sign in to access your calendar.</div>;
+    }
+    return <div className="text-red-500">Failed to load calendar events.</div>;
+  }
+
   if (!data) return <div>Loading calendar...</div>;
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-2">Upcoming Events</h2>
       <ul className="space-y-2">
-        {data?.length ? (
+        {data.length ? (
           data.map((event: any) => (
             <li key={event.id} className="border-b pb-2">
               <div className="font-medium">{event.summary}</div>
