@@ -36,8 +36,13 @@ export default function DashboardGrid() {
   const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
   const [chatOpen, setChatOpen] = useState(false);
   const { isLocked } = useAuth();
+  const [rerender, setRerender] = useState(0);
 
   // Hydrate once on mount
+  useEffect(() => {
+    setRerender(prev => prev + 1);
+  }, [isLocked]);
+
   useEffect(() => {
     const saved = localStorage.getItem("flohub-layouts");
     if (saved) {
@@ -67,6 +72,7 @@ export default function DashboardGrid() {
         onLayoutChange={onLayoutChange}
         isDraggable={!isLocked} // Disable dragging when locked
         isResizable={!isLocked} // Disable resizing when locked
+        key={rerender}
       >
         <div key="tasks" className="glass p-4 rounded-xl">
           <div className="widget-header cursor-move mb-2 font-semibold">

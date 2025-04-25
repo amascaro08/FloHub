@@ -64,14 +64,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           </Link>
 :start_line:68
 -------
+:start_line:68
+-------
         </nav>
-        <button
-          className="block px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
-          onClick={() => toggleLock()}
-          aria-label="Toggle Lock"
-        >
-          {isLocked ? "Unlock Layout" : "Lock Layout"}
-        </button>
       </aside>
 
       {/* main */}
@@ -90,6 +85,20 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
           <ThemeToggle />
         </header>
+
+        <div className="absolute top-4 right-4 z-50">
+          <button
+            className="p-2 rounded hover:bg-[var(--neutral-200)] transition"
+            onClick={() => toggleLock()}
+            aria-label="Toggle Lock"
+          >
+            {isLocked ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock"><rect width="12" height="10" x="6" y="11" rx="2"/><path d="M12 17v-2"/><path d="M8 11V5a4 4 0 0 1 8 0v6"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-unlock"><rect width="12" height="10" x="6" y="11" rx="2"/><path d="M12 17v-2"/><path d="M16 11V5a4 4 0 0 0-8 0"/></svg>
+            )}
+          </button>
+        </div>
 
         <main className="flex-1 overflow-auto p-6">
           {children}
