@@ -10,6 +10,16 @@ import type { Task } from "@/components/widgets/TaskWidget";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "No due date";
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
 export default function TasksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -27,6 +37,7 @@ export default function TasksPage() {
   );
 
   const [input, setInput] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [editing, setEditing] = useState<Task | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState("");
@@ -37,6 +48,7 @@ export default function TasksPage() {
 
     const payload: any = {
       text: input.trim(),
+      dueDate: dueDate || null,
     };
 
     const method = editing ? "PATCH" : "POST";
@@ -52,6 +64,7 @@ export default function TasksPage() {
     });
 
     setInput("");
+    setDueDate("");
     setEditing(null);
     mutate();
   };
@@ -77,6 +90,7 @@ export default function TasksPage() {
   const startEdit = (task: Task) => {
     setEditing(task);
     setInput(task.text);
+    setDueDate(task.dueDate || "");
   };
 
   const completedTasks = tasks ? tasks.filter((task) => task.done) : [];
@@ -104,14 +118,20 @@ export default function TasksPage() {
       <form onSubmit={addOrUpdate} className="flex flex-col gap-2 mb-4">
         <input
           type="text"
-          className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           placeholder="New task…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
+        <input
+          type="date"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
         <button
           type="submit"
-          className="self-end bg-primary-500 text-white px-4 py-2 rounded hover:bg-primary-600"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           {editing ? "Save" : "Add"}
         </button>
@@ -119,95 +139,99 @@ export default function TasksPage() {
 
       <input
         type="text"
-        className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] mb-4"
+        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-4"
         placeholder="Search tasks…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <h2>Pending Tasks</h2>
+      <h2 className="text-xl font-semibold mb-2">Pending Tasks</h2>
       {filteredTasks && filteredTasks.filter(task => !task.done).length > 0 ? (
-        <table className="table-auto w-full">
-          <thead>
-            <tr>
-              <th className="px-4 py-2">Task</th>
-              <th className="px-4 py-2">Due Date</th>
-              <th className="px-4 py-2">Created At</th>
-              <th className="px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTasks.filter(task => !task.done).map((task) => (
-              <tr key={task.id}>
-                <td className="border px-4 py-2">{task.text}</td>
-                <td className="border px-4 py-2">{task.dueDate || "No due date"}</td>
-                <td className="border px-4 py-2">{task.createdAt || "Unknown"}</td>
-                <td className="border px-4 py-2">
-                  <input
-                    type="checkbox"
-                    checked={task.done}
-                    onChange={() => toggleComplete(task)}
-                    className="mr-2"
-                  />
-                  <button
-                    onClick={() => startEdit(task)}
-                    className="text-sm text-primary-500 hover:underline mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => remove(task.id)}
-                    className="text-sm text-red-500 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
+        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredTasks.filter(task => !task.done).map((task) => (
+                <tr key={task.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{task.text}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(task.dueDate)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{task.createdAt || "Unknown"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={() => toggleComplete(task)}
+                      className="mr-2"
+                    />
+                    <button
+                      onClick={() => startEdit(task)}
+                      className="text-indigo-600 hover:text-indigo-900 mr-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => remove(task.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <p>No pending tasks.</p>
       )}
 
       <button
         onClick={() => setShowCompleted(!showCompleted)}
-        className="text-blue-500 hover:underline mt-4"
+        className="mt-4 text-blue-500 hover:text-blue-700"
       >
         {showCompleted ? "Hide Completed Tasks" : "Show Completed Tasks"}
       </button>
 
       {showCompleted && (
         <div>
-          <h2>Completed Tasks</h2>
+          <h2 className="text-xl font-semibold mb-2">Completed Tasks</h2>
           {filteredTasks && filteredTasks.filter(task => task.done).length > 0 ? (
-            <table className="table-auto w-full">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2">Task</th>
-                  <th className="px-4 py-2">Due Date</th>
-                  <th className="px-4 py-2">Created At</th>
-                  <th className="px-4 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTasks.filter(task => task.done).map((task) => (
-                  <tr key={task.id}>
-                    <td className="border px-4 py-2">{task.text}</td>
-                    <td className="border px-4 py-2">{task.dueDate || "No due date"}</td>
-                    <td className="border px-4 py-2">{task.createdAt || "Unknown"}</td>
-                    <td className="border px-4 py-2">
-                      <button
-                        onClick={() => remove(task.id)}
-                        className="text-sm text-red-500 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
+            <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredTasks.filter(task => task.done).map((task) => (
+                    <tr key={task.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">{task.text}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{formatDate(task.dueDate)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{task.createdAt || "Unknown"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => remove(task.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p>No completed tasks.</p>
           )}
