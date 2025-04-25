@@ -1,10 +1,8 @@
-// components/widgets/CalendarWidget.tsx
-"use client";
-
+import { useEffect } from "react";
 import useSWR from "swr";
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: "include" });
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'An unknown error occurred');
@@ -13,7 +11,7 @@ const fetcher = async (url: string) => {
 };
 
 export default function CalendarWidget() {
-  const calendarId = "primary"; // Using "primary" calendar
+  const calendarId = "primary";
   const now = new Date();
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
@@ -21,13 +19,20 @@ export default function CalendarWidget() {
   const timeMin = now.toISOString();
   const timeMax = nextWeek.toISOString();
 
+  // 👇 LOG for debugging
+  useEffect(() => {
+    console.log("CALENDAR FETCH URL:", `/api/calendar?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`);
+    console.log("Raw timeMin:", timeMin);
+    console.log("Raw timeMax:", timeMax);
+  }, []);
+
   const { data, error } = useSWR(
     `/api/calendar?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
     fetcher
   );
 
   if (error) {
-    if (error.message.includes('Not signed in') || error.message.includes('Invalid Credentials')) {
+    if (error.message.includes("Not signed in") || error.message.includes("Invalid Credentials")) {
       return <div className="text-red-500">Please re-sign in to access your calendar.</div>;
     }
     return <div className="text-red-500">Failed to load calendar events.</div>;
