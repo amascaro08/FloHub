@@ -1,6 +1,9 @@
 "use client";
 
+:start_line:3
+-------
 import { useState, FormEvent } from "react";
+import Select from 'react-select';
 
 type AddNoteModalProps = {
   isOpen: boolean;
@@ -13,21 +16,25 @@ type AddNoteModalProps = {
 export default function AddNoteModal({ isOpen, onClose, onSave, isSaving, existingTags }: AddNoteModalProps) { // Receive existingTags prop
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSaving) return;
 
-    const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag !== "");
-
-    await onSave({ title, content, tags });
+    await onSave({ title, content, tags: selectedTags });
 
     // Clear form after saving (assuming onSave handles the actual API call and success)
     setTitle("");
     setContent("");
-    setTagsInput("");
+    setSelectedTags([]);
     onClose(); // Close modal after saving
+  };
+
+  const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
+
+  const handleTagChange = (selectedOptions: any) => {
+    setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
   };
 
   if (!isOpen) return null;
@@ -61,32 +68,19 @@ export default function AddNoteModal({ isOpen, onClose, onSave, isSaving, existi
             />
           </div>
           <div>
-            <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags (comma-separated)</label>
-            <input
-              type="text"
-              id="note-tags"
-              className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              disabled={isSaving}
+            <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
+            <Select
+              isMulti
+              options={tagOptions}
+              onChange={handleTagChange}
+              placeholder="Select or create tags..."
+              isDisabled={isSaving}
+              isSearchable
+              onCreateOption={(newTag: string) => {
+                setSelectedTags([...selectedTags, newTag]);
+              }}
             />
           </div>
-          {/* Display existing tags */}
-          {existingTags && existingTags.length > 0 && (
-            <div className="mt-2">
-              <p className="text-sm font-medium text-[var(--fg)] mb-1">Existing Tags:</p>
-              <div className="flex flex-wrap gap-1">
-                {existingTags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"

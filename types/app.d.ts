@@ -8,4 +8,5 @@ export type Note = {
   content: string;
   tags: string[];
   createdAt: string; // Use string for the type as it's sent as ISO string from API
+  source?: string; // e.g., "quicknote", "notespage"
 };
