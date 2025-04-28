@@ -88,7 +88,7 @@ export default function NoteList({ notes, selectedNoteId, onSelectNote }: NoteLi
             return groups;
           }, {} as Record<string, Note[]>),
         )
-          .sort(([[aMonthYear, aNotes]], [[bMonthYear, bNotes]]) => {
+          .sort(([aMonthYear, aNotes], [bMonthYear, bNotes]) => {
             const [aMonth, aYear] = aMonthYear.split(" ");
             const [bMonth, bYear] = bMonthYear.split(" ");
             const aDate = new Date(`${aMonth} 1, ${aYear}`);
