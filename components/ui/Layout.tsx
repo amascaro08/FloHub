@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode, useState } from 'react'
+import { signOut } from "next-auth/react"; // Import signOut
 import { Menu } from 'lucide-react'       // npm install lucide-react
 import Link from 'next/link'
 import ThemeToggle from './ThemeToggle'
@@ -54,14 +55,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               </a>
             </Link>
           ))}
-          <Link href="/api/auth/signout" legacyBehavior>
-            <a
-              className="block px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
-              onClick={() => setOpen(false)}
-            >
-              Sign Out
-            </a>
-          </Link>
+          {/* Changed Link to button and added onClick={signOut} */}
+          <button
+            className="block w-full text-left px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
+            onClick={() => {
+              setOpen(false); // Close sidebar first
+              signOut();      // Call client-side signOut
+            }}
+          >
+            Sign Out
+          </button>
         </nav>
       </aside>
 
