@@ -142,27 +142,11 @@ export default function NotesPage() {
 
 
       <div className="space-y-4">
-        {/* Log the length of filteredNotes for debugging */}
-        {console.log("Filtered notes length:", filteredNotes.length)}
         {filteredNotes.length > 0 ? (
           filteredNotes.map((note) => (
-            <div key={note.id} className="glass p-4 rounded-xl shadow-elevate-sm">
-              <p className="text-sm text-[var(--fg)] mb-2">{note.content}</p>
-              {note.tags && note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {note.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-               <p className="text-xs text-[var(--neutral-500)] mt-2">
-                Created: {new Date(note.createdAt).toLocaleString()}
-              </p>
+            // Render a simple test element for each note
+            <div key={note.id} className="border border-red-500 p-2 mb-2">
+              Test Note: {note.id}
             </div>
           ))
         ) : (
