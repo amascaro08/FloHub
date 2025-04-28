@@ -90,9 +90,6 @@ export default function DashboardGrid() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // Require 5px movement before activating drag
-      },
     })
   );
 
