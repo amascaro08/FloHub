@@ -1,11 +1,7 @@
-:start_line:1
-:start_line:2
--------
--------
 "use client";
 
 import { useState, FormEvent } from "react";
-import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 
 type AddNoteModalProps = {
   isOpen: boolean;
@@ -35,8 +31,12 @@ export default function AddNoteModal({ isOpen, onClose, onSave, isSaving, existi
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
 
-  const handleTagChange = (selectedOptions: any) => {
-    setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
+  const handleTagChange = (selectedOptions: any, actionMeta: any) => {
+    if (actionMeta.action === 'create-option') {
+      setSelectedTags([...selectedTags, actionMeta.option.value]);
+    } else {
+      setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
+    }
   };
 
   if (!isOpen) return null;
@@ -71,16 +71,13 @@ export default function AddNoteModal({ isOpen, onClose, onSave, isSaving, existi
           </div>
           <div>
             <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
-            <Select
+            <CreatableSelect
               isMulti
               options={tagOptions}
               onChange={handleTagChange}
               placeholder="Select or create tags..."
               isDisabled={isSaving}
               isSearchable
-              onCreateOption={(newTag: string) => {
-                setSelectedTags([...selectedTags, newTag]);
-              }}
             />
           </div>
           <div className="flex justify-end gap-2">
