@@ -142,6 +142,8 @@ export default function NotesPage() {
 
 
       <div className="space-y-4">
+        {/* Log the length of filteredNotes for debugging */}
+        {console.log("Filtered notes length:", filteredNotes.length)}
         {filteredNotes.length > 0 ? (
           filteredNotes.map((note) => (
             <div key={note.id} className="glass p-4 rounded-xl shadow-elevate-sm">

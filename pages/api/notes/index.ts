@@ -59,6 +59,8 @@ export default async function handler(
 
   } catch (err: any) {
     console.error("Fetch notes error:", err);
+    // Log the full error object for detailed debugging
+    console.error("Fetch notes error details:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
