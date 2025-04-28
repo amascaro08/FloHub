@@ -73,25 +73,25 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* main */}
       <div className="flex-1 flex flex-col">
-        {/* mobile header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm">
+        {/* header */}
+        <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm">
           <div className="flex items-center">
             <button
               onClick={() => setOpen(!open)}
-              className="p-2 rounded hover:bg-[var(--neutral-200)] transition"
+              className="p-2 rounded hover:bg-[var(--neutral-200)] transition md:hidden"
               aria-label="Toggle menu"
             >
               <Menu className="w-6 h-6 text-[var(--fg)]" />
             </button>
             <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2" />
           </div>
-          <ThemeToggle />
           <input
             type="text"
             placeholder=" FloCat is here to help you... 🐱"
             className="ml-2 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             onClick={() => setIsChatOpen(true)}
           />
+          <ThemeToggle />
         </header>
 
         <div className="absolute top-4 right-4 z-50">
