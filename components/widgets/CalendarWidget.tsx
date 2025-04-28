@@ -11,8 +11,8 @@ const fetcher = async (url: string) => {
 };
 
 export default function CalendarWidget() {
-  // State to hold selected calendar IDs
-  const [selectedCals, setSelectedCals] = useState<string[] | null>(null);
+  // State to hold selected calendar IDs, initialize with default
+  const [selectedCals, setSelectedCals] = useState<string[]>(["primary"]);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -39,10 +39,8 @@ export default function CalendarWidget() {
   const timeMin = now.toISOString();
   const timeMax = nextWeek.toISOString();
 
-  // Construct the URL dynamically based on selectedCals
-  const apiUrl = selectedCals
-    ? `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}${selectedCals.map(id => `&calendarId=${encodeURIComponent(id)}`).join('')}`
-    : null; // Don't fetch until selectedCals is loaded
+  // Construct the URL dynamically based on selectedCals state
+  const apiUrl = `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}${selectedCals.map(id => `&calendarId=${encodeURIComponent(id)}`).join('')}`;
 
   // 👇 LOG for debugging
   useEffect(() => {
