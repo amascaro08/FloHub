@@ -9,9 +9,14 @@ export default function App({
 }: AppProps<{ session?: any }>) {
   return (
     <SessionProvider session={session}>
-      <Layout>
-        <Component {...pageProps}/>
-      </Layout>
+      {/* Wrap Layout with AuthProvider */}
+      <AuthProvider>
+        <Layout>
+          <Component {...pageProps}/>
+        </Layout>
+      </AuthProvider>
     </SessionProvider>
   )
 }
+
+import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider
