@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react"; // Import useState
 import useSWR from "swr";
 
 const fetcher = async (url: string) => {
@@ -11,7 +11,27 @@ const fetcher = async (url: string) => {
 };
 
 export default function CalendarWidget() {
-  const calendarId = "primary";
+  // State to hold selected calendar IDs
+  const [selectedCals, setSelectedCals] = useState<string[] | null>(null);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const rawSettings = localStorage.getItem("flohub.calendarSettings");
+    let calIds = ["primary"]; // Default to primary
+    if (rawSettings) {
+      try {
+        const settings = JSON.parse(rawSettings);
+        if (Array.isArray(settings.selectedCals) && settings.selectedCals.length > 0) {
+          calIds = settings.selectedCals;
+        }
+      } catch (e) {
+        console.error("Failed to parse calendar settings from localStorage", e);
+      }
+    }
+    setSelectedCals(calIds);
+  }, []);
+
+
   const now = new Date();
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
@@ -19,15 +39,22 @@ export default function CalendarWidget() {
   const timeMin = now.toISOString();
   const timeMax = nextWeek.toISOString();
 
+  // Construct the URL dynamically based on selectedCals
+  const apiUrl = selectedCals
+    ? `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}${selectedCals.map(id => `&calendarId=${encodeURIComponent(id)}`).join('')}`
+    : null; // Don't fetch until selectedCals is loaded
+
   // 👇 LOG for debugging
   useEffect(() => {
-    console.log("CALENDAR FETCH URL:", `/api/calendar?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`);
-    console.log("Raw timeMin:", timeMin);
-    console.log("Raw timeMax:", timeMax);
-  }, []);
+    if (apiUrl) {
+      console.log("CALENDAR FETCH URL:", apiUrl);
+      console.log("Raw timeMin:", timeMin);
+      console.log("Raw timeMax:", timeMax);
+    }
+  }, [apiUrl, timeMin, timeMax]); // Re-run if URL changes
 
   const { data, error } = useSWR(
-    `/api/calendar?calendarId=${calendarId}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
+    apiUrl, // Use the dynamically generated URL
     fetcher
   );
 
