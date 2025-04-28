@@ -51,7 +51,7 @@ export default async function handler(
         id: doc.id,
         content: data.content,
         tags: data.tags || [],
-        createdAt: data.createdAt.toDate(), // Convert Firestore Timestamp to Date
+        createdAt: data.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
       };
     });
 

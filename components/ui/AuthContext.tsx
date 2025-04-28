@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useState } from "react";
+import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import type { Session } from "next-auth";
 
@@ -20,7 +20,22 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
-  const [isLocked, setIsLocked] = useState(false);
+  // Initialize state from localStorage, default to false if not found
+  const [isLocked, setIsLocked] = useState(() => {
+    if (typeof window !== 'undefined') { // Check if window is defined (client-side)
+      const savedLockState = localStorage.getItem('isLocked');
+      return savedLockState === 'true';
+    }
+    return false; // Default to false on server-side render
+  });
+
+  // Save lock state to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') { // Check if window is defined (client-side)
+      localStorage.setItem('isLocked', String(isLocked));
+    }
+  }, [isLocked]);
+
 
   const login = () => signIn("google");
   const logout = () => signOut();

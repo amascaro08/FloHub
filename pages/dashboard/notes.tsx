@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
+import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -25,13 +26,43 @@ export default function NotesPage() {
   }, [status, router]);
 
   const shouldFetch = status === "authenticated";
-  const { data: notes, error } = useSWR<Note[]>(
+  const { data: notes, error, mutate } = useSWR<Note[]>( // Destructure mutate
     shouldFetch ? "/api/notes" : null,
     fetcher
   );
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
+  const [showModal, setShowModal] = useState(false); // State to control modal visibility
+  const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
+
+  const handleSaveNote = async (note: { title: string; content: string; tags: string[] }) => {
+    setIsSaving(true);
+    try {
+      // Note: The current API only supports content and tags, title is not saved.
+      // If title needs to be saved, the API needs to be updated.
+      const response = await fetch("/api/notes/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: note.content, tags: note.tags }),
+      });
+
+      if (response.ok) {
+        console.log("Note saved successfully!");
+        mutate(); // Re-fetch notes to update the list
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to save note:", errorData.error);
+        // Optionally show an error message to the user
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+       // Optionally show an error message to the user
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   const filteredNotes = useMemo(() => {
     if (!notes) return [];
@@ -70,6 +101,22 @@ export default function NotesPage() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-semibold mb-4">Notes</h1>
+
+      <button
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+        onClick={() => setShowModal(true)} // Open modal on button click
+      >
+        Add Note
+      </button>
+
+      {/* Add the modal component */}
+      <AddNoteModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={handleSaveNote}
+        isSaving={isSaving}
+      />
+
 
       <div className="flex gap-4 mb-4">
         <input
