@@ -21,6 +21,7 @@ import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 import { ReactElement } from "react";
+import { useAuth } from "../ui/AuthContext"; // Import useAuth
 
 type WidgetType = "tasks" | "calendar" | "chat";
 
@@ -31,8 +32,9 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
 };
 
 function SortableItem({ id }: { id: WidgetType }) {
+  const { isLocked } = useAuth(); // Use the isLocked state
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
+    useSortable({ id, disabled: isLocked }); // Disable sorting when locked
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -48,13 +50,14 @@ function SortableItem({ id }: { id: WidgetType }) {
       minWidth="300px"
       minHeight={200}
       className="mb-4"
+      enable={isLocked ? false : { top: true, right: true, bottom: true, left: true, topRight: true, bottomRight: true, bottomLeft: true, topLeft: true }} // Disable resizing when locked, enable all when unlocked
     >
       <div
         ref={setNodeRef}
         style={style}
-        {...attributes}
-        {...listeners}
-        className="glass p-4 rounded-xl h-full shadow-md cursor-move flex flex-col"
+        {...(isLocked ? {} : attributes)} // Apply attributes only when not locked
+        {...(isLocked ? {} : listeners)} // Apply listeners only when not locked
+        className={`glass p-4 rounded-xl h-full shadow-md flex flex-col ${isLocked ? 'cursor-default' : 'cursor-move'}`} // Change cursor based on lock state
       >
         <div className="font-semibold capitalize mb-2">{id}</div>
         <div className="flex-1 overflow-auto">{widgetComponents[id]}</div>

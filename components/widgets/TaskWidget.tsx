@@ -146,11 +146,12 @@ export default function TaskWidget() {
               border border-[var(--neutral-300)]
               px-3 py-2 rounded focus:outline-none
               focus:ring-2 focus:ring-[var(--primary)]
+              text-[var(--fg)]
             "
           >
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="custom">Custom</option>
+            <option value="today" className="text-[var(--fg)]">Today</option>
+            <option value="tomorrow" className="text-[var(--fg)]">Tomorrow</option>
+            <option value="custom" className="text-[var(--fg)]">Custom</option>
           </select>
 
           {due === "custom" && (
@@ -178,7 +179,7 @@ export default function TaskWidget() {
         </button>
       </form>
 
-      <ul className="space-y-2 text-sm overflow-auto">
+      <ul className="space-y-2 text-sm">
         {tasks && tasks.length > 0 ? (
           tasks.map((t) => (
             <li
