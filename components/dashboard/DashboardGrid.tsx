@@ -16,16 +16,18 @@ import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
+import QuickNoteWidget from "@/components/widgets/QuickNoteWidget"; // Import QuickNoteWidget
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext"; // Import useAuth
 
-type WidgetType = "tasks" | "calendar" | "chat" | "ataglance";
+type WidgetType = "tasks" | "calendar" | "chat" | "ataglance" | "quicknote"; // Add 'quicknote'
 
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   chat: <ChatWidget />,
   ataglance: <AtAGlanceWidget />,
+  quicknote: <QuickNoteWidget />, // Add QuickNoteWidget
 };
 
 interface DraggableItemProps {
@@ -89,6 +91,7 @@ export default function DashboardGrid() {
     { id: "calendar", x: 450, y: 0, width: 400, height: 300 },
     { id: "chat", x: 0, y: 350, width: 400, height: 300 },
     { id: "ataglance", x: 450, y: 350, width: 400, height: 300 },
+    { id: "quicknote", x: 0, y: 700, width: 400, height: 300 }, // Add QuickNoteWidget with initial position and size
   ]);
 
   const sensors = useSensors(

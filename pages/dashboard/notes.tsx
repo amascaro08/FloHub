@@ -1,0 +1,120 @@
+"use client";
+
+import { useState, useMemo, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import useSWR from "swr";
+import { useRouter } from "next/navigation";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+type Note = {
+  id: string;
+  content: string;
+  tags: string[];
+  createdAt: string; // Use string for simplicity in display, can format later
+};
+
+export default function NotesPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+    }
+  }, [status, router]);
+
+  const shouldFetch = status === "authenticated";
+  const { data: notes, error } = useSWR<Note[]>(
+    shouldFetch ? "/api/notes" : null,
+    fetcher
+  );
+
+  const [searchContent, setSearchContent] = useState("");
+  const [filterTag, setFilterTag] = useState("");
+
+  const filteredNotes = useMemo(() => {
+    if (!notes) return [];
+
+    let filtered = notes;
+
+    // Filter by content
+    if (searchContent.trim() !== "") {
+      filtered = filtered.filter((note) =>
+        note.content.toLowerCase().includes(searchContent.toLowerCase())
+      );
+    }
+
+    // Filter by tag
+    if (filterTag.trim() !== "") {
+      filtered = filtered.filter((note) =>
+        note.tags.some(tag => tag.toLowerCase().includes(filterTag.toLowerCase()))
+      );
+    }
+
+    return filtered;
+  }, [notes, searchContent, filterTag]);
+
+  if (status === "loading") {
+    return <p>Loading notes…</p>;
+  }
+
+  if (!session) {
+    return <p>Please sign in to see your notes.</p>;
+  }
+
+  if (error) {
+    return <p>Error loading notes.</p>;
+  }
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-semibold mb-4">Notes</h1>
+
+      <div className="flex gap-4 mb-4">
+        <input
+          type="text"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          placeholder="Search note content…"
+          value={searchContent}
+          onChange={(e) => setSearchContent(e.target.value)}
+        />
+         <input
+          type="text"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          placeholder="Filter by tag…"
+          value={filterTag}
+          onChange={(e) => setFilterTag(e.target.value)}
+        />
+      </div>
+
+
+      <div className="space-y-4">
+        {filteredNotes.length > 0 ? (
+          filteredNotes.map((note) => (
+            <div key={note.id} className="glass p-4 rounded-xl shadow-elevate-sm">
+              <p className="text-sm text-[var(--fg)] mb-2">{note.content}</p>
+              {note.tags && note.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {note.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+               <p className="text-xs text-[var(--neutral-500)] mt-2">
+                Created: {new Date(note.createdAt).toLocaleString()}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="text-[var(--neutral-500)]">No notes found.</p>
+        )}
+      </div>
+    </div>
+  );
+}
