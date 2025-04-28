@@ -72,7 +72,7 @@ function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps)
             {...attributes} // Apply attributes to header
             {...listeners} // Apply listeners to header
           >
-            {/* Removed redundant heading display */}
+            <div>{id}</div> {/* Add widget title */}
           </div>
           <div className="flex-1 overflow-auto">{widgetComponents[id as WidgetType]}</div> {/* Cast id to WidgetType */}
         </div>
