@@ -216,10 +216,10 @@ export default function CalendarWidget() {
                 <select
                   value={form.calendarId}
                   onChange={(e) => setForm((f) => ({ ...f, calendarId: e.target.value }))}
-                  className="mt-1 block w-full border px-2 py-1"
+                  className="mt-1 block w-full border px-2 py-1 text-[var(--fg)]"
                 >
                   {selectedCals.map((id) => (
-                    <option key={id} value={id}>
+                    <option key={id} value={id} className="text-[var(--fg)]">
                       {id}
                     </option>
                   ))}

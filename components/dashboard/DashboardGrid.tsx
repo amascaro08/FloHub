@@ -33,6 +33,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
 
 function SortableItem({ id }: { id: WidgetType }) {
   const { isLocked } = useAuth(); // Use the isLocked state
+  console.log(`Widget ${id} isLocked:`, isLocked); // Add logging
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id, disabled: isLocked }); // Disable sorting when locked
 
