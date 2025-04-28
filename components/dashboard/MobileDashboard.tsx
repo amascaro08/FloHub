@@ -7,17 +7,16 @@ import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import QuickNoteWidget from "@/components/widgets/QuickNoteWidget"; // Import QuickNoteWidget
 import { ReactElement } from "react";
 
-type WidgetType = "tasks" | "calendar" | "chat" | "ataglance" | "quicknote";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote";
 
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
-  chat: <ChatWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
 };
 
-const widgetOrder: WidgetType[] = ["ataglance", "quicknote", "tasks", "calendar", "chat"]; // Define a default order for mobile
+const widgetOrder: WidgetType[] = ["ataglance", "quicknote", "tasks", "calendar"]; // Define a default order for mobile
 
 export default function MobileDashboard() {
   return (
