@@ -15,15 +15,17 @@ import { useState } from "react";
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
+import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext"; // Import useAuth
 
-type WidgetType = "tasks" | "calendar" | "chat";
+type WidgetType = "tasks" | "calendar" | "chat" | "ataglance";
 
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   chat: <ChatWidget />,
+  ataglance: <AtAGlanceWidget />,
 };
 
 interface DraggableItemProps {
@@ -86,6 +88,7 @@ export default function DashboardGrid() {
     { id: "tasks", x: 0, y: 0, width: 400, height: 300 },
     { id: "calendar", x: 450, y: 0, width: 400, height: 300 },
     { id: "chat", x: 0, y: 350, width: 400, height: 300 },
+    { id: "ataglance", x: 450, y: 350, width: 400, height: 300 },
   ]);
 
   const sensors = useSensors(
