@@ -8,7 +8,11 @@ import useSWR, { mutate }      from "swr";
 // Simple fetcher for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-export default function ChatWidget() {
+interface ChatWidgetProps {
+  onClose: () => void;
+}
+
+export default function ChatWidget({ onClose }: ChatWidgetProps) {
   const { data: session, status } = useSession();
   const isAuthed                   = status === "authenticated";
 
@@ -53,7 +57,7 @@ export default function ChatWidget() {
         {
           role: "assistant",
           content:
-            `${greet}! I’m FloCat 🐱 — your FlowHub buddy!\n` +
+            `${greet}! I’m FloCat 🐱 — your FloHub buddy!\n` +
             `You have ${dueToday} task${dueToday===1?"":"s"} due today and ` +
             `${evtToday} event${evtToday===1?"":"s"} scheduled.\n` +
             `What can I do for you today?`
@@ -150,20 +154,9 @@ export default function ChatWidget() {
               Send
             </button>
           </div>
+          <button onClick={onClose}>Close</button>
         </div>
       )}
-
-      {/* Chat toggle bubble */}
-      <img
-        src="/flohub_bubble.png"
-        alt="FloCat"
-        onClick={toggle}
-        className={`
-          fixed bottom-6 right-6
-          w-16 h-16 cursor-pointer z-50
-          ${unread ? "animate-bounce" : ""}
-        `}
-      />
     </>
   );
 }

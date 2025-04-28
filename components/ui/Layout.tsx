@@ -1,9 +1,10 @@
 'use client'
 
 import { ReactNode, useState } from 'react'
-import { signOut } from "next-auth/react"; // Import signOut
-import { Menu } from 'lucide-react'       // npm install lucide-react
+import { signOut } from "next-auth/react";
+import { Menu } from 'lucide-react'
 import Link from 'next/link'
+import ChatWidget from '../assistant/ChatWidget'; // Import ChatWidget
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from "./AuthContext";
 
@@ -20,6 +21,7 @@ const nav = [
 export default function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const { isLocked, toggleLock } = useAuth();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
@@ -84,6 +86,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2" />
           </div>
           <ThemeToggle />
+          <input
+            type="text"
+            placeholder=" FloCat is here to help you... 🐱"
+            className="ml-2 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={() => setIsChatOpen(true)}
+          />
         </header>
 
         <div className="absolute top-4 right-4 z-50">
@@ -103,6 +111,11 @@ export default function Layout({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-auto p-6">
           {children}
         </main>
+        {isChatOpen && (
+          <div className="fixed bottom-0 right-0 z-50">
+            <ChatWidget onClose={() => setIsChatOpen(false)} key="chatwidget"/>
+          </div>
+        )}
       </div>
     </div>
   )
