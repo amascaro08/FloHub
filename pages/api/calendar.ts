@@ -6,6 +6,7 @@ export type CalendarEvent = {
   summary: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
+  source?: "personal" | "work";
 };
 
 type ErrorRes = { error: string };
@@ -25,7 +26,7 @@ export default async function handler(
   }
 
   const accessToken = token.accessToken as string;
-  const { calendarId = "primary", timeMin, timeMax } = req.query;
+  const { calendarId = "primary", timeMin, timeMax, o365Url } = req.query;
 
   // Normalize and validate dates
   const safeTimeMin = typeof timeMin === "string" ? timeMin : "";
@@ -59,38 +60,78 @@ export default async function handler(
     )}&timeMax=${encodeURIComponent(
       safeTimeMax
     )}&singleEvents=true&orderBy=startTime`;
-
+  
     try {
       const gres = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
+  
       if (!gres.ok) {
         const err = await gres.json();
         console.error(`Google Calendar API error for ${id}:`, err);
         continue;
       }
-
+  
       const body = await gres.json();
       if (Array.isArray(body.items)) {
-        allEvents.push(...body.items);
+        // Tag as personal (Google)
+        allEvents.push(...body.items.map((item: any) => ({ ...item, source: "personal" })));
       }
     } catch (e) {
       console.error("Error fetching events:", e);
     }
   }
+  
+  // Fetch O365 events if o365Url is provided
+  if (typeof o365Url === "string" && o365Url.startsWith("http")) {
+    try {
+      const o365Res = await fetch(o365Url);
+      if (o365Res.ok) {
+        const o365Data = await o365Res.json();
+        // Try to normalize O365 events to CalendarEvent shape
+        // Assume o365Data is an array of events or has an "events" property
+        const o365EventsRaw = Array.isArray(o365Data)
+          ? o365Data
+          : Array.isArray(o365Data.events)
+          ? o365Data.events
+          : [];
+        const o365Events: any[] = o365EventsRaw.map((e: any) => ({
+          id: e.id || e.eventId || e.Id || Math.random().toString(36).slice(2),
+          summary: e.subject || e.title || e.summary || "(No title)",
+          start: {
+            dateTime: e.start?.dateTime || e.startTime || e.start || undefined,
+            date: e.start?.date || undefined,
+          },
+          end: e.end
+            ? {
+                dateTime: e.end.dateTime || e.endTime || e.end || undefined,
+                date: e.end.date || undefined,
+              }
+            : undefined,
+          source: "work",
+          raw: e, // keep original for debugging if needed
+        }));
+        allEvents.push(...o365Events);
+      } else {
+        console.error("Failed to fetch O365 events:", o365Res.status);
+      }
+    } catch (e) {
+      console.error("Error fetching O365 events:", e);
+    }
+  }
 
   const events: CalendarEvent[] = allEvents
     .sort((a, b) => {
-      const da = new Date(a.start.dateTime || a.start.date || 0).getTime();
-      const db = new Date(b.start.dateTime || b.start.date || 0).getTime();
+      const da = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
+      const db = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
       return da - db;
     })
     .map((e: any) => ({
       id: e.id,
       summary: e.summary,
-      start: { dateTime: e.start.dateTime, date: e.start.date },
-      end: e.end ? { dateTime: e.end.dateTime, date: e.end.date } : undefined,
+      start: { dateTime: e.start?.dateTime, date: e.start?.date },
+      end: e.end ? { dateTime: e.end?.dateTime, date: e.end?.date } : undefined,
+      source: e.source || undefined,
     }));
 
   return res.status(200).json(events);

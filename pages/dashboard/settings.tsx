@@ -11,6 +11,7 @@ type Settings = {
   selectedCals: string[];
   defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
   customRange:  { start: string; end: string };
+  powerAutomateUrl?: string; // Optional for backward compatibility
 };
 
 const fetcher = async (url: string) => {
@@ -39,6 +40,7 @@ export default function CalendarSettingsPage() {
       start: new Date().toISOString().slice(0,10),
       end:   new Date().toISOString().slice(0,10),
     },
+    powerAutomateUrl: "",
   });
 
   // 4) Load saved settings once
@@ -107,7 +109,27 @@ export default function CalendarSettingsPage() {
       <Link href="/dashboard">
         <a className="text-blue-500 hover:underline">&larr; Back to Dashboard</a>
       </Link>
-
+  
+      {/* PowerAutomate URL */}
+      <section>
+        <h2 className="text-lg font-medium mb-2">Work Calendar (O365 PowerAutomate URL)</h2>
+        <input
+          type="url"
+          placeholder="Enter your PowerAutomate HTTP request URL"
+          value={settings.powerAutomateUrl || ""}
+          onChange={(e) =>
+            setSettings((s) => ({
+              ...s,
+              powerAutomateUrl: e.target.value,
+            }))
+          }
+          className="border px-3 py-2 rounded w-full"
+        />
+        <p className="text-xs text-[var(--fg-muted)] mt-1">
+          Paste your PowerAutomate HTTP request URL here to enable O365 work calendar events.
+        </p>
+      </section>
+  
       {/* Calendar selection */}
       <section>
         <h2 className="text-lg font-medium mb-2">Which calendars?</h2>
@@ -125,7 +147,7 @@ export default function CalendarSettingsPage() {
           ))}
         </div>
       </section>
-
+  
       {/* Default view filter */}
       <section>
         <h2 className="text-lg font-medium mb-2">Default date filter</h2>
@@ -145,7 +167,7 @@ export default function CalendarSettingsPage() {
           <option value="month">This Month</option>
           <option value="custom">Custom Range</option>
         </select>
-
+  
         {settings.defaultView === "custom" && (
           <div className="mt-2 flex gap-4">
             <div>
@@ -179,7 +201,7 @@ export default function CalendarSettingsPage() {
           </div>
         )}
       </section>
-
+  
       <button
         onClick={save}
         className="bg-primary-500 text-white px-4 py-2 rounded"

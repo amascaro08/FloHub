@@ -9,6 +9,7 @@ export interface CalendarEvent {
   summary?: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
+  source?: "personal" | "work"; // "personal" = Google, "work" = O365
 }
 
 const fetcher = async (url: string): Promise<CalendarEvent[]> => {
@@ -26,12 +27,14 @@ export default function CalendarWidget() {
   const [timeRange, setTimeRange] = useState<{ timeMin: string; timeMax: string } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
   const [form, setForm] = useState<{
     calendarId: string;
     summary: string;
     start: string;
     end: string;
   }>({ calendarId: '', summary: '', start: '', end: '' });
+  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
 
   // Load calendar settings on mount
   useEffect(() => {
@@ -51,6 +54,9 @@ export default function CalendarWidget() {
           typeof settings.customRange.end === 'string'
         ) {
           setCustomRange({ start: settings.customRange.start, end: settings.customRange.end });
+        }
+        if (typeof settings.powerAutomateUrl === "string") {
+          setPowerAutomateUrl(settings.powerAutomateUrl);
         }
       } catch (e) {
         console.error('Failed to parse calendar settings:', e);
@@ -121,7 +127,9 @@ export default function CalendarWidget() {
     timeRange &&
     `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
-    )}${selectedCals.map((id) => `&calendarId=${encodeURIComponent(id)}`).join('')}`;
+    )}${selectedCals.map((id) => `&calendarId=${encodeURIComponent(id)}`).join('')}${
+      powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
+    }`;
 
   const { data, error } = useSWR(apiUrl, fetcher);
 
@@ -159,6 +167,68 @@ export default function CalendarWidget() {
 
   return (
     <div className="p-4 bg-[var(--surface)] rounded-lg shadow">
+      {/* Event Details Modal */}
+      {viewingEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Event Details</h3>
+            <div className="space-y-2">
+              <div>
+                <span className="font-medium">Title: </span>
+                {viewingEvent.summary || "(No title)"}
+              </div>
+              <div>
+                <span className="font-medium">When: </span>
+                {formatEvent(viewingEvent)}
+              </div>
+              <div>
+                <span className="font-medium">Type: </span>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-xs ${
+                    viewingEvent.source === "work"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  {viewingEvent.source === "work" ? "Work" : "Personal"}
+                </span>
+              </div>
+              {/* Show Teams link if present */}
+              {(() => {
+                // Try to find a Teams link in summary or description
+                const text =
+                  (viewingEvent.summary || "") +
+                  ("description" in viewingEvent ? (viewingEvent as any).description || "" : "");
+                const teamsRegex = /(https:\/\/teams\.microsoft\.com\/[^\s]+)/i;
+                const match = text.match(teamsRegex);
+                if (match) {
+                  return (
+                    <div>
+                      <a
+                        href={match[1]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-2 px-3 py-1 bg-blue-600 text-white rounded"
+                      >
+                        Join Meeting
+                      </a>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setViewingEvent(null)}
+                className="px-3 py-1 border rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
         {/* Removed redundant Calendar heading */}
@@ -344,13 +414,33 @@ export default function CalendarWidget() {
         {data && data.length > 0 && (
           <ul className="space-y-2">
             {data.map((ev) => (
-              <li key={ev.id} className="border-b pb-2 flex justify-between">
+              <li
+                key={ev.id}
+                className="border-b pb-2 flex justify-between items-center cursor-pointer hover:bg-[var(--neutral-100)] transition"
+                onClick={() => setViewingEvent(ev)}
+              >
                 <div>
-                  <div className="font-medium">{ev.summary || '(No title)'}</div>
+                  <div className="font-medium flex items-center gap-2">
+                    {ev.summary || '(No title)'}
+                    {ev.source && (
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-xs ${
+                          ev.source === "work"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {ev.source === "work" ? "Work" : "Personal"}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-[var(--fg-muted)]">{formatEvent(ev)}</div>
                 </div>
                 <button
-                  onClick={() => openEdit(ev)}
+                  onClick={e => {
+                    e.stopPropagation();
+                    openEdit(ev);
+                  }}
                   className="text-sm text-primary-500 ml-2"
                 >
                   Edit
