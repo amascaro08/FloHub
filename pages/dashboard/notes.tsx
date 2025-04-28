@@ -88,6 +88,7 @@ export default function NotesPage() {
       );
     }
 
+    console.log("Filtered notes computed:", filtered); // Log the computed filtered notes
     return filtered;
   }, [notes, searchContent, filterTag]);
 
