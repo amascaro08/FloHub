@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
+import NoteList from "@/components/notes/NoteList"; // Import NoteList component
+import NoteDetail from "@/components/notes/NoteDetail"; // Import NoteDetail component
 import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
 import type { Note } from "@/types/app"; // Import shared Note type
 
@@ -37,6 +39,7 @@ export default function NotesPage() {
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
   const handleSaveNote = async (note: { title: string; content: string; tags: string[] }) => {
     setIsSaving(true);
@@ -68,7 +71,6 @@ export default function NotesPage() {
 
   const filteredNotes = useMemo(() => {
     // Extract the notes array from the fetched data
-    // Extract the notes array from the fetched data
     const notesArray = notesResponse?.notes || [];
 
     if (notesArray.length === 0) return [];
@@ -93,6 +95,13 @@ export default function NotesPage() {
     return filtered;
   }, [notesResponse, searchContent, filterTag]); // Update dependency to notesResponse
 
+  // Find the selected note object
+  const selectedNote = useMemo(() => {
+    // filteredNotes is now an array of Note objects
+    if (!selectedNoteId || !filteredNotes) return null;
+    return filteredNotes.find(note => note.id === selectedNoteId) || null;
+  }, [selectedNoteId, filteredNotes]);
+
   if (status === "loading") {
     return <p>Loading notes…</p>;
   }
@@ -105,68 +114,90 @@ export default function NotesPage() {
     return <p>Error loading notes.</p>;
   }
 
+  const handleUpdateNote = async (noteId: string, updatedContent: string, updatedTags: string[]) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/notes/update`, { // Assuming update endpoint is /api/notes/update
+        method: "PUT", // Or PATCH, depending on API design
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: noteId, content: updatedContent, tags: updatedTags }),
+      });
+
+      if (response.ok) {
+        console.log("Note updated successfully!");
+        mutate(); // Re-fetch notes to update the list
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update note:", errorData.error);
+        // Optionally show an error message to the user
+      }
+    } catch (error) {
+      console.error("Error updating note:", error);
+       // Optionally show an error message to the user
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4">Notes</h1>
+    <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
+      {/* Left Column: Note List */}
+      <div className="w-1/3 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto"> {/* Adjust width and add border */}
+        <h1 className="text-2xl font-semibold mb-4">Notes</h1>
 
-      <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        onClick={() => setShowModal(true)} // Open modal on button click
-      >
-        Add Note
-      </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 w-full" // Make button full width
+          onClick={() => setShowModal(true)} // Open modal on button click
+        >
+          Add Note
+        </button>
 
-      {/* Add the modal component */}
-      <AddNoteModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleSaveNote}
-        isSaving={isSaving}
-      />
-
-
-      <div className="flex gap-4 mb-4">
-        <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          placeholder="Search note content…"
-          value={searchContent}
-          onChange={(e) => setSearchContent(e.target.value)}
+        {/* Add the modal component */}
+        <AddNoteModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveNote}
+          isSaving={isSaving}
         />
-         <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          placeholder="Filter by tag…"
-          value={filterTag}
-          onChange={(e) => setFilterTag(e.target.value)}
+
+
+        <div className="flex gap-4 mb-4">
+          <input
+            type="text"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="Search note content…"
+            value={searchContent}
+            onChange={(e) => setSearchContent(e.target.value)}
+          />
+           <input
+            type="text"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="Filter by tag…"
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+          />
+        </div>
+
+        {/* Render the NoteList component */}
+        <NoteList
+          notes={filteredNotes}
+          selectedNoteId={selectedNoteId}
+          onSelectNote={setSelectedNoteId}
         />
       </div>
 
-
-      <div className="space-y-4">
-        {filteredNotes.length > 0 ? (
-          filteredNotes.map((note: Note) => ( // Explicitly type note
-            <div key={note.id} className="glass p-4 rounded-xl shadow-elevate-sm">
-              <p className="text-sm text-[var(--fg)] mb-2">{note.content}</p>
-              {note.tags && note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {note.tags.map((tag: string, index: number) => ( // Explicitly type tag and index
-                    <span
-                      key={index}
-                      className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-               <p className="text-xs text-[var(--neutral-500)] mt-2">
-                Created: {new Date(note.createdAt).toLocaleString()}
-              </p>
-            </div>
-          ))
+      {/* Right Column: Note Detail */}
+      <div className="flex-1 p-4 overflow-y-auto"> {/* Use flex-1 to take remaining space */}
+        {selectedNote ? (
+          // Render the NoteDetail component if a note is selected
+          <NoteDetail
+            note={selectedNote}
+            onSave={handleUpdateNote}
+            isSaving={isSaving} // Pass isSaving state
+          />
         ) : (
-          <p className="text-[var(--neutral-500)]">No notes found.</p>
+          <p className="text-[var(--neutral-500)]">Select a note to view details.</p>
         )}
       </div>
     </div>
