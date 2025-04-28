@@ -36,3 +36,9 @@
   background-color: var(--surface); /* Use a dark surface color */
   color: var(--fg); /* Ensure foreground color is applied */
 }
+
+/* Ensure dropdown background is dark in dark mode when open/focused */
+.dark select:focus,
+.dark select:active {
+  background-color: var(--surface);
+}

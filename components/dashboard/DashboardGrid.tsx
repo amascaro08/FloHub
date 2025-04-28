@@ -34,7 +34,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
 function SortableItem({ id }: { id: WidgetType }) {
   const { isLocked } = useAuth(); // Use the isLocked state
   console.log(`Widget ${id} isLocked:`, isLocked); // Add logging
-  const { attributes, listeners, setNodeRef, transform, transition } =
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } =
     useSortable({ id, disabled: isLocked }); // Disable sorting when locked
 
   const style = {
@@ -54,13 +54,19 @@ function SortableItem({ id }: { id: WidgetType }) {
       enable={isLocked ? false : { top: true, right: true, bottom: true, left: true, topRight: true, bottomRight: true, bottomLeft: true, topLeft: true }} // Disable resizing when locked, enable all when unlocked
     >
       <div
-        ref={setNodeRef}
+        ref={setNodeRef} // Apply ref to the main div
         style={style}
-        {...(isLocked ? {} : attributes)} // Apply attributes only when not locked
-        {...(isLocked ? {} : listeners)} // Apply listeners only when not locked
-        className={`glass p-4 rounded-xl h-full shadow-md flex flex-col ${isLocked ? 'cursor-default' : 'cursor-move'}`} // Change cursor based on lock state
+        className={`p-4 rounded-xl h-full ${isLocked ? 'cursor-default' : ''}`} // Temporarily remove glass, shadow-md, flex flex-col
       >
-        <div className="font-semibold capitalize mb-2">{id}</div>
+        {/* Apply attributes, listeners, and setActivatorNodeRef to the header for drag handle */}
+        <div
+          ref={setActivatorNodeRef} // Apply activator ref here
+          className={`font-semibold capitalize mb-2 ${isLocked ? '' : 'cursor-move'}`} // Add cursor-move to header when unlocked
+          {...attributes}
+          {...listeners}
+        >
+          {id}
+        </div>
         <div className="flex-1 overflow-auto">{widgetComponents[id]}</div>
       </div>
     </Resizable>
