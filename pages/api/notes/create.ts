@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
-import { db } from "../../../lib/firebase"; // Need to confirm how db is exported
+import { db } from "../../../lib/firebase"; // Import db from your firebase config
+import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
 
 type CreateNoteRequest = {
   content: string;
@@ -49,7 +50,7 @@ export default async function handler(
     console.log(`Saving note for user ${userId}:`, { content, tags });
 
     // Example placeholder for Firebase (adjust based on your actual Firebase setup)
-    const newNoteRef = await db.collection("notes").add({
+    const newNoteRef = await addDoc(collection(db, "notes"), {
       userId: userId,
       content: content,
       tags: tags || [], // Save tags as an empty array if none provided

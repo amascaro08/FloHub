@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { QueryDocumentSnapshot } from "firebase/firestore"; // Import QueryDocumentSnapshot
+import { collection, query, where, orderBy, getDocs, QueryDocumentSnapshot } from "firebase/firestore"; // Import modular Firestore functions and QueryDocumentSnapshot
 
 type Note = {
   id: string;
@@ -39,10 +39,11 @@ export default async function handler(
     // This is a placeholder. You will need to implement the actual database logic here.
     console.log(`Fetching notes for user ${userId}`);
 
-    const notesSnapshot = await db.collection("notes")
-                                  .where("userId", "==", userId)
-                                  .orderBy("createdAt", "desc")
-                                  .get();
+    const notesSnapshot = await getDocs(query(
+      collection(db, "notes"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
+    ));
 
     const notes: Note[] = notesSnapshot.docs.map((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
