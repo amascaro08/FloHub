@@ -265,10 +265,36 @@ export default function CalendarWidget() {
                     const payload: any = {
                       calendarId: form.calendarId,
                       summary: form.summary,
-                      start: { dateTime: form.start },
-                      end: { dateTime: form.end },
+                      start: {}, // Initialize start and end as empty objects
+                      end: {},
                     };
+
+                    // Only add dateTime if the form value is not empty
+                    if (form.start) {
+                      payload.start.dateTime = form.start;
+                    }
+                    if (form.end) {
+                      payload.end.dateTime = form.end;
+                    }
+
                     if (editingEvent) payload.eventId = editingEvent.id;
+
+                    // Only add dateTime if the form value is not empty
+                    if (form.start) {
+                      payload.start.dateTime = form.start;
+                    }
+                    if (form.end) {
+                      payload.end.dateTime = form.end;
+                    }
+
+                    if (editingEvent) payload.eventId = editingEvent.id;
+
+                    // Basic validation before sending
+                    if (!payload.calendarId || !payload.summary || !payload.start.dateTime || !payload.end.dateTime) {
+                       alert("Please fill in all required fields (Calendar, Title, Start, End).");
+                       return; // Stop here if validation fails
+                    }
+
                     await fetch('/api/calendar/event', {
                       method,
                       headers: { 'Content-Type': 'application/json' },
