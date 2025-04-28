@@ -32,24 +32,33 @@ export default function CalendarWidget() {
   }, []);
 
 
-  const now = new Date();
-  const nextWeek = new Date();
-  nextWeek.setDate(now.getDate() + 7);
+  // State for time range
+  const [timeRange, setTimeRange] = useState<{ timeMin: string; timeMax: string } | null>(null);
 
-  const timeMin = now.toISOString();
-  const timeMax = nextWeek.toISOString();
+  // Calculate time range once on mount
+  useEffect(() => {
+    const now = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(now.getDate() + 7);
+    setTimeRange({
+      timeMin: now.toISOString(),
+      timeMax: nextWeek.toISOString(),
+    });
+  }, []); // Empty dependency array ensures this runs only once
 
-  // Construct the URL dynamically based on selectedCals state
-  const apiUrl = `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}${selectedCals.map(id => `&calendarId=${encodeURIComponent(id)}`).join('')}`;
+  // Construct the URL dynamically based on selectedCals state and timeRange
+  const apiUrl = timeRange
+    ? `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(timeRange.timeMax)}${selectedCals.map(id => `&calendarId=${encodeURIComponent(id)}`).join('')}`
+    : null; // Don't fetch until timeRange is set
 
   // 👇 LOG for debugging
   useEffect(() => {
-    if (apiUrl) {
+    if (apiUrl && timeRange) {
       console.log("CALENDAR FETCH URL:", apiUrl);
-      console.log("Raw timeMin:", timeMin);
-      console.log("Raw timeMax:", timeMax);
+      console.log("Raw timeMin:", timeRange.timeMin);
+      console.log("Raw timeMax:", timeRange.timeMax);
     }
-  }, [apiUrl, timeMin, timeMax]); // Re-run if URL changes
+  }, [apiUrl, timeRange]); // Re-run if URL or timeRange changes
 
   const { data, error } = useSWR(
     apiUrl, // Use the dynamically generated URL
