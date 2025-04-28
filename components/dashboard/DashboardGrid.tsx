@@ -20,12 +20,11 @@ import QuickNoteWidget from "@/components/widgets/QuickNoteWidget"; // Import Qu
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext"; // Import useAuth
 
-type WidgetType = "tasks" | "calendar" | "chat" | "ataglance" | "quicknote"; // Add 'quicknote'
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote"; // Add 'quicknote'
 
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
-  chat: <ChatWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />, // Add QuickNoteWidget
 };
@@ -89,7 +88,6 @@ export default function DashboardGrid() {
   const [widgets, setWidgets] = useState([
     { id: "tasks", x: 0, y: 0, width: 400, height: 300 },
     { id: "calendar", x: 450, y: 0, width: 400, height: 300 },
-    { id: "chat", x: 0, y: 350, width: 400, height: 300 },
     { id: "ataglance", x: 450, y: 350, width: 400, height: 300 },
     { id: "quicknote", x: 0, y: 700, width: 400, height: 300 }, // Add QuickNoteWidget with initial position and size
   ]);
