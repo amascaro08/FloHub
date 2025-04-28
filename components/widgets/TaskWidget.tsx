@@ -29,6 +29,7 @@ export default function TaskWidget() {
     new Date().toISOString().slice(0, 10)
   );
   const [editing, setEditing]     = useState<Task | null>(null);
+  const [celebrating, setCelebrating] = useState(false); // State for celebration
 
   // Friendly formatter: "Jan 5"
   const fmt = (iso: string | null) => {
@@ -88,20 +89,39 @@ export default function TaskWidget() {
   };
 
   const toggleComplete = async (t: Task) => {
+    // Optimistically update the UI
+    if (tasks) {
+      mutate(tasks.filter(task => task.id !== t.id), false); // Remove task and don't revalidate yet
+    }
+
+    // Trigger celebration
+    setCelebrating(true);
+    setTimeout(() => setCelebrating(false), 3000); // Hide celebration after 3 seconds
+
+    // Send API request
     await fetch("/api/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ id: t.id, done: !t.done }),
     });
+
+    // Revalidate data after API call
     mutate();
   };
 
   const remove = async (id: string) => {
+     // Optimistically update the UI
+     if (tasks) {
+      mutate(tasks.filter(task => task.id !== id), false); // Remove task and don't revalidate yet
+    }
+
     await fetch("/api/tasks", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ id }),
     });
+
+    // Revalidate data after API call
     mutate();
   };
 
@@ -110,7 +130,7 @@ export default function TaskWidget() {
     setInput(t.text);
     setDue(t.dueDate ? "custom" : "today");
     if (t.dueDate) {
-      setCustomDate(t.dueDate.slice(0, 10)); 
+      setCustomDate(t.dueDate.slice(0, 10));
     }
   };
 
@@ -122,7 +142,14 @@ export default function TaskWidget() {
   }
 
   return (
-    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
+    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)] relative"> {/* Added relative for absolute positioning */}
+      {/* Celebration Message */}
+      {celebrating && (
+        <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl">
+          Task Complete! 🎉
+        </div>
+      )}
+
       <form onSubmit={addOrUpdate} className="flex flex-col gap-2 mb-4">
         <div className="flex gap-2">
           <input
