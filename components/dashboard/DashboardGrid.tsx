@@ -56,7 +56,7 @@ function SortableItem({ id }: { id: WidgetType }) {
       <div
         ref={setNodeRef} // Apply ref to the main div
         style={style}
-        className={`p-4 rounded-xl h-full ${isLocked ? 'cursor-default' : ''}`} // Temporarily remove glass, shadow-md, flex flex-col
+        className={`glass p-4 rounded-xl h-full shadow-md flex flex-col ${isLocked ? 'cursor-default' : ''}`} // Restore original classes
       >
         {/* Apply attributes, listeners, and setActivatorNodeRef to the header for drag handle */}
         <div
@@ -65,7 +65,7 @@ function SortableItem({ id }: { id: WidgetType }) {
           {...attributes}
           {...listeners}
         >
-          {id}
+          {/* Removed redundant heading display */}
         </div>
         <div className="flex-1 overflow-auto">{widgetComponents[id]}</div>
       </div>

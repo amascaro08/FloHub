@@ -123,8 +123,6 @@ export default function TaskWidget() {
 
   return (
     <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
-      <h3 className="text-lg font-semibold mb-3">Tasks</h3>
-
       <form onSubmit={addOrUpdate} className="flex flex-col gap-2 mb-4">
         <div className="flex gap-2">
           <input

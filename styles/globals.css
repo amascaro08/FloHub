@@ -42,3 +42,12 @@
 .dark select:active {
   background-color: var(--surface);
 }
+
+/* Make re-resizable handles visible for debugging */
+.react-resizable-handle {
+  background-color: red !important; /* Use !important to override potential conflicting styles */
+  width: 10px !important;
+  height: 10px !important;
+  z-index: 100 !important; /* Ensure handles are on top */
+  opacity: 1 !important; /* Ensure handles are not transparent */
+}

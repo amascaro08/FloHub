@@ -161,7 +161,7 @@ export default function CalendarWidget() {
     <div className="p-4 bg-[var(--surface)] rounded-lg shadow">
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-xl font-semibold">Calendar</h2>
+        {/* Removed redundant Calendar heading */}
         <button onClick={openAdd} className="px-2 py-1 bg-primary-500 text-white rounded text-sm">
           Add Event
         </button>
