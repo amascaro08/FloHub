@@ -269,23 +269,29 @@ export default function CalendarWidget() {
                       end: {},
                     };
 
-                    // Only add dateTime if the form value is not empty
+                    // Format date-time strings to ISO 8601 if not empty
                     if (form.start) {
-                      payload.start.dateTime = form.start;
+                      try {
+                        // Parse the local datetime string and convert to ISO string
+                        // This assumes the input is in the user's local timezone
+                        payload.start.dateTime = new Date(form.start).toISOString();
+                      } catch (e) {
+                        console.error("Failed to parse start date:", form.start, e);
+                        alert("Invalid start date format.");
+                        return;
+                      }
                     }
                     if (form.end) {
-                      payload.end.dateTime = form.end;
+                       try {
+                        // Parse the local datetime string and convert to ISO string
+                        payload.end.dateTime = new Date(form.end).toISOString();
+                      } catch (e) {
+                        console.error("Failed to parse end date:", form.end, e);
+                        alert("Invalid end date format.");
+                        return;
+                      }
                     }
 
-                    if (editingEvent) payload.eventId = editingEvent.id;
-
-                    // Only add dateTime if the form value is not empty
-                    if (form.start) {
-                      payload.start.dateTime = form.start;
-                    }
-                    if (form.end) {
-                      payload.end.dateTime = form.end;
-                    }
 
                     if (editingEvent) payload.eventId = editingEvent.id;
 
@@ -295,11 +301,28 @@ export default function CalendarWidget() {
                        return; // Stop here if validation fails
                     }
 
-                    await fetch('/api/calendar/event', {
+                    // Optional: Add validation to ensure end time is after start time
+                    if (new Date(payload.start.dateTime) >= new Date(payload.end.dateTime)) {
+                         alert("End time must be after start time.");
+                         return;
+                    }
+
+                    // Make the API call
+                    const response = await fetch('/api/calendar/event', {
                       method,
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(payload),
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("API Error:", response.status, errorData);
+                        alert(`Failed to save event: ${errorData.error || 'Unknown error'}`);
+                        return;
+                    }
+
+
+                    // If successful, revalidate SWR cache and close modal
                     if (apiUrl) mutate(apiUrl);
                     setModalOpen(false);
                   }}
