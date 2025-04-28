@@ -51,7 +51,7 @@ function SortableItem({ id }: { id: WidgetType }) {
       minWidth="300px"
       minHeight={200}
       className="mb-4"
-      enable={isLocked ? false : { top: true, right: true, bottom: true, left: true, topRight: true, bottomRight: true, bottomLeft: true, topLeft: true }} // Disable resizing when locked, enable all when unlocked
+      enable={isLocked ? false : { top: false, right: true, bottom: true, left: true, topRight: true, bottomRight: true, bottomLeft: true, topLeft: true }} // Disable resizing when locked, enable all except top when unlocked
     >
       <div
         ref={setNodeRef} // Apply ref to the main div
@@ -80,7 +80,13 @@ export default function DashboardGrid() {
     "chat",
   ]);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Require 5px movement before activating drag
+      },
+    })
+  );
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
