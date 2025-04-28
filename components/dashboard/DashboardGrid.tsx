@@ -75,7 +75,9 @@ function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps)
             {...attributes} // Apply attributes to header
             {...listeners} // Apply listeners to header
           >
-            <div>{id}</div> {/* Add widget title */}
+            <div>
+              {id === "ataglance" ? "Your Day at a Glance" : id.charAt(0).toUpperCase() + id.slice(1)}
+            </div> {/* Add widget title, customize for ataglance */}
           </div>
           <div className="flex-1 overflow-auto">{widgetComponents[id as WidgetType]}</div> {/* Cast id to WidgetType */}
         </div>
