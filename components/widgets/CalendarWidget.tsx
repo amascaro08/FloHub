@@ -10,6 +10,7 @@ export interface CalendarEvent {
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   source?: "personal" | "work"; // "personal" = Google, "work" = O365
+  description?: string; // Add description field
 }
 
 const fetcher = async (url: string): Promise<CalendarEvent[]> => {
@@ -193,19 +194,44 @@ export default function CalendarWidget() {
                   {viewingEvent.source === "work" ? "Work" : "Personal"}
                 </span>
               </div>
+              {/* Event Description */}
+              {viewingEvent.description && (
+                <div>
+                  <span className="font-medium">Details: </span>
+                  {/* WARNING: Using dangerouslySetInnerHTML can expose to XSS attacks if content is not trusted */}
+                  <div
+                    className="prose prose-sm max-w-none mt-1"
+                    dangerouslySetInnerHTML={{ __html: viewingEvent.description }}
+                  />
+                </div>
+              )}
+
               {/* Show Teams link if present */}
               {(() => {
-                // Try to find a Teams link in summary or description
-                const text =
-                  (viewingEvent.summary || "") +
-                  ("description" in viewingEvent ? (viewingEvent as any).description || "" : "");
-                const teamsRegex = /(https:\/\/teams\.microsoft\.com\/[^\s]+)/i;
-                const match = text.match(teamsRegex);
-                if (match) {
+                let teamsLink = null;
+                // Check summary first
+                const summaryMatch = (viewingEvent.summary || "").match(/(https:\/\/teams\.microsoft\.com\/[^\s]+)/i);
+                if (summaryMatch) {
+                  teamsLink = summaryMatch[1];
+                } else if (viewingEvent.description) {
+                  // If no link in summary, parse description HTML
+                  try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(viewingEvent.description, 'text/html');
+                    const teamsAnchor = doc.querySelector('a[href*="teams.microsoft.com"]');
+                    if (teamsAnchor && (teamsAnchor as HTMLAnchorElement).href) {
+                      teamsLink = (teamsAnchor as HTMLAnchorElement).href;
+                    }
+                  } catch (e) {
+                    console.error("Failed to parse HTML description for Teams link:", e);
+                  }
+                }
+
+                if (teamsLink) {
                   return (
                     <div>
                       <a
-                        href={match[1]}
+                        href={teamsLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block mt-2 px-3 py-1 bg-blue-600 text-white rounded"

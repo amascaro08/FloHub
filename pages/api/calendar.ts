@@ -7,6 +7,7 @@ export type CalendarEvent = {
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   source?: "personal" | "work";
+  description?: string; // Add description field
 };
 
 type ErrorRes = { error: string };
@@ -109,6 +110,7 @@ export default async function handler(
               }
             : undefined,
           source: "work",
+          description: e.description || undefined, // Include description
           raw: e, // keep original for debugging if needed
         }));
         allEvents.push(...o365Events);
@@ -132,6 +134,7 @@ export default async function handler(
       start: { dateTime: e.start?.dateTime, date: e.start?.date },
       end: e.end ? { dateTime: e.end?.dateTime, date: e.end?.date } : undefined,
       source: e.source || undefined,
+      description: e.description || undefined, // Include description
     }));
 
   return res.status(200).json(events);
