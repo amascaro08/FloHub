@@ -89,7 +89,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             type="text"
             placeholder=" FloCat is here to help you... 🐱"
             className="ml-2 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onClick={() => setIsChatOpen(true)}
+            onFocus={() => setIsChatOpen(true)}
           />
           <ThemeToggle />
         </header>
