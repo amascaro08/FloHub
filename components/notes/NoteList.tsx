@@ -1,4 +1,3 @@
-:start_line:1
 -------
 "use client";
 
