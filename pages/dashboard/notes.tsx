@@ -39,6 +39,12 @@ export default function NotesPage() {
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
+
+  // Extract unique tags from notes
+  const uniqueTags = useMemo(() => {
+    const tags = notesResponse?.notes?.flatMap(note => note.tags) || [];
+    return Array.from(new Set(tags)).sort(); // Get unique tags and sort them
+  }, [notesResponse]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
   const handleSaveNote = async (note: { title: string; content: string; tags: string[] }) => {
@@ -49,7 +55,7 @@ export default function NotesPage() {
       const response = await fetch("/api/notes/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: note.content, tags: note.tags }),
+        body: JSON.stringify({ title: note.title, content: note.content, tags: note.tags }), // Include title
       });
 
       if (response.ok) {
@@ -87,7 +93,7 @@ export default function NotesPage() {
     // Filter by tag
     if (filterTag.trim() !== "") {
       filtered = filtered.filter((note: Note) => // Explicitly type note
-        note.tags.some((tag: string) => tag.toLowerCase().includes(filterTag.toLowerCase())) // Explicitly type tag
+        note.tags.some((tag: string) => tag.toLowerCase() === filterTag.toLowerCase()) // Exact match for tag filter
       );
     }
 
@@ -114,13 +120,13 @@ export default function NotesPage() {
     return <p>Error loading notes.</p>;
   }
 
-  const handleUpdateNote = async (noteId: string, updatedContent: string, updatedTags: string[]) => {
+  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => { // Include updatedTitle
     setIsSaving(true);
     try {
       const response = await fetch(`/api/notes/update`, { // Assuming update endpoint is /api/notes/update
         method: "PUT", // Or PATCH, depending on API design
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: noteId, content: updatedContent, tags: updatedTags }),
+        body: JSON.stringify({ id: noteId, title: updatedTitle, content: updatedContent, tags: updatedTags }), // Include updatedTitle
       });
 
       if (response.ok) {
@@ -159,6 +165,7 @@ export default function NotesPage() {
           onClose={() => setShowModal(false)}
           onSave={handleSaveNote}
           isSaving={isSaving}
+          existingTags={uniqueTags} // Pass uniqueTags to the modal
         />
 
 
@@ -170,13 +177,17 @@ export default function NotesPage() {
             value={searchContent}
             onChange={(e) => setSearchContent(e.target.value)}
           />
-           <input
-            type="text"
+           {/* Replace input with select dropdown for tags */}
+           <select
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            placeholder="Filter by tag…"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-          />
+           >
+             <option value="">All Tags</option> {/* Option to show all notes */}
+             {uniqueTags.map(tag => (
+               <option key={tag} value={tag}>{tag}</option>
+             ))}
+           </select>
         </div>
 
         {/* Render the NoteList component */}

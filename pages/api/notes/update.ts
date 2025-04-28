@@ -5,6 +5,7 @@ import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import modular F
 
 type UpdateNoteRequest = {
   id: string;
+  title?: string; // Allow updating title
   content?: string; // Allow updating content
   tags?: string[]; // Allow updating tags
 };
@@ -34,14 +35,18 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { id, content, tags } = req.body as UpdateNoteRequest;
+  const { id, title, content, tags } = req.body as UpdateNoteRequest; // Include title
   if (typeof id !== "string" || id.trim() === "") {
     return res.status(400).json({ error: "Note ID is required" });
   }
 
-  // Ensure at least content or tags are provided for update
-  if (content === undefined && tags === undefined) {
+  // Ensure at least title, content or tags are provided for update
+  if (title === undefined && content === undefined && tags === undefined) {
       return res.status(400).json({ error: "No update fields provided" });
+  }
+
+  if (title !== undefined && typeof title !== "string") {
+      return res.status(400).json({ error: "Invalid title format" });
   }
 
   if (content !== undefined && typeof content !== "string") {
@@ -69,6 +74,9 @@ export default async function handler(
 
     // 4) Prepare update data
     const updateData: any = {};
+    if (title !== undefined) {
+        updateData.title = title;
+    }
     if (content !== undefined) {
         updateData.content = content;
     }

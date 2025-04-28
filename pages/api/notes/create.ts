@@ -5,6 +5,7 @@ import { db } from "../../../lib/firebase"; // Import db from your firebase conf
 import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
 
 type CreateNoteRequest = {
+  title?: string; // Add optional title field
   content: string;
   tags?: string[]; // Optional array of tags
 };
@@ -35,7 +36,7 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { content, tags } = req.body as CreateNoteRequest;
+  const { title, content, tags } = req.body as CreateNoteRequest; // Include title
   if (typeof content !== "string" || content.trim() === "") {
     return res.status(400).json({ error: "Note content is required" });
   }
@@ -52,6 +53,7 @@ export default async function handler(
     // Example placeholder for Firebase (adjust based on your actual Firebase setup)
     const newNoteRef = await addDoc(collection(db, "notes"), {
       userId: userId,
+      title: title || "", // Save title, default to empty string if not provided
       content: content,
       tags: tags || [], // Save tags as an empty array if none provided
       createdAt: new Date(),

@@ -5,16 +5,18 @@ import type { Note } from "@/types/app"; // Import shared Note type
 
 type NoteDetailProps = {
   note: Note;
-  onSave: (noteId: string, updatedContent: string, updatedTags: string[]) => Promise<void>;
+  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => Promise<void>; // Include updatedTitle
   isSaving: boolean;
 };
 
 export default function NoteDetail({ note, onSave, isSaving }: NoteDetailProps) {
+  const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
   const [tagsInput, setTagsInput] = useState(note.tags.join(", ")); // Join tags for input
 
   // Update state when a different note is selected
   useEffect(() => {
+    setTitle(note.title || ""); // Update title state
     setContent(note.content);
     setTagsInput(note.tags.join(", "));
   }, [note]);
@@ -25,12 +27,25 @@ export default function NoteDetail({ note, onSave, isSaving }: NoteDetailProps) 
 
     const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag !== "");
 
-    await onSave(note.id, content, tags);
+    await onSave(note.id, title, content, tags); // Include title in onSave call
   };
 
   return (
     <div className="flex flex-col h-full">
-      <h2 className="text-xl font-semibold mb-4">{note.content.substring(0, 50)}...</h2> {/* Display truncated content as title */}
+      {/* Add input for title */}
+      <div className="mb-4">
+        <label htmlFor="note-detail-title" className="block text-sm font-medium text-[var(--fg)] mb-1">Title</label>
+        <input
+          type="text"
+          id="note-detail-title"
+          className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent text-xl font-semibold"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={isSaving}
+          placeholder="Note Title"
+        />
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1"> {/* Use flex-1 to make form take available space */}
         <div>
           <label htmlFor="note-content" className="block text-sm font-medium text-[var(--fg)] mb-1">Content</label>

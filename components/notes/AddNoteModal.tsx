@@ -7,9 +7,10 @@ type AddNoteModalProps = {
   onClose: () => void;
   onSave: (note: { title: string; content: string; tags: string[] }) => Promise<void>;
   isSaving: boolean;
+  existingTags: string[]; // Add existingTags prop
 };
 
-export default function AddNoteModal({ isOpen, onClose, onSave, isSaving }: AddNoteModalProps) {
+export default function AddNoteModal({ isOpen, onClose, onSave, isSaving, existingTags }: AddNoteModalProps) { // Receive existingTags prop
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tagsInput, setTagsInput] = useState("");
@@ -70,6 +71,22 @@ export default function AddNoteModal({ isOpen, onClose, onSave, isSaving }: AddN
               disabled={isSaving}
             />
           </div>
+          {/* Display existing tags */}
+          {existingTags && existingTags.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm font-medium text-[var(--fg)] mb-1">Existing Tags:</p>
+              <div className="flex flex-wrap gap-1">
+                {existingTags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
