@@ -31,6 +31,11 @@ export default function NotesPage() {
     fetcher
   );
 
+  // Log the fetched data and error for debugging
+  console.log("Notes data:", notes);
+  console.log("Notes fetch error:", error);
+
+
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
