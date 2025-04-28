@@ -3,14 +3,9 @@ import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
 import { collection, query, where, orderBy, getDocs, QueryDocumentSnapshot } from "firebase/firestore"; // Import modular Firestore functions and QueryDocumentSnapshot
 
-type Note = {
-  id: string;
-  content: string;
-  tags: string[];
-  createdAt: Date;
-};
+import type { Note } from "@/types/app"; // Import shared Note type
 
-type GetNotesResponse = {
+export type GetNotesResponse = { // Export the type
   notes?: Note[];
   error?: string;
 };
@@ -51,7 +46,8 @@ export default async function handler(
         id: doc.id,
         content: data.content,
         tags: data.tags || [],
-        createdAt: data.createdAt.toDate().toISOString(), // Convert Firestore Timestamp to ISO string
+        // Ensure createdAt is a string before assigning to the shared Note type
+        createdAt: data.createdAt.toDate().toISOString(),
       };
     });
 

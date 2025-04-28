@@ -5,15 +5,11 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
+import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
+import type { Note } from "@/types/app"; // Import shared Note type
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-type Note = {
-  id: string;
-  content: string;
-  tags: string[];
-  createdAt: string; // Use string for simplicity in display, can format later
-};
 
 export default function NotesPage() {
   const { data: session, status } = useSession();
@@ -26,13 +22,14 @@ export default function NotesPage() {
   }, [status, router]);
 
   const shouldFetch = status === "authenticated";
-  const { data: notes, error, mutate } = useSWR<Note[]>( // Destructure mutate
+  // Update useSWR type parameter to GetNotesResponse
+  const { data: notesResponse, error, mutate } = useSWR<GetNotesResponse>(
     shouldFetch ? "/api/notes" : null,
     fetcher
   );
 
   // Log the fetched data and error for debugging
-  console.log("Notes data:", notes);
+  console.log("Notes data:", notesResponse); // Use notesResponse
   console.log("Notes fetch error:", error);
 
 
@@ -70,27 +67,31 @@ export default function NotesPage() {
 
 
   const filteredNotes = useMemo(() => {
-    if (!notes) return [];
+    // Extract the notes array from the fetched data
+    // Extract the notes array from the fetched data
+    const notesArray = notesResponse?.notes || [];
 
-    let filtered = notes;
+    if (notesArray.length === 0) return [];
+
+    let filtered = notesArray;
 
     // Filter by content
     if (searchContent.trim() !== "") {
-      filtered = filtered.filter((note) =>
+      filtered = filtered.filter((note: Note) => // Explicitly type note
         note.content.toLowerCase().includes(searchContent.toLowerCase())
       );
     }
 
     // Filter by tag
     if (filterTag.trim() !== "") {
-      filtered = filtered.filter((note) =>
-        note.tags.some(tag => tag.toLowerCase().includes(filterTag.toLowerCase()))
+      filtered = filtered.filter((note: Note) => // Explicitly type note
+        note.tags.some((tag: string) => tag.toLowerCase().includes(filterTag.toLowerCase())) // Explicitly type tag
       );
     }
 
     console.log("Filtered notes computed:", filtered); // Log the computed filtered notes
     return filtered;
-  }, [notes, searchContent, filterTag]);
+  }, [notesResponse, searchContent, filterTag]); // Update dependency to notesResponse
 
   if (status === "loading") {
     return <p>Loading notes…</p>;
@@ -144,12 +145,12 @@ export default function NotesPage() {
 
       <div className="space-y-4">
         {filteredNotes.length > 0 ? (
-          filteredNotes.map((note) => (
+          filteredNotes.map((note: Note) => ( // Explicitly type note
             <div key={note.id} className="glass p-4 rounded-xl shadow-elevate-sm">
               <p className="text-sm text-[var(--fg)] mb-2">{note.content}</p>
               {note.tags && note.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {note.tags.map((tag, index) => (
+                  {note.tags.map((tag: string, index: number) => ( // Explicitly type tag and index
                     <span
                       key={index}
                       className="bg-primary-200 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
