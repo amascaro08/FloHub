@@ -123,7 +123,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <main className="flex-1 overflow-auto p-4">
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
         {isChatOpen && (
