@@ -45,7 +45,10 @@ export default function Layout({ children }: { children: ReactNode }) {
       >
         <div className="p-4 border-b flex items-center justify-between">
           <img src="/flohub_logo.png" alt="FloHub" className="h-8"/>
-          <ThemeToggle/>
+          {/* Hide on medium and larger screens */}
+          <div className="md:hidden">
+            <ThemeToggle/>
+          </div>
         </div>
         <nav className="p-4 space-y-1">
           {nav.map((x) => (
@@ -91,7 +94,10 @@ export default function Layout({ children }: { children: ReactNode }) {
             className="ml-2 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             onFocus={() => setIsChatOpen(true)}
           />
-          <ThemeToggle />
+          {/* Hide on small screens */}
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
         </header>
 
         <div className="absolute top-4 right-4 z-50">

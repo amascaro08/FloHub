@@ -209,7 +209,7 @@ export default function TaskWidget() {
 
         {/* Task Source Selection */}
         <div className="flex gap-2 items-center">
-           <label className="text-sm font-medium">Source:</label>
+           <label className="text-sm font-medium text-[var(--fg)]">Source:</label>
            <select
              value={taskSource}
              onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}

@@ -65,7 +65,7 @@ export default function QuickNoteWidget() {
             px-3 py-2 rounded focus:outline-none
             focus:ring-2 focus:ring-[var(--primary)]
             text-[var(--fg)] bg-transparent
-            flex-1
+            flex-1 placeholder-[var(--fg-muted)]
           "
           placeholder="Write your note here..."
           value={content}
@@ -73,17 +73,18 @@ export default function QuickNoteWidget() {
           disabled={isSaving}
         />
         <input
-           type="text"
-           className="
-             w-full border border-[var(--neutral-300)]
-             px-3 py-2 rounded focus:outline-none
-             focus:ring-2 focus:ring-[var(--primary)]
-             text-[var(--fg)] bg-transparent
-           "
-           placeholder="Tags (comma-separated)"
-           value={tagsInput}
-           onChange={(e) => setTagsInput(e.target.value)}
-           disabled={isSaving}
+          type="text"
+          className="
+            w-full border border-[var(--neutral-300)]
+            px-3 py-2 rounded focus:outline-none
+            focus:ring-2 focus:ring-[var(--primary)]
+            text-[var(--fg)] bg-transparent
+            placeholder-[var(--fg-muted)]
+          "
+          placeholder="Tags (comma-separated)"
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+          disabled={isSaving}
         />
         <button
           type="submit"
