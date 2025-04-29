@@ -41,14 +41,14 @@ export default function Layout({ children }: { children: ReactNode }) {
       />
 
       {/* sidebar */}
-      <aside
-        className={`
-          fixed inset-y-0 left-0 bg-[var(--surface)] shadow-lg z-30 transform transition-transform duration-200 ease-in-out
-          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0 md:static md:shadow-none
-          ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'} {/* Adjust width based on state */}
-        `}
-      >
+        <aside
+          className={`
+            bg-[var(--surface)] shadow-lg z-30 transform transition-transform duration-200 ease-in-out
+            ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
+            md:static md:translate-x-0 md:shadow-none
+            ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
+          `}
+        >
         <div className={`p-4 border-b flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}> {/* Center content when collapsed */}
           {!desktopSidebarCollapsed && <img src="/flohub_logo.png" alt="FloHub" className="h-8"/>} {/* Hide logo when collapsed */}
           <ThemeToggle/>
