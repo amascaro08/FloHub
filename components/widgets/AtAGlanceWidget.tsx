@@ -76,6 +76,9 @@ const AtAGlanceWidget: React.FC = () => {
         // Filter out completed tasks for the AI prompt
         const incompleteTasks = tasksData.filter(task => !task.done);
 
+        console.log("[AtAGlanceWidget] eventsData:", eventsData); // Log events data
+        console.log("[AtAGlanceWidget] incompleteTasks:", incompleteTasks); // Log incomplete tasks
+
         // Generate AI message
         const prompt = `Generate a personalized "At A Glance" message for the user "${userName}" based on the following information:\n\nUpcoming Events Today:\n${eventsData.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date} (${event.source || 'personal'})`).join('\n') || 'None'}\n\nIncomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\nThe message should be from FloCat, welcoming the user to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and have a friendly, slightly quirky personality with emojis. Please use markdown for lists and **bold** headings.`;
 

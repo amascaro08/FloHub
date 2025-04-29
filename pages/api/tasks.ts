@@ -11,6 +11,7 @@ type Task = {
   done:      boolean;
   dueDate:   string | null;
   createdAt: string | null;
+  source?:   "personal" | "work"; // Add source tag
 };
 
 export default async function handler(
@@ -44,6 +45,7 @@ export default async function handler(
           done:      data.done,
           dueDate:   data.dueDate   ? data.dueDate.toDate().toISOString()   : null,
           createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+          source:    data.source || undefined, // Include source
         };
       });
       return res.status(200).json(tasks);
@@ -51,17 +53,21 @@ export default async function handler(
 
     // ── POST: create new task ────────────────────────────────────
     if (req.method === "POST") {
-      const { text, dueDate } = req.body as { text: string; dueDate?: string };
+      const { text, dueDate, source } = req.body as { text: string; dueDate?: string; source?: "personal" | "work" };
       if (typeof text !== "string" || !text.trim()) {
         return res.status(400).json({ error: "Invalid text" });
       }
       const due = dueDate ? new Date(dueDate) : null;
-      const ref = await userTasks.add({
+      const newTaskData: any = {
         text:      text.trim(),
         done:      false,
         dueDate:   due,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+      if (source) {
+        newTaskData.source = source;
+      }
+      const ref = await userTasks.add(newTaskData);
       const snap = await ref.get();
       const data = snap.data() as any;
       const task: Task = {
@@ -70,18 +76,26 @@ export default async function handler(
         done:      data.done,
         dueDate:   data.dueDate   ? data.dueDate.toDate().toISOString()   : null,
         createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+        source:    data.source || undefined, // Include source
       };
       return res.status(201).json(task);
     }
 
     // ── PATCH: toggle done ───────────────────────────────────────
     if (req.method === "PATCH") {
-      const { id, done } = req.body as { id: string; done: boolean };
-      if (!id || typeof done !== "boolean") {
+      const { id, done, source } = req.body as { id: string; done?: boolean; source?: "personal" | "work" };
+      if (!id || (typeof done === "undefined" && typeof source === "undefined")) {
         return res.status(400).json({ error: "Invalid payload" });
       }
-      await userTasks.doc(id).update({ done });
-      return res.status(200).json({ id, done });
+      const updateData: any = {};
+      if (typeof done !== "undefined") {
+        updateData.done = done;
+      }
+      if (typeof source !== "undefined") {
+        updateData.source = source;
+      }
+      await userTasks.doc(id).update(updateData);
+      return res.status(200).json({ id, ...updateData });
     }
 
     // ── DELETE: remove a task ─────────────────────────────────────

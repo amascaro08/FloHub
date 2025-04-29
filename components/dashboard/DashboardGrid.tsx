@@ -19,6 +19,9 @@ import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import QuickNoteWidget from "@/components/widgets/QuickNoteWidget"; // Import QuickNoteWidget
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext"; // Import useAuth
+import { db } from "@/lib/firebase"; // Import Firebase client-side db
+import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import { useSession } from "next-auth/react"; // Import useSession
 
 type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote"; // Add 'quicknote'
 
@@ -95,45 +98,59 @@ export default function DashboardGrid() {
     { id: "quicknote", x: 0, y: 700, width: 400, height: 300 },
   ];
 
+  const { data: session } = useSession(); // Get session to access user email
+
+  // Define a default layout
   // State to hold the current widget layout
   const [widgets, setWidgets] = useState(defaultLayout);
 
-  // Load layout from localStorage on component mount
+  // Load layout from Firestore on component mount
   useEffect(() => {
-    const savedLayout = localStorage.getItem("dashboardLayout");
-    if (savedLayout) {
-      try {
-        const parsedLayout = JSON.parse(savedLayout);
-        // Basic validation to ensure loaded data is an array and has expected structure
-        if (Array.isArray(parsedLayout) && parsedLayout.every(item => item.id && typeof item.x === 'number' && typeof item.y === 'number' && typeof item.width === 'number' && typeof item.height === 'number')) {
-           // Merge saved layout with default layout to include new widgets
-           const mergedLayout = defaultLayout.map(defaultWidget => {
-             const savedWidget = parsedLayout.find((sw: any) => sw.id === defaultWidget.id);
-             return savedWidget ? { ...defaultWidget, ...savedWidget } : defaultWidget;
-           });
-           // Add any new widgets from savedLayout that are not in defaultLayout (shouldn't happen with current logic, but good for robustness)
-           const finalLayout = [...mergedLayout, ...parsedLayout.filter((savedWidget: any) => !defaultLayout.some(defaultWidget => defaultWidget.id === savedWidget.id))];
+    const fetchLayout = async () => {
+      if (session?.user?.email) {
+        const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
+        const docSnap = await getDoc(layoutRef);
+        if (docSnap.exists()) {
+          const savedLayout = docSnap.data()?.widgets;
+          if (Array.isArray(savedLayout) && savedLayout.every((item: any) => item.id && typeof item.x === 'number' && typeof item.y === 'number' && typeof item.width === 'number' && typeof item.height === 'number')) {
+            // Merge saved layout with default layout to include new widgets
+            const mergedLayout = defaultLayout.map(defaultWidget => {
+              const savedWidget = savedLayout.find((sw: any) => sw.id === defaultWidget.id);
+              return savedWidget ? { ...defaultWidget, ...savedWidget } : defaultWidget;
+            });
+            // Add any new widgets from savedLayout that are not in defaultLayout (shouldn't happen with current logic, but good for robustness)
+            const finalLayout = [...mergedLayout, ...savedLayout.filter((savedWidget: any) => !defaultLayout.some(defaultWidget => defaultWidget.id === savedWidget.id))];
 
-           setWidgets(finalLayout);
+            setWidgets(finalLayout);
+          } else {
+            console.error("Invalid layout data in Firestore, using default layout.");
+            setWidgets(defaultLayout); // Fallback to default if data is invalid
+          }
         } else {
-          console.error("Invalid layout data in localStorage, using default layout.");
-          setWidgets(defaultLayout); // Fallback to default if data is invalid
+          // If no layout exists, save the default layout
+          await setDoc(layoutRef, { widgets: defaultLayout });
         }
-      } catch (e) {
-        console.error("Failed to parse dashboard layout from localStorage:", e);
-        setWidgets(defaultLayout); // Fallback to default on parse error
       }
-    }
-  }, []); // Empty dependency array means this runs once on mount
+    };
 
-  // Save layout to localStorage whenever the widgets state changes
+    fetchLayout();
+  }, [session]); // Fetch layout when session changes
+
+  // Save layout to Firestore whenever the widgets state changes
   useEffect(() => {
-    try {
-      localStorage.setItem("dashboardLayout", JSON.stringify(widgets));
-    } catch (e) {
-      console.error("Failed to save dashboard layout to localStorage:", e);
-    }
-  }, [widgets]); // Save whenever widgets state changes
+    const saveLayout = async () => {
+      if (session?.user?.email && widgets !== defaultLayout) { // Only save if session exists and layout is not the initial default
+        const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
+        try {
+          await setDoc(layoutRef, { widgets });
+        } catch (e) {
+          console.error("Error saving layout:", e);
+        }
+      }
+    };
+
+    saveLayout();
+  }, [widgets, session]); // Save when widgets or session changes
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

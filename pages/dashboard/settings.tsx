@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import useSWR                  from "swr";
 import Link                    from "next/link";
+import { db } from "@/lib/firebase"; // Import Firebase client-side db
+import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
 
 type CalItem = { id: string; summary: string };
 type Settings = {
@@ -32,7 +34,7 @@ export default function CalendarSettingsPage() {
     { revalidateOnFocus: false }
   );
 
-  // 3) Local settings state
+  // 3) Settings state
   const [settings, setSettings] = useState<Settings>({
     selectedCals: [],
     defaultView:  "month",
@@ -43,19 +45,41 @@ export default function CalendarSettingsPage() {
     powerAutomateUrl: "",
   });
 
-  // 4) Load saved settings once
+  // 4) Load saved settings from Firestore
   useEffect(() => {
-    const raw = localStorage.getItem("flohub.calendarSettings");
-    if (raw) {
-      try {
-        setSettings(JSON.parse(raw));
-      } catch {
-        console.warn("Invalid calendarSettings in localStorage");
+    const fetchSettings = async () => {
+      if (session?.user?.email) {
+        const settingsRef = doc(db, "users", session.user.email, "settings", "calendar");
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+          setSettings(docSnap.data() as Settings);
+        } else {
+          // If no settings exist, save the default settings
+          await setDoc(settingsRef, settings);
+        }
       }
-    }
-  }, []);
+    };
 
-  // 5) Handlers
+    fetchSettings();
+  }, [session]); // Fetch settings when session changes
+
+  // 5) Save settings to Firestore
+  const save = async () => {
+    if (session?.user?.email) {
+      const settingsRef = doc(db, "users", session.user.email, "settings", "calendar");
+      try {
+        await setDoc(settingsRef, settings);
+        alert("Settings saved!");
+      } catch (e) {
+        console.error("Error saving settings:", e);
+        alert("Failed to save settings.");
+      }
+    } else {
+      alert("You must be signed in to save settings.");
+    }
+  };
+
+  // Handlers
   const toggleCal = (id: string) =>
     setSettings((s) => ({
       ...s,
@@ -64,12 +88,7 @@ export default function CalendarSettingsPage() {
         : [...s.selectedCals, id],
     }));
 
-  const save = () => {
-    localStorage.setItem("flohub.calendarSettings", JSON.stringify(settings));
-    alert("Settings saved!");
-  };
-
-  // 6) Early returns
+  // Early returns
   if (loadingSession) {
     return <main className="p-6">Loading session…</main>;
   }
