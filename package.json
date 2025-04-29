@@ -25,6 +25,7 @@
     "re-resizable": "^6.11.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-grid-layout": "^1.5.1",
     "react-select": "^5.10.1",
     "swr": "^2.3.3"
   },
