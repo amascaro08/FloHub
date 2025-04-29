@@ -20,9 +20,9 @@ const widgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "quicknote"
 
 export default function MobileDashboard() {
   return (
-    <div className="grid grid-cols-1 gap-4 p-4">
+    <div className="grid grid-cols-1 gap-4 px-2 py-4">
       {widgetOrder.map((widgetId) => (
-        <div key={widgetId} className="glass p-4 rounded-xl shadow-md">
+        <div key={widgetId} className="glass px-2 py-2 rounded-xl shadow-md">
           <h2 className="font-semibold capitalize mb-2">
             {widgetId === "ataglance" ? "Your Day at a Glance" : widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
           </h2> {/* Customize header for ataglance */}

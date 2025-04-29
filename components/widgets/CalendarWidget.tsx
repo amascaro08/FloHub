@@ -448,7 +448,7 @@ export default function CalendarWidget() {
       )}
 
       {/* Event List */}
-      <div className="max-h-60 overflow-y-auto">
+      <div className="overflow-y-auto">
         {!data && !error && <div className="text-[var(--fg-muted)]">Loading events...</div>}
         {error && <div className="text-red-500">Error loading events: {error.message}</div>}
         {upcomingEvents.length === 0 && <div className="text-[var(--fg-muted)]">No upcoming events scheduled.</div>} {/* Use upcomingEvents */}

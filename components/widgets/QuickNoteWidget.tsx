@@ -65,8 +65,8 @@ export default function QuickNoteWidget() {
             px-3 py-2 rounded focus:outline-none
             focus:ring-2 focus:ring-[var(--primary)]
             text-[var(--fg)] bg-transparent
+            flex-1
           "
-          rows={4}
           placeholder="Write your note here..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
