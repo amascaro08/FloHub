@@ -134,6 +134,20 @@ export default function CalendarWidget() {
 
   const { data, error } = useSWR(apiUrl, fetcher);
 
+  // Filter out past events and find the next upcoming event
+  const now = new Date();
+  const upcomingEvents = data
+    ? data.filter(ev => {
+        const eventTime = ev.start.dateTime ? new Date(ev.start.dateTime) : (ev.start.date ? new Date(ev.start.date) : null);
+        // Keep events that are currently ongoing or in the future
+        return eventTime && (eventTime.getTime() >= now.getTime() || (ev.end?.dateTime && new Date(ev.end.dateTime).getTime() > now.getTime()));
+      })
+    : [];
+
+  // The next upcoming event is the first one in the sorted, filtered list
+  const nextUpcomingEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
+
+
   // Format event for display
   const formatEvent = (ev: CalendarEvent) => {
     if (ev.start.date && !ev.start.dateTime) {
@@ -380,6 +394,7 @@ export default function CalendarWidget() {
                     if (form.end) {
                        try {
                         // Parse the local datetime string and convert to ISO string
+                        // This assumes the input is in the user's local timezone
                         payload.end.dateTime = new Date(form.end).toISOString();
                       } catch (e) {
                         console.error("Failed to parse end date:", form.end, e);
@@ -395,13 +410,13 @@ export default function CalendarWidget() {
                     if (!payload.calendarId || !payload.summary || !payload.start.dateTime || !payload.end.dateTime) {
                        alert("Please fill in all required fields (Calendar, Title, Start, End).");
                        return; // Stop here if validation fails
-                    }
+                     }
 
-                    // Optional: Add validation to ensure end time is after start time
-                    if (new Date(payload.start.dateTime) >= new Date(payload.end.dateTime)) {
-                         alert("End time must be after start time.");
-                         return;
-                    }
+                     // Optional: Add validation to ensure end time is after start time
+                     if (new Date(payload.start.dateTime) >= new Date(payload.end.dateTime)) {
+                          alert("End time must be after start time.");
+                          return;
+                     }
 
                     // Make the API call
                     const response = await fetch('/api/calendar/event', {
@@ -436,13 +451,17 @@ export default function CalendarWidget() {
       <div className="max-h-60 overflow-y-auto">
         {!data && !error && <div className="text-[var(--fg-muted)]">Loading events...</div>}
         {error && <div className="text-red-500">Error loading events: {error.message}</div>}
-        {data && data.length === 0 && <div className="text-[var(--fg-muted)]">No events scheduled.</div>}
-        {data && data.length > 0 && (
+        {upcomingEvents.length === 0 && <div className="text-[var(--fg-muted)]">No upcoming events scheduled.</div>} {/* Use upcomingEvents */}
+        {upcomingEvents.length > 0 && (
           <ul className="space-y-2">
-            {data.map((ev) => (
+            {upcomingEvents.map((ev) => ( // Use upcomingEvents
               <li
                 key={ev.id}
-                className="border-b pb-2 flex justify-between items-center cursor-pointer hover:bg-[var(--neutral-100)] transition"
+                className={`border-b pb-2 flex justify-between items-center cursor-pointer transition ${
+                  ev.id === nextUpcomingEvent?.id // Check if it's the next upcoming event
+                    ? 'bg-yellow-100 hover:bg-yellow-200 border-yellow-500' // Highlight style
+                    : 'hover:bg-[var(--neutral-100)]' // Default hover style
+                }`}
                 onClick={() => setViewingEvent(ev)}
               >
                 <div>
