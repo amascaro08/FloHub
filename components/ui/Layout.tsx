@@ -101,13 +101,21 @@ export default function Layout({ children }: { children: ReactNode }) {
             </button>
             <img src="/fh_logo_large.png" alt="FloHub" className="h-10 ml-2 md:hidden" /> {/* Hide logo on desktop header */}
           </div>
-          <input
-            type="text"
-            placeholder=" FloCat is here to help you... 🐱"
-            className="ml-2 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onFocus={() => setIsChatOpen(true)}
-          />
+          {/* FloCat Chat Bubble */}
+          <div className="flex-1 flex justify-center"> {/* Use flex-1 and justify-center to center the input */}
+            <input
+              type="text"
+              placeholder=" FloCat is here to help you... 🐱"
+              className="w-full max-w-md p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onFocus={() => setIsChatOpen(true)}
+            />
+          </div>
         </header>
+
+        {/* Temporary indicator for isChatOpen state */}
+        {isChatOpen && (
+          <div className="fixed top-20 right-4 w-10 h-10 bg-red-500 z-50"></div>
+        )}
 
         <div className="absolute top-4 right-4 z-50 hidden md:block">
           <button
