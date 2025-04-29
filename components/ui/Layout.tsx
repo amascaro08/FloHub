@@ -50,7 +50,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           `}
         >
         <div className={`p-4 border-b flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}> {/* Center content when collapsed */}
-          {!desktopSidebarCollapsed && <img src="/fh_logo_large.png" alt="FloHub" className="h-10"/>} {/* Hide logo when collapsed */}
+          {!desktopSidebarCollapsed && <img src="/fh_logo_large.png" alt="FloHub" className="h-12"/>} {/* Hide logo when collapsed */}
           <ThemeToggle/>
           {/* Toggle button for desktop sidebar */}
           <button
@@ -99,7 +99,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             >
               <Menu className="w-6 h-6 text-[var(--fg)]" />
             </button>
-            <img src="/fh_logo_large.png" alt="FloHub" className="h-8 ml-2 md:hidden" /> {/* Hide logo on desktop header */}
+            <img src="/fh_logo_large.png" alt="FloHub" className="h-10 ml-2 md:hidden" /> {/* Hide logo on desktop header */}
           </div>
           <input
             type="text"
