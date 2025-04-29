@@ -2,26 +2,31 @@
 
 import { ReactNode, useState } from 'react'
 import { signOut } from "next-auth/react";
-import { Menu } from 'lucide-react'
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon } from 'lucide-react' // Import icons
 import Link from 'next/link'
-import ChatWidget from '../assistant/ChatWidget'; // Import ChatWidget
+import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from "./AuthContext";
 
 const nav = [
-  { name: "Hub", href: "/dashboard" },
-  { name: "Tasks", href: "/dashboard/tasks" },
-  { name: "Notes", href: "/dashboard/notes" }, // Add Notes link
-  { name: "Habits", href: "/dashboard/habits" },
-  { name: "Journal", href: "/dashboard/journal" },
-  { name: "Meetings", href: "/dashboard/meetings" },
-  { name: "Settings", href: "/dashboard/settings" },
+  { name: "Hub", href: "/dashboard", icon: Home },
+  { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
+  { name: "Notes", href: "/dashboard/notes", icon: NotebookPen }, // Add Notes link with icon
+  { name: "Habits", href: "/dashboard/habits", icon: Book },
+  { name: "Journal", href: "/dashboard/journal", icon: Calendar }, // Using Calendar icon for Journal for now
+  { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
   const { isLocked, toggleLock } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const toggleDesktopSidebar = () => {
+    setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
@@ -29,61 +34,72 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div
         className={`
           fixed inset-0 bg-black/50 z-20 transition-opacity
-          ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+          ${mobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
           md:hidden
         `}
-        onClick={() => setOpen(false)}
+        onClick={() => setMobileSidebarOpen(false)}
       />
 
       {/* sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 w-64 bg-[var(--surface)] shadow-lg z-30 transform transition-transform
-          ${open ? 'translate-x-0' : '-translate-x-full'}
+          fixed inset-y-0 left-0 bg-[var(--surface)] shadow-lg z-30 transform transition-transform duration-200 ease-in-out
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:static md:shadow-none
+          ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'} {/* Adjust width based on state */}
         `}
       >
-        <div className="p-4 border-b flex items-center justify-between">
-          <img src="/flohub_logo.png" alt="FloHub" className="h-8"/>
+        <div className={`p-4 border-b flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}> {/* Center content when collapsed */}
+          {!desktopSidebarCollapsed && <img src="/flohub_logo.png" alt="FloHub" className="h-8"/>} {/* Hide logo when collapsed */}
           <ThemeToggle/>
+          {/* Toggle button for desktop sidebar */}
+          <button
+            onClick={toggleDesktopSidebar}
+            className="p-2 rounded hover:bg-[var(--neutral-200)] transition hidden md:block" // Only show on desktop
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="w-6 h-6 text-[var(--fg)]" />
+          </button>
         </div>
         <nav className="p-4 space-y-1">
           {nav.map((x) => (
             <Link key={x.href} href={x.href} legacyBehavior>
               <a
-                className="block px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
-                onClick={() => setOpen(false)}
+                className={`flex items-center px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition ${desktopSidebarCollapsed ? 'justify-center' : ''}`}
+                onClick={() => setMobileSidebarOpen(false)}
               >
-                {x.name}
+                <x.icon className={`w-6 h-6 ${!desktopSidebarCollapsed && 'mr-3'}`} /> {/* Icon with margin */}
+                {!desktopSidebarCollapsed && x.name} {/* Hide text when collapsed */}
               </a>
             </Link>
           ))}
-          {/* Changed Link to button and added onClick={signOut} */}
+          {/* Sign Out button */}
           <button
-            className="block w-full text-left px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition"
+            className={`flex items-center w-full text-left px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition ${desktopSidebarCollapsed ? 'justify-center' : ''}`}
             onClick={() => {
-              setOpen(false); // Close sidebar first
-              signOut();      // Call client-side signOut
+              setMobileSidebarOpen(false);
+              signOut();
             }}
           >
-            Sign Out
+            <LogOut className={`w-6 h-6 ${!desktopSidebarCollapsed && 'mr-3'}`} /> {/* Sign Out icon */}
+            {!desktopSidebarCollapsed && "Sign Out"} {/* Hide text when collapsed */}
           </button>
         </nav>
       </aside>
 
       {/* main */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col transition-all duration-200 ease-in-out ${desktopSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}> {/* Adjust margin based on state */}
         {/* header */}
         <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm">
           <div className="flex items-center">
             <button
-              onClick={() => setOpen(!open)}
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
               className="p-2 rounded hover:bg-[var(--neutral-200)] transition md:hidden"
               aria-label="Toggle menu"
             >
               <Menu className="w-6 h-6 text-[var(--fg)]" />
             </button>
-            <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2" />
+            <img src="/flohub_logo.png" alt="FloHub" className="h-6 ml-2 md:hidden" /> {/* Hide logo on desktop header */}
           </div>
           <input
             type="text"
@@ -117,5 +133,5 @@ export default function Layout({ children }: { children: ReactNode }) {
         )}
       </div>
     </div>
-  )
+  );
 }
