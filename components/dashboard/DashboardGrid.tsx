@@ -106,30 +106,39 @@ export default function DashboardGrid() {
 
   // Load layout from Firestore on component mount
   useEffect(() => {
+    console.log("[DashboardGrid] Component mounted. Session:", session); // Log session status on mount
     const fetchLayout = async () => {
       if (session?.user?.email) {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
-        const docSnap = await getDoc(layoutRef);
-        if (docSnap.exists()) {
-          const savedLayout = docSnap.data()?.widgets;
-          if (Array.isArray(savedLayout) && savedLayout.every((item: any) => item.id && typeof item.x === 'number' && typeof item.y === 'number' && typeof item.width === 'number' && typeof item.height === 'number')) {
-            // Merge saved layout with default layout to include new widgets
-            const mergedLayout = defaultLayout.map(defaultWidget => {
-              const savedWidget = savedLayout.find((sw: any) => sw.id === defaultWidget.id);
-              return savedWidget ? { ...defaultWidget, ...savedWidget } : defaultWidget;
-            });
-            // Add any new widgets from savedLayout that are not in defaultLayout (shouldn't happen with current logic, but good for robustness)
-            const finalLayout = [...mergedLayout, ...savedLayout.filter((savedWidget: any) => !defaultLayout.some(defaultWidget => defaultWidget.id === savedWidget.id))];
+        try {
+          const docSnap = await getDoc(layoutRef);
+          if (docSnap.exists()) {
+            const savedLayout = docSnap.data()?.widgets;
+            if (Array.isArray(savedLayout) && savedLayout.every((item: any) => item.id && typeof item.x === 'number' && typeof item.y === 'number' && typeof item.width === 'number' && typeof item.height === 'number')) {
+              // Merge saved layout with default layout to include new widgets
+              const mergedLayout = defaultLayout.map(defaultWidget => {
+                const savedWidget = savedLayout.find((sw: any) => sw.id === defaultWidget.id);
+                return savedWidget ? { ...defaultWidget, ...savedWidget } : defaultWidget;
+              });
+              // Add any new widgets from savedLayout that are not in defaultLayout (shouldn't happen with current logic, but good for robustness)
+              const finalLayout = [...mergedLayout, ...savedLayout.filter((savedWidget: any) => !defaultLayout.some(defaultWidget => defaultWidget.id === savedWidget.id))];
 
-            setWidgets(finalLayout);
+              console.log("[DashboardGrid] Loaded saved layout:", finalLayout); // Log loaded layout
+              setWidgets(finalLayout);
+            } else {
+              console.error("[DashboardGrid] Invalid layout data in Firestore, using default layout.");
+              setWidgets(defaultLayout); // Fallback to default if data is invalid
+            }
           } else {
-            console.error("Invalid layout data in Firestore, using default layout.");
-            setWidgets(defaultLayout); // Fallback to default if data is invalid
+            // If no layout exists, save the default layout
+            console.log("[DashboardGrid] No layout found in Firestore, saving default layout."); // Log saving default
+            await setDoc(layoutRef, { widgets: defaultLayout });
           }
-        } else {
-          // If no layout exists, save the default layout
-          await setDoc(layoutRef, { widgets: defaultLayout });
+        } catch (e) {
+          console.error("[DashboardGrid] Error fetching layout:", e); // More specific error logging
         }
+      } else {
+        console.log("[DashboardGrid] Session not available, cannot fetch layout."); // Log if session is missing
       }
     };
 
@@ -140,16 +149,29 @@ export default function DashboardGrid() {
   useEffect(() => {
     const saveLayout = async () => {
       if (session?.user?.email) { // Save if session exists
+        console.log("[DashboardGrid] Saving layout:", widgets); // Log layout being saved
         const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
         try {
           await setDoc(layoutRef, { widgets });
+          console.log("[DashboardGrid] Layout saved successfully."); // Log successful save
         } catch (e) {
-          console.error("Error saving layout:", e);
+          console.error("[DashboardGrid] Error saving layout:", e); // More specific error logging
         }
+      } else {
+        console.log("[DashboardGrid] Session not available, cannot save layout."); // Log if session is missing
       }
     };
 
-    saveLayout();
+    // Add a small delay before saving to avoid excessive writes during rapid changes (e.g., resizing)
+    const handler = setTimeout(() => {
+      saveLayout();
+    }, 500); // Adjust delay as needed
+
+    return () => {
+      // Clean up the timeout on unmount or when dependencies change
+      clearTimeout(handler);
+    };
+
   }, [widgets, session]); // Save when widgets or session changes
 
   const sensors = useSensors(
