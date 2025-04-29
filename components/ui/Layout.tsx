@@ -123,11 +123,11 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4">
           {children}
         </main>
         {isChatOpen && (
-          <div className="fixed bottom-0 right-0 z-50">
+          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
             <ChatWidget onClose={() => setIsChatOpen(false)} key="chatwidget"/>
           </div>
         )}
