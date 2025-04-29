@@ -16,7 +16,6 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
   const { data: session, status } = useSession();
   const isAuthed                   = status === "authenticated";
 
-  const [open, setOpen]           = useState(false);
   const [unread, setUnread]       = useState(false);
   const [history, setHistory]     = useState<
     { role: "user" | "assistant"; content: string }[]
@@ -88,75 +87,66 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
       setHistory(h => [...h, { role: "assistant", content: "Network error. Please try again." }]);
     } finally {
       setLoading(false);
-      if (!open) setUnread(true);
       // Refresh widgets
       mutate("/api/tasks");
       mutate("/api/calendar");
     }
   };
 
-  // Toggle chat drawer
-  const toggle = () => {
-    setOpen(o => !o);
-    if (!open) setUnread(false);
-  };
+  // Removed the 'toggle' function as it's no longer needed
 
   if (status === "loading") return null;
 
   return (
-    <>
-      {open && (
-        <div className="
-          fixed bottom-20 right-6
-          w-80 h-96
-          glass p-4 rounded-xl shadow-elevate-lg
-          flex flex-col z-50
-        ">
-          <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
-            {history.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
-                <span className={`
-                  inline-block px-3 py-1 rounded-lg
-                  ${m.role === "assistant"
-                    ? "bg-[var(--primary)] text-white"
-                    : "bg-[var(--neutral-200)] text-[var(--fg)]"
-                  }
-                `}>
-                  {m.content}
-                </span>
-              </div>
-            ))}
-            {loading && (
-              <p className="italic text-[var(--neutral-500)]">FloCat is typing…</p>
-            )}
-          </div>
-          <div className="flex border-t border-[var(--neutral-300)] pt-2">
-            <input
-              className="
-                flex-1 border border-[var(--neutral-300)]
-                rounded-l px-2 py-1 focus:outline-none
-                focus:ring-2 focus:ring-[var(--primary)]
-              "
-              placeholder="Type a message…"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && send()}
-            />
-            <button
-              onClick={send}
-              disabled={loading}
-              className="
-                ml-2 px-3 rounded-r text-white
-                bg-[var(--accent)] hover:opacity-90
-                disabled:opacity-50
-              "
-            >
-              Send
-            </button>
-          </div>
-          <button onClick={onClose}>Close</button>
+    <div className=" {/* Removed the outer fragment and the 'open &&' conditional */}
+      fixed bottom-20 right-6
+      w-80 h-96
+      glass p-4 rounded-xl shadow-elevate-lg
+      flex flex-col z-50
+    ">
+        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
+          {history.map((m, i) => (
+            <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
+              <span className={`
+                inline-block px-3 py-1 rounded-lg
+                ${m.role === "assistant"
+                  ? "bg-[var(--primary)] text-white"
+                  : "bg-[var(--neutral-200)] text-[var(--fg)]"
+                }
+              `}>
+                {m.content}
+              </span>
+            </div>
+          ))}
+          {loading && (
+            <p className="italic text-[var(--neutral-500)]">FloCat is typing…</p>
+          )}
         </div>
-      )}
-    </>
+        <div className="flex border-t border-[var(--neutral-300)] pt-2">
+          <input
+            className="
+              flex-1 border border-[var(--neutral-300)]
+              rounded-l px-2 py-1 focus:outline-none
+              focus:ring-2 focus:ring-[var(--primary)]
+            "
+            placeholder="Type a message…"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && send()}
+          />
+          <button
+            onClick={send}
+            disabled={loading}
+            className="
+              ml-2 px-3 rounded-r text-white
+              bg-[var(--accent)] hover:opacity-90
+              disabled:opacity-50
+            "
+            >
+            Send
+          </button>
+        </div>
+        <button onClick={onClose}>Close</button>
+      </div>
   );
 }
