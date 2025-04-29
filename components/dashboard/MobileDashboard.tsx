@@ -16,14 +16,16 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   quicknote: <QuickNoteWidget />,
 };
 
-const widgetOrder: WidgetType[] = ["ataglance", "quicknote", "tasks", "calendar"]; // Define a default order for mobile
+const widgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "quicknote"]; // Define the requested order for mobile
 
 export default function MobileDashboard() {
   return (
     <div className="grid grid-cols-1 gap-4 p-4">
       {widgetOrder.map((widgetId) => (
         <div key={widgetId} className="glass p-4 rounded-xl shadow-md">
-          <h2 className="font-semibold capitalize mb-2">{widgetId}</h2>
+          <h2 className="font-semibold capitalize mb-2">
+            {widgetId === "ataglance" ? "Your Day at a Glance" : widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
+          </h2> {/* Customize header for ataglance */}
           <div className="flex-1 overflow-auto">
             {widgetComponents[widgetId]}
           </div>

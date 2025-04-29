@@ -12,6 +12,7 @@ interface Task {
   id: string;
   text: string;
   done: boolean;
+  source?: "personal" | "work"; // Add source tag
 }
 
 const AtAGlanceWidget: React.FC = () => {
@@ -50,7 +51,7 @@ const AtAGlanceWidget: React.FC = () => {
         setTasks(tasksData);
 
         // Generate AI message
-        const prompt = `Generate a personalized "At A Glance" message for the user "${userName}" based on the following information:\n\nUpcoming Events Today:\n${eventsData.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date}`).join('\n') || 'None'}\n\nTasks:\n${tasksData.map(task => `- ${task.text} (Done: ${task.done})`).join('\n') || 'None'}\n\nThe message should be from FloCat, welcoming the user to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and have a friendly, slightly quirky personality with emojis.`;
+        const prompt = `Generate a personalized "At A Glance" message for the user "${userName}" based on the following information:\n\nUpcoming Events Today:\n${upcomingEvents.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date}`).join('\n') || 'None'}\n\nTasks:\n${tasks.map(task => `- ${task.text} (Done: ${task.done})`).join('\n') || 'None'}\n\nThe message should be from FloCat, welcoming the user to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and have a friendly, slightly quirky personality with emojis. Please use markdown for lists and include line breaks for readability.`;
 
         const aiRes = await fetch('/api/assistant', {
           method: 'POST',
@@ -92,9 +93,15 @@ const AtAGlanceWidget: React.FC = () => {
 
   return (
     <div className="p-4 border rounded-lg shadow-sm flex flex-col h-full justify-between">
-      <p className="text-lg">
-        {aiMessage || "FloCat is thinking..."}
-      </p>
+      <div className="text-lg">
+        {/* Render message with line breaks */}
+        {aiMessage ? aiMessage.split('\n').map((line, index) => (
+          <React.Fragment key={index}>
+            {line}
+            {index < aiMessage.split('\n').length - 1 && <br />}
+          </React.Fragment>
+        )) : "FloCat is thinking..."}
+      </div>
       <p className="text-sm mt-2 self-end">- FloCat 😼</p>
     </div>
   );

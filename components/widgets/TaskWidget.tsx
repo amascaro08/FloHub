@@ -13,6 +13,7 @@ export interface Task {
   done:      boolean;
   dueDate:   string | null;
   createdAt: string | null;
+  source?:   "personal" | "work"; // Add source tag
 }
 
 export default function TaskWidget() {
@@ -30,6 +31,7 @@ export default function TaskWidget() {
   );
   const [editing, setEditing]     = useState<Task | null>(null);
   const [celebrating, setCelebrating] = useState(false); // State for celebration
+  const [taskSource, setTaskSource] = useState<"personal" | "work">("personal"); // State for task source
 
   // Friendly formatter: "Jan 5"
   const fmt = (iso: string | null) => {
@@ -64,6 +66,7 @@ export default function TaskWidget() {
     const payload: any = {
       text:    input.trim(),
       dueDate: dueISO,
+      source:  taskSource, // Include task source
     };
     // If you're editing, send PATCH; else POST
     const method = editing ? "PATCH" : "POST";
@@ -72,6 +75,12 @@ export default function TaskWidget() {
     if (editing) {
       payload.id   = editing.id;
       payload.done = editing.done;
+      // If editing, don't change source unless explicitly added to form
+      if (taskSource !== (editing.source || "personal")) { // Check if source changed from original
+         payload.source = taskSource;
+      } else {
+         delete payload.source; // Don't send source if it's the same as original or default
+      }
     }
 
     await fetch("/api/tasks", {
@@ -85,13 +94,14 @@ export default function TaskWidget() {
     setDue("today");
     setCustomDate(new Date().toISOString().slice(0, 10));
     setEditing(null);
+    setTaskSource("personal"); // Reset source to default
     mutate();
   };
 
   const toggleComplete = async (t: Task) => {
-    // Optimistically update the UI
+    // Optimistically update the UI by filtering out completed tasks
     if (tasks) {
-      mutate(tasks.filter(task => task.id !== t.id), false); // Remove task and don't revalidate yet
+      mutate(tasks.filter(task => task.id !== t.id), false);
     }
 
     // Trigger celebration
@@ -132,6 +142,7 @@ export default function TaskWidget() {
     if (t.dueDate) {
       setCustomDate(t.dueDate.slice(0, 10));
     }
+    setTaskSource(t.source || "personal"); // Set source when editing
   };
 
   if (status === "loading") {
@@ -140,6 +151,9 @@ export default function TaskWidget() {
   if (!session) {
     return <p>Please sign in to see your tasks.</p>;
   }
+
+  // Filter out completed tasks for display
+  const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
 
   return (
     <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)] relative"> {/* Added relative for absolute positioning */}
@@ -175,8 +189,8 @@ export default function TaskWidget() {
             "
           >
             <option value="today" className="text-[var(--fg)]">Today</option>
-            <option value="tomorrow" className="text-[var(--fg)]">Tomorrow</option>
-            <option value="custom" className="text-[var(--fg)]">Custom</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="custom">Custom</option>
           </select>
 
           {due === "custom" && (
@@ -193,6 +207,25 @@ export default function TaskWidget() {
           )}
         </div>
 
+        {/* Task Source Selection */}
+        <div className="flex gap-2 items-center">
+           <label className="text-sm font-medium">Source:</label>
+           <select
+             value={taskSource}
+             onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
+             className="
+               border border-[var(--neutral-300)]
+               px-3 py-1 rounded focus:outline-none
+               focus:ring-2 focus:ring-[var(--primary)]
+               text-[var(--fg)]
+             "
+           >
+             <option value="personal">Personal</option>
+             <option value="work">Work</option>
+           </select>
+        </div>
+
+
         <button
           type="submit"
           className="
@@ -205,8 +238,8 @@ export default function TaskWidget() {
       </form>
 
       <ul className="space-y-2 text-sm">
-        {tasks && tasks.length > 0 ? (
-          tasks.map((t) => (
+        {incompleteTasks.length > 0 ? (
+          incompleteTasks.map((t) => (
             <li
               key={t.id}
               className="flex justify-between items-center py-1"
@@ -218,9 +251,21 @@ export default function TaskWidget() {
                   onChange={() => toggleComplete(t)}
                   className="mr-2"
                 />
-                <span className={t.done ? "line-through text-[var(--neutral-500)]" : ""}>
+                <span>
                   {t.text}
                 </span>
+                 {/* Display task source tag */}
+                {t.source && (
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded text-xs ml-2 ${
+                      t.source === "work"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {t.source === "work" ? "Work" : "Personal"}
+                  </span>
+                )}
                 <span className="ml-2 text-[var(--neutral-500)]">
                   ({fmt(t.dueDate)})
                 </span>
