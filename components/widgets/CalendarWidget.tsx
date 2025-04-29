@@ -184,7 +184,7 @@ export default function CalendarWidget() {
     <div className="p-4 bg-[var(--surface)] rounded-lg shadow">
       {/* Event Details Modal */}
       {viewingEvent && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Event Details</h3>
             <div className="space-y-2">
