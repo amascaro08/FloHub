@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { marked } from 'marked'; // Import marked
 
 interface CalendarEvent {
   id: string;
   summary: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
+  source?: "personal" | "work"; // Add source tag
 }
 
 interface Task {
@@ -24,18 +26,39 @@ const AtAGlanceWidget: React.FC = () => {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>(""); // State for PowerAutomate URL
+
+  // Load calendar settings on mount to get PowerAutomate URL
+  useEffect(() => {
+    const raw = localStorage.getItem('flohub.calendarSettings');
+    if (raw) {
+      try {
+        const settings = JSON.parse(raw);
+        if (typeof settings.powerAutomateUrl === "string") {
+          setPowerAutomateUrl(settings.powerAutomateUrl);
+        }
+      } catch (e) {
+        console.error('Failed to parse calendar settings:', e);
+      }
+    }
+  }, []);
+
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch upcoming events for today
+        // Fetch upcoming events for today, including o365Url
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
         const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-        const eventsRes = await fetch(`/api/calendar?timeMin=${startOfDay}&timeMax=${endOfDay}`);
+        const eventsApiUrl = `/api/calendar?timeMin=${startOfDay}&timeMax=${endOfDay}${
+          powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
+        }`;
+
+        const eventsRes = await fetch(eventsApiUrl);
         if (!eventsRes.ok) {
           throw new Error(`Error fetching events: ${eventsRes.statusText}`);
         }
@@ -50,8 +73,11 @@ const AtAGlanceWidget: React.FC = () => {
         const tasksData: Task[] = await tasksRes.json();
         setTasks(tasksData);
 
+        // Filter out completed tasks for the AI prompt
+        const incompleteTasks = tasksData.filter(task => !task.done);
+
         // Generate AI message
-        const prompt = `Generate a personalized "At A Glance" message for the user "${userName}" based on the following information:\n\nUpcoming Events Today:\n${upcomingEvents.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date}`).join('\n') || 'None'}\n\nTasks:\n${tasks.map(task => `- ${task.text} (Done: ${task.done})`).join('\n') || 'None'}\n\nThe message should be from FloCat, welcoming the user to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and have a friendly, slightly quirky personality with emojis. Please use markdown for lists and include line breaks for readability.`;
+        const prompt = `Generate a personalized "At A Glance" message for the user "${userName}" based on the following information:\n\nUpcoming Events Today:\n${eventsData.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date} (${event.source || 'personal'})`).join('\n') || 'None'}\n\nIncomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\nThe message should be from FloCat, welcoming the user to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and have a friendly, slightly quirky personality with emojis. Please use markdown for lists and **bold** headings.`;
 
         const aiRes = await fetch('/api/assistant', {
           method: 'POST',
@@ -80,8 +106,11 @@ const AtAGlanceWidget: React.FC = () => {
       }
     };
 
-    fetchData();
-  }, [session]); // Refetch when session changes
+    // Fetch data when session or powerAutomateUrl changes
+    if (session) {
+       fetchData();
+    }
+  }, [session, powerAutomateUrl]); // Refetch when session or powerAutomateUrl changes
 
   if (loading) {
     return <div className="p-4 border rounded-lg shadow-sm">Loading...</div>;
@@ -91,16 +120,13 @@ const AtAGlanceWidget: React.FC = () => {
     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
   }
 
+  // Convert markdown to HTML
+  const formattedMessage = aiMessage ? marked(aiMessage) : "FloCat is thinking...";
+
   return (
     <div className="p-4 border rounded-lg shadow-sm flex flex-col h-full justify-between">
-      <div className="text-lg">
-        {/* Render message with line breaks */}
-        {aiMessage ? aiMessage.split('\n').map((line, index) => (
-          <React.Fragment key={index}>
-            {line}
-            {index < aiMessage.split('\n').length - 1 && <br />}
-          </React.Fragment>
-        )) : "FloCat is thinking..."}
+      <div className="text-lg prose" dangerouslySetInnerHTML={{ __html: formattedMessage }}>
+        {/* Message will be rendered here by dangerouslySetInnerHTML */}
       </div>
       <p className="text-sm mt-2 self-end">- FloCat 😼</p>
     </div>
