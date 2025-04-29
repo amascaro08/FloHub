@@ -54,7 +54,8 @@ const AtAGlanceWidget: React.FC = () => {
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
         const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-        const eventsApiUrl = `/api/calendar?timeMin=${startOfDay}&timeMax=${endOfDay}${
+        const userTimezone = "Australia/Sydney"; // Using a standard IANA timezone name for AEST/AEDT
+        const eventsApiUrl = `/api/calendar?timeMin=${startOfDay}&timeMax=${endOfDay}&timezone=${encodeURIComponent(userTimezone)}${
           powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
         }`;
 

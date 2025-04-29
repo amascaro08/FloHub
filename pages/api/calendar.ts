@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
+import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
+import { parseISO } from 'date-fns'; // Import parseISO
 
 export type CalendarEvent = {
   id: string;
@@ -27,16 +29,17 @@ export default async function handler(
   }
 
   const accessToken = token.accessToken as string;
-  const { calendarId = "primary", timeMin, timeMax, o365Url } = req.query;
+  const { calendarId = "primary", timeMin, timeMax, o365Url, timezone } = req.query; // Extract timezone
 
   // Normalize and validate dates
   const safeTimeMin = typeof timeMin === "string" ? timeMin : "";
   const safeTimeMax = typeof timeMax === "string" ? timeMax : "";
-  
+  const userTimezone = typeof timezone === "string" ? timezone : "UTC"; // Default to UTC if no timezone is provided
 
   console.log("[CALENDAR API] calendarId:", calendarId);
   console.log("[CALENDAR API] safeTimeMin:", safeTimeMin);
   console.log("[CALENDAR API] safeTimeMax:", safeTimeMax);
+  console.log("[CALENDAR API] userTimezone:", userTimezone); // Log the timezone
 
   if (!safeTimeMin || !safeTimeMax) {
     return res.status(400).json({ error: "Missing timeMin or timeMax" });
@@ -61,18 +64,18 @@ export default async function handler(
     )}&timeMax=${encodeURIComponent(
       safeTimeMax
     )}&singleEvents=true&orderBy=startTime`;
-  
+
     try {
       const gres = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-  
+
       if (!gres.ok) {
         const err = await gres.json();
         console.error(`Google Calendar API error for ${id}:`, err);
         continue;
       }
-  
+
       const body = await gres.json();
       if (Array.isArray(body.items)) {
         // Tag as personal (Google)
@@ -82,7 +85,7 @@ export default async function handler(
       console.error("Error fetching events:", e);
     }
   }
-  
+
   // Fetch O365 events if o365Url is provided
   if (typeof o365Url === "string" && o365Url.startsWith("http")) {
     try {
@@ -128,14 +131,28 @@ export default async function handler(
       const db = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
       return da - db;
     })
-    .map((e: any) => ({
-      id: e.id,
-      summary: e.summary,
-      start: { dateTime: e.start?.dateTime, date: e.start?.date },
-      end: e.end ? { dateTime: e.end?.dateTime, date: e.end?.date } : undefined,
-      source: e.source || undefined,
-      description: e.description || undefined, // Include description
-    }));
+    .map((e: any) => {
+      // Format dateTime to the user's timezone
+      const startDateTime = e.start?.dateTime;
+      const endDateTime = e.end?.dateTime;
+
+      const formattedStartDateTime = startDateTime
+        ? formatInTimeZone(parseISO(startDateTime), userTimezone, 'yyyy-MM-dd HH:mm:ss zzz') // Format to user's timezone
+        : undefined;
+
+      const formattedEndDateTime = endDateTime
+        ? formatInTimeZone(parseISO(endDateTime), userTimezone, 'yyyy-MM-dd HH:mm:ss zzz') // Format to user's timezone
+        : undefined;
+
+      return {
+        id: e.id,
+        summary: e.summary,
+        start: { dateTime: formattedStartDateTime, date: e.start?.date },
+        end: e.end ? { dateTime: formattedEndDateTime, date: e.end?.date } : undefined,
+        source: e.source || undefined,
+        description: e.description || undefined, // Include description
+      };
+    });
 
   return res.status(200).json(events);
 }

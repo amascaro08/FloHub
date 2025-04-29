@@ -139,7 +139,7 @@ export default function DashboardGrid() {
   // Save layout to Firestore whenever the widgets state changes
   useEffect(() => {
     const saveLayout = async () => {
-      if (session?.user?.email && widgets !== defaultLayout) { // Only save if session exists and layout is not the initial default
+      if (session?.user?.email) { // Save if session exists
         const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
         try {
           await setDoc(layoutRef, { widgets });
