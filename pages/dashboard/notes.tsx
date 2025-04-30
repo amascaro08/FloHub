@@ -47,6 +47,32 @@ export default function NotesPage() {
   }, [notesResponse]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
+  const handleDeleteNote = async (noteId: string) => {
+    setIsSaving(true); // Indicate saving/deleting in progress
+    try {
+      const response = await fetch(`/api/notes/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: noteId }),
+      });
+
+      if (response.ok) {
+        console.log("Note deleted successfully!");
+        mutate(); // Re-fetch notes to update the list
+        setSelectedNoteId(null); // Deselect the note after deletion
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to delete note:", errorData.error);
+        // Optionally show an error message to the user
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+       // Optionally show an error message to the user
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSaveNote = async (note: { title: string; content: string; tags: string[] }) => {
     setIsSaving(true);
     try {
@@ -205,6 +231,7 @@ export default function NotesPage() {
           <NoteDetail
             note={selectedNote}
             onSave={handleUpdateNote}
+            onDelete={handleDeleteNote} // Pass the delete handler
             isSaving={isSaving} // Pass isSaving state
           />
         ) : (

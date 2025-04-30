@@ -1,0 +1,50 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import admin from 'firebase-admin'; // Import admin directly
+
+// Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
+// If not, uncomment the initialization block below:
+/*
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
+    }),
+  });
+}
+*/
+
+const db = getFirestore();
+const auth = getAuth();
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'DELETE') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  const { id } = req.body; // Assuming the note ID is sent in the request body
+
+  if (!id) {
+    return res.status(400).json({ message: 'Note ID is required' });
+  }
+
+  try {
+    // Optional: Verify user's authentication and ownership of the note
+    // const session = await auth.verifyIdToken(req.headers.authorization?.split(' ')[1]);
+    // const userId = session.uid;
+    // const noteRef = db.collection('notes').doc(id);
+    // const noteDoc = await noteRef.get();
+    // if (!noteDoc.exists || noteDoc.data()?.userId !== userId) {
+    //   return res.status(403).json({ message: 'Unauthorized' });
+    // }
+
+    await db.collection('notes').doc(id).delete();
+    res.status(200).json({ message: 'Note deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting note:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error instanceof Error ? error.message : 'An unknown error occurred' });
+  }
+}

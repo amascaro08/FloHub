@@ -6,10 +6,11 @@ import type { Note } from "@/types/app"; // Import shared Note type
 type NoteDetailProps = {
   note: Note;
   onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => Promise<void>; // Include updatedTitle
+  onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
 };
 
-export default function NoteDetail({ note, onSave, isSaving }: NoteDetailProps) {
+export default function NoteDetail({ note, onSave, onDelete, isSaving }: NoteDetailProps) {
   const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
   const [tagsInput, setTagsInput] = useState(note.tags.join(", ")); // Join tags for input
@@ -70,7 +71,15 @@ export default function NoteDetail({ note, onSave, isSaving }: NoteDetailProps) 
             disabled={isSaving}
           />
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2"> {/* Add gap for spacing */}
+          <button
+            type="button" // Change type to button to prevent form submission
+            className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => onDelete(note.id)} // Call onDelete with note ID
+            disabled={isSaving}
+          >
+            Delete Note
+          </button>
           <button
             type="submit"
             className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
