@@ -38,6 +38,21 @@ export default function CalendarWidget() {
   const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
 
   // Load calendar settings on mount
+
+  // Save calendar settings to localStorage when they change
+  useEffect(() => {
+    const settings = {
+      selectedCals,
+      defaultView: activeView,
+      customRange,
+      powerAutomateUrl,
+    };
+    try {
+      localStorage.setItem('flohub.calendarSettings', JSON.stringify(settings));
+    } catch (e) {
+      console.error('Failed to save calendar settings:', e);
+    }
+  }, [selectedCals, activeView, customRange, powerAutomateUrl]);
   useEffect(() => {
     const raw = localStorage.getItem('flohub.calendarSettings');
     if (raw) {
