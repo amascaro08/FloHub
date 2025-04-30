@@ -70,8 +70,15 @@ export default async function handler(
 
         const body = await gres.json();
         if (Array.isArray(body.items)) {
-          // Tag as personal (Google)
-          allEvents.push(...body.items.map((item: any) => ({ ...item, source: "personal" })));
+          // Tag as personal (Google) and normalize fields
+          allEvents.push(...body.items.map((item: any) => ({
+            id: item.id,
+            summary: item.summary || "No Title",
+            start: item.start || { dateTime: "", timeZone: "" },
+            end: item.end || { dateTime: "", timeZone: "" },
+            source: "personal",
+            description: item.description || "",
+          })));
         }
       } catch (e) {
         console.error("Error fetching events:", e);
