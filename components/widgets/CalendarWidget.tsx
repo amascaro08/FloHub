@@ -147,8 +147,14 @@ export default function CalendarWidget() {
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
     }`;
 
+
   const { data, error } = useSWR(apiUrl, fetcher);
 
+  useEffect(() => {
+    if (data) {
+      console.log("Calendar events data:", data);
+    }
+  }, [data]);
   // Debug logs for API URL and error
   useEffect(() => {
     if (apiUrl) {
