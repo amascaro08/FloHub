@@ -32,7 +32,6 @@ export default async function handler(
   try {
     // 2) Fetch notes for the authenticated user from the database
     // This is a placeholder. You will need to implement the actual database logic here.
-    console.log(`Fetching notes for user ${userId}`);
 
     const notesSnapshot = await getDocs(query(
       collection(db, "notes"),

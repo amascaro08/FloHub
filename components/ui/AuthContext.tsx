@@ -40,7 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = () => signIn("google");
   const logout = () => signOut();
   const toggleLock = () => {
-    console.log("Toggle lock called");
     setIsLocked(!isLocked);
   };
 

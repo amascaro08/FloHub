@@ -56,7 +56,6 @@ export default async function handler(
 
   try {
     // 3) Save the meeting note to the database
-    console.log(`Saving meeting note for user ${userId}:`, { title, content, tags, eventId, eventTitle, isAdhoc, actions }); // Updated log message
 
     // Example placeholder for Firebase (adjust based on your actual Firebase setup)
     const newNoteRef = await addDoc(collection(db, "notes"), { // Still save to 'notes' collection

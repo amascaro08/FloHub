@@ -41,12 +41,11 @@ interface DraggableItemProps {
 
 function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps) {
   const { isLocked } = useAuth(); // Use the isLocked state
-  console.log(`Widget ${id} isLocked:`, isLocked); // Add logging
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform } =
     useDraggable({ id, disabled: isLocked }); // Disable dragging when locked
 
   const containerStyle = {
-    position: 'absolute' as 'absolute', // Explicitly type as 'absolute'
+    position: 'absolute' as const, // Explicitly type as 'absolute'
     left: position.x,
     top: position.y,
     width: size.width, // Control width with state
@@ -106,7 +105,6 @@ export default function DashboardGrid() {
 
   // Load layout from Firestore on component mount
   useEffect(() => {
-    console.log("[DashboardGrid] Component mounted. Session:", session); // Log session status on mount
     const fetchLayout = async () => {
       if (session?.user?.email) {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
@@ -123,7 +121,6 @@ export default function DashboardGrid() {
               // Add any new widgets from savedLayout that are not in defaultLayout (shouldn't happen with current logic, but good for robustness)
               const finalLayout = [...mergedLayout, ...savedLayout.filter((savedWidget: any) => !defaultLayout.some(defaultWidget => defaultWidget.id === savedWidget.id))];
 
-              console.log("[DashboardGrid] Loaded saved layout:", finalLayout); // Log loaded layout
               setWidgets(finalLayout);
             } else {
               console.error("[DashboardGrid] Invalid layout data in Firestore, using default layout.");
@@ -131,14 +128,12 @@ export default function DashboardGrid() {
             }
           } else {
             // If no layout exists, save the default layout
-            console.log("[DashboardGrid] No layout found in Firestore, saving default layout."); // Log saving default
             await setDoc(layoutRef, { widgets: defaultLayout });
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching layout:", e); // More specific error logging
         }
       } else {
-        console.log("[DashboardGrid] Session not available, cannot fetch layout."); // Log if session is missing
       }
     };
 
@@ -149,16 +144,13 @@ export default function DashboardGrid() {
   useEffect(() => {
     const saveLayout = async () => {
       if (session?.user?.email) { // Save if session exists
-        console.log("[DashboardGrid] Saving layout:", widgets); // Log layout being saved
         const layoutRef = doc(db, "users", session.user.email, "settings", "layout");
         try {
           await setDoc(layoutRef, { widgets });
-          console.log("[DashboardGrid] Layout saved successfully."); // Log successful save
         } catch (e) {
           console.error("[DashboardGrid] Error saving layout:", e); // More specific error logging
         }
       } else {
-        console.log("[DashboardGrid] Session not available, cannot save layout."); // Log if session is missing
       }
     };
 

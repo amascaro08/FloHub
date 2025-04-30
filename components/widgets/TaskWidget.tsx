@@ -63,7 +63,7 @@ export default function TaskWidget() {
     }
 
     // Build payload
-    const payload: any = {
+    const payload: { text: string; dueDate: string | null; source: Task['source']; id?: string; done?: boolean } = {
       text:    input.trim(),
       dueDate: dueISO,
       source:  taskSource, // Include task source
@@ -180,7 +180,7 @@ export default function TaskWidget() {
 
           <select
             value={due}
-            onChange={(e) => setDue(e.target.value as any)}
+            onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
             className="
               border border-[var(--neutral-300)]
               px-3 py-2 rounded focus:outline-none

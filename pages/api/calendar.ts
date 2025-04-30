@@ -36,10 +36,6 @@ export default async function handler(
   const safeTimeMax = typeof timeMax === "string" ? timeMax : "";
   const userTimezone = typeof timezone === "string" ? timezone : "UTC"; // Default to UTC if no timezone is provided
 
-  console.log("[CALENDAR API] calendarId:", calendarId);
-  console.log("[CALENDAR API] safeTimeMin:", safeTimeMin);
-  console.log("[CALENDAR API] safeTimeMax:", safeTimeMax);
-  console.log("[CALENDAR API] userTimezone:", userTimezone); // Log the timezone
 
   if (!safeTimeMin || !safeTimeMax) {
     return res.status(400).json({ error: "Missing timeMin or timeMax" });

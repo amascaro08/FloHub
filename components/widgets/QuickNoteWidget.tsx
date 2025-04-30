@@ -31,7 +31,6 @@ export default function QuickNoteWidget() {
         setContent(""); // Clear content on success
         setTagsInput(""); // Clear tags on success
         setSaveStatus("success");
-        console.log("Note saved successfully!");
         // Optionally, trigger a re-fetch of notes in the Notes list if it were visible
       } else {
         const errorData = await response.json();

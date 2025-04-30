@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
+import { firestore } from "@/lib/firebaseAdmin";
+import admin from "firebase-admin";
 
 type CreateNoteRequest = {
   title?: string; // Add optional title field
@@ -51,24 +51,18 @@ export default async function handler(
 
   try {
     // 3) Save the note to the database
-    // This is a placeholder. You will need to implement the actual database logic here.
-    console.log(`Saving note for user ${userId}:`, { content, tags, eventId, eventTitle, isAdhoc });
-
-    // Example placeholder for Firebase (adjust based on your actual Firebase setup)
-    const newNoteRef = await addDoc(collection(db, "notes"), {
-      userId: userId,
-      title: title || "", // Save title, default to empty string if not provided
-      content: content,
-      tags: tags || [], // Save tags as an empty array if none provided
-      createdAt: new Date(),
-      // Save new fields if provided
-      ...(eventId && { eventId }),
-      ...(eventTitle && { eventTitle }),
-      ...(isAdhoc !== undefined && { isAdhoc }), // Save if explicitly provided (true or false)
+    const newNoteRef = await firestore.collection("notes").add({
+      userId,
+      title: title ?? "",
+      content,
+      tags: tags ?? [],
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(eventId !== undefined && { eventId }),
+      ...(eventTitle !== undefined && { eventTitle }),
+      ...(isAdhoc !== undefined && { isAdhoc }),
     });
-    const noteId = newNoteRef.id;
-
-    return res.status(201).json({ success: true, noteId: noteId });
+    const snap = await newNoteRef.get();
+    return res.status(201).json({ success: true, noteId: snap.id });
 
   } catch (err: any) {
     console.error("Create note error:", err);

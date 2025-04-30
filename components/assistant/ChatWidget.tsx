@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSession }          from "next-auth/react";
 import useSWR, { mutate }      from "swr";
+import type { Task as TaskType } from "@/components/widgets/TaskWidget";
 
 // Simple fetcher for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -36,9 +37,9 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
       history.length === 0
     ) {
       const todayStr = new Date().toDateString();
-      const dueToday = tasks.filter((t: any) => {
-        const d = new Date(t.due);
-        return !t.completed && d.toDateString() === todayStr;
+      const dueToday = (tasks as TaskType[]).filter((t) => {
+        const d = new Date(t.dueDate ?? "");
+        return !t.done && d.toDateString() === todayStr;
       }).length;
       const evtToday = events.filter((e: any) => {
         const d = new Date(e.start.dateTime || e.start.date || "");
@@ -98,7 +99,7 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
   if (status === "loading") return null;
 
   return (
-    <div className=" {/* Removed the outer fragment and the 'open &&' conditional */}
+    <div role="dialog" aria-label="FloCat chat" className="
       w-80 h-96
       glass p-4 rounded-xl shadow-elevate-lg
       flex flex-col
@@ -145,7 +146,13 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
             Send
           </button>
         </div>
-        <button onClick={onClose}>Close</button>
+        <button
+          onClick={onClose}
+          aria-label="Close chat"
+          className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+        >
+          Close
+        </button>
       </div>
   );
 }

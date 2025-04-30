@@ -33,7 +33,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  console.log("Received DELETE request for meeting note ID:", req.body.id); // Updated log message
   const { id } = req.body; // Assuming the note ID is sent in the request body
 
   if (!id) {
@@ -51,7 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // }
 
     await db.collection('notes').doc(id).delete(); // Still delete from 'notes' collection
-    console.log("Meeting note with ID", id, "deleted successfully."); // Updated log message
     res.status(200).json({ message: 'Meeting note deleted successfully' }); // Updated success message
   } catch (error) {
     console.error('Error deleting meeting note:', error); // Updated error log

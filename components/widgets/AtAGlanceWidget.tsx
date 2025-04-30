@@ -79,8 +79,6 @@ const AtAGlanceWidget: React.FC = () => {
         // Filter out completed tasks for the AI prompt
         const incompleteTasks = tasksData.filter(task => !task.done);
 
-        console.log("[AtAGlanceWidget] eventsData:", eventsData); // Log events data
-        console.log("[AtAGlanceWidget] incompleteTasks:", incompleteTasks); // Log incomplete tasks
 
         // Filter out past events for the AI prompt
         const upcomingEventsForPrompt = eventsData.filter(ev => {

@@ -16,7 +16,7 @@ type Task = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse  // ← no generic here
+  res: NextApiResponse<Task[] | Task | { id: string; done?: boolean; source?: string } | { error: string }>
 ) {
   // ── 1) Authenticate via JWT
   const token = await getToken({
@@ -38,14 +38,14 @@ export default async function handler(
     if (req.method === "GET") {
       const snap = await userTasks.orderBy("createdAt", "desc").get();
       const tasks: Task[] = snap.docs.map((d) => {
-        const data = d.data() as any;
+        const data = d.data();
         return {
-          id:        d.id,
-          text:      data.text,
-          done:      data.done,
-          dueDate:   data.dueDate   ? data.dueDate.toDate().toISOString()   : null,
-          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-          source:    data.source || undefined, // Include source
+          id: d.id,
+          text: data.text as string,
+          done: data.done as boolean,
+          dueDate: data.dueDate?.toDate().toISOString() ?? null,
+          createdAt: data.createdAt?.toDate().toISOString() ?? null,
+          source: data.source as Task['source'] | undefined,
         };
       });
       return res.status(200).json(tasks);
@@ -69,14 +69,14 @@ export default async function handler(
       }
       const ref = await userTasks.add(newTaskData);
       const snap = await ref.get();
-      const data = snap.data() as any;
+      const data = snap.data()!;
       const task: Task = {
-        id:        snap.id,
-        text:      data.text,
-        done:      data.done,
-        dueDate:   data.dueDate   ? data.dueDate.toDate().toISOString()   : null,
-        createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-        source:    data.source || undefined, // Include source
+        id: snap.id,
+        text: data.text as string,
+        done: data.done as boolean,
+        dueDate: data.dueDate?.toDate().toISOString() ?? null,
+        createdAt: data.createdAt?.toDate().toISOString() ?? null,
+        source: data.source as Task['source'] | undefined,
       };
       return res.status(201).json(task);
     }

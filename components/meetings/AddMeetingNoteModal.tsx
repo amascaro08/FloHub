@@ -45,8 +45,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
 
   // Log fetched events for debugging
   useEffect(() => {
-    console.log("Fetched calendar events:", calendarEvents);
-    console.log("Calendar events fetch error:", calendarEventsError);
   }, [calendarEvents, calendarEventsError]);
 
 
@@ -68,7 +66,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     e.preventDefault();
     // Content is required, and either an event must be selected or it must be ad-hoc
     if (!content.trim() || isSaving || (!selectedEventId && !isAdhoc)) {
-      // TODO: Add user feedback for validation failure
       return;
     }
 

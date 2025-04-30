@@ -33,7 +33,6 @@ export default async function handler(
   try {
     // 2) Fetch meeting notes for the authenticated user from the database
     // Filter for notes where eventId exists OR isAdhoc is true
-    console.log(`Fetching meeting notes for user ${userId}`);
 
     const meetingNotesSnapshot = await getDocs(query(
       collection(db, "notes"), // Meeting notes are stored in the same 'notes' collection

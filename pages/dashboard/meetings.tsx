@@ -57,12 +57,6 @@ export default function MeetingsPage() {
   );
 
   // Log the fetched data and errors for debugging
-  console.log("Meeting Notes data:", meetingNotesResponse);
-  console.log("Meeting Notes fetch error:", meetingNotesError);
-  console.log("Calendar events data:", calendarEvents);
-  console.log("Calendar fetch error:", calendarError);
-  console.log("Settings data:", settings);
-  console.log("Settings fetch error:", settingsError);
 
 
   const [searchContent, setSearchContent] = useState("");
@@ -77,7 +71,6 @@ export default function MeetingsPage() {
     return Array.from(new Set(tags)).sort(); // Get unique tags and sort them
   }, [meetingNotesResponse]);
 
-  // TODO: Implement filtering, searching, and grouping by date
   const filteredMeetingNotes = useMemo(() => {
     const notesArray = meetingNotesResponse?.meetingNotes || [];
     let filtered = notesArray;
@@ -98,9 +91,7 @@ export default function MeetingsPage() {
       );
     }
 
-    // TODO: Add filtering by event association and ad-hoc status
 
-    // TODO: Implement grouping by month/year
 
     return filtered;
   }, [meetingNotesResponse, searchContent, filterTag]);
@@ -111,12 +102,10 @@ export default function MeetingsPage() {
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
 
-  // TODO: Implement handleSaveMeetingNote and handleUpdateMeetingNote (will call new API endpoints)
   const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
     setIsSaving(true);
     try {
       // Call the new create meeting note API
-      console.log("Attempting to save meeting note:", note);
       const response = await fetch("/api/meetings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,16 +113,13 @@ export default function MeetingsPage() {
       });
 
       if (response.ok) {
-        console.log("Meeting note saved successfully!");
         mutate(); // Re-fetch meeting notes to update the list
       } else {
         const errorData = await response.json();
         console.error("Failed to save meeting note:", errorData.error);
-        // TODO: Show error message to the user
       }
     } catch (error) {
       console.error("Error saving meeting note:", error);
-      // TODO: Show error message to the user
     } finally {
       setIsSaving(false);
     }
@@ -144,7 +130,6 @@ export default function MeetingsPage() {
     setIsSaving(true);
     try {
       // Call the new update meeting note API
-      console.log("Attempting to update meeting note:", noteId, { updatedTitle, updatedContent, updatedTags, updatedEventId, updatedEventTitle, updatedIsAdhoc });
       const response = await fetch(`/api/meetings/update`, {
         method: "PUT", // Or PATCH, depending on API design
         headers: { "Content-Type": "application/json" },
@@ -160,16 +145,13 @@ export default function MeetingsPage() {
       });
 
       if (response.ok) {
-        console.log("Meeting note updated successfully!");
         mutate(); // Re-fetch meeting notes to update the list
       } else {
         const errorData = await response.json();
         console.error("Failed to update meeting note:", errorData.error);
-        // TODO: Show error message to the user
       }
     } catch (error) {
       console.error("Error updating meeting note:", error);
-      // TODO: Show error message to the user
     } finally {
       setIsSaving(false);
     }
@@ -180,7 +162,6 @@ export default function MeetingsPage() {
     setIsSaving(true);
     try {
       // Call the new delete meeting note API
-      console.log("Attempting to delete meeting note:", noteId);
       const response = await fetch(`/api/meetings/delete`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -188,17 +169,14 @@ export default function MeetingsPage() {
       });
 
       if (response.ok) {
-        console.log("Meeting note deleted successfully!");
         mutate(); // Re-fetch meeting notes to update the list
         setSelectedNoteId(null); // Deselect the note after deletion
       } else {
         const errorData = await response.json();
         console.error("Failed to delete meeting note:", errorData.error);
-        // TODO: Show error message to the user
       }
     } catch (error) {
       console.error("Error deleting meeting note:", error);
-      // TODO: Show error message to the user
     } finally {
       setIsSaving(false);
     }
@@ -216,12 +194,10 @@ export default function MeetingsPage() {
           body: JSON.stringify({ id: id }),
         })
       ));
-      console.log("Selected meeting notes deleted successfully!");
       mutate(); // Re-fetch meeting notes to update the list
       setSelectedNoteId(null); // Deselect any potentially selected note
     } catch (error) {
       console.error("Error deleting selected meeting notes:", error);
-      // TODO: Show error message to the user
     } finally {
       setIsSaving(false);
     }
@@ -315,7 +291,6 @@ export default function MeetingsPage() {
               <option key={tag} value={tag}>{tag}</option>
             ))}
           </select>
-          {/* TODO: Add filters for event association and ad-hoc status */}
        </div>
 
        {/* Render the MeetingNoteList component */}

@@ -43,10 +43,6 @@ export default function NotesPage() {
   );
 
   // Log the fetched data and errors for debugging
-  console.log("Notes data:", notesResponse);
-  console.log("Notes fetch error:", notesError);
-  console.log("Calendar events data:", calendarEvents);
-  console.log("Calendar fetch error:", calendarError);
 
 
   const [searchContent, setSearchContent] = useState("");
@@ -63,7 +59,6 @@ export default function NotesPage() {
 
   const handleDeleteNote = async (noteId: string) => {
     setIsSaving(true); // Indicate saving/deleting in progress
-    console.log("Attempting to delete note with ID:", noteId); // Add logging
     try {
       const response = await fetch(`/api/notes/delete`, {
         method: "DELETE",
@@ -72,7 +67,6 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        console.log("Note deleted successfully!");
         mutate(); // Re-fetch notes to update the list
         setSelectedNoteId(null); // Deselect the note after deletion
       } else {
@@ -113,7 +107,6 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        console.log("Note saved successfully!");
         mutate(); // Re-fetch notes to update the list
       } else {
         const errorData = await response.json();
@@ -151,9 +144,7 @@ export default function NotesPage() {
       );
     }
 
-    // TODO: Implement filtering by event association and ad-hoc status
 
-    console.log("Filtered notes computed:", filtered); // Log the computed filtered notes
     return filtered;
   }, [notesResponse, searchContent, filterTag]); // Update dependency to notesResponse
 
@@ -198,7 +189,6 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        console.log("Note updated successfully!");
         mutate(); // Re-fetch notes to update the list
       } else {
         const errorData = await response.json();

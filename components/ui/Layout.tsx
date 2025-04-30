@@ -63,14 +63,14 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
         <nav className="p-4 space-y-1">
           {nav.map((x) => (
-            <Link key={x.href} href={x.href} legacyBehavior>
-              <a
-                className={`flex items-center px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition ${desktopSidebarCollapsed ? 'justify-center' : ''}`}
-                onClick={() => setMobileSidebarOpen(false)}
-              >
-                <x.icon className={`w-6 h-6 ${!desktopSidebarCollapsed && 'mr-3'}`} /> {/* Icon with margin */}
-                {!desktopSidebarCollapsed && x.name} {/* Hide text when collapsed */}
-              </a>
+            <Link
+              key={x.href}
+              href={x.href}
+              className={`flex items-center px-3 py-2 rounded hover:bg-[var(--neutral-200)] transition ${desktopSidebarCollapsed ? 'justify-center' : ''}`}
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <x.icon className={`w-6 h-6 ${!desktopSidebarCollapsed && 'mr-3'}`} />
+              {!desktopSidebarCollapsed && x.name}
             </Link>
           ))}
           {/* Sign Out button */}

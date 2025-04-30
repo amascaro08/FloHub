@@ -40,7 +40,6 @@ export default async function handler(
 
   try {
     // 3) Call Google Calendar API to list events for the specified calendar
-    console.log(`Fetching events for calendar: ${calendarId}`);
 
     // Set time range for events (e.g., next 3 months)
     const now = new Date();

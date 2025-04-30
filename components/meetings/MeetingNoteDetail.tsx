@@ -64,7 +64,6 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
     // If assignedTo is "Me", automatically add to tasks list
     if (newActionAssignedTo === "Me") {
-      console.log("Action assigned to Me. Attempting to add to tasks list:", newAction);
       try {
         const response = await fetch("/api/tasks", {
           method: "POST",
@@ -77,16 +76,12 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
         });
 
         if (response.ok) {
-          console.log("Task created successfully from meeting action!");
-          // TODO: Optionally show a success message to the user
         } else {
           const errorData = await response.json();
           console.error("Failed to create task from meeting action:", errorData.error);
-          // TODO: Show an error message to the user
         }
       } catch (error) {
         console.error("Error creating task from meeting action:", error);
-        // TODO: Show an error message to the user
       }
     }
   };
