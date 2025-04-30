@@ -44,7 +44,7 @@ export default async function handler(
     const conversations = await fetchUserConversations(email);
 
     // Find relevant context based on prompt
-    const relevantContext = findRelevantContext(prompt, notes, meetings, conversations);
+    const relevantContext = await findRelevantContext(prompt, notes, meetings, conversations);
 
     // Compose messages with relevant context included as system message
     const messages: any[] = [

@@ -22,7 +22,7 @@ type GetConversationsResponse = {
 };
 
 type SaveConversationRequest = {
-  messages: { role: string; content: string }[];
+  messages: { role: "system" | "user" | "assistant"; content: string }[];
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<GetConversationsResponse>) {
@@ -64,8 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         messages: messages.map((m) => ({ ...m, timestamp: Timestamp.now() })),
         createdAt: Timestamp.now(),
       };
-      await addDoc(conversationsRef, newConversation);
-      return res.status(201).json({ conversations: [newConversation] });
+      const docRef = await addDoc(conversationsRef, newConversation);
+      return res.status(201).json({ conversations: [{ id: docRef.id, ...newConversation }] });
     } catch (error) {
       console.error("Error saving conversation:", error);
       return res.status(500).json({ error: "Failed to save conversation" });
