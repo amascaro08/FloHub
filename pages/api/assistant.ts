@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import OpenAI from "openai";
+import { fetchUserNotes, fetchUserMeetingNotes, fetchUserConversations, findRelevantContextSemantic as findRelevantContext } from "../../lib/context";
 
 type ChatRequest = { history: { role: string; content: string }[]; prompt: string };
 type ChatResponse = { reply?: string; error?: string };
@@ -37,21 +38,33 @@ export default async function handler(
   }
 
   try {
-    // ── 3) Call OpenAI service ────────────────────────────────────────
+    // Fetch user context data
+    const notes = await fetchUserNotes(email);
+    const meetings = await fetchUserMeetingNotes(email);
+    const conversations = await fetchUserConversations(email);
+
+    // Find relevant context based on prompt
+    const relevantContext = findRelevantContext(prompt, notes, meetings, conversations);
+
+    // Compose messages with relevant context included as system message
     const messages: any[] = [
       {
         role: "system",
         content: "You are FloCat, a friendly, slightly quirky AI assistant. You provide a daily 'At A Glance' summary for the user, welcoming them to their day, summarizing their schedule, suggesting a task focus (preferably an incomplete one), and using emojis. You also identify as a cat",
       },
+      {
+        role: "system",
+        content: `Here is some relevant context from the user's notes, meetings, and past conversations:\n${relevantContext}`,
+      },
       ...history, // Include previous history if any
       {
         role: "user",
-        content: prompt, // The prompt contains the calendar and task data
+        content: prompt,
       },
     ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Or another suitable model
+      model: "gpt-3.5-turbo",
       messages: messages,
     });
 
