@@ -1,18 +1,15 @@
-// pages/dashboard/settings.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
-import useSWR                  from "swr";
-import Link                    from "next/link";
-import { db } from "@/lib/firebase"; // Import Firebase client-side db
-import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import useSWR from "swr";
+import Link from "next/link";
 
 type CalItem = { id: string; summary: string };
 export type Settings = {
   selectedCals: string[];
-  defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
-  customRange:  { start: string; end: string };
+  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  customRange: { start: string; end: string };
   powerAutomateUrl?: string; // Optional for backward compatibility
 };
 
@@ -37,45 +34,55 @@ export default function CalendarSettingsPage() {
   // 3) Settings state
   const [settings, setSettings] = useState<Settings>({
     selectedCals: [],
-    defaultView:  "month",
-    customRange:  {
-      start: new Date().toISOString().slice(0,10),
-      end:   new Date().toISOString().slice(0,10),
+    defaultView: "month",
+    customRange: {
+      start: new Date().toISOString().slice(0, 10),
+      end: new Date().toISOString().slice(0, 10),
     },
     powerAutomateUrl: "",
   });
 
-  // 4) Load saved settings from Firestore
+  // 4) Load saved settings from backend API
   useEffect(() => {
     const fetchSettings = async () => {
-      if (session?.user?.email) {
-        const settingsRef = doc(db, "users", session.user.email, "settings", "calendar");
-        const docSnap = await getDoc(settingsRef);
-        if (docSnap.exists()) {
-          setSettings(docSnap.data() as Settings);
-        } else {
-          // If no settings exist, save the default settings
-          await setDoc(settingsRef, settings);
+      if (!session?.user?.email) return;
+      try {
+        const res = await fetch('/api/userSettings');
+        if (!res.ok) {
+          console.error('Failed to load user settings:', await res.text());
+          return;
         }
+        const data = await res.json();
+        setSettings(data);
+      } catch (e) {
+        console.error('Failed to load user settings:', e);
       }
     };
 
     fetchSettings();
   }, [session]); // Fetch settings when session changes
 
-  // 5) Save settings to Firestore
+  // 5) Save settings to backend API
   const save = async () => {
-    if (session?.user?.email) {
-      const settingsRef = doc(db, "users", session.user.email, "settings", "calendar");
-      try {
-        await setDoc(settingsRef, settings);
-        alert("Settings saved!");
-      } catch (e) {
-        console.error("Error saving settings:", e);
-        alert("Failed to save settings.");
-      }
-    } else {
+    if (!session?.user?.email) {
       alert("You must be signed in to save settings.");
+      return;
+    }
+    try {
+      const res = await fetch('/api/userSettings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) {
+        alert("Failed to save settings.");
+        console.error("Failed to save settings:", await res.text());
+        return;
+      }
+      alert("Settings saved!");
+    } catch (e) {
+      console.error("Error saving settings:", e);
+      alert("Failed to save settings.");
     }
   };
 
@@ -128,7 +135,7 @@ export default function CalendarSettingsPage() {
       <Link href="/dashboard">
         <a className="text-blue-500 hover:underline">&larr; Back to Dashboard</a>
       </Link>
-  
+
       {/* PowerAutomate URL */}
       <section>
         <h2 className="text-lg font-medium mb-2">Work Calendar (O365 PowerAutomate URL)</h2>
@@ -148,7 +155,7 @@ export default function CalendarSettingsPage() {
           Paste your PowerAutomate HTTP request URL here to enable O365 work calendar events.
         </p>
       </section>
-  
+
       {/* Calendar selection */}
       <section>
         <h2 className="text-lg font-medium mb-2">Which calendars?</h2>
@@ -166,7 +173,7 @@ export default function CalendarSettingsPage() {
           ))}
         </div>
       </section>
-  
+
       {/* Default view filter */}
       <section>
         <h2 className="text-lg font-medium mb-2">Default date filter</h2>
@@ -186,7 +193,7 @@ export default function CalendarSettingsPage() {
           <option value="month">This Month</option>
           <option value="custom">Custom Range</option>
         </select>
-  
+
         {settings.defaultView === "custom" && (
           <div className="mt-2 flex gap-4">
             <div>
@@ -220,7 +227,7 @@ export default function CalendarSettingsPage() {
           </div>
         )}
       </section>
-  
+
       <button
         onClick={save}
         className="bg-primary-500 text-white px-4 py-2 rounded"

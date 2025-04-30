@@ -1,0 +1,56 @@
+import type { NextApiRequest, NextApiResponse } from "next";
+import { getToken } from "next-auth/jwt";
+import { firestore } from "../../lib/firebaseAdmin";
+
+type UserSettings = {
+  selectedCals: string[];
+  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  customRange: { start: string; end: string };
+  powerAutomateUrl?: string;
+};
+
+type ErrorRes = { error: string };
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<UserSettings | ErrorRes>
+) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token?.email) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const userEmail = token.email;
+  const settingsDocRef = firestore.collection("users").doc(userEmail).collection("settings").doc("calendar");
+
+  if (req.method === "GET") {
+    try {
+      const docSnap = await settingsDocRef.get();
+      if (!docSnap.exists) {
+        // Return default settings if none exist
+        const defaultSettings: UserSettings = {
+          selectedCals: ["primary"],
+          defaultView: "month",
+          customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
+          powerAutomateUrl: "",
+        };
+        return res.status(200).json(defaultSettings);
+      }
+      const data = docSnap.data() as UserSettings;
+      return res.status(200).json(data);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch user settings" });
+    }
+  } else if (req.method === "POST") {
+    try {
+      const settings: UserSettings = req.body;
+      await settingsDocRef.set(settings, { merge: true });
+      return res.status(200).json(settings);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to save user settings" });
+    }
+  } else {
+    res.setHeader("Allow", ["GET", "POST"]);
+    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  }
+}
