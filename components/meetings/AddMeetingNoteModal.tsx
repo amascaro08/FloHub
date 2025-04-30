@@ -5,6 +5,8 @@ import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
 import useSWR from "swr"; // Import useSWR
 import type { CalendarEvent } from "@/pages/api/calendar/events"; // Import CalendarEvent type
+import type { Action } from "@/types/app"; // Import Action type
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 
 // Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
 type CalendarItem = {
@@ -15,8 +17,8 @@ type CalendarItem = {
 type AddMeetingNoteModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  // Update onSave type to include new fields
-  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => Promise<void>;
+  // Update onSave type to include new fields and actions
+  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[] }) => Promise<void>;
   isSaving: boolean;
   existingTags: string[]; // Add existingTags prop
   calendarList: CalendarItem[]; // Rename prop from calendarEvents to calendarList
@@ -32,6 +34,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
   const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
+  const [actions, setActions] = useState<Action[]>([]); // State for actions
+  const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
 
   // Fetch events for the selected calendar
   const { data: calendarEvents, error: calendarEventsError } = useSWR<CalendarEvent[]>(
@@ -45,6 +49,20 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     console.log("Calendar events fetch error:", calendarEventsError);
   }, [calendarEvents, calendarEventsError]);
 
+
+  const handleAddAction = () => {
+    if (newActionDescription.trim()) {
+      const newAction: Action = {
+        id: uuidv4(), // Generate a unique ID
+        description: newActionDescription.trim(),
+        assignedTo: "Me", // Default assignment
+        status: "todo", // Default status
+        createdAt: new Date().toISOString(), // Timestamp
+      };
+      setActions([...actions, newAction]);
+      setNewActionDescription(""); // Clear the input field
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,6 +79,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       eventId: selectedEventId,
       eventTitle: selectedEventTitle,
       isAdhoc: isAdhoc,
+      actions: actions, // Include actions in the saved note
     });
 
     // Clear form after saving
@@ -71,6 +90,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
     setIsAdhoc(false);
+    setActions([]); // Clear actions
+    setNewActionDescription(""); // Clear new action input
     onClose(); // Close modal after saving
   };
 
@@ -200,6 +221,35 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               disabled={isSaving || selectedEventId !== undefined || selectedCalendarId !== undefined} // Disable if saving, event is selected, or calendar is selected
             />
             <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
+          </div>
+          {/* Actions Section */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--fg)] mb-1">Actions</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
+                placeholder="Add a new action item..."
+                value={newActionDescription}
+                onChange={(e) => setNewActionDescription(e.target.value)}
+                disabled={isSaving}
+              />
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleAddAction}
+                disabled={isSaving || !newActionDescription.trim()}
+              >
+                Add
+              </button>
+            </div>
+            {actions.length > 0 && (
+              <ul className="list-disc list-inside space-y-1 text-sm text-[var(--fg)]">
+                {actions.map((action, index) => (
+                  <li key={action.id}>{action.description}</li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button

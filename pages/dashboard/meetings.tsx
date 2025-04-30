@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { useRouter } from "next/navigation";
 // Import types
 import type { Note } from "@/types/app";
+import type { Settings } from "@/pages/dashboard/settings"; // Import Settings type
 // Import meeting notes components
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
@@ -43,6 +44,12 @@ export default function MeetingsPage() {
     fetcher
   );
 
+  // Fetch user settings to get the Work Calendar URL
+  const { data: settings, error: settingsError } = useSWR<Settings>(
+    shouldFetch ? "/api/settings/calendar" : null, // Assuming this endpoint exists
+    fetcher
+  );
+
   // Fetch calendar events
   const { data: calendarEvents, error: calendarError } = useSWR<CalendarItem[]>(
     shouldFetch ? "/api/calendar/list" : null,
@@ -54,6 +61,9 @@ export default function MeetingsPage() {
   console.log("Meeting Notes fetch error:", meetingNotesError);
   console.log("Calendar events data:", calendarEvents);
   console.log("Calendar fetch error:", calendarError);
+  console.log("Settings data:", settings);
+  console.log("Settings fetch error:", settingsError);
+
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
@@ -218,92 +228,122 @@ export default function MeetingsPage() {
   };
 
 
-  // Show loading state if either notes or calendar events are loading
-  if (status === "loading" || (!meetingNotesResponse && !meetingNotesError) || (!calendarEvents && !calendarError && shouldFetch)) {
-    return <p>Loading meeting notes and calendar events…</p>;
-  }
+ // Find the Work Calendar ID based on the powerAutomateUrl from settings
+ const workCalendarId = useMemo(() => {
+   if (!settings?.powerAutomateUrl || !calendarEvents) return undefined;
+   // Assuming the calendar ID is part of the powerAutomateUrl or can be derived from it.
+   // This is a placeholder logic. A more robust solution might involve storing the calendar ID
+   // directly in settings or having a way to map the URL to an ID via an API.
+   // For now, let's assume the powerAutomateUrl contains the calendar ID in some identifiable way.
+   // A more realistic approach would be to have the settings API return the calendar ID directly.
+   // Since we don't have that API, I'll make a placeholder assumption: the calendar ID is the last segment of the URL path.
+   try {
+     const url = new URL(settings.powerAutomateUrl);
+     const pathSegments = url.pathname.split('/');
+     const potentialCalendarId = pathSegments[pathSegments.length - 1];
+     // Check if this potential ID exists in the fetched calendar events
+     const workCalendar = calendarEvents.find(cal => cal.id === potentialCalendarId);
+     return workCalendar ? workCalendar.id : undefined;
+   } catch (e) {
+     console.error("Invalid powerAutomateUrl in settings:", e);
+     return undefined;
+   }
+ }, [settings, calendarEvents]);
 
-  if (!session) {
-    return <p>Please sign in to see your meeting notes.</p>;
-  }
-
-  // Show error state if either notes or calendar events failed to load
-  if (meetingNotesError || calendarError) {
-    return <p>Error loading data.</p>;
-  }
-
-
-  return (
-    <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
-      {/* Left Column: Meeting Note List */}
-      <div className="w-80 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0"> {/* Set a fixed width and prevent shrinking */}
-        <h1 className="text-2xl font-semibold mb-4">Meeting Notes</h1>
-
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 w-full" // Make button full width
-          onClick={() => setShowModal(true)} // Open modal on button click
-        >
-          Add Meeting Note
-        </button>
-
-        {/* Add the modal component */}
-        <AddMeetingNoteModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveMeetingNote}
-          isSaving={isSaving}
-          existingTags={uniqueTags}
-          calendarList={calendarEvents || []}
-        />
+ // Filter calendar events to only include the Work Calendar
+ const workCalendarList = useMemo(() => {
+   if (!workCalendarId || !calendarEvents) return [];
+   const workCalendar = calendarEvents.find(cal => cal.id === workCalendarId);
+   return workCalendar ? [workCalendar] : [];
+ }, [workCalendarId, calendarEvents]);
 
 
-        <div className="flex gap-4 mb-4">
-          <input
-            type="text"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
-            placeholder="Search meeting notes…"
-            value={searchContent}
-            onChange={(e) => setSearchContent(e.target.value)}
-          />
-           <select
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
-            value={filterTag}
-            onChange={(e) => setFilterTag(e.target.value)}
-           >
-             <option value="">All Tags</option> {/* Option to show all notes */}
-             {uniqueTags.map(tag => (
-               <option key={tag} value={tag}>{tag}</option>
-             ))}
-           </select>
-           {/* TODO: Add filters for event association and ad-hoc status */}
-        </div>
+ // Show loading state if notes, calendar events, or settings are loading
+ if (status === "loading" || (!meetingNotesResponse && !meetingNotesError) || (!calendarEvents && !calendarError && shouldFetch) || (!settings && !settingsError && shouldFetch)) {
+   return <p>Loading meeting notes, calendar events, and settings…</p>;
+ }
 
-        {/* Render the MeetingNoteList component */}
-        <MeetingNoteList
-          notes={filteredMeetingNotes}
-          selectedNoteId={selectedNoteId}
-          onSelectNote={setSelectedNoteId}
-          onDeleteNotes={handleDeleteSelectedMeetingNotes} // Pass the delete handler for selected notes
-          isSaving={isSaving} // Pass isSaving state
-        />
-      </div>
+ if (!session) {
+   return <p>Please sign in to see your meeting notes.</p>;
+ }
 
-      {/* Right Column: Meeting Note Detail */}
-      <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
-        {selectedNote ? (
-          // Render the MeetingNoteDetail component if a note is selected
-          <MeetingNoteDetail
-            note={selectedNote}
-            onSave={handleUpdateMeetingNote}
-            onDelete={handleDeleteMeetingNote}
-            isSaving={isSaving}
-            existingTags={uniqueTags}
-            calendarEvents={calendarEvents || []}
-          />
-        ) : (
-          <p className="text-[var(--neutral-500)]">Select a meeting note to view details.</p>
-        )}
-      </div>
-    </div>
-  );
+ // Show error state if notes, calendar events, or settings failed to load
+ if (meetingNotesError || calendarError || settingsError) {
+   return <p>Error loading data.</p>;
+ }
+
+
+ return (
+   <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
+     {/* Left Column: Meeting Note List */}
+     <div className="w-80 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0"> {/* Set a fixed width and prevent shrinking */}
+       <h1 className="text-2xl font-semibold mb-4">Meeting Notes</h1>
+
+       <button
+         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 w-full" // Make button full width
+         onClick={() => setShowModal(true)} // Open modal on button click
+       >
+         Add Meeting Note
+       </button>
+
+       {/* Add the modal component */}
+       <AddMeetingNoteModal
+         isOpen={showModal}
+         onClose={() => setShowModal(false)}
+         onSave={handleSaveMeetingNote}
+         isSaving={isSaving}
+         existingTags={uniqueTags}
+         calendarList={workCalendarList} // Pass the filtered workCalendarList
+       />
+
+
+       <div className="flex gap-4 mb-4">
+         <input
+           type="text"
+           className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
+           placeholder="Search meeting notes…"
+           value={searchContent}
+           onChange={(e) => setSearchContent(e.target.value)}
+         />
+          <select
+           className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
+           value={filterTag}
+           onChange={(e) => setFilterTag(e.target.value)}
+          >
+            <option value="">All Tags</option> {/* Option to show all notes */}
+            {uniqueTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
+          {/* TODO: Add filters for event association and ad-hoc status */}
+       </div>
+
+       {/* Render the MeetingNoteList component */}
+       <MeetingNoteList
+         notes={filteredMeetingNotes}
+         selectedNoteId={selectedNoteId}
+         onSelectNote={setSelectedNoteId}
+         onDeleteNotes={handleDeleteSelectedMeetingNotes} // Pass the delete handler for selected notes
+         isSaving={isSaving} // Pass isSaving state
+       />
+     </div>
+
+     {/* Right Column: Meeting Note Detail */}
+     <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
+       {selectedNote ? (
+         // Render the MeetingNoteDetail component if a note is selected
+         <MeetingNoteDetail
+           note={selectedNote}
+           onSave={handleUpdateMeetingNote}
+           onDelete={handleDeleteMeetingNote}
+           isSaving={isSaving}
+           existingTags={uniqueTags}
+           calendarEvents={calendarEvents || []} // Keep all calendar events for detail view if needed, or filter here too
+         />
+       ) : (
+         <p className="text-[var(--neutral-500)]">Select a meeting note to view details.</p>
+       )}
+     </div>
+   </div>
+ );
 }

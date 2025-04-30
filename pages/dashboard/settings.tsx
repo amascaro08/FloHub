@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase"; // Import Firebase client-side db
 import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
 
 type CalItem = { id: string; summary: string };
-type Settings = {
+export type Settings = {
   selectedCals: string[];
   defaultView:  "today"|"tomorrow"|"week"|"month"|"custom";
   customRange:  { start: string; end: string };

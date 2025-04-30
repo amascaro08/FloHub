@@ -4,6 +4,7 @@
 import { useState, useEffect, FormEvent, useMemo } from "react"; // Import useMemo
 import type { Note, Action } from "@/types/app"; // Import shared Note and Action types
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 
 // Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
 type CalendarItem = {
@@ -13,7 +14,7 @@ type CalendarItem = {
 
 type MeetingNoteDetailProps = { // Renamed type
   note: Note;
-  // Update onSave type to include new fields
+  // Update onSave type to include new fields and actions
   onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[]) => Promise<void>; // Include updatedActions
   onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
@@ -26,7 +27,6 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
   const [selectedTags, setSelectedTags] = useState<string[]>(note.tags || []); // State for selected tags (allow multiple)
-  const [newTagInput, setNewTagInput] = useState(""); // State for new tag input
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(note.eventId); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(note.eventTitle); // State for selected event title
   const [isAdhoc, setIsAdhoc] = useState(note.isAdhoc || false); // State for ad-hoc flag
@@ -34,12 +34,12 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action description
   const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
 
+
   // Update state when a different note is selected
   useEffect(() => {
     setTitle(note.title || ""); // Update title state
     setContent(note.content);
     setSelectedTags(note.tags || []); // Update selected tags state
-    setNewTagInput(""); // Clear new tag input
     setSelectedEventId(note.eventId); // Update selected event ID state
     setSelectedEventTitle(note.eventTitle); // Update selected event title state
     setIsAdhoc(note.isAdhoc || false); // Update ad-hoc state
@@ -48,24 +48,11 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     setNewActionAssignedTo("Me"); // Reset assigned to
   }, [note]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() || isSaving) return;
-
-    // Combine existing and new tags
-    const tagsToSave = [...selectedTags];
-    if (newTagInput.trim() !== "" && !tagsToSave.includes(newTagInput.trim())) {
-      tagsToSave.push(newTagInput.trim());
-    }
-
-    await onSave(note.id, title, content, tagsToSave, selectedEventId, selectedEventTitle, isAdhoc, actions); // Include actions in onSave call
-  };
-
-  const handleAddAction = async () => { // Made function async
+  const handleAddAction = async () => {
     if (newActionDescription.trim() === "") return;
 
     const newAction: Action = {
-      id: Date.now().toString(), // Simple unique ID for now
+      id: uuidv4(), // Generate a unique ID
       description: newActionDescription.trim(),
       assignedTo: newActionAssignedTo,
       status: "todo",
@@ -77,7 +64,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
     // If assignedTo is "Me", automatically add to tasks list
     if (newActionAssignedTo === "Me") {
-      console.log("Action assigned to Me. Adding to tasks list:", newAction);
+      console.log("Action assigned to Me. Attempting to add to tasks list:", newAction);
       try {
         const response = await fetch("/api/tasks", {
           method: "POST",
@@ -112,6 +99,14 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
   const handleActionDelete = (actionId: string) => {
     setActions(actions.filter(action => action.id !== actionId));
+  };
+
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() || isSaving) return;
+
+    await onSave(note.id, title, content, selectedTags, selectedEventId, selectedEventTitle, isAdhoc, actions); // Include actions in onSave call
   };
 
 
@@ -238,7 +233,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
                     <p className="text-xs text-[var(--neutral-600)]">Assigned to: {action.assignedTo}</p>
                   </div>
                 </div>
-                <button onClick={() => handleActionDelete(action.id)} className="text-red-500 hover:text-red-700 text-sm" disabled={isSaving}>Delete</button>
+                <button type="button" onClick={() => handleActionDelete(action.id)} className="text-red-500 hover:text-red-700 text-sm" disabled={isSaving}>Delete</button>
               </div>
             ))}
           </div>
