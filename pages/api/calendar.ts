@@ -77,7 +77,7 @@ export default async function handler(
         console.error("Error fetching events:", e);
       }
     }
-
+//
     // Fetch O365 events if o365Url is provided
     if (typeof o365Url === "string" && o365Url.startsWith("http")) {
       try {
