@@ -8,25 +8,26 @@ type NoteDetailProps = {
   onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => Promise<void>; // Include updatedTitle
   onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
+  existingTags: string[]; // Add existingTags to props
 };
 
-export default function NoteDetail({ note, onSave, onDelete, isSaving }: NoteDetailProps) {
+export default function NoteDetail({ note, onSave, onDelete, isSaving, existingTags }: NoteDetailProps) { // Destructure existingTags
   const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
-  const [tagsInput, setTagsInput] = useState(note.tags.join(", ")); // Join tags for input
+  const [selectedTag, setSelectedTag] = useState(note.tags[0] || ""); // State for selected tag (assuming single select for now)
 
   // Update state when a different note is selected
   useEffect(() => {
     setTitle(note.title || ""); // Update title state
     setContent(note.content);
-    setTagsInput(note.tags.join(", "));
+    setSelectedTag(note.tags[0] || ""); // Update selected tag state
   }, [note]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSaving) return;
 
-    const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag !== "");
+    const tags = selectedTag ? [selectedTag] : []; // Use selectedTag for tags (assuming single select)
 
     await onSave(note.id, title, content, tags); // Include title in onSave call
   };
@@ -61,15 +62,19 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving }: NoteDet
           />
         </div>
         <div>
-          <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags (comma-separated)</label>
-          <input
-            type="text"
+          <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tag</label> {/* Change label */}
+          <select // Use select dropdown for tags
             id="note-tags"
             className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
             disabled={isSaving}
-          />
+          >
+            <option value="">No Tag</option> {/* Option for no tag */}
+            {existingTags.map(tag => ( // Populate with existing tags
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
         </div>
         <div className="flex justify-end gap-2"> {/* Add gap for spacing */}
           <button

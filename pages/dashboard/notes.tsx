@@ -49,6 +49,7 @@ export default function NotesPage() {
 
   const handleDeleteNote = async (noteId: string) => {
     setIsSaving(true); // Indicate saving/deleting in progress
+    console.log("Attempting to delete note with ID:", noteId); // Add logging
     try {
       const response = await fetch(`/api/notes/delete`, {
         method: "DELETE",
@@ -63,10 +64,12 @@ export default function NotesPage() {
       } else {
         const errorData = await response.json();
         console.error("Failed to delete note:", errorData.error);
+        console.error("Delete API response status:", response.status); // Log response status
         // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error deleting note:", error);
+      console.error("Error details:", error); // Log error object
        // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
@@ -175,7 +178,7 @@ export default function NotesPage() {
   return (
     <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
       {/* Left Column: Note List */}
-      <div className="w-1/3 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto"> {/* Adjust width and add border */}
+      <div className="w-80 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0"> {/* Set a fixed width and prevent shrinking */}
         <h1 className="text-2xl font-semibold mb-4">Notes</h1>
 
         <button
@@ -198,14 +201,14 @@ export default function NotesPage() {
         <div className="flex gap-4 mb-4">
           <input
             type="text"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
             placeholder="Search note content…"
             value={searchContent}
             onChange={(e) => setSearchContent(e.target.value)}
           />
            {/* Replace input with select dropdown for tags */}
            <select
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
            >
@@ -225,7 +228,7 @@ export default function NotesPage() {
       </div>
 
       {/* Right Column: Note Detail */}
-      <div className="flex-1 p-4 overflow-y-auto"> {/* Use flex-1 to take remaining space */}
+      <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
         {selectedNote ? (
           // Render the NoteDetail component if a note is selected
           <NoteDetail
@@ -233,6 +236,7 @@ export default function NotesPage() {
             onSave={handleUpdateNote}
             onDelete={handleDeleteNote} // Pass the delete handler
             isSaving={isSaving} // Pass isSaving state
+            existingTags={uniqueTags} // Pass uniqueTags to NoteDetail
           />
         ) : (
           <p className="text-[var(--neutral-500)]">Select a note to view details.</p>
