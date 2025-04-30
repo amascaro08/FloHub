@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import type { Note } from "@/types/app"; // Import shared Note type
+import CreatableSelect from 'react-select/creatable';
 
 type NoteDetailProps = {
   note: Note;
@@ -14,27 +15,36 @@ type NoteDetailProps = {
 export default function NoteDetail({ note, onSave, onDelete, isSaving, existingTags }: NoteDetailProps) { // Destructure existingTags
   const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
-  const [selectedTag, setSelectedTag] = useState(note.tags[0] || ""); // State for selected existing tag
-  const [newTagInput, setNewTagInput] = useState(""); // State for new tag input
+  const [tags, setTags] = useState(note.tags);
 
-  // Update state when a different note is selected
   useEffect(() => {
-    setTitle(note.title || ""); // Update title state
+    setTitle(note.title || "");
     setContent(note.content);
-    setSelectedTag(note.tags[0] || ""); // Update selected tag state
-    setNewTagInput(""); // Clear new tag input
+    setTags(note.tags);
   }, [note]);
+
+  // Convert existingTags to options for select
+  const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
+
+  // State for selected options in react-select format
+  const [selectedOptions, setSelectedOptions] = useState(
+    tags.map(tag => ({ value: tag, label: tag }))
+  );
+
+  useEffect(() => {
+    setSelectedOptions(tags.map(tag => ({ value: tag, label: tag })));
+  }, [tags]);
+
+  const handleTagChange = (selected: any) => {
+    setSelectedOptions(selected || []);
+    setTags((selected || []).map((option: any) => option.value));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSaving) return;
 
-    const tags = selectedTag ? [selectedTag] : []; // Start with selected existing tag
-    if (newTagInput.trim() !== "" && !tags.includes(newTagInput.trim())) { // Add new tag if not empty and not already selected
-      tags.push(newTagInput.trim());
-    }
-
-    await onSave(note.id, title, content, tags); // Include title and updated tags in onSave call
+    await onSave(note.id, title, content, tags);
   };
 
   return (
@@ -67,30 +77,15 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
           />
         </div>
         <div>
-          <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tag</label> {/* Change label */}
-          <select // Use select dropdown for tags
-            id="note-tags"
-            className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
-            disabled={isSaving}
-          >
-            <option value="">Select Existing Tag</option> {/* Change option text */}
-            {existingTags.map(tag => ( // Populate with existing tags
-              <option key={tag} value={tag}>{tag}</option>
-            ))}
-          </select>
-        </div>
-        <div> {/* Add new input for adding a new tag */}
-          <label htmlFor="new-note-tag" className="block text-sm font-medium text-[var(--fg)] mb-1">Add New Tag</label>
-          <input
-            type="text"
-            id="new-note-tag"
-            className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-            value={newTagInput}
-            onChange={(e) => setNewTagInput(e.target.value)}
-            disabled={isSaving}
-            placeholder="Enter new tag"
+          <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
+          <CreatableSelect
+            isMulti
+            options={tagOptions}
+            value={selectedOptions}
+            onChange={handleTagChange}
+            isDisabled={isSaving}
+            isSearchable
+            placeholder="Select or create tags..."
           />
         </div>
         <div className="flex justify-end gap-2"> {/* Add gap for spacing */}

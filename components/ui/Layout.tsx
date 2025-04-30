@@ -51,7 +51,6 @@ export default function Layout({ children }: { children: ReactNode }) {
         >
         <div className={`p-4 border-b flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}> {/* Center content when collapsed */}
           {!desktopSidebarCollapsed && <img src="/FloHub_Logo_Transparent.png" alt="FloHub" className="h-12"/>} {/* Hide logo when collapsed */}
-          <ThemeToggle/>
           {/* Toggle button for desktop sidebar */}
           <button
             onClick={toggleDesktopSidebar}
@@ -85,6 +84,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             {!desktopSidebarCollapsed && "Sign Out"} {/* Hide text when collapsed */}
           </button>
         </nav>
+        <div className={`p-4 border-t flex items-center justify-center ${desktopSidebarCollapsed ? 'hidden' : ''}`}>
+          <ThemeToggle />
+        </div>
       </aside>
 
       {/* main */}

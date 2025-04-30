@@ -56,8 +56,8 @@ export default function QuickNoteWidget() {
   }
 
   return (
-    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)]">
-      <form onSubmit={handleSaveNote} className="flex flex-col gap-2">
+    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)] flex flex-col h-full">
+      <form onSubmit={handleSaveNote} className="flex flex-col flex-1 gap-2">
         <textarea
           className="
             w-full border border-[var(--neutral-300)]
