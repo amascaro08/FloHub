@@ -149,6 +149,19 @@ export default function CalendarWidget() {
 
   const { data, error } = useSWR(apiUrl, fetcher);
 
+  // Debug logs for API URL and error
+  useEffect(() => {
+    if (apiUrl) {
+      console.log("Fetching calendar events from:", apiUrl);
+    }
+  }, [apiUrl]);
+
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching calendar events:", error);
+    }
+  }, [error]);
+
   // Filter out past events and find the next upcoming event
   const now = new Date();
   const upcomingEvents = data
