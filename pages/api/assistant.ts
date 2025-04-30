@@ -74,8 +74,51 @@ export default async function handler(
       return res.status(500).json({ error: "OpenAI did not return a message." });
     }
 
-    return res.status(200).json({ reply: aiReply });
+    // After getting AI reply, check for commands to add task or calendar event
+    // Simple regex-based detection for demonstration; can be improved with NLP parsing
+    const lowerPrompt = prompt.toLowerCase();
 
+    // Helper function to call internal API
+    const callInternalApi = async (path: string, method: string, body: any) => {
+      const url = `${process.env.NEXTAUTH_URL || ""}${path}`;
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return response.ok;
+    }
+
+    // Detect add task command
+    if (lowerPrompt.includes("add task") || lowerPrompt.includes("new task")) {
+      // Extract task text from prompt (naive approach)
+      const taskMatch = prompt.match(/add task (.+)/i) || prompt.match(/new task (.+)/i);
+      if (taskMatch && taskMatch[1]) {
+        const taskText = taskMatch[1].trim();
+        if (taskText) {
+          await callInternalApi("/api/tasks", "POST", { text: taskText });
+          return res.status(200).json({ reply: `Task "${taskText}" added.` });
+        }
+      }
+    }
+
+    // Detect add calendar event command
+    if (lowerPrompt.includes("add event") || lowerPrompt.includes("new event") || lowerPrompt.includes("schedule event")) {
+      // Extract event summary and dummy start/end for demo
+      const eventMatch = prompt.match(/(?:add|new|schedule) event (.+)/i);
+      if (eventMatch && eventMatch[1]) {
+        const summary = eventMatch[1].trim();
+        if (summary) {
+          const now = new Date();
+          const start = now.toISOString();
+          const end = new Date(now.getTime() + 3600000).toISOString(); // 1 hour later
+          await callInternalApi("/api/calendar", "POST", { summary, start, end });
+          return res.status(200).json({ reply: `Event "${summary}" scheduled.` });
+        }
+      }
+    }
+
+    return res.status(200).json({ reply: aiReply });
   } catch (err: any) {
     console.error("Assistant error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });

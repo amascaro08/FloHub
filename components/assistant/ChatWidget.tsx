@@ -20,7 +20,20 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
   const [unread, setUnread]       = useState(false);
   const [history, setHistory]     = useState<
     { role: "user" | "assistant"; content: string }[]
-  >([]);
+  >(() => {
+    // Load chat history from localStorage if available
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("floCatChatHistory");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  });
   const [input, setInput]         = useState("");
   const [loading, setLoading]     = useState(false);
 
@@ -67,6 +80,13 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
     }
   }, [isAuthed, tasks, events, history.length]);
 
+  // Save chat history to localStorage on change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("floCatChatHistory", JSON.stringify(history));
+    }
+  }, [history]);
+
   // Send message to /api/assistant
   const send = async () => {
     if (!input.trim()) return;
@@ -104,7 +124,14 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
       glass p-4 rounded-xl shadow-elevate-lg
       flex flex-col
     ">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
+        <div
+          className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]"
+          ref={el => {
+            if (el) {
+              el.scrollTop = el.scrollHeight;
+            }
+          }}
+        >
           {history.map((m, i) => (
             <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
               <span className={`
