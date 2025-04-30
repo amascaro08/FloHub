@@ -34,11 +34,14 @@ export default async function handler(
           customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
           powerAutomateUrl: "",
         };
+        console.log("User settings not found for", userEmail, "- returning default settings");
         return res.status(200).json(defaultSettings);
       }
       const data = docSnap.data() as UserSettings;
+      console.log("User settings loaded for", userEmail, data);
       return res.status(200).json(data);
     } catch (error) {
+      console.error("Error fetching user settings for", userEmail, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
   } else if (req.method === "POST") {
