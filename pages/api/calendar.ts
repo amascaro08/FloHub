@@ -91,6 +91,7 @@ export default async function handler(
         const o365Res = await fetch(o365Url);
         if (o365Res.ok) {
           const o365Data = await o365Res.json();
+          console.log("O365 events data fetched:", o365Data);
           // Try to normalize O365 events to CalendarEvent shape
           // Assume o365Data is an array of events or has an "events" property
           const o365EventsRaw = Array.isArray(o365Data)
@@ -107,6 +108,8 @@ export default async function handler(
             description: e.bodyPreview || "",
           }));
           allEvents.push(...o365Events);
+        } else {
+          console.error("Failed to fetch O365 events, status:", o365Res.status);
         }
       } catch (e) {
         console.error("Error fetching O365 events:", e);
