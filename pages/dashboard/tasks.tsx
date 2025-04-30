@@ -6,17 +6,23 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { Task } from "@/components/widgets/TaskWidget";
+import type { Task as TaskWidgetTask } from "@/components/widgets/TaskWidget";
+
+// Define a more comprehensive Task type for the tasks page
+export interface Task extends TaskWidgetTask {
+  tags?: string[]; // Add tags property
+}
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "No due date";
   const date = new Date(dateString);
+  // Use a more concise format for better space usage
   return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
+    year: "numeric",
   });
 };
 
@@ -38,6 +44,7 @@ export default function TasksPage() {
 
   const [input, setInput] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [tagsInput, setTagsInput] = useState(""); // State for tags input
   const [editing, setEditing] = useState<Task | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,15 +53,21 @@ export default function TasksPage() {
     e.preventDefault();
     if (!input.trim()) return;
 
+    // Simple comma-separated tag parsing
+    const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+
     const payload: any = {
       text: input.trim(),
       dueDate: dueDate || null,
+      tags: tags.length > 0 ? tags : undefined, // Include tags if not empty
     };
 
     const method = editing ? "PATCH" : "POST";
 
     if (editing) {
       payload.id = editing.id;
+      // When editing, send the new tags array
+      payload.tags = tags;
     }
 
     await fetch("/api/tasks", {
@@ -65,6 +78,7 @@ export default function TasksPage() {
 
     setInput("");
     setDueDate("");
+    setTagsInput(""); // Clear tags input
     setEditing(null);
     mutate();
   };
@@ -91,6 +105,7 @@ export default function TasksPage() {
     setEditing(task);
     setInput(task.text);
     setDueDate(task.dueDate || "");
+    setTagsInput(task.tags ? task.tags.join(', ') : ""); // Populate tags input
   };
 
   const completedTasks = tasks ? tasks.filter((task) => task.done) : [];
@@ -112,26 +127,36 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4">Tasks</h1>
+    <div className="p-4 max-w-4xl mx-auto"> {/* Added max-width and auto margin for better centering on larger screens */}
+      <h1 className="text-2xl font-semibold mb-4 text-[var(--fg)]">Tasks</h1> {/* Applied text color variable */}
 
-      <form onSubmit={addOrUpdate} className="flex flex-col gap-2 mb-4">
+      <form onSubmit={addOrUpdate} className="glass p-4 rounded-xl shadow-elevate-sm flex flex-col gap-4 mb-6"> {/* Applied glass class and adjusted spacing */}
+        <div className="flex flex-col sm:flex-row gap-4"> {/* Flex container for inputs, responsive layout */}
+          <input
+            type="text"
+            className="flex-1 border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-[var(--bg)]"
+            placeholder="New task…"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <input
+            type="date"
+            className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-[var(--bg)]"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
+        {/* Tags Input */}
         <input
           type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          placeholder="New task…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <input
-          type="date"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
+          className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-[var(--bg)]"
+          placeholder="Tags (comma-separated)"
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
         />
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="self-end bg-[var(--primary)] text-white px-4 py-2 rounded hover:bg-[var(--accent)] focus:outline-none focus:shadow-outline transition-colors"
         >
           {editing ? "Save" : "Add"}
         </button>
@@ -139,101 +164,109 @@ export default function TasksPage() {
 
       <input
         type="text"
-        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-4"
+        className="glass border border-[var(--neutral-300)] rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline mb-6 bg-[var(--bg)]"
         placeholder="Search tasks…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <h2 className="text-xl font-semibold mb-2">Pending Tasks</h2>
+      <h2 className="text-xl font-semibold mb-3 text-[var(--fg)]">Pending Tasks</h2>
       {filteredTasks && filteredTasks.filter(task => !task.done).length > 0 ? (
-        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTasks.filter(task => !task.done).map((task) => (
-                <tr key={task.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{task.text}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(task.dueDate)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{task.createdAt || "Unknown"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => toggleComplete(task)}
-                      className="mr-2"
-                    />
-                    <button
-                      onClick={() => startEdit(task)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => remove(task.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {filteredTasks.filter(task => !task.done).map((task) => (
+            <div key={task.id} className="glass p-4 rounded-xl shadow-elevate-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center flex-1">
+                <input
+                  type="checkbox"
+                  checked={task.done}
+                  onChange={(e) => toggleComplete(task)}
+                  className="mr-3 h-5 w-5 text-[var(--primary)] focus:ring-[var(--primary)] border-gray-300 rounded"
+                />
+                <div className="flex flex-col">
+                  <span className="text-[var(--fg)] font-medium">{task.text}</span>
+                  <span className="text-sm text-[var(--neutral-500)]">Due: {formatDate(task.dueDate)}</span>
+                   {/* Display tags here */}
+                   {task.tags && task.tags.length > 0 && (
+                     <div className="flex flex-wrap gap-1 mt-1">
+                       {task.tags.map(tag => (
+                         <span key={tag} className="bg-[var(--surface)] text-[var(--fg)] text-xs px-2 py-1 rounded-full">
+                           {tag}
+                         </span>
+                       ))}
+                     </div>
+                   )}
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => startEdit(task)}
+                  className="text-sm text-[var(--primary)] hover:underline"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => remove(task.id)}
+                  className="text-sm text-red-500 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <p>No pending tasks.</p>
+        <p className="text-[var(--neutral-500)]">No pending tasks.</p>
       )}
 
       <button
         onClick={() => setShowCompleted(!showCompleted)}
-        className="mt-4 text-blue-500 hover:text-blue-700"
+        className="mt-6 text-[var(--primary)] hover:text-[var(--accent)] transition-colors"
       >
         {showCompleted ? "Hide Completed Tasks" : "Show Completed Tasks"}
       </button>
 
       {showCompleted && (
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Completed Tasks</h2>
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-3 text-[var(--fg)]">Completed Tasks</h2>
           {filteredTasks && filteredTasks.filter(task => task.done).length > 0 ? (
-            <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTasks.filter(task => task.done).map((task) => (
-                    <tr key={task.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{task.text}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{formatDate(task.dueDate)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{task.createdAt || "Unknown"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => remove(task.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {filteredTasks.filter(task => task.done).map((task) => (
+                <div key={task.id} className="glass p-4 rounded-xl shadow-elevate-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 opacity-70">
+                   <div className="flex items-center flex-1">
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={(e) => toggleComplete(task)}
+                      className="mr-3 h-5 w-5 text-[var(--primary)] focus:ring-[var(--primary)] border-gray-300 rounded"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-[var(--fg)] font-medium line-through">{task.text}</span>
+                      <span className="text-sm text-[var(--neutral-500)]">Completed: {formatDate(task.dueDate)}</span>
+                       {/* Display tags here */}
+                       {task.tags && task.tags.length > 0 && (
+                         <div className="flex flex-wrap gap-1 mt-1">
+                           {task.tags.map(tag => (
+                             <span key={tag} className="bg-[var(--surface)] text-[var(--fg)] text-xs px-2 py-1 rounded-full">
+                               {tag}
+                             </span>
+                           ))}
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => remove(task.id)}
+                      className="text-sm text-red-500 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <p>No completed tasks.</p>
+            <p className="text-[var(--neutral-500)]">No completed tasks.</p>
           )}
         </div>
       )}
