@@ -99,10 +99,9 @@ export default function ChatWidget({ onClose }: ChatWidgetProps) {
 
   return (
     <div className=" {/* Removed the outer fragment and the 'open &&' conditional */}
-      fixed bottom-20 right-6
       w-80 h-96
       glass p-4 rounded-xl shadow-elevate-lg
-      flex flex-col z-50
+      flex flex-col
     ">
         <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
           {history.map((m, i) => (

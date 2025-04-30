@@ -102,20 +102,20 @@ export default function Layout({ children }: { children: ReactNode }) {
             <img src="/FloHub_Logo_Transparent.png" alt="FloHub" className="h-10 ml-2 md:hidden" /> {/* Hide logo on desktop header */}
           </div>
           {/* FloCat Chat Bubble */}
-          <div className="flex-1 flex justify-center"> {/* Use flex-1 and justify-center to center the input */}
+          <div className="flex-1 flex justify-center relative"> {/* Use flex-1 and justify-center to center the input, add relative positioning */}
             <input
               type="text"
               placeholder=" FloCat is here to help you... 🐱"
               className="w-full max-w-md p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onFocus={() => setIsChatOpen(true)}
             />
+            {isChatOpen && (
+              <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50"> {/* Position below input */}
+                <ChatWidget onClose={() => setIsChatOpen(false)} key="chatwidget"/>
+              </div>
+            )}
           </div>
         </header>
-
-        {/* Temporary indicator for isChatOpen state */}
-        {isChatOpen && (
-          <div className="fixed top-20 right-4 w-10 h-10 bg-red-500 z-50"></div>
-        )}
 
         <div className="absolute top-4 right-4 z-50 hidden md:block">
           <button
@@ -134,11 +134,6 @@ export default function Layout({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-auto">
           {children}
         </main>
-        {isChatOpen && (
-          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
-            <ChatWidget onClose={() => setIsChatOpen(false)} key="chatwidget"/>
-          </div>
-        )}
       </div>
     </div>
   );
