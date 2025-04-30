@@ -62,9 +62,13 @@ export default function NotesPage() {
         mutate(); // Re-fetch notes to update the list
         setSelectedNoteId(null); // Deselect the note after deletion
       } else {
-        const errorData = await response.json();
-        console.error("Failed to delete note:", errorData.error);
-        console.error("Delete API response status:", response.status); // Log response status
+        console.error("Failed to delete note. Status:", response.status); // Log response status
+        try {
+          const errorData = await response.json();
+          console.error("Error details:", errorData.error);
+        } catch (jsonError) {
+          console.error("Could not parse error response as JSON:", jsonError);
+        }
         // Optionally show an error message to the user
       }
     } catch (error) {
