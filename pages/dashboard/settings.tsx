@@ -45,14 +45,17 @@ export default function CalendarSettingsPage() {
   // 4) Load saved settings from backend API
   useEffect(() => {
     const fetchSettings = async () => {
+      console.log("Fetching user settings from API...");
       if (!session?.user?.email) return;
       try {
         const res = await fetch('/api/userSettings');
+        console.log("User settings API response status:", res.status);
         if (!res.ok) {
           console.error('Failed to load user settings:', await res.text());
           return;
         }
         const data = await res.json();
+        console.log("User settings data received:", data);
         setSettings(data);
       } catch (e) {
         console.error('Failed to load user settings:', e);
