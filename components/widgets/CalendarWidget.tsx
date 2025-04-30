@@ -181,11 +181,11 @@ export default function CalendarWidget() {
   };
 
   return (
-    <div className="p-4 bg-[var(--surface)] rounded-lg shadow">
+    <div className="p-4 bg-[var(--surface)] rounded-lg shadow relative"> {/* Add relative positioning */}
       {/* Event Details Modal */}
       {viewingEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setViewingEvent(null)}>
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setViewingEvent(null)}> {/* Change to absolute positioning */}
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md max-h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}> {/* max-h-full to constrain within parent */}
             <h3 className="text-lg font-semibold mb-4">Event Details</h3>
             <div className="space-y-2">
               <div>
