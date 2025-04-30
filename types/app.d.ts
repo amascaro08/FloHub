@@ -9,4 +9,8 @@ export type Note = {
   tags: string[];
   createdAt: string; // Use string for the type as it's sent as ISO string from API
   source?: string; // e.g., "quicknote", "notespage"
+  // New fields for meeting notes
+  eventId?: string; // Optional: ID of the associated calendar event
+  eventTitle?: string; // Optional: Title of the associated calendar event
+  isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
 };

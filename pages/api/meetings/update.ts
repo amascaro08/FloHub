@@ -1,9 +1,11 @@
+// pages/api/meetings/update.ts
+
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
 import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import modular Firestore functions
 
-type UpdateNoteRequest = {
+type UpdateMeetingNoteRequest = { // Renamed type
   id: string;
   title?: string; // Allow updating title
   content?: string; // Allow updating content
@@ -13,14 +15,14 @@ type UpdateNoteRequest = {
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
 };
 
-type UpdateNoteResponse = {
+type UpdateMeetingNoteResponse = { // Renamed type
   success?: boolean;
   error?: string;
 };
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UpdateNoteResponse>
+  res: NextApiResponse<UpdateMeetingNoteResponse> // Use renamed type
 ) {
   if (req.method !== "PUT" && req.method !== "PATCH") {
     res.setHeader("Allow", "PUT, PATCH");
@@ -38,9 +40,9 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { id, title, content, tags, eventId, eventTitle, isAdhoc } = req.body as UpdateNoteRequest; // Include new fields
+  const { id, title, content, tags, eventId, eventTitle, isAdhoc } = req.body as UpdateMeetingNoteRequest; // Include new fields
   if (typeof id !== "string" || id.trim() === "") {
-    return res.status(400).json({ error: "Note ID is required" });
+    return res.status(400).json({ error: "Meeting Note ID is required" }); // Updated error message
   }
 
   // Ensure at least one update field is provided
@@ -63,17 +65,17 @@ export default async function handler(
 
 
   try {
-    // 3) Check if the note exists and belongs to the authenticated user
-    const noteRef = doc(db, "notes", id);
+    // 3) Check if the meeting note exists and belongs to the authenticated user
+    const noteRef = doc(db, "notes", id); // Still reference the 'notes' collection
     const noteSnap = await getDoc(noteRef);
 
     if (!noteSnap.exists()) {
-        return res.status(404).json({ error: "Note not found" });
+        return res.status(404).json({ error: "Meeting Note not found" }); // Updated error message
     }
 
     const noteData = noteSnap.data();
     if (noteData.userId !== userId) {
-        return res.status(403).json({ error: "Unauthorized to update this note" });
+        return res.status(403).json({ error: "Unauthorized to update this meeting note" }); // Updated error message
     }
 
     // 4) Prepare update data
@@ -100,13 +102,13 @@ export default async function handler(
     // updateData.updatedAt = new Date();
 
 
-    // 5) Update the note in the database
+    // 5) Update the meeting note in the database
     await updateDoc(noteRef, updateData);
 
     return res.status(200).json({ success: true });
 
   } catch (err: any) {
-    console.error("Update note error:", err);
+    console.error("Update meeting note error:", err); // Updated error log
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

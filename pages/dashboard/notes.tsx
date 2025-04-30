@@ -10,6 +10,12 @@ import NoteDetail from "@/components/notes/NoteDetail"; // Import NoteDetail com
 import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
 import type { Note } from "@/types/app"; // Import shared Note type
 
+// Define a type for calendar items based on the API response
+type CalendarItem = {
+  id: string;
+  summary: string;
+};
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 
@@ -24,15 +30,23 @@ export default function NotesPage() {
   }, [status, router]);
 
   const shouldFetch = status === "authenticated";
-  // Update useSWR type parameter to GetNotesResponse
-  const { data: notesResponse, error, mutate } = useSWR<GetNotesResponse>(
+  // Fetch notes
+  const { data: notesResponse, error: notesError, mutate } = useSWR<GetNotesResponse>(
     shouldFetch ? "/api/notes" : null,
     fetcher
   );
 
-  // Log the fetched data and error for debugging
-  console.log("Notes data:", notesResponse); // Use notesResponse
-  console.log("Notes fetch error:", error);
+  // Fetch calendar events
+  const { data: calendarEvents, error: calendarError } = useSWR<CalendarItem[]>(
+    shouldFetch ? "/api/calendar/list" : null,
+    fetcher
+  );
+
+  // Log the fetched data and errors for debugging
+  console.log("Notes data:", notesResponse);
+  console.log("Notes fetch error:", notesError);
+  console.log("Calendar events data:", calendarEvents);
+  console.log("Calendar fetch error:", calendarError);
 
 
   const [searchContent, setSearchContent] = useState("");
@@ -80,15 +94,22 @@ export default function NotesPage() {
     }
   };
 
-  const handleSaveNote = async (note: { title: string; content: string; tags: string[] }) => {
+  // Update handleSaveNote to include new fields
+  const handleSaveNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
     setIsSaving(true);
     try {
-      // Note: The current API only supports content and tags, title is not saved.
-      // If title needs to be saved, the API needs to be updated.
       const response = await fetch("/api/notes/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: note.title, content: note.content, tags: note.tags }), // Include title
+        // Include all relevant fields in the body
+        body: JSON.stringify({
+          title: note.title,
+          content: note.content,
+          tags: note.tags,
+          eventId: note.eventId,
+          eventTitle: note.eventTitle,
+          isAdhoc: note.isAdhoc,
+        }),
       });
 
       if (response.ok) {
@@ -130,6 +151,8 @@ export default function NotesPage() {
       );
     }
 
+    // TODO: Implement filtering by event association and ad-hoc status
+
     console.log("Filtered notes computed:", filtered); // Log the computed filtered notes
     return filtered;
   }, [notesResponse, searchContent, filterTag]); // Update dependency to notesResponse
@@ -141,25 +164,37 @@ export default function NotesPage() {
     return filteredNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredNotes]);
 
-  if (status === "loading") {
-    return <p>Loading notes…</p>;
+  // Show loading state if either notes or calendar events are loading
+  if (status === "loading" || (!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch)) {
+    return <p>Loading notes and calendar events…</p>;
   }
 
   if (!session) {
     return <p>Please sign in to see your notes.</p>;
   }
 
-  if (error) {
-    return <p>Error loading notes.</p>;
+  // Show error state if either notes or calendar events failed to load
+  if (notesError || calendarError) {
+    return <p>Error loading data.</p>;
   }
 
-  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => { // Include updatedTitle
+  // Update handleUpdateNote to include new fields
+  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean) => { // Include new fields
     setIsSaving(true);
     try {
       const response = await fetch(`/api/notes/update`, { // Assuming update endpoint is /api/notes/update
         method: "PUT", // Or PATCH, depending on API design
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: noteId, title: updatedTitle, content: updatedContent, tags: updatedTags }), // Include updatedTitle
+        // Include all relevant fields in the body
+        body: JSON.stringify({
+          id: noteId,
+          title: updatedTitle,
+          content: updatedContent,
+          tags: updatedTags,
+          eventId: updatedEventId,
+          eventTitle: updatedEventTitle,
+          isAdhoc: updatedIsAdhoc,
+        }),
       });
 
       if (response.ok) {

@@ -1,10 +1,12 @@
+// pages/api/meetings/create.ts
+
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
 import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
 
-type CreateNoteRequest = {
+type CreateMeetingNoteRequest = { // Renamed type
   title?: string; // Add optional title field
   content: string;
   tags?: string[]; // Optional array of tags
@@ -13,7 +15,7 @@ type CreateNoteRequest = {
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
 };
 
-type CreateNoteResponse = {
+type CreateMeetingNoteResponse = { // Renamed type
   success?: boolean;
   error?: string;
   noteId?: string; // Optional ID of the created note
@@ -21,7 +23,7 @@ type CreateNoteResponse = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<CreateNoteResponse>
+  res: NextApiResponse<CreateMeetingNoteResponse> // Use renamed type
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -39,9 +41,9 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { title, content, tags, eventId, eventTitle, isAdhoc } = req.body as CreateNoteRequest; // Include new fields
+  const { title, content, tags, eventId, eventTitle, isAdhoc } = req.body as CreateMeetingNoteRequest; // Include new fields
   if (typeof content !== "string" || content.trim() === "") {
-    return res.status(400).json({ error: "Note content is required" });
+    return res.status(400).json({ error: "Meeting note content is required" }); // Updated error message
   }
   if (tags !== undefined && (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string'))) {
      return res.status(400).json({ error: "Invalid tags format" });
@@ -50,12 +52,11 @@ export default async function handler(
 
 
   try {
-    // 3) Save the note to the database
-    // This is a placeholder. You will need to implement the actual database logic here.
-    console.log(`Saving note for user ${userId}:`, { content, tags, eventId, eventTitle, isAdhoc });
+    // 3) Save the meeting note to the database
+    console.log(`Saving meeting note for user ${userId}:`, { title, content, tags, eventId, eventTitle, isAdhoc }); // Updated log message
 
     // Example placeholder for Firebase (adjust based on your actual Firebase setup)
-    const newNoteRef = await addDoc(collection(db, "notes"), {
+    const newNoteRef = await addDoc(collection(db, "notes"), { // Still save to 'notes' collection
       userId: userId,
       title: title || "", // Save title, default to empty string if not provided
       content: content,
@@ -71,7 +72,7 @@ export default async function handler(
     return res.status(201).json({ success: true, noteId: noteId });
 
   } catch (err: any) {
-    console.error("Create note error:", err);
+    console.error("Create meeting note error:", err); // Updated error log
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
