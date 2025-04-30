@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useMemo } from "react"; // Import useMemo
-import type { Note } from "@/types/app"; // Import shared Note type
+import type { Note, Action } from "@/types/app"; // Import shared Note and Action types
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 
 // Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
@@ -14,12 +14,13 @@ type CalendarItem = {
 type MeetingNoteDetailProps = { // Renamed type
   note: Note;
   // Update onSave type to include new fields
-  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean) => Promise<void>;
+  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[]) => Promise<void>; // Include updatedActions
   onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
   existingTags: string[]; // Add existingTags to props
   calendarEvents: CalendarItem[]; // Add calendarEvents prop
 };
+
 
 export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, existingTags, calendarEvents }: MeetingNoteDetailProps) { // Destructure new prop
   const [title, setTitle] = useState(note.title || ""); // Add state for title
@@ -29,6 +30,9 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(note.eventId); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(note.eventTitle); // State for selected event title
   const [isAdhoc, setIsAdhoc] = useState(note.isAdhoc || false); // State for ad-hoc flag
+  const [actions, setActions] = useState<Action[]>(note.actions || []); // State for actions
+  const [newActionDescription, setNewActionDescription] = useState(""); // State for new action description
+  const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
 
   // Update state when a different note is selected
   useEffect(() => {
@@ -39,6 +43,9 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     setSelectedEventId(note.eventId); // Update selected event ID state
     setSelectedEventTitle(note.eventTitle); // Update selected event title state
     setIsAdhoc(note.isAdhoc || false); // Update ad-hoc state
+    setActions(note.actions || []); // Update actions state
+    setNewActionDescription(""); // Clear new action description
+    setNewActionAssignedTo("Me"); // Reset assigned to
   }, [note]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -51,8 +58,62 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
       tagsToSave.push(newTagInput.trim());
     }
 
-    await onSave(note.id, title, content, tagsToSave, selectedEventId, selectedEventTitle, isAdhoc); // Include new fields in onSave call
+    await onSave(note.id, title, content, tagsToSave, selectedEventId, selectedEventTitle, isAdhoc, actions); // Include actions in onSave call
   };
+
+  const handleAddAction = async () => { // Made function async
+    if (newActionDescription.trim() === "") return;
+
+    const newAction: Action = {
+      id: Date.now().toString(), // Simple unique ID for now
+      description: newActionDescription.trim(),
+      assignedTo: newActionAssignedTo,
+      status: "todo",
+      createdAt: new Date().toISOString(),
+    };
+
+    setActions([...actions, newAction]);
+    setNewActionDescription(""); // Clear input
+
+    // If assignedTo is "Me", automatically add to tasks list
+    if (newActionAssignedTo === "Me") {
+      console.log("Action assigned to Me. Adding to tasks list:", newAction);
+      try {
+        const response = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: newAction.description,
+            source: "meeting-note", // Add a source to identify where the task came from
+            // Optionally add a dueDate if the Action type had one
+          }),
+        });
+
+        if (response.ok) {
+          console.log("Task created successfully from meeting action!");
+          // TODO: Optionally show a success message to the user
+        } else {
+          const errorData = await response.json();
+          console.error("Failed to create task from meeting action:", errorData.error);
+          // TODO: Show an error message to the user
+        }
+      } catch (error) {
+        console.error("Error creating task from meeting action:", error);
+        // TODO: Show an error message to the user
+      }
+    }
+  };
+
+  const handleActionStatusChange = (actionId: string, status: "todo" | "done") => {
+    setActions(actions.map(action =>
+      action.id === actionId ? { ...action, status: status } : action
+    ));
+  };
+
+  const handleActionDelete = (actionId: string) => {
+    setActions(actions.filter(action => action.id !== actionId));
+  };
+
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
   const eventOptions = calendarEvents.map(event => ({ value: event.id, label: event.summary }));
@@ -157,7 +218,61 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
             value={selectedTagOptions} // Set selected value
           />
         </div>
-        <div className="flex justify-end gap-2"> {/* Add gap for spacing */}
+
+        {/* Actions Section */}
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold mb-2">Actions</h3>
+          <div className="space-y-2">
+            {actions.map(action => (
+              <div key={action.id} className="flex items-center justify-between bg-[var(--neutral-100)] p-2 rounded">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={action.status === "done"}
+                    onChange={() => handleActionStatusChange(action.id, action.status === "done" ? "todo" : "done")}
+                    className="form-checkbox h-4 w-4 text-[var(--primary)] rounded mr-2"
+                    disabled={isSaving}
+                  />
+                  <div>
+                    <p className={`text-sm ${action.status === "done" ? "line-through text-[var(--neutral-500)]" : ""}`}>{action.description}</p>
+                    <p className="text-xs text-[var(--neutral-600)]">Assigned to: {action.assignedTo}</p>
+                  </div>
+                </div>
+                <button onClick={() => handleActionDelete(action.id)} className="text-red-500 hover:text-red-700 text-sm" disabled={isSaving}>Delete</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <input
+              type="text"
+              className="flex-1 border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent text-sm"
+              placeholder="Add new action..."
+              value={newActionDescription}
+              onChange={(e) => setNewActionDescription(e.target.value)}
+              disabled={isSaving}
+            />
+            <select
+              className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent text-sm"
+              value={newActionAssignedTo}
+              onChange={(e) => setNewActionAssignedTo(e.target.value)}
+              disabled={isSaving}
+            >
+              <option value="Me">Me</option>
+              <option value="Other">Other</option> {/* Simple "Other" for now */}
+            </select>
+            <button
+              type="button"
+              onClick={handleAddAction}
+              className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm ${isSaving || newActionDescription.trim() === "" ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={isSaving || newActionDescription.trim() === ""}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+
+        <div className="flex justify-end gap-2 mt-4"> {/* Added mt-4 for spacing */}
           <button
             type="button" // Change type to button to prevent form submission
             className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}

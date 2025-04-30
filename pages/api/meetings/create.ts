@@ -6,6 +6,8 @@ import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
 import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
 
+import type { Action } from "@/types/app"; // Import Action type
+
 type CreateMeetingNoteRequest = { // Renamed type
   title?: string; // Add optional title field
   content: string;
@@ -13,6 +15,7 @@ type CreateMeetingNoteRequest = { // Renamed type
   eventId?: string; // Optional: ID of the associated calendar event
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
+  actions?: Action[]; // Optional: Array of actions
 };
 
 type CreateMeetingNoteResponse = { // Renamed type
@@ -41,19 +44,19 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { title, content, tags, eventId, eventTitle, isAdhoc } = req.body as CreateMeetingNoteRequest; // Include new fields
+  const { title, content, tags, eventId, eventTitle, isAdhoc, actions } = req.body as CreateMeetingNoteRequest; // Include new fields
   if (typeof content !== "string" || content.trim() === "") {
     return res.status(400).json({ error: "Meeting note content is required" }); // Updated error message
   }
   if (tags !== undefined && (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string'))) {
      return res.status(400).json({ error: "Invalid tags format" });
   }
-  // Optional: Add validation for eventId, eventTitle, isAdhoc if needed
+  // Optional: Add validation for eventId, eventTitle, isAdhoc, and actions if needed
 
 
   try {
     // 3) Save the meeting note to the database
-    console.log(`Saving meeting note for user ${userId}:`, { title, content, tags, eventId, eventTitle, isAdhoc }); // Updated log message
+    console.log(`Saving meeting note for user ${userId}:`, { title, content, tags, eventId, eventTitle, isAdhoc, actions }); // Updated log message
 
     // Example placeholder for Firebase (adjust based on your actual Firebase setup)
     const newNoteRef = await addDoc(collection(db, "notes"), { // Still save to 'notes' collection
@@ -66,6 +69,7 @@ export default async function handler(
       ...(eventId && { eventId }),
       ...(eventTitle && { eventTitle }),
       ...(isAdhoc !== undefined && { isAdhoc }), // Save if explicitly provided (true or false)
+      ...(actions && { actions }), // Save actions if provided
     });
     const noteId = newNoteRef.id;
 

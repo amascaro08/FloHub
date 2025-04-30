@@ -253,7 +253,7 @@ export default function MeetingsPage() {
           onSave={handleSaveMeetingNote}
           isSaving={isSaving}
           existingTags={uniqueTags}
-          calendarEvents={calendarEvents || []}
+          calendarList={calendarEvents || []}
         />
 
 

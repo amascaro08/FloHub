@@ -5,6 +5,8 @@ import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
 import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import modular Firestore functions
 
+import type { Action } from "@/types/app"; // Import Action type
+
 type UpdateMeetingNoteRequest = { // Renamed type
   id: string;
   title?: string; // Allow updating title
@@ -13,6 +15,7 @@ type UpdateMeetingNoteRequest = { // Renamed type
   eventId?: string; // Optional: ID of the associated calendar event
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
+  actions?: Action[]; // Optional: Array of actions
 };
 
 type UpdateMeetingNoteResponse = { // Renamed type
@@ -40,13 +43,13 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { id, title, content, tags, eventId, eventTitle, isAdhoc } = req.body as UpdateMeetingNoteRequest; // Include new fields
+  const { id, title, content, tags, eventId, eventTitle, isAdhoc, actions } = req.body as UpdateMeetingNoteRequest; // Include new fields
   if (typeof id !== "string" || id.trim() === "") {
     return res.status(400).json({ error: "Meeting Note ID is required" }); // Updated error message
   }
 
   // Ensure at least one update field is provided
-  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined) {
+  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && actions === undefined) {
       return res.status(400).json({ error: "No update fields provided" });
   }
 
@@ -61,7 +64,7 @@ export default async function handler(
   if (tags !== undefined && (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string'))) {
      return res.status(400).json({ error: "Invalid tags format" });
   }
-  // Optional: Add validation for eventId, eventTitle, isAdhoc if needed
+  // Optional: Add validation for eventId, eventTitle, isAdhoc, and actions if needed
 
 
   try {
@@ -97,6 +100,9 @@ export default async function handler(
     }
     if (isAdhoc !== undefined) { // Allow setting isAdhoc to true or false
         updateData.isAdhoc = isAdhoc;
+    }
+    if (actions !== undefined) { // Allow updating actions
+        updateData.actions = actions;
     }
     // Optionally update a 'updatedAt' timestamp
     // updateData.updatedAt = new Date();

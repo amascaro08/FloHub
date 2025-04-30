@@ -1,8 +1,10 @@
 // components/meetings/AddMeetingNoteModal.tsx
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
+import useSWR from "swr"; // Import useSWR
+import type { CalendarEvent } from "@/pages/api/calendar/events"; // Import CalendarEvent type
 
 // Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
 type CalendarItem = {
@@ -17,16 +19,32 @@ type AddMeetingNoteModalProps = {
   onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => Promise<void>;
   isSaving: boolean;
   existingTags: string[]; // Add existingTags prop
-  calendarEvents: CalendarItem[]; // Add calendarEvents prop
+  calendarList: CalendarItem[]; // Rename prop from calendarEvents to calendarList
 };
 
-export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, calendarEvents }: AddMeetingNoteModalProps) { // Receive new prop
+const fetcher = (url: string) => fetch(url).then((r) => r.json()); // Define fetcher
+
+export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, calendarList }: AddMeetingNoteModalProps) { // Receive renamed prop
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | undefined>(undefined); // State for selected calendar ID
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
   const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
+
+  // Fetch events for the selected calendar
+  const { data: calendarEvents, error: calendarEventsError } = useSWR<CalendarEvent[]>(
+    selectedCalendarId ? `/api/calendar/events?calendarId=${selectedCalendarId}` : null,
+    fetcher
+  );
+
+  // Log fetched events for debugging
+  useEffect(() => {
+    console.log("Fetched calendar events:", calendarEvents);
+    console.log("Calendar events fetch error:", calendarEventsError);
+  }, [calendarEvents, calendarEventsError]);
+
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,6 +67,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setTitle("");
     setContent("");
     setSelectedTags([]);
+    setSelectedCalendarId(undefined); // Clear selected calendar
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
     setIsAdhoc(false);
@@ -56,13 +75,27 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   };
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
-  const eventOptions = calendarEvents.map(event => ({ value: event.id, label: event.summary }));
+  const calendarOptions = calendarList.map(calendar => ({ value: calendar.id, label: calendar.summary }));
+  const eventOptions = calendarEvents?.map(event => ({ value: event.id, label: event.summary })) || []; // Use fetched events
+
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
     if (actionMeta.action === 'create-option') {
       setSelectedTags([...selectedTags, actionMeta.option.value]);
     } else {
       setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
+    }
+  };
+
+  const handleCalendarChange = (selectedOption: any) => {
+    if (selectedOption) {
+      setSelectedCalendarId(selectedOption.value);
+      setSelectedEventId(undefined); // Clear selected event when calendar changes
+      setSelectedEventTitle(undefined);
+    } else {
+      setSelectedCalendarId(undefined);
+      setSelectedEventId(undefined);
+      setSelectedEventTitle(undefined);
     }
   };
 
@@ -80,7 +113,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const handleAdhocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsAdhoc(e.target.checked);
     if (e.target.checked) {
-      setSelectedEventId(undefined); // If ad-hoc, clear selected event
+      setSelectedCalendarId(undefined); // If ad-hoc, clear selected calendar and event
+      setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
     }
   };
@@ -129,17 +163,33 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
           </div>
           {/* New fields for meeting notes */}
           <div>
-            <label htmlFor="calendar-event" className="block text-sm font-medium text-[var(--fg)] mb-1">Associate with Calendar Event (Optional)</label>
+            <label htmlFor="calendar-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Calendar (Optional)</label> {/* Updated label */}
             <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-              options={eventOptions}
-              onChange={handleEventChange}
-              placeholder="Select an event..."
+              options={calendarOptions}
+              onChange={handleCalendarChange}
+              placeholder="Select a calendar..."
               isDisabled={isSaving || isAdhoc} // Disable if saving or ad-hoc is checked
               isClearable
               isSearchable
-              value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
+              value={selectedCalendarId ? { value: selectedCalendarId, label: calendarList.find(cal => cal.id === selectedCalendarId)?.summary || '' } : null}
             />
           </div>
+           {selectedCalendarId && ( // Show event selection only if a calendar is selected
+            <div>
+              <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
+              <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
+                options={eventOptions}
+                onChange={handleEventChange}
+                placeholder="Select an event..."
+                isDisabled={isSaving || isAdhoc || !calendarEvents} // Disable if saving, ad-hoc is checked, or events are loading/failed
+                isClearable
+                isSearchable
+                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
+              />
+               {calendarEventsError && <p className="text-red-500 text-sm mt-1">Error loading events.</p>} {/* Show error if events fail to load */}
+               {!calendarEvents && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -147,7 +197,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
               checked={isAdhoc}
               onChange={handleAdhocChange}
-              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
+              disabled={isSaving || selectedEventId !== undefined || selectedCalendarId !== undefined} // Disable if saving, event is selected, or calendar is selected
             />
             <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
           </div>
