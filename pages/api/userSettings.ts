@@ -47,9 +47,11 @@ export default async function handler(
   } else if (req.method === "POST") {
     try {
       const settings: UserSettings = req.body;
+      console.log("Saving user settings:", settings);
       await settingsDocRef.set(settings, { merge: true });
       return res.status(200).json(settings);
     } catch (error) {
+      console.error("Error saving user settings:", error);
       return res.status(500).json({ error: "Failed to save user settings" });
     }
   } else {
