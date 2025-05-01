@@ -54,7 +54,8 @@ export default async function handler(
       )}/events?timeMin=${encodeURIComponent(
         safeTimeMin
       )}&timeMax=${encodeURIComponent(
-        safeTimeMax
+        // Adjust timeMax to be the start of the next day to ensure all events on the target day are included
+        new Date(new Date(safeTimeMax).getTime() + 24 * 60 * 60 * 1000).toISOString()
       )}&singleEvents=true&orderBy=startTime`;
 
       try {
