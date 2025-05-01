@@ -364,6 +364,36 @@ export default function CalendarWidget() {
         </div>
       )}
 
+      {/* Filter Buttons */}
+      <div className="flex space-x-2 mb-4">
+        <button
+          className={`px-3 py-1 rounded text-sm ${activeView === 'today' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setActiveView('today')}
+        >
+          Today
+        </button>
+        <button
+          className={`px-3 py-1 rounded text-sm ${activeView === 'week' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setActiveView('week')}
+        >
+          This Week
+        </button>
+        <button
+          className={`px-3 py-1 rounded text-sm ${activeView === 'month' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setActiveView('month')}
+        >
+          This Month
+        </button>
+        {/* Custom Range button/input will need more complex handling */}
+        {/* For now, just a button */}
+        <button
+          className={`px-3 py-1 rounded text-sm ${activeView === 'custom' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setActiveView('custom')}
+        >
+          Custom Range
+        </button>
+      </div>
+
       {/* Event List */}
       <div className="overflow-y-auto">
         {!data && !error && <div className="text-[var(--fg-muted)]">Loading events...</div>}
