@@ -59,23 +59,34 @@ export default function CalendarSettingsPage() {
       alert("You must be signed in to save settings.");
       return;
     }
+
+    // Optimistic UI update
+    mutateSettings(settings, false); // Update local cache immediately, don't revalidate yet
+
     try {
       const res = await fetch('/api/userSettings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
+
       if (!res.ok) {
-        alert("Failed to save settings.");
+        alert("Failed to save settings. Reverting changes.");
         console.error("Failed to save settings:", await res.text());
+        // Revert optimistic update on failure
+        mutateSettings(); // Revalidate to get the actual server state
         return;
       }
+
       alert("Settings saved!");
-      // Revalidate SWR cache to load the updated settings
-      await mutateSettings();
+      // Trigger revalidation to ensure consistency
+      mutateSettings();
+
     } catch (e) {
       console.error("Error saving settings:", e);
-      alert("Failed to save settings.");
+      alert("Failed to save settings. Reverting changes.");
+      // Revert optimistic update on failure
+      mutateSettings(); // Revalidate to get the actual server state
     }
   };
 
