@@ -148,12 +148,13 @@ export default function CalendarSettingsPage() {
           type="url"
           placeholder="Enter your PowerAutomate HTTP request URL"
           value={settings.powerAutomateUrl || ""}
-          onChange={(e) =>
+          onChange={(e) => {
             setSettings((s) => ({
               ...s,
               powerAutomateUrl: e.target.value,
-            }))
-          }
+            }));
+            console.log("PowerAutomate URL changed to:", e.target.value);
+          }}
           className="border px-3 py-2 rounded w-full"
         />
         <p className="text-xs text-[var(--fg-muted)] mt-1">
