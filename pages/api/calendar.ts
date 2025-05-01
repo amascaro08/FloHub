@@ -100,12 +100,12 @@ export default async function handler(
             ? o365Data.events
             : [];
           const o365Events: any[] = o365EventsRaw.map((e: any) => ({
-            id: e.id,
-            summary: e.subject,
-            start: { dateTime: e.start?.dateTime || e.start?.date },
-            end: { dateTime: e.end?.dateTime || e.end?.date },
+            id: `o365_${e.startTime || e.title}_${Math.random().toString(36).substring(7)}`, // Generate ID from available fields
+            summary: e.title || "No Title (Work)", // Map title to summary
+            start: { dateTime: e.startTime }, // Map startTime
+            end: { dateTime: e.endTime }, // Map endTime
             source: "work",
-            description: e.bodyPreview || "",
+            description: e.description || "", // Map description
           }));
           allEvents.push(...o365Events);
         } else {
