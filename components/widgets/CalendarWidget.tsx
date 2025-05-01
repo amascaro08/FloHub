@@ -282,7 +282,7 @@ export default function CalendarWidget() {
               {viewingEvent.description && (
                 <div>
                   <span className="font-medium">Description: </span>
-                  {viewingEvent.description}
+                  <div dangerouslySetInnerHTML={{ __html: viewingEvent.description }} />
                 </div>
               )}
             </div>
