@@ -57,11 +57,14 @@ const AtAGlanceWidget: React.FC = () => {
         const userTimezone = "Australia/Sydney"; // Using a standard IANA timezone name for AEST/AEDT
 
         // Calculate start and end of day in the user's timezone
-        const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00XXX');
-        const endOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'23:59:59XXX');
+        const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00');
+        const endOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'23:59:59');
 
+        // Convert timezone-aware dates to Date objects and then to UTC ISO strings for the API
+        const startOfTodayUTC = new Date(startOfTodayInTimezone).toISOString();
+        const endOfTodayUTC = new Date(endOfTodayInTimezone).toISOString();
 
-        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayInTimezone)}&timeMax=${encodeURIComponent(endOfTodayInTimezone)}&timezone=${encodeURIComponent(userTimezone)}${
+        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${
           powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
         }`;
 
