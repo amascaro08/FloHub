@@ -56,11 +56,11 @@ const AtAGlanceWidget: React.FC = () => {
         const now = new Date();
         const userTimezone = "Australia/Sydney"; // Using a standard IANA timezone name for AEST/AEDT
 
-        // Calculate start and end of day in the user's timezone
-        const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00');
-        const endOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'23:59:59');
+        // Calculate start and end of day in the user's timezone, including the timezone offset
+        const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00XXX');
+        const endOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'23:59:59XXX');
 
-        // Convert timezone-aware dates to Date objects and then to UTC ISO strings for the API
+        // Create Date objects from the timezone-aware strings and convert them to UTC ISO strings for the API
         const startOfTodayUTC = new Date(startOfTodayInTimezone).toISOString();
         const endOfTodayUTC = new Date(endOfTodayInTimezone).toISOString();
 

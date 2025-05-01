@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* main */}
-      <div className={`flex-1 flex flex-col transition-all duration-200 ease-in-out ${desktopSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}> {/* Adjust margin based on state */}
+      <div className={`flex-1 flex flex-col transition-all duration-200 ease-in-out ${desktopSidebarCollapsed ? 'md:ml-16' : ''}`}> {/* Adjust margin based on state */}
         {/* header */}
         <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm">
           <div className="flex items-center">
