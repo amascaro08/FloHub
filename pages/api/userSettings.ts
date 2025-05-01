@@ -15,6 +15,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<UserSettings | ErrorRes>
 ) {
+  // Disable caching to always return freshest data
+  res.setHeader('Cache-Control', 'no-store');
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.email) {
     return res.status(401).json({ error: "Not authenticated" });

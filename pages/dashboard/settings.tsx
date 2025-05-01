@@ -31,7 +31,7 @@ export default function CalendarSettingsPage() {
     { revalidateOnFocus: false }
   );
 
-  // 3) Settings state
+  // 3) Settings state (local form state)
   const [settings, setSettings] = useState<Settings>({
     selectedCals: [],
     defaultView: "month",
@@ -42,29 +42,17 @@ export default function CalendarSettingsPage() {
     powerAutomateUrl: "",
   });
 
-  // 4) Load saved settings from backend API
+  // 4) Fetch persistent user settings via SWR
+  const { data: loadedSettings, error: settingsError, mutate: mutateSettings } =
+    useSWR<Settings>(session ? "/api/userSettings" : null, fetcher, { revalidateOnFocus: false });
+
+  // 5) Initialize local form state when loadedSettings changes
   useEffect(() => {
-    const fetchSettings = async () => {
-      console.log("Fetching user settings from API...");
-      if (!session?.user?.email) return;
-      try {
-        const res = await fetch('/api/userSettings');
-        console.log("User settings API response status:", res.status);
-        if (!res.ok) {
-          console.error('Failed to load user settings:', await res.text());
-          return;
-        }
-        const data = await res.json();
-        console.log("User settings data received:", data);
-        setSettings(data);
-      } catch (e) {
-        console.error('Failed to load user settings:', e);
-      }
-    };
-
-    fetchSettings();
-  }, [session]); // Fetch settings when session changes
-
+    if (loadedSettings) {
+      console.log("Loaded persistent settings:", loadedSettings);
+      setSettings(loadedSettings);
+    }
+  }, [loadedSettings]);
   // 5) Save settings to backend API
   const save = async () => {
     if (!session?.user?.email) {
@@ -83,12 +71,8 @@ export default function CalendarSettingsPage() {
         return;
       }
       alert("Settings saved!");
-      // Refetch settings after save to update UI
-      const res2 = await fetch('/api/userSettings');
-      if (res2.ok) {
-        const data = await res2.json();
-        setSettings(data);
-      }
+      // Revalidate SWR cache to load the updated settings
+      await mutateSettings();
     } catch (e) {
       console.error("Error saving settings:", e);
       alert("Failed to save settings.");
