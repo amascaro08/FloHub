@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
+import { useSession } from "next-auth/react"; // Import useSession
+
+// Define Settings type (can be moved to a shared types file)
+export type Settings = {
+  selectedCals: string[];
+  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  customRange: { start: string; end: string };
+  powerAutomateUrl?: string;
+};
 
 type ViewType = 'today' | 'tomorrow' | 'week' | 'month' | 'custom';
 type CustomRange = { start: string; end: string };
@@ -13,7 +22,18 @@ export interface CalendarEvent {
   description?: string; // Add description field
 }
 
-const fetcher = async (url: string): Promise<CalendarEvent[]> => {
+// Generic fetcher for SWR
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errorInfo = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errorInfo}`);
+  }
+  return res.json();
+};
+
+// Fetcher specifically for calendar events API
+const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   const res = await fetch(url, { credentials: 'include' });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error loading events');
@@ -21,10 +41,20 @@ const fetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 export default function CalendarWidget() {
+  const { data: session } = useSession(); // Get session for conditional fetching
   const { mutate } = useSWRConfig();
+
+  // Fetch persistent user settings via SWR
+  const { data: loadedSettings, error: settingsError } =
+    useSWR<Settings>(session ? "/api/userSettings" : null, fetcher);
+
+  // Local state derived from loadedSettings or defaults
   const [selectedCals, setSelectedCals] = useState<string[]>(['primary']);
   const [activeView, setActiveView] = useState<ViewType>('week');
   const [customRange, setCustomRange] = useState<CustomRange>({ start: '', end: '' });
+  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
+
+  // Other local state
   const [timeRange, setTimeRange] = useState<{ timeMin: string; timeMax: string } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -35,65 +65,35 @@ export default function CalendarWidget() {
     start: string;
     end: string;
   }>({ calendarId: '', summary: '', start: '', end: '' });
-  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
 
-  // Load calendar settings on mount from backend API
+  // Update local state when loadedSettings changes
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const res = await fetch('/api/userSettings');
-        if (!res.ok) {
-          console.error('Failed to load calendar settings:', await res.text());
-          return;
-        }
-        const settings = await res.json();
-        if (Array.isArray(settings.selectedCals) && settings.selectedCals.length > 0) {
-          setSelectedCals(settings.selectedCals);
-        }
-        if (['today', 'tomorrow', 'week', 'month', 'custom'].includes(settings.defaultView)) {
-          setActiveView(settings.defaultView);
-        }
-        if (
-          settings.customRange &&
-          typeof settings.customRange.start === 'string' &&
-          typeof settings.customRange.end === 'string'
-        ) {
-          setCustomRange({ start: settings.customRange.start, end: settings.customRange.end });
-        }
-        if (typeof settings.powerAutomateUrl === "string") {
-          setPowerAutomateUrl(settings.powerAutomateUrl);
-        }
-      } catch (e) {
-        console.error('Failed to load calendar settings:', e);
+    if (loadedSettings) {
+      console.log("CalendarWidget loaded settings:", loadedSettings);
+      if (Array.isArray(loadedSettings.selectedCals) && loadedSettings.selectedCals.length > 0) {
+        setSelectedCals(loadedSettings.selectedCals);
+      } else {
+        setSelectedCals(['primary']); // Default if empty/invalid
       }
-    };
-    loadSettings();
-  }, []);
-
-  // Save calendar settings to backend API when they change
-  useEffect(() => {
-    const saveSettings = async () => {
-      const settings = {
-        selectedCals,
-        defaultView: activeView,
-        customRange,
-        powerAutomateUrl,
-      };
-      try {
-        const res = await fetch('/api/userSettings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings),
-        });
-        if (!res.ok) {
-          console.error('Failed to save calendar settings:', await res.text());
-        }
-      } catch (e) {
-        console.error('Failed to save calendar settings:', e);
+      if (['today', 'tomorrow', 'week', 'month', 'custom'].includes(loadedSettings.defaultView)) {
+        setActiveView(loadedSettings.defaultView);
+      } else {
+        setActiveView('week'); // Default
       }
-    };
-    saveSettings();
-  }, [selectedCals, activeView, customRange, powerAutomateUrl]);
+      if (
+        loadedSettings.customRange &&
+        typeof loadedSettings.customRange.start === 'string' &&
+        typeof loadedSettings.customRange.end === 'string'
+      ) {
+        setCustomRange(loadedSettings.customRange);
+      } else {
+        // Initialize with default if needed
+        const today = new Date().toISOString().slice(0, 10);
+        setCustomRange({ start: today, end: today });
+      }
+      setPowerAutomateUrl(loadedSettings.powerAutomateUrl || "");
+    }
+  }, [loadedSettings]);
 
   // Calculate time range when view or customRange changes
   useEffect(() => {
