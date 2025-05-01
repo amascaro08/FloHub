@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
+import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 
 interface CalendarEvent {
   id: string;
@@ -53,12 +54,14 @@ const AtAGlanceWidget: React.FC = () => {
       try {
         // Fetch upcoming events for today, including o365Url
         const now = new Date();
-        // Calculate start and end of day in UTC
-        const startOfDayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-        const endOfDayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)).toISOString();
-
         const userTimezone = "Australia/Sydney"; // Using a standard IANA timezone name for AEST/AEDT
-        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfDayUTC)}&timeMax=${encodeURIComponent(endOfDayUTC)}&timezone=${encodeURIComponent(userTimezone)}${
+
+        // Calculate start and end of day in the user's timezone
+        const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00XXX');
+        const endOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'23:59:59XXX');
+
+
+        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayInTimezone)}&timeMax=${encodeURIComponent(endOfTodayInTimezone)}&timezone=${encodeURIComponent(userTimezone)}${
           powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
         }`;
 
@@ -82,7 +85,6 @@ const AtAGlanceWidget: React.FC = () => {
         const incompleteTasks = tasksData.filter(task => !task.done);
 
 
-        // Filter out past events for the AI prompt
         // Filter out past events for the AI prompt
         const upcomingEventsForPrompt = eventsData.filter(ev => {
           if (ev.start.dateTime) {
