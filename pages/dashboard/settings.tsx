@@ -90,13 +90,15 @@ export default function CalendarSettingsPage() {
   };
 
   // Handlers
-  const toggleCal = (id: string) =>
-    setSettings((s) => ({
-      ...s,
-      selectedCals: s.selectedCals.includes(id)
+  const toggleCal = (id: string) => {
+    setSettings((s) => {
+      const newSelectedCals = s.selectedCals.includes(id)
         ? s.selectedCals.filter((x) => x !== id)
-        : [...s.selectedCals, id],
-    }));
+        : [...s.selectedCals, id];
+      console.log("Toggling calendar selection:", newSelectedCals);
+      return { ...s, selectedCals: newSelectedCals };
+    });
+  };
 
   // Early returns
   if (loadingSession) {
