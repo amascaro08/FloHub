@@ -66,6 +66,7 @@ const AtAGlanceWidget: React.FC = () => {
           throw new Error(`Error fetching events: ${eventsRes.statusText}`);
         }
         const eventsData: CalendarEvent[] = await eventsRes.json();
+        console.log("AtAGlanceWidget: Fetched eventsData:", eventsData); // Add this log
         setUpcomingEvents(eventsData);
 
         // Fetch tasks
@@ -81,12 +82,26 @@ const AtAGlanceWidget: React.FC = () => {
 
 
         // Filter out past events for the AI prompt
+        // Filter out past events for the AI prompt
         const upcomingEventsForPrompt = eventsData.filter(ev => {
-          const eventEndTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : (ev.end?.date ? new Date(ev.end.date) : null);
-          const eventStartTime = ev.start.dateTime ? new Date(ev.start.dateTime) : (ev.start.date ? new Date(ev.start.date) : null);
-          // Keep events that are currently ongoing or in the future
-          return (eventEndTime && eventEndTime.getTime() > now.getTime()) || (eventStartTime && eventStartTime.getTime() >= now.getTime());
+          if (ev.start.dateTime) {
+            // Timed event
+            const startTime = new Date(ev.start.dateTime);
+            const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+            // Keep if start is in future OR (if end exists and end is in future)
+            return startTime.getTime() >= now.getTime() || (endTime && endTime.getTime() > now.getTime());
+          } else if (ev.start.date) {
+            // All-day event
+            const eventDate = new Date(ev.start.date);
+            // Set time to end of day for comparison to include today's all-day events
+            eventDate.setHours(23, 59, 59, 999);
+            // Keep if the date is today or in the future
+            return eventDate.getTime() >= now.getTime();
+          }
+          // Should not happen if data is well-formed, but filter out if no start time/date
+          return false;
         });
+        console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
         // Generate AI message
         const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date} (${event.source || 'personal'})`).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be friendly, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;

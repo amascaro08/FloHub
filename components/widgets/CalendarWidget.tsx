@@ -189,15 +189,36 @@ export default function CalendarWidget() {
 
   // Filter out past events and find the next upcoming event
   const now = new Date();
+  // Filter out past events and find the next upcoming event
   const upcomingEvents = data
     ? data.filter(ev => {
-        const eventTime = ev.start.dateTime ? new Date(ev.start.dateTime) : (ev.start.date ? new Date(ev.start.date) : null);
-        // Keep events that are currently ongoing or in the future
-        return eventTime && (eventTime.getTime() >= now.getTime() || (ev.end?.dateTime && new Date(ev.end.dateTime).getTime() > now.getTime()));
+        if (ev.start.dateTime) {
+          // Timed event
+          const startTime = new Date(ev.start.dateTime);
+          const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+          // Keep if start is in future OR (if end exists and end is in future)
+          return startTime.getTime() >= now.getTime() || (endTime && endTime.getTime() > now.getTime());
+        } else if (ev.start.date) {
+          // All-day event
+          const eventDate = new Date(ev.start.date);
+          // Set time to end of day for comparison to include today's all-day events
+          eventDate.setHours(23, 59, 59, 999);
+          // Keep if the date is today or in the future
+          return eventDate.getTime() >= now.getTime();
+        }
+        // Should not happen if data is well-formed, but filter out if no start time/date
+        return false;
       })
     : [];
 
   // The next upcoming event is the first one in the sorted, filtered list
+  // Note: Sorting is handled by the API, but we re-sort here just in case or for client-side additions
+  upcomingEvents.sort((a, b) => {
+    const dateA = a.start.dateTime ? new Date(a.start.dateTime).getTime() : (a.start.date ? new Date(a.start.date).getTime() : 0);
+    const dateB = b.start.dateTime ? new Date(b.start.dateTime).getTime() : (b.start.date ? new Date(b.start.date).getTime() : 0);
+    return dateA - dateB;
+  });
+
   const nextUpcomingEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
 
 
