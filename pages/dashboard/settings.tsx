@@ -83,6 +83,12 @@ export default function CalendarSettingsPage() {
         return;
       }
       alert("Settings saved!");
+      // Refetch settings after save to update UI
+      const res2 = await fetch('/api/userSettings');
+      if (res2.ok) {
+        const data = await res2.json();
+        setSettings(data);
+      }
     } catch (e) {
       console.error("Error saving settings:", e);
       alert("Failed to save settings.");
