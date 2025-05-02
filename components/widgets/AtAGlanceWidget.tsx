@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
-import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz'; // Import formatInTimeZone and toZonedTime
 import useSWR from 'swr'; // Import useSWR
 import { Settings } from '../../pages/dashboard/settings'; // Import Settings type
 
@@ -82,9 +82,30 @@ const AtAGlanceWidget: React.FC = () => {
         if (!eventsRes.ok) {
           throw new Error(`Error fetching events: ${eventsRes.statusText}`);
         }
-        const eventsData: CalendarEvent[] = await eventsRes.json();
-        console.log("AtAGlanceWidget: Fetched eventsData:", eventsData); // Add this log
-        setUpcomingEvents(eventsData);
+       const eventsData: CalendarEvent[] = await eventsRes.json();
+       console.log("AtAGlanceWidget: Fetched eventsData:", eventsData); // Add this log
+
+       // Convert event times to user's timezone
+       const eventsInUserTimezone = eventsData.map(event => {
+         const start = event.start.dateTime
+           ? { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
+            : event.start.date
+              ? { date: event.start.date } // All-day events don't need time conversion
+              : {};
+          const end = event.end?.dateTime
+            ? { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
+           : event.end?.date
+             ? { date: event.end.date } // All-day events don't need time conversion
+             : undefined;
+
+         return {
+           ...event,
+           start,
+           end,
+         };
+       });
+
+       setUpcomingEvents(eventsInUserTimezone);
 
         // Fetch tasks
         const tasksRes = await fetch('/api/tasks');
@@ -98,17 +119,17 @@ const AtAGlanceWidget: React.FC = () => {
         const incompleteTasks = tasksData.filter(task => !task.done);
 
 
-       // Filter out past events for the AI prompt, considering the user's timezone
-       const upcomingEventsForPrompt = eventsData.filter(ev => {
+       // Filter out past events for the AI prompt, using times already converted to user's timezone
+       const upcomingEventsForPrompt = eventsInUserTimezone.filter(ev => {
          if (ev.start.dateTime) {
-           // Timed event - parse as UTC and compare with current time in user's timezone
-           const startTimeUTC = new Date(ev.start.dateTime);
-           const endTimeUTC = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+           // Timed event - compare with current time in user's timezone
+           const startTime = new Date(ev.start.dateTime);
+           const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
            const nowInUserTimezone = new Date(formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'));
 
-           // Keep if start time (in UTC) is after or equal to the current time (in user's timezone)
-           // OR if end time (in UTC) exists and is after the current time (in user's timezone)
-           return startTimeUTC.getTime() >= nowInUserTimezone.getTime() || (endTimeUTC && endTimeUTC.getTime() > nowInUserTimezone.getTime());
+           // Keep if start time is after or equal to the current time (both in user's timezone)
+           // OR if end time exists and is after the current time (both in user's timezone)
+           return startTime.getTime() >= nowInUserTimezone.getTime() || (endTime && endTime.getTime() > nowInUserTimezone.getTime());
 
          } else if (ev.start.date) {
            // All-day event - compare date with current date in user's timezone
@@ -125,8 +146,15 @@ const AtAGlanceWidget: React.FC = () => {
        });
         console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
-        // Generate AI message
-        const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => `- ${event.summary} at ${event.start.dateTime || event.start.date} (${event.source || 'personal'})`).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be friendly, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
+       // Generate AI message
+       const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => {
+         // Format the time for display in the user's timezone
+         const eventTime = event.start.dateTime
+           ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
+           : event.start.date; // All-day events use the date
+
+         return `- ${event.summary} at ${eventTime} (${event.source || 'personal'})`;
+       }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be friendly, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
 
 
         const aiRes = await fetch('/api/assistant', {
