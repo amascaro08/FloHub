@@ -58,7 +58,8 @@ const AtAGlanceWidget: React.FC = () => {
       try {
         // Fetch upcoming events for today, including o365Url
         const now = new Date();
-        const userTimezone = "Australia/Sydney"; // Using a standard IANA timezone name for AEST/AEDT
+        // Get user's local timezone
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         // Calculate start and end of day in the user's timezone, including the timezone offset
         const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00XXX');
@@ -97,25 +98,31 @@ const AtAGlanceWidget: React.FC = () => {
         const incompleteTasks = tasksData.filter(task => !task.done);
 
 
-        // Filter out past events for the AI prompt
-        const upcomingEventsForPrompt = eventsData.filter(ev => {
-          if (ev.start.dateTime) {
-            // Timed event
-            const startTime = new Date(ev.start.dateTime);
-            const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
-            // Keep if start is in future OR (if end exists and end is in future)
-            return startTime.getTime() >= now.getTime() || (endTime && endTime.getTime() > now.getTime());
-          } else if (ev.start.date) {
-            // All-day event
-            const eventDate = new Date(ev.start.date);
-            // Set time to end of day for comparison to include today's all-day events
-            eventDate.setHours(23, 59, 59, 999);
-            // Keep if the date is today or in the future
-            return eventDate.getTime() >= now.getTime();
-          }
-          // Should not happen if data is well-formed, but filter out if no start time/date
-          return false;
-        });
+       // Filter out past events for the AI prompt, considering the user's timezone
+       const upcomingEventsForPrompt = eventsData.filter(ev => {
+         if (ev.start.dateTime) {
+           // Timed event - parse as UTC and compare with current time in user's timezone
+           const startTimeUTC = new Date(ev.start.dateTime);
+           const endTimeUTC = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+           const nowInUserTimezone = new Date(formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'));
+
+           // Keep if start time (in UTC) is after or equal to the current time (in user's timezone)
+           // OR if end time (in UTC) exists and is after the current time (in user's timezone)
+           return startTimeUTC.getTime() >= nowInUserTimezone.getTime() || (endTimeUTC && endTimeUTC.getTime() > nowInUserTimezone.getTime());
+
+         } else if (ev.start.date) {
+           // All-day event - compare date with current date in user's timezone
+           const eventDate = new Date(ev.start.date);
+           // Set time to end of day in user's timezone for comparison to include today's all-day events
+           const endOfEventDayInTimezone = new Date(formatInTimeZone(eventDate, userTimezone, 'yyyy-MM-dd\'T\'23:59:59XXX'));
+           const nowInUserTimezone = new Date(formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'));
+
+           // Keep if the event date (end of day in user's timezone) is today or in the future compared to now (in user's timezone)
+           return endOfEventDayInTimezone.getTime() >= nowInUserTimezone.getTime();
+         }
+         // Should not happen if data is well-formed, but filter out if no start time/date
+         return false;
+       });
         console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
         // Generate AI message
