@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
+import useSWR from 'swr'; // Import useSWR
+import { Settings } from '../../pages/dashboard/settings'; // Import Settings type
 
 interface CalendarEvent {
   id: string;
@@ -29,22 +31,24 @@ const AtAGlanceWidget: React.FC = () => {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>(""); // State for PowerAutomate URL
 
-  // Load calendar settings on mount to get PowerAutomate URL
+  // Fetch user settings
+  const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+  const { data: loadedSettings, error: settingsError } = useSWR<Settings>(session ? "/api/userSettings" : null, fetcher);
+
+  // State for PowerAutomate URL, initialized from settings
+  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
+
+  // Update powerAutomateUrl when settings load
   useEffect(() => {
-    const raw = localStorage.getItem('flohub.calendarSettings');
-    if (raw) {
-      try {
-        const settings = JSON.parse(raw);
-        if (typeof settings.powerAutomateUrl === "string") {
-          setPowerAutomateUrl(settings.powerAutomateUrl);
-        }
-      } catch (e) {
-        console.error('Failed to parse calendar settings:', e);
-      }
+    if (loadedSettings?.powerAutomateUrl) {
+      setPowerAutomateUrl(loadedSettings.powerAutomateUrl);
     }
-  }, []);
+  }, [loadedSettings]);
 
 
   useEffect(() => {
@@ -64,7 +68,12 @@ const AtAGlanceWidget: React.FC = () => {
         const startOfTodayUTC = new Date(startOfTodayInTimezone).toISOString();
         const endOfTodayUTC = new Date(endOfTodayInTimezone).toISOString();
 
-        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${
+        // Construct calendarId query parameter from selectedCals
+        const calendarIdQuery = loadedSettings?.selectedCals && loadedSettings.selectedCals.length > 0
+          ? `&calendarId=${loadedSettings.selectedCals.map(id => encodeURIComponent(id)).join('&calendarId=')}`
+          : ''; // If no calendars selected, don't add calendarId param (API defaults to primary)
+
+        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${calendarIdQuery}${
           powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
         }`;
 
@@ -141,10 +150,10 @@ const AtAGlanceWidget: React.FC = () => {
     };
 
     // Fetch data when session or powerAutomateUrl changes
-    if (session) {
+    if (session && loadedSettings) { // Only fetch data if session and settings are loaded
        fetchData();
     }
-  }, [session, powerAutomateUrl]); // Refetch when session or powerAutomateUrl changes
+  }, [session, loadedSettings, powerAutomateUrl]); // Refetch when session, settings, or powerAutomateUrl changes
 
   if (loading) {
     return <div className="p-4 border rounded-lg shadow-sm">Loading...</div>;
