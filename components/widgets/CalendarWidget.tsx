@@ -102,8 +102,16 @@ export default function CalendarWidget() {
     const now = new Date();
     let minDate = new Date();
     let maxDate = new Date();
-    const startOfDay = (d: Date) => (d.setHours(0, 0, 0, 0), d);
-    const endOfDay = (d: Date) => (d.setHours(23, 59, 59, 999), d);
+    const startOfDay = (d: Date): Date => {
+      const newDate = new Date(d);
+      newDate.setHours(0, 0, 0, 0);
+      return newDate;
+    };
+    const endOfDay = (d: Date): Date => {
+      const newDate = new Date(d);
+      newDate.setHours(23, 59, 59, 999);
+      return newDate;
+    };
 
     switch (activeView) {
       case 'today':

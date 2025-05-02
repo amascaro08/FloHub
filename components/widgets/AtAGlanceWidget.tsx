@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'; // Import formatInTimeZone and toZonedTime
+import { isSameDay } from 'date-fns'; // Import isSameDay from date-fns
 import useSWR from 'swr'; // Import useSWR
 import { Settings } from '../../pages/dashboard/settings'; // Import Settings type
 
@@ -142,38 +143,37 @@ const AtAGlanceWidget = () => {
        // Filter out past events for the AI prompt, using times already converted to user's timezone
        const upcomingEventsForPrompt = eventsInUserTimezone.filter(ev => {
          console.log("AtAGlanceWidget: Filtering event:", ev.summary, ev.start.dateTime || ev.start.date);
-         if (ev.start.dateTime) {
-           // Timed event - compare with current time in user's timezone
-           const startTime = new Date(ev.start.dateTime);
-           const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
-           const nowInUserTimezone = toZonedTime(now, userTimezone); // Use toZonedTime for current time as well
+         const nowInUserTimezone = toZonedTime(now, userTimezone); // Use toZonedTime for current time as well
 
-           console.log("AtAGlanceWidget: Timed event times (user timezone):", startTime, endTime, "Current time (user timezone):", nowInUserTimezone);
-           // Keep if start time is after or equal to the current time (both in user's timezone)
-           // OR if end time exists and is after the current time (both in user's timezone)
-           const shouldKeep = startTime.getTime() >= nowInUserTimezone.getTime() || (endTime && endTime.getTime() > nowInUserTimezone.getTime());
-           console.log("AtAGlanceWidget: Keep timed event?", shouldKeep);
+         if (ev.start.dateTime) {
+           // Timed event
+           const startTime = toZonedTime(ev.start.dateTime, userTimezone);
+           const endTime = ev.end?.dateTime ? toZonedTime(ev.end.dateTime, userTimezone) : null;
+
+           // Include if the event starts today AND has not ended yet
+           const isToday = isSameDay(startTime, nowInUserTimezone);
+           const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
+
+           const shouldKeep = isToday && hasNotEnded;
+           console.log("AtAGlanceWidget: Timed event times (user timezone):", startTime, endTime, "Current time (user timezone):", nowInUserTimezone, "Is today:", isToday, "Has not ended:", hasNotEnded, "Keep timed event?", shouldKeep);
            return shouldKeep;
 
          } else if (ev.start.date) {
-           // All-day event - compare date with current date in user's timezone
-           const eventDate = new Date(ev.start.date);
-           // Set time to end of day in user's timezone for comparison to include today's all-day events
-           const endOfEventDayInTimezone = toZonedTime(new Date(ev.start.date), userTimezone); // Use toZonedTime
-           endOfEventDayInTimezone.setHours(23, 59, 59, 999); // Set to end of day in that timezone
-           const nowInUserTimezone = toZonedTime(now, userTimezone); // Use toZonedTime
+           // All-day event
+           const eventDate = toZonedTime(ev.start.date, userTimezone);
 
-           console.log("AtAGlanceWidget: All-day event date (user timezone):", eventDate, "End of day (user timezone):", endOfEventDayInTimezone, "Current time (user timezone):", nowInUserTimezone);
-           // Keep if the event date (end of day in user's timezone) is today or in the future compared to now (in user's timezone)
-           const shouldKeep = endOfEventDayInTimezone.getTime() >= nowInUserTimezone.getTime();
-           console.log("AtAGlanceWidget: Keep all-day event?", shouldKeep);
+           // Include if the event date is today
+           const isToday = isSameDay(eventDate, nowInUserTimezone);
+
+           const shouldKeep = isToday;
+           console.log("AtAGlanceWidget: All-day event date (user timezone):", eventDate, "Current time (user timezone):", nowInUserTimezone, "Is today:", isToday, "Keep all-day event?", shouldKeep);
            return shouldKeep;
          }
          // Should not happen if data is well-formed, but filter out if no start time/date
          console.log("AtAGlanceWidget: Filtering out event with no start time/date.");
          return false;
        });
-        console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
+         console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
        // Check for cached message *after* fetching data
        const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
