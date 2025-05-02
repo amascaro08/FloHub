@@ -51,15 +51,42 @@ const AtAGlanceWidget: React.FC = () => {
   }, [loadedSettings]);
 
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch upcoming events for today, including o365Url
-        const now = new Date();
-        // Get user's local timezone
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+ // Function to determine the current time interval (morning, lunch, evening)
+ const getTimeInterval = (date: Date, timezone: string): 'morning' | 'lunch' | 'evening' | 'other' => {
+   const hour = parseInt(formatInTimeZone(date, timezone, 'HH'), 10);
+   if (hour >= 5 && hour < 12) return 'morning';
+   if (hour >= 12 && hour < 17) return 'lunch';
+   if (hour >= 17 || hour < 5) return 'evening';
+   return 'other'; // Should not happen with the current logic, but as a fallback
+ };
+
+ useEffect(() => {
+   const fetchData = async () => {
+     setLoading(true);
+     setError(null);
+
+     const now = new Date();
+     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+     const currentTimeInterval = getTimeInterval(now, userTimezone);
+
+     // Check for cached message
+     const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
+     const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
+     const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
+
+     if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval) {
+       // Use cached message if it's from the current time interval
+       setAiMessage(cachedMessage);
+       setLoading(false);
+       console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
+       return; // Exit fetchData, no need to refetch or regenerate
+     }
+
+     console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
+
+     try {
+       // Fetch upcoming events for today, including o365Url
+       // Calculate start and end of day in the user's timezone, including the timezone offset
 
         // Calculate start and end of day in the user's timezone, including the timezone offset
         const startOfTodayInTimezone = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd\'T\'00:00:00XXX');
@@ -176,19 +203,26 @@ const AtAGlanceWidget: React.FC = () => {
           setError("AI assistant did not return a message.");
         }
 
-      } catch (err: any) {
-        setError(err.message);
-        console.error("Error fetching data or generating AI message for At A Glance widget:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+       // Store the new message and timestamp in localStorage
+       localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
+       localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
+       localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
+
+     } catch (err: any) {
+       setError(err.message);
+       console.error("Error fetching data or generating AI message for At A Glance widget:", err);
+     } finally {
+       setLoading(false);
+     }
+   };
 
     // Fetch data when session or powerAutomateUrl changes
-    if (session && loadedSettings) { // Only fetch data if session and settings are loaded
-       fetchData();
-    }
-  }, [session, loadedSettings, powerAutomateUrl]); // Refetch when session, settings, or powerAutomateUrl changes
+   // Fetch data when session or loadedSettings changes, or when the time interval changes
+   // We don't need powerAutomateUrl in dependencies anymore as it's handled by loadedSettings
+   if (session && loadedSettings) { // Only fetch data if session and settings are loaded
+      fetchData();
+   }
+ }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
 
   if (loading) {
     return <div className="p-4 border rounded-lg shadow-sm">Loading...</div>;
