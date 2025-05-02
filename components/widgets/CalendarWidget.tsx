@@ -153,6 +153,7 @@ export default function CalendarWidget() {
         break;
       }
       default:
+console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
         // default to week
         const ddd = now.getDay();
         const diff3 = now.getDate() - ddd + (ddd === 0 ? -6 : 1);
@@ -195,29 +196,8 @@ export default function CalendarWidget() {
   }, [data]);
 
 
-  // Filter out past events and find the next upcoming event
-  const now = new Date();
-  // Filter out past events and find the next upcoming event
-  const upcomingEvents = data
-    ? data.filter(ev => {
-        if (ev.start.dateTime) {
-          // Timed event
-          const startTime = new Date(ev.start.dateTime);
-          const endTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
-          // Keep if start is in future OR (if end exists and end is in future)
-          return startTime.getTime() >= now.getTime() || (endTime && endTime.getTime() > now.getTime());
-        } else if (ev.start.date) {
-          // All-day event
-          const eventDate = new Date(ev.start.date);
-          // Set time to end of day for comparison to include today's all-day events
-          eventDate.setHours(23, 59, 59, 999);
-          // Keep if the date is today or in the future
-          return eventDate.getTime() >= now.getTime();
-        }
-        // Should not happen if data is well-formed, but filter out if no start time/date
-        return false;
-      })
-    : [];
+  // Use the data fetched from the API, which is already filtered by timeRange
+  const upcomingEvents = data || [];
 
   // The next upcoming event is the first one in the sorted, filtered list
   // Note: Sorting is handled by the API, but we re-sort here just in case or for client-side additions
