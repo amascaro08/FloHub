@@ -60,6 +60,8 @@ const AtAGlanceWidget: React.FC = () => {
    return 'other'; // Should not happen with the current logic, but as a fallback
  };
 
+:start_line:63
+-------
  useEffect(() => {
    const fetchData = async () => {
      setLoading(true);
@@ -70,20 +72,7 @@ const AtAGlanceWidget: React.FC = () => {
      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
      const currentTimeInterval = getTimeInterval(now, userTimezone);
 
-     // Check for cached message
-     const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
-     const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
-     const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
-
-     if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval) {
-       // Use cached message if it's from the current time interval
-       setAiMessage(cachedMessage);
-       setLoading(false);
-       console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
-       return; // Exit fetchData, no need to refetch or regenerate
-     }
-
-     console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
+     console.log("AtAGlanceWidget: Fetching data for interval:", currentTimeInterval);
 
      try {
        // Fetch upcoming events for today, including o365Url
@@ -114,19 +103,21 @@ const AtAGlanceWidget: React.FC = () => {
         }
        const eventsData: CalendarEvent[] = await eventsRes.json();
        console.log("AtAGlanceWidget: Fetched raw eventsData:", eventsData); // Log raw data
+       console.log("AtAGlanceWidget: Number of events fetched:", eventsData.length); // Log number of events
+       console.log("AtAGlanceWidget: Events data structure example:", eventsData.length > 0 ? eventsData[0] : "No events"); // Log example event structure
 
        // Convert event times to user's timezone
        const eventsInUserTimezone = eventsData.map(event => {
          const start = event.start.dateTime
            ? { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
-            : event.start.date
-              ? { date: event.start.date } // All-day events don't need time conversion
-              : {};
-          const end = event.end?.dateTime
-            ? { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
-           : event.end?.date
-             ? { date: event.end.date } // All-day events don't need time conversion
-             : undefined;
+         : event.start.date
+           ? { date: event.start.date } // All-day events don't need time conversion
+           : {};
+         const end = event.end?.dateTime
+           ? { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
+          : event.end?.date
+            ? { date: event.end.date } // All-day events don't need time conversion
+            : undefined;
 
          return {
            ...event,
@@ -135,10 +126,11 @@ const AtAGlanceWidget: React.FC = () => {
          };
        });
 
+       console.log("AtAGlanceWidget: Events converted to user timezone:", eventsInUserTimezone); // Log events after timezone conversion
        setUpcomingEvents(eventsInUserTimezone);
 
-        // Fetch tasks
-        const tasksRes = await fetch('/api/tasks');
+       // Fetch tasks
+       const tasksRes = await fetch('/api/tasks');
         if (!tasksRes.ok) {
           throw new Error(`Error fetching tasks: ${tasksRes.statusText}`);
         }
@@ -185,40 +177,52 @@ const AtAGlanceWidget: React.FC = () => {
        });
         console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
-       // Generate AI message
-       const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => {
-         // Format the time for display in the user's timezone
-         const eventTime = event.start.dateTime
-           ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
-           : event.start.date; // All-day events use the date
+       // Check for cached message *after* fetching data
+       const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
+       const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
+       const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
 
-         return `- ${event.summary} at ${eventTime} (${event.source || 'personal'})`;
-       }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be witty, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
+       if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval) {
+         // Use cached message if it's from the current time interval
+         setAiMessage(cachedMessage);
+         console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
+       } else {
+         console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
+         // Generate AI message
+         const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => {
+           // Format the time for display in the user's timezone
+           const eventTime = event.start.dateTime
+             ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
+             : event.start.date; // All-day events use the date
+
+           return `- ${event.summary} at ${eventTime} (${event.source || 'personal'})`;
+         }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be witty, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
 
 
-        const aiRes = await fetch('/api/assistant', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ history: [], prompt }),
-        });
+          const aiRes = await fetch('/api/assistant', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ history: [], prompt }),
+          });
 
-        if (!aiRes.ok) {
-          throw new Error(`Error generating AI message: ${aiRes.statusText}`);
-        }
+          if (!aiRes.ok) {
+            throw new Error(`Error generating AI message: ${aiRes.statusText}`);
+          }
 
-        const aiData = await aiRes.json();
-        if (aiData.reply) {
-          setAiMessage(aiData.reply);
-        } else {
-          setError("AI assistant did not return a message.");
-        }
+          const aiData = await aiRes.json();
+          if (aiData.reply) {
+            setAiMessage(aiData.reply);
+            // Store the new message and timestamp in localStorage
+            localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
+            localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
+            localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
+          } else {
+            setError("AI assistant did not return a message.");
+          }
+       }
 
-       // Store the new message and timestamp in localStorage
-       localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
-       localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
-       localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
 
      } catch (err: any) {
        setError(err.message);

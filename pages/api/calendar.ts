@@ -99,6 +99,7 @@ export default async function handler(
             : Array.isArray(o365Data.events)
             ? o365Data.events
             : [];
+          console.log("O365 raw events:", o365EventsRaw); // Added logging for raw O365 events
           const o365Events: any[] = o365EventsRaw.map((e: any) => ({
             id: `o365_${e.startTime || e.title}_${Math.random().toString(36).substring(7)}`, // Generate ID from available fields
             summary: e.title || "No Title (Work)", // Map title to summary
@@ -107,6 +108,7 @@ export default async function handler(
             source: "work",
             description: e.description || "", // Map description
           }));
+          console.log("O365 mapped events:", o365Events); // Added logging for mapped O365 events
           allEvents.push(...o365Events);
         } else {
           console.error("Failed to fetch O365 events, status:", o365Res.status);
