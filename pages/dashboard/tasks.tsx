@@ -6,12 +6,9 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { Task as TaskWidgetTask } from "@/components/widgets/TaskWidget";
+import type { Task } from "@/types/app";
 
 // Define a more comprehensive Task type for the tasks page
-export interface Task extends TaskWidgetTask {
-  tags?: string[]; // Add tags property
-}
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
