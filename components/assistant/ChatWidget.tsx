@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSession }          from "next-auth/react";
 import useSWR, { mutate }      from "swr";
-import type { Task as TaskType } from "@/components/widgets/TaskWidget";
+import type { Task as TaskType } from "@/types/app";
 
 // Simple fetcher for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json());
