@@ -64,6 +64,7 @@ const AtAGlanceWidget: React.FC = () => {
    const fetchData = async () => {
      setLoading(true);
      setError(null);
+     setAiMessage(null); // Clear previous message while loading
 
      const now = new Date();
      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -101,16 +102,18 @@ const AtAGlanceWidget: React.FC = () => {
           ? `&calendarId=${loadedSettings.selectedCals.map(id => encodeURIComponent(id)).join('&calendarId=')}`
           : ''; // If no calendars selected, don't add calendarId param (API defaults to primary)
 
-        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${calendarIdQuery}${
-          powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
-        }`;
+       console.log("AtAGlanceWidget: Using powerAutomateUrl:", powerAutomateUrl);
+       const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${calendarIdQuery}${
+         powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
+       }`;
+       console.log("AtAGlanceWidget: Fetching events from URL:", eventsApiUrl);
 
-        const eventsRes = await fetch(eventsApiUrl);
+       const eventsRes = await fetch(eventsApiUrl);
         if (!eventsRes.ok) {
           throw new Error(`Error fetching events: ${eventsRes.statusText}`);
         }
        const eventsData: CalendarEvent[] = await eventsRes.json();
-       console.log("AtAGlanceWidget: Fetched eventsData:", eventsData); // Add this log
+       console.log("AtAGlanceWidget: Fetched raw eventsData:", eventsData); // Log raw data
 
        // Convert event times to user's timezone
        const eventsInUserTimezone = eventsData.map(event => {
@@ -190,7 +193,7 @@ const AtAGlanceWidget: React.FC = () => {
            : event.start.date; // All-day events use the date
 
          return `- ${event.summary} at ${eventTime} (${event.source || 'personal'})`;
-       }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be friendly, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
+       }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be witty, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events and tasks\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
 
 
         const aiRes = await fetch('/api/assistant', {
@@ -233,14 +236,28 @@ const AtAGlanceWidget: React.FC = () => {
    }
  }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
 
-  if (loading) {
-    return <div className="p-4 border rounded-lg shadow-sm">Loading...</div>;
-  }
+ let loadingMessage = "Planning your day...";
+ if (loading) {
+   // Determine a more specific loading message based on what's being fetched
+   if (!loadedSettings) {
+     loadingMessage = "Loading settings...";
+   } else if (session && loadedSettings && !upcomingEvents.length && !tasks.length) {
+      loadingMessage = "Checking for events and tasks...";
+   } else if (session && loadedSettings && upcomingEvents.length > 0 && tasks.length === 0) {
+      loadingMessage = "Checking for tasks...";
+   } else if (session && loadedSettings && upcomingEvents.length === 0 && tasks.length > 0) {
+      loadingMessage = "Checking for events...";
+   }
 
-  if (error) {
+
+   return <div className="p-4 border rounded-lg shadow-sm">{loadingMessage}</div>;
+ }
+
+ if (error) {
     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
   }
 
+  // Convert markdown to HTML
   // Convert markdown to HTML
   const formattedMessage = aiMessage ? marked(aiMessage) : "FloCat is thinking...";
 
