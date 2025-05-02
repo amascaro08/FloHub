@@ -6,7 +6,7 @@ import { marked } from 'marked'; // Import marked
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'; // Import formatInTimeZone and toZonedTime
 import { isSameDay } from 'date-fns'; // Import isSameDay from date-fns
 import useSWR from 'swr'; // Import useSWR
-import { Settings } from '../../pages/dashboard/settings'; // Import Settings type
+import type { UserSettings } from '../../types/app'; // Import UserSettings type
 
 interface CalendarEvent {
   id: string;
@@ -39,7 +39,7 @@ const AtAGlanceWidget = () => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   };
-  const { data: loadedSettings, error: settingsError } = useSWR<Settings>(session ? "/api/userSettings" : null, fetcher);
+  const { data: loadedSettings, error: settingsError } = useSWR<UserSettings>(session ? "/api/userSettings" : null, fetcher);
 
   // State for PowerAutomate URL, initialized from settings
   const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
@@ -87,7 +87,7 @@ const AtAGlanceWidget = () => {
 
         // Construct calendarId query parameter from selectedCals
         const calendarIdQuery = loadedSettings?.selectedCals && loadedSettings.selectedCals.length > 0
-          ? `&calendarId=${loadedSettings.selectedCals.map(id => encodeURIComponent(id)).join('&calendarId=')}`
+          ? `&calendarId=${loadedSettings.selectedCals.map((id: string) => encodeURIComponent(id)).join('&calendarId=')}`
           : ''; // If no calendars selected, don't add calendarId param (API defaults to primary)
 
        console.log("AtAGlanceWidget: Using powerAutomateUrl:", powerAutomateUrl);
