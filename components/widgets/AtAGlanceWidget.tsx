@@ -22,7 +22,7 @@ interface Task {
   source?: "personal" | "work"; // Add source tag
 }
 
-const AtAGlanceWidget: React.FC = () => {
+const AtAGlanceWidget = () => {
   const { data: session } = useSession();
   const userName = session?.user?.name || "User";
 
@@ -60,8 +60,6 @@ const AtAGlanceWidget: React.FC = () => {
    return 'other'; // Should not happen with the current logic, but as a fallback
  };
 
-:start_line:63
--------
  useEffect(() => {
    const fetchData = async () => {
      setLoading(true);
