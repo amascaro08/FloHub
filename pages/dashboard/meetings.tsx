@@ -6,8 +6,7 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 // Import types
-import type { Note } from "@/types/app";
-import type { Settings } from "@/pages/dashboard/settings"; // Import Settings type
+import type { Note, UserSettings } from "@/types/app"; // Import Note and UserSettings types
 // Import meeting notes components
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
@@ -44,9 +43,9 @@ export default function MeetingsPage() {
     fetcher
   );
 
-  // Fetch user settings to get the Work Calendar URL
-  const { data: settings, error: settingsError } = useSWR<Settings>(
-    shouldFetch ? "/api/settings/calendar" : null, // Assuming this endpoint exists
+  // Fetch user settings to get global tags and Work Calendar URL
+  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
+    shouldFetch ? "/api/userSettings" : null,
     fetcher
   );
 
@@ -65,11 +64,13 @@ export default function MeetingsPage() {
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
-  // Extract unique tags from meeting notes
-  const uniqueTags = useMemo(() => {
-    const tags = meetingNotesResponse?.meetingNotes?.flatMap(note => note.tags) || [];
-    return Array.from(new Set(tags)).sort(); // Get unique tags and sort them
-  }, [meetingNotesResponse]);
+  // Combine unique tags from meeting notes and global tags from settings
+  const allAvailableTags = useMemo(() => {
+    const meetingNoteTags = meetingNotesResponse?.meetingNotes?.flatMap(note => note.tags) || [];
+    const globalTags = userSettings?.globalTags || [];
+    const combinedTags = [...meetingNoteTags, ...globalTags];
+    return Array.from(new Set(combinedTags)).sort(); // Get unique tags and sort them
+  }, [meetingNotesResponse, userSettings]); // Add userSettings to dependency array
 
   const filteredMeetingNotes = useMemo(() => {
     const notesArray = meetingNotesResponse?.meetingNotes || [];
@@ -95,7 +96,6 @@ export default function MeetingsPage() {
 
     return filtered;
   }, [meetingNotesResponse, searchContent, filterTag]);
-
   // Find the selected note object
   const selectedNote = useMemo(() => {
     if (!selectedNoteId || !filteredMeetingNotes) return null;
@@ -206,7 +206,7 @@ export default function MeetingsPage() {
 
  // Find the Work Calendar ID based on the powerAutomateUrl from settings
  const workCalendarId = useMemo(() => {
-   if (!settings?.powerAutomateUrl || !calendarEvents) return undefined;
+   if (!userSettings?.powerAutomateUrl || !calendarEvents) return undefined; // Use userSettings
    // Assuming the calendar ID is part of the powerAutomateUrl or can be derived from it.
    // This is a placeholder logic. A more robust solution might involve storing the calendar ID
    // directly in settings or having a way to map the URL to an ID via an API.
@@ -214,7 +214,7 @@ export default function MeetingsPage() {
    // A more realistic approach would be to have the settings API return the calendar ID directly.
    // Since we don't have that API, I'll make a placeholder assumption: the calendar ID is the last segment of the URL path.
    try {
-     const url = new URL(settings.powerAutomateUrl);
+     const url = new URL(userSettings.powerAutomateUrl); // Use userSettings
      const pathSegments = url.pathname.split('/');
      const potentialCalendarId = pathSegments[pathSegments.length - 1];
      // Check if this potential ID exists in the fetched calendar events
@@ -224,7 +224,7 @@ export default function MeetingsPage() {
      console.error("Invalid powerAutomateUrl in settings:", e);
      return undefined;
    }
- }, [settings, calendarEvents]);
+ }, [userSettings, calendarEvents]); // Add userSettings to dependency array
 
  // Filter calendar events to only include the Work Calendar
  const workCalendarList = useMemo(() => {
@@ -235,7 +235,7 @@ export default function MeetingsPage() {
 
 
  // Show loading state if notes, calendar events, or settings are loading
- if (status === "loading" || (!meetingNotesResponse && !meetingNotesError) || (!calendarEvents && !calendarError && shouldFetch) || (!settings && !settingsError && shouldFetch)) {
+ if (status === "loading" || (!meetingNotesResponse && !meetingNotesError) || (!calendarEvents && !calendarError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) { // Use userSettings and settingsError
    return <p>Loading meeting notes, calendar events, and settings…</p>;
  }
 
@@ -244,7 +244,7 @@ export default function MeetingsPage() {
  }
 
  // Show error state if notes, calendar events, or settings failed to load
- if (meetingNotesError || calendarError || settingsError) {
+ if (meetingNotesError || calendarError || settingsError) { // Use settingsError
    return <p>Error loading data.</p>;
  }
 
@@ -268,7 +268,7 @@ export default function MeetingsPage() {
          onClose={() => setShowModal(false)}
          onSave={handleSaveMeetingNote}
          isSaving={isSaving}
-         existingTags={uniqueTags}
+         existingTags={allAvailableTags} // Pass allAvailableTags
          calendarList={workCalendarList} // Pass the filtered workCalendarList
        />
 
@@ -287,7 +287,7 @@ export default function MeetingsPage() {
            onChange={(e) => setFilterTag(e.target.value)}
           >
             <option value="">All Tags</option> {/* Option to show all notes */}
-            {uniqueTags.map(tag => (
+            {allAvailableTags.map(tag => ( // Use allAvailableTags for filter
               <option key={tag} value={tag}>{tag}</option>
             ))}
           </select>
@@ -312,7 +312,7 @@ export default function MeetingsPage() {
            onSave={handleUpdateMeetingNote}
            onDelete={handleDeleteMeetingNote}
            isSaving={isSaving}
-           existingTags={uniqueTags}
+           existingTags={allAvailableTags} // Pass allAvailableTags
            calendarEvents={calendarEvents || []} // Keep all calendar events for detail view if needed, or filter here too
          />
        ) : (

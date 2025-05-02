@@ -4,14 +4,9 @@ import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import useSWR from "swr";
 import Link from "next/link";
+import { UserSettings } from "../../types/app"; // Import UserSettings
 
 type CalItem = { id: string; summary: string };
-export type Settings = {
-  selectedCals: string[];
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  customRange: { start: string; end: string };
-  powerAutomateUrl?: string; // Optional for backward compatibility
-};
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -32,7 +27,7 @@ export default function CalendarSettingsPage() {
   );
 
   // 3) Settings state (local form state)
-  const [settings, setSettings] = useState<Settings>({
+  const [settings, setSettings] = useState<UserSettings>({ // Use UserSettings type
     selectedCals: [],
     defaultView: "month",
     customRange: {
@@ -40,11 +35,12 @@ export default function CalendarSettingsPage() {
       end: new Date().toISOString().slice(0, 10),
     },
     powerAutomateUrl: "",
+    globalTags: [], // Initialize globalTags
   });
 
   // 4) Fetch persistent user settings via SWR
   const { data: loadedSettings, error: settingsError, mutate: mutateSettings } =
-    useSWR<Settings>(session ? "/api/userSettings" : null, fetcher, { revalidateOnFocus: false });
+    useSWR<UserSettings>(session ? "/api/userSettings" : null, fetcher, { revalidateOnFocus: false }); // Use UserSettings type
 
   // 5) Initialize local form state when loadedSettings changes
   useEffect(() => {
@@ -233,6 +229,66 @@ export default function CalendarSettingsPage() {
             </div>
           </div>
         )}
+:start_line:238
+-------
+      </section>
+
+      {/* Global Tags Section */}
+      <section>
+        <h2 className="text-lg font-medium mb-2">Global Tags</h2>
+        <div className="flex gap-2 mb-2">
+          <input
+            type="text"
+            placeholder="Add a new tag"
+            id="newTagInput"
+            className="border px-3 py-2 rounded flex-grow"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                const input = e.target as HTMLInputElement;
+                const newTag = input.value.trim();
+                if (newTag && !settings.globalTags.includes(newTag)) {
+                  setSettings(s => ({
+                    ...s,
+                    globalTags: [...s.globalTags, newTag]
+                  }));
+                  input.value = ''; // Clear input
+                }
+              }
+            }}
+          />
+          <button
+            onClick={() => {
+              const input = document.getElementById('newTagInput') as HTMLInputElement;
+              const newTag = input.value.trim();
+              if (newTag && !settings.globalTags.includes(newTag)) {
+                setSettings(s => ({
+                  ...s,
+                  globalTags: [...s.globalTags, newTag]
+                }));
+                input.value = ''; // Clear input
+              }
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Add Tag
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {settings.globalTags.map(tag => (
+            <span key={tag} className="bg-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
+              {tag}
+              <button
+                onClick={() => setSettings(s => ({
+                  ...s,
+                  globalTags: s.globalTags.filter(t => t !== tag)
+                }))}
+                className="text-red-500 hover:text-red-700"
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
       </section>
 
       <button

@@ -3,24 +3,23 @@
 
 import { useSession } from "next-auth/react";
 import useSWR         from "swr";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useMemo } from "react"; // Import useMemo
+import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
+import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-export interface Task {
-  id:        string;
-  text:      string;
-  done:      boolean;
-  dueDate:   string | null;
-  createdAt: string | null;
-  source?:   "personal" | "work"; // Add source tag
-}
 
 export default function TaskWidget() {
   const { data: session, status } = useSession();
   const shouldFetch               = status === "authenticated";
   const { data: tasks, mutate }   = useSWR<Task[]>(
     shouldFetch ? "/api/tasks" : null,
+    fetcher
+  );
+
+  // Fetch user settings to get global tags
+  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
+    shouldFetch ? "/api/userSettings" : null,
     fetcher
   );
 
@@ -32,6 +31,22 @@ export default function TaskWidget() {
   const [editing, setEditing]     = useState<Task | null>(null);
   const [celebrating, setCelebrating] = useState(false); // State for celebration
   const [taskSource, setTaskSource] = useState<"personal" | "work">("personal"); // State for task source
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // State for selected tags
+
+  // Combine unique tags from tasks and global tags from settings
+  const allAvailableTags = useMemo(() => {
+    const taskTags = tasks?.flatMap(task => task.tags) || [];
+    const globalTags = userSettings?.globalTags || [];
+    const combinedTags = [...taskTags, ...globalTags];
+    return Array.from(new Set(combinedTags)).sort();
+  }, [tasks, userSettings]); // Add userSettings to dependency array
+
+  const tagOptions = allAvailableTags.map(tag => ({ value: tag, label: tag }));
+
+  const handleTagChange = (selectedOptions: any) => {
+    setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
+  };
+
 
   // Friendly formatter: "Jan 5"
   const fmt = (iso: string | null) => {
@@ -63,10 +78,11 @@ export default function TaskWidget() {
     }
 
     // Build payload
-    const payload: { text: string; dueDate: string | null; source: Task['source']; id?: string; done?: boolean } = {
+    const payload: Partial<Task> = { // Use Partial<Task> since not all fields are required for create/update
       text:    input.trim(),
       dueDate: dueISO,
       source:  taskSource, // Include task source
+      tags: selectedTags, // Include selected tags
     };
     // If you're editing, send PATCH; else POST
     const method = editing ? "PATCH" : "POST";
@@ -81,6 +97,8 @@ export default function TaskWidget() {
       } else {
          delete payload.source; // Don't send source if it's the same as original or default
       }
+      // If editing, don't change tags unless explicitly changed in form (more complex, skip for now)
+      // For simplicity, we'll always send the selectedTags from the form on edit
     }
 
     await fetch("/api/tasks", {
@@ -95,6 +113,7 @@ export default function TaskWidget() {
     setCustomDate(new Date().toISOString().slice(0, 10));
     setEditing(null);
     setTaskSource("personal"); // Reset source to default
+    setSelectedTags([]); // Clear selected tags
     mutate();
   };
 
@@ -143,14 +162,20 @@ export default function TaskWidget() {
       setCustomDate(t.dueDate.slice(0, 10));
     }
     setTaskSource(t.source || "personal"); // Set source when editing
+    setSelectedTags(t.tags || []); // Set tags when editing
   };
 
-  if (status === "loading") {
+  if (status === "loading" || (!tasks && !settingsError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) { // Add loading checks for settings and tasks
     return <p>Loading tasks…</p>;
   }
   if (!session) {
     return <p>Please sign in to see your tasks.</p>;
   }
+
+  if (settingsError) { // Add error check for settings
+    return <p>Error loading settings.</p>;
+  }
+
 
   // Filter out completed tasks for display
   const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
@@ -225,6 +250,20 @@ export default function TaskWidget() {
            </select>
         </div>
 
+        {/* Tags Input */}
+        <div>
+          <label htmlFor="task-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
+          <CreatableSelect // Use CreatableSelect for tags
+            isMulti
+            options={tagOptions}
+            onChange={handleTagChange}
+            placeholder="Select or create tags..."
+            isDisabled={false} // Adjust as needed
+            isSearchable
+            value={selectedTags.map(tag => ({ value: tag, label: tag }))} // Set value for CreatableSelect
+          />
+        </div>
+
 
         <button
           type="submit"
@@ -266,6 +305,12 @@ export default function TaskWidget() {
                     {t.source === "work" ? "Work" : "Personal"}
                   </span>
                 )}
+                {/* Display task tags */}
+                {t.tags && t.tags.map(tag => (
+                  <span key={tag} className="inline-block px-2 py-0.5 rounded text-xs ml-2 bg-gray-200 text-gray-700">
+                    {tag}
+                  </span>
+                ))}
                 <span className="ml-2 text-[var(--neutral-500)]">
                   ({fmt(t.dueDate)})
                 </span>

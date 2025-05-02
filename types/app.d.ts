@@ -2,6 +2,15 @@
 
 // Define shared application types here
 
+// Define a type for user settings
+export type UserSettings = {
+  selectedCals: string[];
+  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  customRange: { start: string; end: string };
+  powerAutomateUrl?: string;
+  globalTags: string[]; // New field for global tags
+};
+
 // Define a type for actions within a meeting note
 export type Action = {
   id: string; // Unique ID for the action
@@ -24,3 +33,14 @@ export type Note = {
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
   actions?: Action[]; // Optional: Array of actions associated with the meeting note
 };
+
+// Define a type for tasks
+export interface Task {
+  id:        string;
+  text:      string;
+  done:      boolean;
+  dueDate:   string | null;
+  createdAt: string | null;
+  source?:   "personal" | "work"; // Add source tag
+  tags: string[]; // Add tags property
+}

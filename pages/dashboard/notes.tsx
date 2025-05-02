@@ -8,7 +8,7 @@ import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal 
 import NoteList from "@/components/notes/NoteList"; // Import NoteList component
 import NoteDetail from "@/components/notes/NoteDetail"; // Import NoteDetail component
 import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
-import type { Note } from "@/types/app"; // Import shared Note type
+import type { Note, UserSettings } from "@/types/app"; // Import shared Note and UserSettings types
 
 // Define a type for calendar items based on the API response
 type CalendarItem = {
@@ -36,6 +36,12 @@ export default function NotesPage() {
     fetcher
   );
 
+  // Fetch user settings to get global tags
+  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
+    shouldFetch ? "/api/userSettings" : null,
+    fetcher
+  );
+
   // Fetch calendar events
   const { data: calendarEvents, error: calendarError } = useSWR<CalendarItem[]>(
     shouldFetch ? "/api/calendar/list" : null,
@@ -50,11 +56,13 @@ export default function NotesPage() {
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
 
-  // Extract unique tags from notes
-  const uniqueTags = useMemo(() => {
-    const tags = notesResponse?.notes?.flatMap(note => note.tags) || [];
-    return Array.from(new Set(tags)).sort(); // Get unique tags and sort them
-  }, [notesResponse]);
+  // Combine unique tags from notes and global tags from settings
+  const allAvailableTags = useMemo(() => {
+    const noteTags = notesResponse?.notes?.flatMap(note => note.tags) || [];
+    const globalTags = userSettings?.globalTags || [];
+    const combinedTags = [...noteTags, ...globalTags];
+    return Array.from(new Set(combinedTags)).sort(); // Get unique tags and sort them
+  }, [notesResponse, userSettings]); // Add userSettings to dependency array
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
   const handleDeleteNote = async (noteId: string) => {
@@ -156,7 +164,7 @@ export default function NotesPage() {
   }, [selectedNoteId, filteredNotes]);
 
   // Show loading state if either notes or calendar events are loading
-  if (status === "loading" || (!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch)) {
+  if (status === "loading" || (!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) { // Add userSettings loading check
     return <p>Loading notes and calendar events…</p>;
   }
 
@@ -165,7 +173,7 @@ export default function NotesPage() {
   }
 
   // Show error state if either notes or calendar events failed to load
-  if (notesError || calendarError) {
+  if (notesError || calendarError || settingsError) { // Add settingsError check
     return <p>Error loading data.</p>;
   }
 
@@ -223,7 +231,7 @@ export default function NotesPage() {
           onClose={() => setShowModal(false)}
           onSave={handleSaveNote}
           isSaving={isSaving}
-          existingTags={uniqueTags} // Pass uniqueTags to the modal
+          existingTags={allAvailableTags} // Pass allAvailableTags to the modal
         />
 
 
@@ -242,7 +250,7 @@ export default function NotesPage() {
             onChange={(e) => setFilterTag(e.target.value)}
            >
              <option value="">All Tags</option> {/* Option to show all notes */}
-             {uniqueTags.map(tag => (
+             {allAvailableTags.map(tag => ( // Use allAvailableTags for filter
                <option key={tag} value={tag}>{tag}</option>
              ))}
            </select>
@@ -265,7 +273,7 @@ export default function NotesPage() {
             onSave={handleUpdateNote}
             onDelete={handleDeleteNote} // Pass the delete handler
             isSaving={isSaving} // Pass isSaving state
-            existingTags={uniqueTags} // Pass uniqueTags to NoteDetail
+            existingTags={allAvailableTags} // Pass allAvailableTags to NoteDetail
           />
         ) : (
           <p className="text-[var(--neutral-500)]">Select a note to view details.</p>

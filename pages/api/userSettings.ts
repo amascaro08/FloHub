@@ -1,13 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { firestore } from "../../lib/firebaseAdmin";
-
-type UserSettings = {
-  selectedCals: string[];
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  customRange: { start: string; end: string };
-  powerAutomateUrl?: string;
-};
+import { UserSettings } from "../../types/app"; // Import UserSettings from types
 
 type ErrorRes = { error: string };
 
@@ -23,7 +17,8 @@ export default async function handler(
   }
 
   const userEmail = token.email;
-  const settingsDocRef = firestore.collection("users").doc(userEmail).collection("settings").doc("calendar");
+  // Use a more general settings document instead of just "calendar"
+  const settingsDocRef = firestore.collection("users").doc(userEmail).collection("settings").doc("userSettings");
 
   if (req.method === "GET") {
     try {
@@ -35,6 +30,7 @@ export default async function handler(
           defaultView: "month",
           customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
           powerAutomateUrl: "",
+          globalTags: [], // Add default empty array for globalTags
         };
         console.log("User settings not found for", userEmail, "- returning default settings");
         return res.status(200).json(defaultSettings);
