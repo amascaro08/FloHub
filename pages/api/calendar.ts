@@ -100,15 +100,31 @@ export default async function handler(
             ? o365Data.events
             : [];
           console.log("O365 raw events:", o365EventsRaw); // Added logging for raw O365 events
-          const o365Events: any[] = o365EventsRaw.map((e: any) => ({
-            id: `o365_${e.startTime || e.title}_${Math.random().toString(36).substring(7)}`, // Generate ID from available fields
-            summary: e.title || "No Title (Work)", // Map title to summary
-            start: { dateTime: e.startTime }, // Map startTime
-            end: { dateTime: e.endTime }, // Map endTime
-            source: "work",
-            description: e.description || "", // Map description
-          }));
-          console.log("O365 mapped events:", o365Events); // Added logging for mapped O365 events
+          const o365Events: any[] = o365EventsRaw
+            .map((e: any) => ({
+              id: `o365_${e.startTime || e.title}_${Math.random().toString(36).substring(7)}`, // Generate ID from available fields
+              summary: e.title || "No Title (Work)", // Map title to summary
+              start: { dateTime: e.startTime }, // Map startTime
+              end: { dateTime: e.endTime }, // Map endTime
+              source: "work",
+              description: e.description || "", // Map description
+            }))
+            .filter((event: any) => {
+              // Filter O365 events by timeMin and timeMax
+              const eventStartTime = event.start.dateTime ? parseISO(event.start.dateTime) : null;
+              const eventEndTime = event.end?.dateTime ? parseISO(event.end.dateTime) : null;
+
+              if (!eventStartTime) return false; // Event must have a start time
+
+              const startsAfterMin = eventStartTime.getTime() >= minDate.getTime();
+              const endsBeforeMax = eventEndTime ? eventEndTime.getTime() <= maxDate.getTime() : true; // If no end time, assume it's within range
+
+              // Also include events that start before minDate but end after minDate (ongoing events)
+              const startsBeforeMinEndsAfterMin = eventStartTime.getTime() < minDate.getTime() && eventEndTime && eventEndTime.getTime() > minDate.getTime();
+
+              return (startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin;
+            });
+          console.log("O365 mapped and filtered events:", o365Events); // Added logging for mapped and filtered O365 events
           allEvents.push(...o365Events);
         } else {
           console.error("Failed to fetch O365 events, status:", o365Res.status);
