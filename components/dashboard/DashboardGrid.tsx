@@ -27,6 +27,28 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   quicknote: <QuickNoteWidget />,
 };
 
+// Helper function to recursively remove undefined values from an object
+function removeUndefined(obj: any): any {
+ if (obj === null || typeof obj !== 'object') {
+   return obj;
+ }
+
+ if (Array.isArray(obj)) {
+   return obj.map(removeUndefined).filter(item => item !== undefined);
+ }
+
+ const cleanedObj: any = {};
+ for (const key in obj) {
+   if (Object.prototype.hasOwnProperty.call(obj, key)) {
+     const cleanedValue = removeUndefined(obj[key]);
+     if (cleanedValue !== undefined) {
+       cleanedObj[key] = cleanedValue;
+     }
+   }
+ }
+ return cleanedObj;
+}
+
 export default function DashboardGrid() {
   const { data: session } = useSession();
   const { isLocked } = useAuth();
@@ -113,22 +135,8 @@ export default function DashboardGrid() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
-    // Clean the layouts object before saving
-    const cleanedLayouts: any = {};
-    for (const breakpoint in allLayouts) {
-      if (Array.isArray(allLayouts[breakpoint])) {
-        cleanedLayouts[breakpoint] = allLayouts[breakpoint].filter(
-          (item: any) =>
-            item !== undefined &&
-            item !== null &&
-            typeof item.i === 'string' && // Ensure 'i' is a string
-            typeof item.x === 'number' && // Ensure 'x' is a number
-            typeof item.y === 'number' && // Ensure 'y' is a number
-            typeof item.w === 'number' && // Ensure 'w' is a number
-            typeof item.h === 'number'    // Ensure 'h' is a number
-        );
-      }
-    }
+    // Recursively remove undefined values from the layouts object
+    const cleanedLayouts = removeUndefined(allLayouts);
 
     // Update the state immediately for responsiveness
     setLayouts(cleanedLayouts);
