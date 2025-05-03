@@ -89,6 +89,7 @@ export default function DashboardGrid() {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
         try {
           await setDoc(layoutRef, { layouts });
+          console.log("[DashboardGrid] Layout saved successfully!");
         } catch (e) {
           console.error("[DashboardGrid] Error saving layout:", e);
         }
