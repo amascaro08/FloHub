@@ -91,8 +91,9 @@ export default async function handler(
 
     // Detect add task command
     if (lowerPrompt.includes("add task") || lowerPrompt.includes("new task")) {
-      // Extract task text from prompt (naive approach)
-      const taskMatch = prompt.match(/add task (.+)/i) || prompt.match(/new task (.+)/i);
+      console.log("lowerPrompt:", lowerPrompt);
+      // Extract task text from prompt (more robust regex)
+      const taskMatch = lowerPrompt.match(/(?:add|new) task(?: called)? ([\w\s]+)(?: due)? (.*)?/i);
       if (taskMatch && taskMatch[1]) {
         const taskText = taskMatch[1].trim();
         if (taskText) {
