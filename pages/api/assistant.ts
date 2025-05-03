@@ -15,6 +15,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ChatResponse>
 ) {
+  console.log("Assistant handler called");
   console.log("Request method:", req.method);
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
