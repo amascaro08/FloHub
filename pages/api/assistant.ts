@@ -94,6 +94,7 @@ export default async function handler(
     console.log("lowerPrompt:", lowerPrompt);
     // Detect add task command
     console.log("Checking for add task command...");
+    console.log("lowerPrompt before regex:", lowerPrompt);
     if (lowerPrompt.includes("add task") || lowerPrompt.includes("new task")) {
       console.log("Add task command detected.");
       // Extract task text from prompt (more robust regex)
