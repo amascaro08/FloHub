@@ -200,28 +200,34 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
   const now = new Date();
   const upcomingEvents = data
     ? data.filter(ev => {
-        const eventStartTime = ev.start.dateTime ? new Date(ev.start.dateTime) : (ev.start.date ? new Date(ev.start.date) : null);
-        const eventEndTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : (ev.end?.date ? new Date(ev.end.date) : null);
+        const eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) : (ev.start.date ? parseISO(ev.start.date) : null);
+        const eventEndDate = ev.end?.dateTime ? parseISO(ev.end.dateTime) : (ev.end?.date ? parseISO(ev.end.date) : null);
 
-        if (!eventStartTime) return false; // Must have a start time/date
+        if (!eventStartDate) return false; // Must have a start time/date
+
+        // For 'today' and 'tomorrow' views, filter out events that have already ended relative to the current time.
+        // For other views, assume the API has provided events within the requested range,
+        // and we only need to ensure the event hasn't ended before the start of the *current* day.
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
 
         if (activeView === 'today' || activeView === 'tomorrow') {
-          // For today/tomorrow, filter out events that have already ended
-          if (eventEndTime) {
-            return eventEndTime.getTime() >= now.getTime();
-          } else if (ev.start.date && !ev.start.dateTime) {
-            // All-day event today/tomorrow
-            const allDayEndDate = new Date(ev.start.date);
-            allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
-            return allDayEndDate.getTime() >= now.getTime();
-          } else {
-             // Timed event with no end time? Assume it's ongoing from start time
-             return eventStartTime.getTime() >= now.getTime();
-          }
+           if (eventEndDate) {
+             return eventEndDate.getTime() >= now.getTime();
+           } else if (ev.start.date && !ev.start.dateTime) {
+             // All-day event today/tomorrow
+             const allDayEndDate = new Date(ev.start.date);
+             allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
+             return allDayEndDate.getTime() >= now.getTime();
+           } else {
+              // Timed event with no end time? Assume it's ongoing from start time
+              return eventStartDate.getTime() >= now.getTime();
+           }
         } else {
-          // For week, month, custom, show all events within the fetched range (API handles this)
-          // No client-side filtering needed based on 'now'
-          return true;
+          // For week, month, custom, show events that start on or after the start of today,
+          // and are within the API's fetched range (which is handled by timeRange).
+          // This prevents showing events from the past days of the current week/month/custom range.
+          return eventStartDate.getTime() >= startOfToday.getTime();
         }
       })
     : [];
@@ -291,7 +297,7 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
     <div className="p-4 bg-[var(--surface)] rounded-lg shadow relative"> {/* Add relative positioning */}
       {/* Event Details Modal */}
       {viewingEvent && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setViewingEvent(null)}> {/* Change to absolute positioning */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setViewingEvent(null)}> {/* Change to fixed positioning */}
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md max-h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}> {/* max-h-full to constrain within parent */}
             <h3 className="text-lg font-semibold mb-4">Event Details</h3>
             <div className="space-y-2">
@@ -334,7 +340,7 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
 
       {/* Add/Edit Event Modal */}
       {modalOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setModalOpen(false)}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setModalOpen(false)}>
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-4">
               {editingEvent ? "Edit Event" : "Add Event"}
