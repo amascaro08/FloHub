@@ -11,7 +11,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { Resizable } from "re-resizable";
-import { useState, useEffect } from "react"; // Import useEffect
+import { useState, useEffect, useRef } from "react"; // Import useEffect and useRef
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
@@ -46,10 +46,10 @@ function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps)
 
   const containerStyle = {
     position: 'absolute' as const, // Explicitly type as 'absolute'
-    left: position.x,
-    top: position.y,
-    width: size.width, // Control width with state
-    height: size.height, // Control height with state
+    left: `${position.x}%`,
+    top: `${position.y}%`,
+    width: `${size.width}%`, // Control width with state
+    height: `${size.height}%`, // Control height with state
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
   };
 
@@ -89,19 +89,30 @@ function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps)
 }
 
 export default function DashboardGrid() {
-  // Define a default layout
+  // Define a default layout using percentages
   const defaultLayout = [
-    { id: "tasks", x: 0, y: 0, width: 400, height: 300 },
-    { id: "calendar", x: 450, y: 0, width: 400, height: 300 },
-    { id: "ataglance", x: 450, y: 350, width: 400, height: 300 },
-    { id: "quicknote", x: 0, y: 700, width: 400, height: 300 },
+    { id: "tasks", x: 0, y: 0, width: 33, height: 30 },
+    { id: "calendar", x: 33, y: 0, width: 33, height: 30 },
+    { id: "ataglance", x: 33, y: 30, width: 33, height: 30 },
+    { id: "quicknote", x: 0, y: 60, width: 33, height: 30 },
   ];
+
+  const checkCollision = (widget1: any, widget2: any) => {
+    return !(
+      widget1.x + widget1.width <= widget2.x ||
+      widget1.x >= widget2.x + widget2.width ||
+      widget1.y + widget1.height <= widget2.y ||
+      widget1.y >= widget2.y + widget2.height
+    );
+  };
 
   const { data: session } = useSession(); // Get session to access user email
 
   // Define a default layout
   // State to hold the current widget layout
   const [widgets, setWidgets] = useState(defaultLayout);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load layout from Firestore on component mount
   useEffect(() => {
@@ -166,40 +177,100 @@ export default function DashboardGrid() {
 
   }, [widgets, session]); // Save when widgets or session changes
 
+  useEffect(() => {
+  }, [widgets, session]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current instanceof HTMLElement) {
+        setContainerDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-    })
+    useSensor(PointerSensor, {})
   );
 
   const handleDragEnd = (event: any) => {
     const { active, delta } = event;
-    setWidgets((prevWidgets) =>
-      prevWidgets.map((widget) => {
+
+    setWidgets((prevWidgets) => {
+      return prevWidgets.map((widget) => {
         if (widget.id === active.id) {
-          return {
-            ...widget,
-            x: widget.x + delta.x,
-            y: widget.y + delta.y,
-          };
+          let newX = widget.x + (delta.x / containerDimensions.width) * 100;
+          let newY = widget.y + (delta.y / containerDimensions.height) * 100;
+
+          newX = Math.max(0, Math.min(100 - widget.width, newX));
+          newY = Math.max(0, Math.min(100 - widget.height, newY));
+
+          // Check for collisions with other widgets
+          let collision = false;
+          for (const otherWidget of prevWidgets) {
+            if (otherWidget.id !== widget.id) {
+              const potentialWidget = { ...widget, x: newX, y: newY };
+              if (checkCollision(potentialWidget, otherWidget)) {
+                collision = true;
+                break;
+              }
+            }
+          }
+
+          if (!collision) {
+            return {
+              ...widget,
+              x: newX,
+              y: newY,
+            };
+          } else {
+            return widget; // Revert to original position if collision occurs
+          }
         }
         return widget;
-      })
-    );
+      });
+    });
   };
 
   const handleResizeStop = (id: string, newSize: { width: number; height: number }) => {
-    setWidgets((prevWidgets) =>
-      prevWidgets.map((widget) => {
+    setWidgets((prevWidgets) => {
+      return prevWidgets.map((widget) => {
         if (widget.id === id) {
-          return {
-            ...widget,
-            width: newSize.width,
-            height: newSize.height,
-          };
+          let newWidthPercentage = Math.min(100, (newSize.width / containerDimensions.width) * 100);
+          let newHeightPercentage = Math.min(100, (newSize.height / containerDimensions.height) * 100);
+
+          // Check for collisions with other widgets
+          let collision = false;
+          for (const otherWidget of prevWidgets) {
+            if (otherWidget.id !== widget.id) {
+              const potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
+              if (checkCollision(potentialWidget, otherWidget)) {
+                collision = true;
+                break;
+              }
+            }
+          }
+
+          if (!collision) {
+            return {
+              ...widget,
+              width: newWidthPercentage,
+              height: newHeightPercentage,
+            };
+          } else {
+            return widget; // Revert to original size if collision occurs
+          }
         }
         return widget;
-      })
-    );
+      });
+    });
   };
 
   return (
@@ -208,14 +279,17 @@ export default function DashboardGrid() {
       sensors={sensors}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}> {/* Add relative container */}
+      <div
+        style={{ position: 'relative', width: '100%', height: '100%' }}
+        ref={containerRef}
+      >
         {widgets.map((widget) => (
           <DraggableItem
             key={widget.id}
             id={widget.id}
-            position={{ x: widget.x, y: widget.y }} // Pass position from state
-            size={{ width: widget.width, height: widget.height }} // Pass size from state
-            onResizeStop={handleResizeStop} // Pass resize handler
+            position={{ x: widget.x, y: widget.y }}
+            size={{ width: widget.width, height: widget.height }}
+            onResizeStop={handleResizeStop}
           />
         ))}
       </div>
