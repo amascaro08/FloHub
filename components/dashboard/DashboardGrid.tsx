@@ -91,10 +91,10 @@ function DraggableItem({ id, position, size, onResizeStop }: DraggableItemProps)
 export default function DashboardGrid() {
   // Define a default layout using percentages
   const defaultLayout = [
-    { id: "tasks", x: 0, y: 0, width: 33, height: 30 },
-    { id: "calendar", x: 33, y: 0, width: 33, height: 30 },
-    { id: "ataglance", x: 33, y: 30, width: 33, height: 30 },
-    { id: "quicknote", x: 0, y: 60, width: 33, height: 30 },
+    { id: "tasks", x: 0, y: 0, width: 25, height: 25 },
+    { id: "calendar", x: 25, y: 0, width: 25, height: 25 },
+    { id: "ataglance", x: 50, y: 0, width: 25, height: 25 },
+    { id: "quicknote", x: 0, y: 25, width: 25, height: 25 },
   ];
 
   const checkCollision = (widget1: any, widget2: any) => {
@@ -213,26 +213,42 @@ export default function DashboardGrid() {
           newY = Math.max(0, Math.min(100 - widget.height, newY));
 
           // Check for collisions with other widgets
-          let collision = false;
           for (const otherWidget of prevWidgets) {
             if (otherWidget.id !== widget.id) {
-              const potentialWidget = { ...widget, x: newX, y: newY };
+              let potentialWidget = { ...widget, x: newX, y: newY };
               if (checkCollision(potentialWidget, otherWidget)) {
-                collision = true;
-                break;
+                // Adjust the position to the edge of the colliding widget
+                if (newX < otherWidget.x) {
+                  newX = otherWidget.x - widget.width;
+                } else if (newX > otherWidget.x) {
+                  newX = otherWidget.x + otherWidget.width;
+                }
+                if (newY < otherWidget.y) {
+                  newY = otherWidget.y - widget.height;
+                } else if (newY > otherWidget.y) {
+                  newY = otherWidget.y + otherWidget.height;
+                }
+
+                newX = Math.max(0, Math.min(100 - widget.width, newX));
+                newY = Math.max(0, Math.min(100 - widget.height, newY));
+
+                potentialWidget = { ...widget, x: newX, y: newY };
+                if (!checkCollision(potentialWidget, otherWidget)) {
+                  return {
+                    ...widget,
+                    x: newX,
+                    y: newY,
+                  };
+                }
               }
             }
           }
 
-          if (!collision) {
-            return {
-              ...widget,
-              x: newX,
-              y: newY,
-            };
-          } else {
-            return widget; // Revert to original position if collision occurs
-          }
+          return {
+            ...widget,
+            x: newX,
+            y: newY,
+          };
         }
         return widget;
       });
@@ -247,26 +263,42 @@ export default function DashboardGrid() {
           let newHeightPercentage = Math.min(100, (newSize.height / containerDimensions.height) * 100);
 
           // Check for collisions with other widgets
-          let collision = false;
           for (const otherWidget of prevWidgets) {
             if (otherWidget.id !== widget.id) {
-              const potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
+              let potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
               if (checkCollision(potentialWidget, otherWidget)) {
-                collision = true;
-                break;
+                // Adjust the size to the edge of the colliding widget
+                if (widget.x < otherWidget.x) {
+                  newWidthPercentage = otherWidget.x - widget.x;
+                } else if (widget.x > otherWidget.x) {
+                  newWidthPercentage = 100 - widget.x;
+                }
+                if (widget.y < otherWidget.y) {
+                  newHeightPercentage = otherWidget.y - widget.y;
+                } else if (widget.y > otherWidget.y) {
+                  newHeightPercentage = 100 - widget.y;
+                }
+
+                newWidthPercentage = Math.min(100, newWidthPercentage);
+                newHeightPercentage = Math.min(100, newHeightPercentage);
+
+                potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
+                if (!checkCollision(potentialWidget, otherWidget)) {
+                  return {
+                    ...widget,
+                    width: newWidthPercentage,
+                    height: newHeightPercentage,
+                  };
+                }
               }
             }
           }
 
-          if (!collision) {
-            return {
-              ...widget,
-              width: newWidthPercentage,
-              height: newHeightPercentage,
-            };
-          } else {
-            return widget; // Revert to original size if collision occurs
-          }
+          return {
+            ...widget,
+            width: newWidthPercentage,
+            height: newHeightPercentage,
+          };
         }
         return widget;
       });
