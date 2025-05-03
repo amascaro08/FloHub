@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { signOut } from "next-auth/react";
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon } from 'lucide-react' // Import icons
 import Link from 'next/link'
@@ -23,6 +23,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
   const { isLocked, toggleLock } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [topInput, setTopInput] = useState('');
+  const [messageToSend, setMessageToSend] = useState<string | null>(null);
 
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
@@ -109,11 +111,24 @@ export default function Layout({ children }: { children: ReactNode }) {
               type="text"
               placeholder=" FloCat is here to help you... 🐱"
               className="w-full max-w-md p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={topInput}
+              onChange={(e) => setTopInput(e.target.value)}
               onFocus={() => setIsChatOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isChatOpen && topInput.trim()) {
+                  setMessageToSend(topInput.trim());
+                  setTopInput('');
+                }
+              }}
             />
             {isChatOpen && (
               <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50"> {/* Position below input */}
-                <ChatWidget onClose={() => setIsChatOpen(false)} key="chatwidget"/>
+                <ChatWidget
+                  onClose={() => setIsChatOpen(false)}
+                  key="chatwidget"
+                  messageToSend={messageToSend}
+                  onMessageProcessed={() => setMessageToSend(null)}
+                />
               </div>
             )}
           </div>
