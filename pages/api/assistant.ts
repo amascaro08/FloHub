@@ -96,6 +96,7 @@ export default async function handler(
       if (taskMatch && taskMatch[1]) {
         const taskText = taskMatch[1].trim();
         if (taskText) {
+          console.log("Task text:", taskText);
           await callInternalApi("/api/tasks", "POST", { text: taskText });
           return res.status(200).json({ reply: `Task "${taskText}" added.` });
         }

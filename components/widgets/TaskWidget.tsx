@@ -101,6 +101,7 @@ export default function TaskWidget() {
       // For simplicity, we'll always send the selectedTags from the form on edit
     }
 
+    console.log("Payload:", payload);
     await fetch("/api/tasks", {
       method,
       headers: { "Content-Type": "application/json" },
