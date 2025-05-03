@@ -93,8 +93,8 @@ export default function DashboardGrid() {
   const defaultLayout = [
     { id: "tasks", x: 0, y: 0, width: 25, height: 25 },
     { id: "calendar", x: 25, y: 0, width: 25, height: 25 },
-    { id: "ataglance", x: 50, y: 0, width: 25, height: 25 },
-    { id: "quicknote", x: 0, y: 25, width: 25, height: 25 },
+    { id: "ataglance", x: 0, y: 25, width: 25, height: 25 },
+    { id: "quicknote", x: 25, y: 25, width: 25, height: 25 },
   ];
 
   const checkCollision = (widget1: any, widget2: any) => {
