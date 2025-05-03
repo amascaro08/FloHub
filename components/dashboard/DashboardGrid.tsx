@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
@@ -82,29 +82,35 @@ export default function DashboardGrid() {
     fetchLayout();
   }, [session]);
 
-  // Save layout to Firestore whenever the layouts state changes
+  // Load layout from Firestore on component mount
   useEffect(() => {
-    const saveLayout = async () => {
-      console.log("[DashboardGrid] Attempting to save layout...");
+    const fetchLayout = async () => {
       if (session?.user?.email) {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
         try {
-          await setDoc(layoutRef, { layouts });
-          console.log("[DashboardGrid] Layout saved successfully!");
+          const docSnap = await getDoc(layoutRef);
+          if (docSnap.exists()) {
+            const savedLayouts = docSnap.data()?.layouts;
+            if (savedLayouts) {
+              setLayouts(savedLayouts);
+            } else {
+              setLayouts(defaultLayouts);
+            }
+          } else {
+            // If no layout exists, save the default layouts
+            await setDoc(layoutRef, { layouts: defaultLayouts });
+          }
         } catch (e) {
-          console.error("[DashboardGrid] Error saving layout:", e);
+          console.error("[DashboardGrid] Error fetching layout:", e);
         }
       }
     };
 
-    const handler = setTimeout(() => {
-      saveLayout();
-    }, 500);
+    fetchLayout();
+  }, [session]); // Dependency on session to refetch if user changes
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [layouts, session]);
+  // Ref to store the timeout ID for debouncing
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     // Clean the layouts object before saving
@@ -123,7 +129,28 @@ export default function DashboardGrid() {
         );
       }
     }
+
+    // Update the state immediately for responsiveness
     setLayouts(cleanedLayouts);
+
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set a new timeout to save the cleaned layout after a delay
+    saveTimeoutRef.current = setTimeout(async () => {
+      console.log("[DashboardGrid] Attempting to save layout...");
+      if (session?.user?.email) {
+        const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
+        try {
+          await setDoc(layoutRef, { layouts: cleanedLayouts }); // Use cleanedLayouts directly
+          console.log("[DashboardGrid] Layout saved successfully!");
+        } catch (e) {
+          console.error("[DashboardGrid] Error saving layout:", e);
+        }
+      }
+    }, 500); // Debounce time
   };
 
   return (
