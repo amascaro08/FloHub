@@ -217,27 +217,30 @@ export default function DashboardGrid() {
             if (otherWidget.id !== widget.id) {
               let potentialWidget = { ...widget, x: newX, y: newY };
               if (checkCollision(potentialWidget, otherWidget)) {
+                let adjustedX = newX;
+                let adjustedY = newY;
+
                 // Adjust the position to the edge of the colliding widget
                 if (newX < otherWidget.x) {
-                  newX = otherWidget.x - widget.width;
+                  adjustedX = otherWidget.x - widget.width;
                 } else if (newX > otherWidget.x) {
-                  newX = otherWidget.x + otherWidget.width;
+                  adjustedX = otherWidget.x + otherWidget.width;
                 }
                 if (newY < otherWidget.y) {
-                  newY = otherWidget.y - widget.height;
+                  adjustedY = otherWidget.y - widget.height;
                 } else if (newY > otherWidget.y) {
-                  newY = otherWidget.y + otherWidget.height;
+                  adjustedY = otherWidget.y + otherWidget.height;
                 }
 
-                newX = Math.max(0, Math.min(100 - widget.width, newX));
-                newY = Math.max(0, Math.min(100 - widget.height, newY));
+                adjustedX = Math.max(0, Math.min(100 - widget.width, adjustedX));
+                adjustedY = Math.max(0, Math.min(100 - widget.height, adjustedY));
 
-                potentialWidget = { ...widget, x: newX, y: newY };
+                potentialWidget = { ...widget, x: adjustedX, y: adjustedY };
                 if (!checkCollision(potentialWidget, otherWidget)) {
                   return {
                     ...widget,
-                    x: newX,
-                    y: newY,
+                    x: adjustedX,
+                    y: adjustedY,
                   };
                 }
               }
@@ -267,27 +270,29 @@ export default function DashboardGrid() {
             if (otherWidget.id !== widget.id) {
               let potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
               if (checkCollision(potentialWidget, otherWidget)) {
+                let adjustedWidth = newWidthPercentage;
+                let adjustedHeight = newHeightPercentage;
                 // Adjust the size to the edge of the colliding widget
                 if (widget.x < otherWidget.x) {
-                  newWidthPercentage = otherWidget.x - widget.x;
+                  adjustedWidth = otherWidget.x - widget.x;
                 } else if (widget.x > otherWidget.x) {
-                  newWidthPercentage = 100 - widget.x;
+                  adjustedWidth = 100 - widget.x;
                 }
                 if (widget.y < otherWidget.y) {
-                  newHeightPercentage = otherWidget.y - widget.y;
+                  adjustedHeight = otherWidget.y - widget.y;
                 } else if (widget.y > otherWidget.y) {
-                  newHeightPercentage = 100 - widget.y;
+                  adjustedHeight = 100 - widget.y;
                 }
 
-                newWidthPercentage = Math.min(100, newWidthPercentage);
-                newHeightPercentage = Math.min(100, newHeightPercentage);
+                adjustedWidth = Math.min(100, adjustedWidth);
+                adjustedHeight = Math.min(100, adjustedHeight);
 
-                potentialWidget = { ...widget, width: newWidthPercentage, height: newHeightPercentage };
+                potentialWidget = { ...widget, width: adjustedWidth, height: adjustedHeight };
                 if (!checkCollision(potentialWidget, otherWidget)) {
                   return {
                     ...widget,
-                    width: newWidthPercentage,
-                    height: newHeightPercentage,
+                    width: adjustedWidth,
+                    height: adjustedHeight,
                   };
                 }
               }
