@@ -200,21 +200,29 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
   const now = new Date();
   const upcomingEvents = data
     ? data.filter(ev => {
-        if (ev.start.dateTime) {
-          // Timed event
-          const startTime = new Date(ev.start.dateTime);
-          // Keep if start is in future
-          return startTime.getTime() >= now.getTime();
-        } else if (ev.start.date) {
-          // All-day event
-          const eventDate = new Date(ev.start.date);
-          // Set time to end of day for comparison to include today's all-day events
-          eventDate.setHours(23, 59, 59, 999);
-          // Keep if the date is today or in the future
-          return eventDate.getTime() >= now.getTime();
+        const eventStartTime = ev.start.dateTime ? new Date(ev.start.dateTime) : (ev.start.date ? new Date(ev.start.date) : null);
+        const eventEndTime = ev.end?.dateTime ? new Date(ev.end.dateTime) : (ev.end?.date ? new Date(ev.end.date) : null);
+
+        if (!eventStartTime) return false; // Must have a start time/date
+
+        if (activeView === 'today' || activeView === 'tomorrow') {
+          // For today/tomorrow, filter out events that have already ended
+          if (eventEndTime) {
+            return eventEndTime.getTime() >= now.getTime();
+          } else if (ev.start.date && !ev.start.dateTime) {
+            // All-day event today/tomorrow
+            const allDayEndDate = new Date(ev.start.date);
+            allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
+            return allDayEndDate.getTime() >= now.getTime();
+          } else {
+             // Timed event with no end time? Assume it's ongoing from start time
+             return eventStartTime.getTime() >= now.getTime();
+          }
+        } else {
+          // For week, month, custom, show all events within the fetched range (API handles this)
+          // No client-side filtering needed based on 'now'
+          return true;
         }
-        // Should not happen if data is well-formed, but filter out if no start time/date
-        return false;
       })
     : [];
 
@@ -412,13 +420,36 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
         >
           This Month
         </button>
-        {/* Custom Range button/input will need more complex handling */}
-        {/* For now, just a button */}
+        {/* Custom Range button and inputs */}
         <button
           className={`px-3 py-1 rounded text-sm ${activeView === 'custom' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
           onClick={() => setActiveView('custom')}
         >
           Custom Range
+        </button>
+        {activeView === 'custom' && (
+          <div className="flex space-x-2 items-center">
+            <input
+              type="date"
+              value={customRange.start}
+              onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+              className="px-2 py-1 border rounded text-sm"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={customRange.end}
+              onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+              className="px-2 py-1 border rounded text-sm"
+            />
+          </div>
+        )}
+        {/* Add Event Button */}
+        <button
+          className="ml-auto px-3 py-1 rounded text-sm bg-green-500 text-white"
+          onClick={openAdd}
+        >
+          + Add Event
         </button>
       </div>
 
