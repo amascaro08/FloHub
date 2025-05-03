@@ -1,4 +1,3 @@
-// pages/api/assistant.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import OpenAI from "openai";
@@ -7,9 +6,10 @@ import {
   fetchUserMeetingNotes,
   fetchUserConversations,
   findRelevantContextSemantic as findRelevantContext,
-} from "../../lib/context";
+} from "@/lib/context";
 import { ChatCompletionMessageParam } from "openai/resources";
 
+// Types
 type ChatRequest = {
   history: { role: string; content: string }[];
   prompt: string;
@@ -23,6 +23,52 @@ type ChatResponse = {
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
+const parseDueDate = (phrase: string): string | undefined => {
+  const now = new Date();
+  const dayMs = 86400000;
+
+  if (phrase === "today") {
+    now.setHours(23, 59, 59, 999);
+    return now.toISOString();
+  }
+
+  if (phrase === "tomorrow") {
+    const date = new Date(now.getTime() + dayMs);
+    date.setHours(23, 59, 59, 999);
+    return date.toISOString();
+  }
+
+  const inDaysMatch = phrase.match(/^in (\d+) days?$/);
+  if (inDaysMatch) {
+    const days = parseInt(inDaysMatch[1], 10);
+    const date = new Date(now.getTime() + days * dayMs);
+    date.setHours(23, 59, 59, 999);
+    return date.toISOString();
+  }
+
+  const weekdays = [
+    "sunday", "monday", "tuesday", "wednesday",
+    "thursday", "friday", "saturday",
+  ];
+
+  const nextWeekdayMatch = phrase.match(/^next (\w+)$/);
+  if (nextWeekdayMatch) {
+    const targetDay = weekdays.indexOf(nextWeekdayMatch[1].toLowerCase());
+    if (targetDay >= 0) {
+      let date = new Date(now);
+      const currentDay = date.getDay();
+      let daysToAdd = (targetDay - currentDay + 7) % 7;
+      if (daysToAdd === 0) daysToAdd = 7;
+      date.setDate(date.getDate() + daysToAdd);
+      date.setHours(23, 59, 59, 999);
+      return date.toISOString();
+    }
+  }
+
+  return undefined;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -51,30 +97,39 @@ export default async function handler(
 
   const lowerPrompt = prompt.toLowerCase();
 
-  // ── Internal API call helper ──────────────────────────────
   const callInternalApi = async (path: string, method: string, body: any) => {
-    const url = `${process.env.NEXTAUTH_URL || ""}${path}`;
+    const url = path;
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error calling ${path}: ${response.status} - ${errorText}`);
+    }
+
     return response.ok;
   };
 
-  // ── Handle "add task" ─────────────────────────────────────
-  if (lowerPrompt.includes("add task") || lowerPrompt.includes("new task")) {
-    const taskMatch = prompt.match(/(?:add|new) task(?: called)? (.+?)(?: due|$)/i);
-    if (taskMatch && taskMatch[1]) {
-      const taskText = taskMatch[1].trim();
-      if (taskText) {
-        await callInternalApi("/api/tasks", "POST", { text: taskText });
-        return res.status(200).json({ reply: `✅ Task "${taskText}" added to your list.` });
-      }
-    }
+  // ── Add Task Detection ─────────────────────────────
+  const taskMatch = prompt.match(/(?:add|new) task(?: called)? (.+?)(?: due ([\w\s]+))?$/i);
+  if (taskMatch && taskMatch[1]) {
+    const taskText = taskMatch[1].trim();
+    const duePhrase = taskMatch[2]?.trim().toLowerCase();
+    const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+
+    const payload: any = { text: taskText };
+    if (dueDate) payload.dueDate = dueDate;
+
+    await callInternalApi("/api/tasks", "POST", payload);
+    return res.status(200).json({
+      reply: `✅ Task "${taskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+    });
   }
 
-  // ── Handle "add event" ────────────────────────────────────
+  // ── Add Calendar Event Detection ───────────────────
   if (
     lowerPrompt.includes("add event") ||
     lowerPrompt.includes("new event") ||
@@ -85,13 +140,13 @@ export default async function handler(
       const summary = eventMatch[1].trim();
       const now = new Date();
       const start = now.toISOString();
-      const end = new Date(now.getTime() + 3600000).toISOString(); // 1 hour later
+      const end = new Date(now.getTime() + 3600000).toISOString();
       await callInternalApi("/api/calendar", "POST", { summary, start, end });
       return res.status(200).json({ reply: `📅 Event "${summary}" scheduled.` });
     }
   }
 
-  // ── Fetch context and generate assistant response ─────────
+  // ── Fetch Context & Fallback to OpenAI ─────────────
   try {
     const notes = await fetchUserNotes(email);
     const meetings = await fetchUserMeetingNotes(email);
@@ -101,11 +156,11 @@ export default async function handler(
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide a daily 'At A Glance' summary, help the user manage tasks and calendar, and you identify as a cat 😺.`,
+        content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺.`,
       },
       {
         role: "system",
-        content: `Here is some relevant context from the user's notes, meetings, and past conversations:\n${relevantContext}`,
+        content: `Relevant context:\n${relevantContext}`,
       },
       ...history.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
