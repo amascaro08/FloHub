@@ -85,6 +85,7 @@ export default function DashboardGrid() {
   // Save layout to Firestore whenever the layouts state changes
   useEffect(() => {
     const saveLayout = async () => {
+      console.log("[DashboardGrid] Attempting to save layout...");
       if (session?.user?.email) {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
         try {
@@ -106,7 +107,23 @@ export default function DashboardGrid() {
   }, [layouts, session]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
-    setLayouts(allLayouts);
+    // Clean the layouts object before saving
+    const cleanedLayouts: any = {};
+    for (const breakpoint in allLayouts) {
+      if (Array.isArray(allLayouts[breakpoint])) {
+        cleanedLayouts[breakpoint] = allLayouts[breakpoint].filter(
+          (item: any) =>
+            item !== undefined &&
+            item !== null &&
+            typeof item.i === 'string' && // Ensure 'i' is a string
+            typeof item.x === 'number' && // Ensure 'x' is a number
+            typeof item.y === 'number' && // Ensure 'y' is a number
+            typeof item.w === 'number' && // Ensure 'w' is a number
+            typeof item.h === 'number'    // Ensure 'h' is a number
+        );
+      }
+    }
+    setLayouts(cleanedLayouts);
   };
 
   return (
