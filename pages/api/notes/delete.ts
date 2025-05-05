@@ -31,26 +31,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { id } = req.body; // Assuming the note ID is sent in the request body
+  const { ids } = req.body; // Assuming an array of note IDs is sent in the request body
 
-  if (!id) {
-    return res.status(400).json({ message: 'Note ID is required' });
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: 'An array of Note IDs is required' });
   }
 
   try {
-    // Optional: Verify user's authentication and ownership of the note
-    // const session = await auth.verifyIdToken(req.headers.authorization?.split(' ')[1]);
-    // const userId = session.uid;
-    // const noteRef = db.collection('notes').doc(id);
-    // const noteDoc = await noteRef.get();
-    // if (!noteDoc.exists || noteDoc.data()?.userId !== userId) {
-    //   return res.status(403).json({ message: 'Unauthorized' });
-    // }
+    // Optional: Verify user's authentication and ownership of the notes
+    // This would involve checking each note's ownership before deleting
+    // For simplicity, this is omitted in this example but recommended for production
 
-    await db.collection('notes').doc(id).delete();
-    res.status(200).json({ message: 'Note deleted successfully' });
+    const batch = db.batch();
+    ids.forEach(id => {
+      const noteRef = db.collection('notes').doc(id);
+      batch.delete(noteRef);
+    });
+
+    await batch.commit();
+
+    res.status(200).json({ message: `${ids.length} notes deleted successfully` });
   } catch (error) {
-    console.error('Error deleting note:', error);
+    console.error('Error deleting notes:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 }

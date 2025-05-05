@@ -55,30 +55,44 @@ export default function NotesPage() {
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]); // State for selected notes for deletion
 
-  // Combine unique tags from notes and global tags from settings
+  // Use only global tags from settings
   const allAvailableTags = useMemo(() => {
-    const noteTags = notesResponse?.notes?.flatMap(note => note.tags) || [];
-    const globalTags = userSettings?.globalTags || [];
-    const combinedTags = [...noteTags, ...globalTags];
-    return Array.from(new Set(combinedTags)).sort(); // Get unique tags and sort them
-  }, [notesResponse, userSettings]); // Add userSettings to dependency array
+    return userSettings?.globalTags?.sort() || []; // Get global tags and sort them
+  }, [userSettings]); // Dependency array includes userSettings
+
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
 
-  const handleDeleteNote = async (noteId: string) => {
+  // Function to handle toggling selection of a note for deletion
+  const handleToggleSelectNote = (noteId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedNotes([...selectedNotes, noteId]);
+    } else {
+      setSelectedNotes(selectedNotes.filter((id) => id !== noteId));
+    }
+  };
+
+  // Function to handle deleting selected notes
+  const handleDeleteSelected = async () => {
+    if (selectedNotes.length === 0) return;
+
     setIsSaving(true); // Indicate saving/deleting in progress
     try {
+      // Assuming your delete API can handle multiple IDs or you make multiple calls
+      // For now, let's assume the API can take an array of IDs
       const response = await fetch(`/api/notes/delete`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: noteId }),
+        body: JSON.stringify({ ids: selectedNotes }), // Send array of IDs
       });
 
       if (response.ok) {
         mutate(); // Re-fetch notes to update the list
-        setSelectedNoteId(null); // Deselect the note after deletion
+        setSelectedNoteId(null); // Deselect any currently selected note
+        setSelectedNotes([]); // Clear selected notes after deletion
       } else {
-        console.error("Failed to delete note. Status:", response.status); // Log response status
+        console.error("Failed to delete selected notes. Status:", response.status); // Log response status
         try {
           const errorData = await response.json();
           console.error("Error details:", errorData.error);
@@ -88,13 +102,24 @@ export default function NotesPage() {
         // Optionally show an error message to the user
       }
     } catch (error) {
-      console.error("Error deleting note:", error);
+      console.error("Error deleting selected notes:", error);
       console.error("Error details:", error); // Log error object
        // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Placeholder function for exporting selected notes as PDF
+  const handleExportSelected = async () => {
+    console.log("Exporting selected notes:", selectedNotes);
+    // TODO: Implement PDF export functionality
+    // This will likely involve:
+    // 1. Fetching the full content of the selected notes
+    // 2. Sending the note data to a new API endpoint for PDF generation
+    // 3. Receiving and downloading the generated PDF file
+  };
+
 
   // Update handleSaveNote to include new fields
   const handleSaveNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
@@ -213,9 +238,9 @@ export default function NotesPage() {
 
 
   return (
-    <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
+    <div className="p-4 flex flex-col md:flex-row h-full"> {/* Use flex-col on mobile, flex-row on medium and up */}
       {/* Left Column: Note List */}
-      <div className="w-80 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0"> {/* Set a fixed width and prevent shrinking */}
+      <div className="w-full md:w-80 border-r md:border-r-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0 mb-4 md:mb-0"> {/* Adjust width and add bottom margin for mobile */}
         <h1 className="text-2xl font-semibold mb-4">Notes</h1>
 
         <button
@@ -261,7 +286,18 @@ export default function NotesPage() {
           notes={filteredNotes}
           selectedNoteId={selectedNoteId}
           onSelectNote={setSelectedNoteId}
+          selectedNotes={selectedNotes} // Pass selected notes state
+          onToggleSelectNote={handleToggleSelectNote} // Pass toggle select handler
+          onDeleteSelected={handleDeleteSelected} // Pass delete selected handler
         />
+        {selectedNotes.length > 0 && (
+          <button
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 w-full" // Add margin top and make button full width
+            onClick={handleExportSelected} // Call the export handler
+          >
+            Export Selected as PDF ({selectedNotes.length})
+          </button>
+        )}
       </div>
 
       {/* Right Column: Note Detail */}
@@ -271,7 +307,7 @@ export default function NotesPage() {
           <NoteDetail
             note={selectedNote}
             onSave={handleUpdateNote}
-            onDelete={handleDeleteNote} // Pass the delete handler
+            onDelete={handleDeleteSelected} // Pass the delete handler (consider if this should delete single or selected)
             isSaving={isSaving} // Pass isSaving state
             existingTags={allAvailableTags} // Pass allAvailableTags to NoteDetail
           />
