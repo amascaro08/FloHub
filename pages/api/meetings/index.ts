@@ -34,31 +34,30 @@ export default async function handler(
     // 2) Fetch meeting notes for the authenticated user from the database
     // Filter for notes where eventId exists OR isAdhoc is true
 
+    // Fetch all notes for the user and filter meeting notes in application code
     const meetingNotesSnapshot = await getDocs(query(
       collection(db, "notes"), // Meeting notes are stored in the same 'notes' collection
-      and( // Use 'and' to combine the userId filter with the or filter
-        where("userId", "==", userId),
-        or( // Use 'or' to filter by either eventId or isAdhoc
-          where("eventId", "!=", null), // Filter where eventId is not null
-          where("isAdhoc", "==", true) // Filter where isAdhoc is true
-        )
-      ),
+      where("userId", "==", userId), // Filter by userId
       orderBy("createdAt", "desc")
     ));
 
-    const meetingNotes: Note[] = meetingNotesSnapshot.docs.map((doc: QueryDocumentSnapshot) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title || "", // Include title
-        content: data.content,
-        tags: data.tags || [],
-        createdAt: data.createdAt.toDate().toISOString(),
-        eventId: data.eventId || undefined, // Include eventId
-        eventTitle: data.eventTitle || undefined, // Include eventTitle
-        isAdhoc: data.isAdhoc || undefined, // Include isAdhoc
-      };
-    });
+    // Filter meeting notes in application code
+    const meetingNotes: Note[] = meetingNotesSnapshot.docs
+      .map((doc: QueryDocumentSnapshot) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || "", // Include title
+          content: data.content,
+          tags: data.tags || [],
+          createdAt: data.createdAt.toDate().toISOString(),
+          eventId: data.eventId || undefined, // Include eventId
+          eventTitle: data.eventTitle || undefined, // Include eventTitle
+          isAdhoc: data.isAdhoc || undefined, // Include isAdhoc
+          actions: data.actions || [], // Include actions
+        };
+      })
+      .filter(note => note.eventId !== undefined || note.isAdhoc === true); // Filter for meeting notes
 
     return res.status(200).json({ meetingNotes: meetingNotes });
 

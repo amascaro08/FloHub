@@ -4,7 +4,7 @@
 import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
 import useSWR from "swr"; // Import useSWR
-import type { CalendarEvent } from "@/pages/api/calendar/events"; // Import CalendarEvent type
+import type { CalendarEvent } from "@/pages/api/calendar/events"; // Import CalendarEvent type with description
 import type { Action } from "@/types/app"; // Import Action type
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 
@@ -33,9 +33,11 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | undefined>(undefined); // State for selected calendar ID
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
+  const [selectedEventDescription, setSelectedEventDescription] = useState<string | undefined>(undefined); // State for selected event description/agenda
   const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
   const [actions, setActions] = useState<Action[]>([]); // State for actions
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
+  const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
 
   // Fetch events for the selected calendar
   const { data: calendarEvents, error: calendarEventsError } = useSWR<CalendarEvent[]>(
@@ -86,9 +88,11 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setSelectedCalendarId(undefined); // Clear selected calendar
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
+    setSelectedEventDescription(undefined); // Clear selected event description
     setIsAdhoc(false);
     setActions([]); // Clear actions
     setNewActionDescription(""); // Clear new action input
+    setNewActionAssignedTo("Me"); // Reset assigned to
     onClose(); // Close modal after saving
   };
 
@@ -110,21 +114,28 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       setSelectedCalendarId(selectedOption.value);
       setSelectedEventId(undefined); // Clear selected event when calendar changes
       setSelectedEventTitle(undefined);
+      setSelectedEventDescription(undefined); // Clear selected event description
     } else {
       setSelectedCalendarId(undefined);
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
+      setSelectedEventDescription(undefined); // Clear selected event description
     }
   };
 
   const handleEventChange = (selectedOption: any) => {
     if (selectedOption) {
+      const selectedEvent = calendarEvents?.find(event => event.id === selectedOption.value);
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
+      setSelectedEventDescription(selectedEvent?.description); // Set the description
+      setTitle(selectedOption.label); // Set title to event summary
       setIsAdhoc(false); // If an event is selected, it's not ad-hoc
     } else {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
+      setSelectedEventDescription(undefined); // Clear the description
+      setTitle(""); // Clear title
     }
   };
 
@@ -134,6 +145,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       setSelectedCalendarId(undefined); // If ad-hoc, clear selected calendar and event
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
+      setSelectedEventDescription(undefined); // Clear selected event description
+      setTitle(""); // Clear title for ad-hoc
     }
   };
 
@@ -153,7 +166,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={isSaving}
+              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
             />
           </div>
           <div>
@@ -208,6 +221,14 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
                {!calendarEvents && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
             </div>
           )}
+          {selectedEventDescription && ( // Display agenda if event is selected and has a description
+            <div>
+              <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
+              <div className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap">
+                {selectedEventDescription}
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -222,28 +243,41 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
           {/* Actions Section */}
           <div>
             <label className="block text-sm font-medium text-[var(--fg)] mb-1">Actions</label>
-            <div className="flex gap-2 mb-2">
+            <div className="flex flex-col gap-2 mb-2"> {/* Use flex-col for stacking inputs */}
               <input
                 type="text"
                 className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-                placeholder="Add a new action item..."
+                placeholder="Action item description..."
                 value={newActionDescription}
                 onChange={(e) => setNewActionDescription(e.target.value)}
                 disabled={isSaving}
               />
-              <button
-                type="button"
-                className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleAddAction}
-                disabled={isSaving || !newActionDescription.trim()}
-              >
-                Add
-              </button>
+              <div className="flex gap-2"> {/* Flex container for assignedTo and Add button */}
+                <input
+                  type="text"
+                  className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
+                  placeholder="Assigned to (e.g., Me, John Doe)..."
+                  value={newActionAssignedTo}
+                  onChange={(e) => setNewActionAssignedTo(e.target.value)}
+                  disabled={isSaving}
+                />
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleAddAction}
+                  disabled={isSaving || !newActionDescription.trim()}
+                >
+                  Add
+                </button>
+              </div>
             </div>
             {actions.length > 0 && (
               <ul className="list-disc list-inside space-y-1 text-sm text-[var(--fg)]">
                 {actions.map((action, index) => (
-                  <li key={action.id}>{action.description}</li>
+                  <li key={action.id}>
+                    {action.description}
+                    {action.assignedTo && <span className="font-semibold"> (Assigned to: {action.assignedTo})</span>} {/* Display assigned person */}
+                  </li>
                 ))}
               </ul>
             )}

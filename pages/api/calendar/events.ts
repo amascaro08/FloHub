@@ -8,6 +8,7 @@ export type CalendarEvent = {
   summary: string;
   start: { dateTime: string; timeZone: string };
   end: { dateTime: string; timeZone: string };
+  description?: string; // Add optional description field
 };
 
 type GetCalendarEventsResponse = {
@@ -69,6 +70,7 @@ export default async function handler(
           summary: event.summary || "No Title",
           start: event.start,
           end: event.end,
+          description: event.description, // Include the description
         }))
       : [];
 

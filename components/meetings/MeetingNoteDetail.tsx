@@ -48,8 +48,75 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     setNewActionAssignedTo("Me"); // Reset assigned to
   }, [note]);
 
-  const handleAddAction = async () => {
-    if (newActionDescription.trim() === "") return;
+ const handleExportPdf = async () => {
+   try {
+     const response = await fetch('/api/meetings/export-pdf', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+       },
+       body: JSON.stringify({ id: note.id }),
+     });
+
+     if (!response.ok) {
+       const errorData = await response.json();
+       console.error('PDF export failed:', errorData.message);
+       alert('Failed to export PDF.'); // Provide user feedback
+       return;
+     }
+
+     // Trigger file download
+     const blob = await response.blob();
+     const url = window.URL.createObjectURL(blob);
+     const a = document.createElement('a');
+     a.href = url;
+     a.download = `${note.title || 'Meeting Note'}_${note.id}.pdf`;
+     document.body.appendChild(a);
+     a.click();
+     a.remove();
+     window.URL.revokeObjectURL(url);
+
+   } catch (error) {
+     console.error('Error during PDF export:', error);
+     alert('An error occurred during PDF export.'); // Provide user feedback
+   }
+ };
+
+ const handleCopyForEmail = () => {
+   let emailContent = `Meeting Note: ${note.title || 'Untitled Meeting Note'}\n\n`;
+
+   if (note.eventTitle) {
+     emailContent += `Associated Event: ${note.eventTitle}\n\n`;
+   } else if (note.isAdhoc) {
+     emailContent += `Ad-hoc Meeting\n\n`;
+   }
+
+   if (note.content) {
+     emailContent += `Meeting Minutes:\n${note.content}\n\n`;
+   }
+
+   if (note.actions && note.actions.length > 0) {
+     emailContent += `Action Items:\n`;
+     note.actions.forEach(action => {
+       emailContent += `- [${action.status === 'done' ? 'x' : ' '}] ${action.description} (Assigned to: ${action.assignedTo})\n`;
+     });
+     emailContent += '\n';
+   }
+
+   emailContent += `Created: ${new Date(note.createdAt).toLocaleString()}\n`;
+
+   navigator.clipboard.writeText(emailContent)
+     .then(() => {
+       alert('Meeting note copied to clipboard for email.');
+     })
+     .catch(err => {
+       console.error('Failed to copy meeting note:', err);
+       alert('Failed to copy meeting note.');
+     });
+ };
+
+ const handleAddAction = async () => {
+   if (newActionDescription.trim() === "") return;
 
     const newAction: Action = {
       id: uuidv4(), // Generate a unique ID
@@ -263,6 +330,25 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
 
         <div className="flex justify-end gap-2 mt-4"> {/* Added mt-4 for spacing */}
+          {/* Export Buttons */}
+          <button
+            type="button"
+            className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleExportPdf}
+            disabled={isSaving}
+          >
+            Export as PDF
+          </button>
+          <button
+            type="button"
+            className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleCopyForEmail}
+            disabled={isSaving}
+          >
+            Copy for Email
+          </button>
+
+          {/* Action Buttons */}
           <button
             type="button" // Change type to button to prevent form submission
             className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
