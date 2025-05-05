@@ -279,7 +279,7 @@ export default function MeetingsPage() {
          onSave={handleSaveMeetingNote}
          isSaving={isSaving}
          existingTags={allAvailableTags} // Pass allAvailableTags
-         calendarList={workCalendarList} // Pass only the work calendar list
+         calendarList={calendarEvents || []} // Pass all fetched calendar lists
        />
 
 
