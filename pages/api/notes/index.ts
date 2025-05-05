@@ -43,6 +43,7 @@ export default async function handler(
       const data = doc.data();
       return {
         id: doc.id,
+        title: data.title || "", // Include the title field
         content: data.content,
         tags: data.tags || [],
         // Ensure createdAt is a string before assigning to the shared Note type
