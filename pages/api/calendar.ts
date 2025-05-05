@@ -86,8 +86,6 @@ export default async function handler(
     }
 //
     // Fetch O365 events if o365Url is provided
-:start_line:89
--------
     if (typeof o365Url === "string" && o365Url.startsWith("http")) {
       console.log("Attempting to fetch O365 events from URL:", o365Url); // Log the URL
       try {
@@ -122,13 +120,11 @@ export default async function handler(
 
               const startsAfterMin = eventStartTime.getTime() >= minDate.getTime();
               const endsBeforeMax = eventEndTime ? eventEndTime.getTime() <= maxDate.getTime() : true; // If no end time, assume it's within range
-
-              // Also include events that start before minDate but end after minDate (ongoing events)
               const startsBeforeMinEndsAfterMin = eventStartTime.getTime() < minDate.getTime() && eventEndTime && eventEndTime.getTime() > minDate.getTime();
 
               return (startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin;
             });
-          console.log("O365 mapped and filtered events:", o366Events); // Added logging for mapped and filtered O365 events
+          console.log("O365 mapped and filtered events:", o365Events); // Added logging for mapped and filtered O365 events
           allEvents.push(...o365Events);
         } else {
           console.error("Failed to fetch O365 events, status:", o365Res.status);
