@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
-marked.setOptions({}); // Initialize marked with default options
+marked.setOptions({ gfm: true }); // Initialize marked with GFM options
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'; // Import formatInTimeZone and toZonedTime
 import { isSameDay } from 'date-fns'; // Import isSameDay from date-fns
 import useSWR from 'swr'; // Import useSWR
