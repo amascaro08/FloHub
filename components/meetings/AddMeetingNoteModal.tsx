@@ -236,7 +236,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
               checked={isAdhoc}
               onChange={handleAdhocChange}
-              disabled={isSaving || selectedEventId !== undefined || selectedCalendarId !== undefined} // Disable if saving, event is selected, or calendar is selected
+              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
             />
             <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
           </div>
