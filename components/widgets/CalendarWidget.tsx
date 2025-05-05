@@ -277,11 +277,35 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
 
   // Handlers for saving/deleting events (simplified for now)
   const handleSaveEvent = async () => {
-    // TODO: Implement actual save logic using API
     console.log("Saving event:", form);
-    setModalOpen(false);
-    // Trigger revalidation after potential save
-    if (apiUrl) mutate(apiUrl);
+    try {
+      const method = editingEvent ? 'PUT' : 'POST';
+      const url = editingEvent ? `/api/calendar/event?id=${editingEvent.id}` : '/api/calendar/event';
+
+      const res = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        const errorInfo = await res.json();
+        throw new Error(errorInfo.error || `HTTP error! status: ${res.status}`);
+      }
+
+      const savedEvent = await res.json();
+      console.log("Event saved successfully:", savedEvent);
+
+      setModalOpen(false);
+      // Trigger revalidation after potential save
+      if (apiUrl) mutate(apiUrl);
+
+    } catch (error) {
+      console.error("Failed to save event:", error);
+      // TODO: Show error message to user
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
