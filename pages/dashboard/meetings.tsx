@@ -58,6 +58,16 @@ export default function MeetingsPage() {
   // Log the fetched data and errors for debugging
 
 
+  // Log the fetched data and errors for debugging
+  useEffect(() => {
+    console.log("Fetched calendar list:", calendarEvents);
+    console.log("Calendar list error:", calendarError);
+    console.log("Fetched user settings:", userSettings);
+    console.log("User settings error:", settingsError);
+    console.log("Fetched meeting notes:", meetingNotesResponse);
+    console.log("Meeting notes error:", meetingNotesError);
+  }, [calendarEvents, calendarError, userSettings, settingsError, meetingNotesResponse, meetingNotesError]);
+
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false); // State to control modal visibility
@@ -269,7 +279,7 @@ export default function MeetingsPage() {
          onSave={handleSaveMeetingNote}
          isSaving={isSaving}
          existingTags={allAvailableTags} // Pass allAvailableTags
-         calendarList={calendarEvents || []} // Pass all fetched calendar lists
+         calendarList={workCalendarList} // Pass only the work calendar list
        />
 
 

@@ -47,11 +47,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   );
 
   // Log fetched events for debugging
-  useEffect(() => {
-  console.log("Fetched calendar events:", calendarEventsResponse);
-  }, [calendarEventsResponse, calendarEventsError]);
-
-
   const handleAddAction = () => {
     if (newActionDescription.trim()) {
       const newAction: Action = {
@@ -102,6 +97,11 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const calendarOptions = calendarList.map(calendar => ({ value: calendar.id, label: calendar.summary }));
   const eventOptions = calendarEventsResponse?.events?.map(event => ({ value: event.id, label: event.summary })) || []; // Use fetched events array
 
+  // Log fetched events and generated options for debugging
+  useEffect(() => {
+    console.log("Fetched calendar events:", calendarEventsResponse);
+    console.log("Generated event options:", eventOptions);
+  }, [calendarEventsResponse, calendarEventsError, eventOptions]);
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
     if (actionMeta.action === 'create-option') {
