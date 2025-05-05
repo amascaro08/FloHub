@@ -5,12 +5,7 @@ import { useState, useEffect, FormEvent, useMemo } from "react"; // Import useMe
 import type { Note, Action } from "@/types/app"; // Import shared Note and Action types
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
-
-// Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
-type CalendarItem = {
-  id: string;
-  summary: string;
-};
+import type { CalendarEvent } from "@/components/widgets/CalendarWidget"; // Import CalendarEvent type
 
 type MeetingNoteDetailProps = { // Renamed type
   note: Note;
@@ -19,7 +14,7 @@ type MeetingNoteDetailProps = { // Renamed type
   onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
   existingTags: string[]; // Add existingTags to props
-  calendarEvents: CalendarItem[]; // Add calendarEvents prop
+  calendarEvents: CalendarEvent[]; // Update to CalendarEvent[]
 };
 
 
@@ -173,7 +168,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
-  const eventOptions = calendarEvents.map(event => ({ value: event.id, label: event.summary }));
+  const eventOptions = calendarEvents.map(event => ({ value: event.id, label: event.summary || '' })); // Use CalendarEvent[] and provide default for label
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
     if (actionMeta.action === 'create-option') {

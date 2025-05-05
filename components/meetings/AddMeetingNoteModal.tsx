@@ -4,15 +4,9 @@
 import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
 import useSWR from "swr"; // Import useSWR
-import type { CalendarEvent, GetCalendarEventsResponse } from "@/pages/api/calendar/events"; // Import CalendarEvent type with description
+import type { CalendarEvent } from "@/components/widgets/CalendarWidget"; // Import CalendarEvent type
 import type { Action } from "@/types/app"; // Import Action type
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
-
-// Define a type for calendar items (should match the type in pages/dashboard/meetings.tsx)
-type CalendarItem = {
-  id: string;
-  summary: string;
-};
 
 type AddMeetingNoteModalProps = {
   isOpen: boolean;
@@ -21,16 +15,15 @@ type AddMeetingNoteModalProps = {
   onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[] }) => Promise<void>;
   isSaving: boolean;
   existingTags: string[]; // Add existingTags prop
-  calendarList: CalendarItem[]; // Rename prop from calendarEvents to calendarList
+  workCalendarEvents: CalendarEvent[]; // Add workCalendarEvents prop
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()); // Define fetcher
 
-export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, calendarList }: AddMeetingNoteModalProps) { // Receive renamed prop
+export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, workCalendarEvents }: AddMeetingNoteModalProps) { // Receive workCalendarEvents prop
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string | undefined>(undefined); // State for selected calendar ID
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
   const [selectedEventDescription, setSelectedEventDescription] = useState<string | undefined>(undefined); // State for selected event description/agenda
@@ -39,14 +32,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
   const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
 
-  // Fetch events for the selected calendar
-  // Fetch events for the selected calendar
-  const { data: calendarEventsResponse, error: calendarEventsError } = useSWR<GetCalendarEventsResponse>(
-    selectedCalendarId ? `/api/calendar/events?calendarId=${selectedCalendarId}` : null,
-    fetcher
-  );
-
-  // Log fetched events for debugging
   const handleAddAction = () => {
     if (newActionDescription.trim()) {
       const newAction: Action = {
@@ -82,7 +67,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setTitle("");
     setContent("");
     setSelectedTags([]);
-    setSelectedCalendarId(undefined); // Clear selected calendar
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
     setSelectedEventDescription(undefined); // Clear selected event description
@@ -94,14 +78,13 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   };
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
-  const calendarOptions = calendarList.map(calendar => ({ value: calendar.id, label: calendar.summary }));
-  const eventOptions = calendarEventsResponse?.events?.map(event => ({ value: event.id, label: event.summary })) || []; // Use fetched events array
+  const eventOptions = workCalendarEvents.map(event => ({ value: event.id, label: event.summary || '' })); // Use passed-in workCalendarEvents and provide default for label
 
-  // Log fetched events and generated options for debugging
+  // Log passed-in events and generated options for debugging
   useEffect(() => {
-    console.log("Fetched calendar events:", calendarEventsResponse);
+    console.log("Passed-in work calendar events:", workCalendarEvents);
     console.log("Generated event options:", eventOptions);
-  }, [calendarEventsResponse, calendarEventsError, eventOptions]);
+  }, [workCalendarEvents, eventOptions]);
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
     if (actionMeta.action === 'create-option') {
@@ -111,23 +94,9 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     }
   };
 
-  const handleCalendarChange = (selectedOption: any) => {
-    if (selectedOption) {
-      setSelectedCalendarId(selectedOption.value);
-      setSelectedEventId(undefined); // Clear selected event when calendar changes
-      setSelectedEventTitle(undefined);
-      setSelectedEventDescription(undefined); // Clear selected event description
-    } else {
-      setSelectedCalendarId(undefined);
-      setSelectedEventId(undefined);
-      setSelectedEventTitle(undefined);
-      setSelectedEventDescription(undefined); // Clear selected event description
-    }
-  };
-
   const handleEventChange = (selectedOption: any) => {
     if (selectedOption) {
-      const selectedEvent = calendarEventsResponse?.events?.find(event => event.id === selectedOption.value);
+      const selectedEvent = workCalendarEvents.find(event => event.id === selectedOption.value); // Use workCalendarEvents
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
       setSelectedEventDescription(selectedEvent?.description); // Set the description
@@ -144,7 +113,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const handleAdhocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsAdhoc(e.target.checked);
     if (e.target.checked) {
-      setSelectedCalendarId(undefined); // If ad-hoc, clear selected calendar and event
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
       setSelectedEventDescription(undefined); // Clear selected event description
@@ -245,32 +213,20 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
             />
           </div>
           {/* New fields for meeting notes */}
-          <div>
-            <label htmlFor="calendar-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Calendar (Optional)</label> {/* Updated label */}
-            <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-              options={calendarOptions}
-              onChange={handleCalendarChange}
-              placeholder="Select a calendar..."
-              isDisabled={isSaving} // Disable if saving
-              isClearable
-              isSearchable
-              value={selectedCalendarId ? { value: selectedCalendarId, label: calendarList.find(cal => cal.id === selectedCalendarId)?.summary || '' } : null}
-            />
-          </div>
-           {selectedCalendarId && Array.isArray(calendarEventsResponse?.events) && ( // Show event selection only if a calendar is selected and events are an array
+          {/* Removed calendar selection as events are passed directly */}
+           {workCalendarEvents.length > 0 && ( // Show event selection only if workCalendarEvents are available
             <div>
               <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
               <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
                 options={eventOptions}
                 onChange={handleEventChange}
                 placeholder="Select an event..."
-                isDisabled={isSaving || !calendarEventsResponse?.events} // Disable if saving or events are loading/failed
+                isDisabled={isSaving || eventOptions.length === 0} // Disable if saving or no events
                 isClearable
                 isSearchable
                 value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
               />
-               {calendarEventsError && <p className="text-red-500 text-sm mt-1">Error loading events.</p>} {/* Show error if events fail to load */}
-               {!calendarEventsResponse?.events && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
+               {workCalendarEvents.length === 0 && <p className="text-sm text-[var(--neutral-500)] mt-1">No work calendar events found for the selected time range.</p>} {/* Show message if no events */}
             </div>
           )}
           <div className="flex items-center gap-2">
