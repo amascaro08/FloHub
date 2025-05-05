@@ -112,12 +112,43 @@ export default function NotesPage() {
 
   // Placeholder function for exporting selected notes as PDF
   const handleExportSelected = async () => {
-    console.log("Exporting selected notes:", selectedNotes);
-    // TODO: Implement PDF export functionality
-    // This will likely involve:
-    // 1. Fetching the full content of the selected notes
-    // 2. Sending the note data to a new API endpoint for PDF generation
-    // 3. Receiving and downloading the generated PDF file
+    if (selectedNotes.length === 0) return;
+
+    setIsSaving(true); // Indicate saving/exporting in progress
+    try {
+      const response = await fetch("/api/notes/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedNotes }),
+      });
+
+      if (response.ok) {
+        // Assuming the backend sends the PDF as a Blob
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "exported_notes.pdf"; // Set the desired filename
+        document.body.appendChild(a);
+        a.click();
+        a.remove(); // Clean up the element
+        window.URL.revokeObjectURL(url); // Free up memory
+      } else {
+        console.error("Failed to export notes. Status:", response.status);
+        try {
+          const errorData = await response.json();
+          console.error("Error details:", errorData.error);
+        } catch (jsonError) {
+          console.error("Could not parse error response as JSON:", jsonError);
+        }
+        // Optionally show an error message to the user
+      }
+    } catch (error) {
+      console.error("Error exporting notes:", error);
+      // Optionally show an error message to the user
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
