@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { Task } from "@/types/app";
+import type { Task, UserSettings } from "@/types/app"; // Import UserSettings
+import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 
 // Define a more comprehensive Task type for the tasks page
 
@@ -39,9 +40,15 @@ export default function TasksPage() {
     fetcher
   );
 
+  // Fetch user settings to get global tags
+  const { data: userSettings } = useSWR<UserSettings>(
+    shouldFetch ? "/api/userSettings" : null,
+    fetcher
+  );
+
   const [input, setInput] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [tagsInput, setTagsInput] = useState(""); // State for tags input
+  const [selectedTags, setSelectedTags] = useState<{ value: string; label: string }[]>([]); // State for selected tags using CreatableSelect format
   const [editing, setEditing] = useState<Task | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState("");
@@ -50,8 +57,8 @@ export default function TasksPage() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Simple comma-separated tag parsing
-    const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+    // Get tags from selectedTags state
+    const tags = selectedTags.map(tag => tag.value);
 
     const payload: any = {
       text: input.trim(),
@@ -75,7 +82,7 @@ export default function TasksPage() {
 
     setInput("");
     setDueDate("");
-    setTagsInput(""); // Clear tags input
+    setSelectedTags([]); // Clear selected tags
     setEditing(null);
     mutate();
   };
@@ -102,7 +109,8 @@ export default function TasksPage() {
     setEditing(task);
     setInput(task.text);
     setDueDate(task.dueDate || "");
-    setTagsInput(task.tags ? task.tags.join(', ') : ""); // Populate tags input
+    // Populate selected tags from task tags
+    setSelectedTags(task.tags ? task.tags.map(tag => ({ value: tag, label: tag })) : []);
   };
 
   const completedTasks = tasks ? tasks.filter((task) => task.done) : [];
@@ -115,7 +123,7 @@ export default function TasksPage() {
     );
   }, [tasks, search]);
 
-  if (status === "loading") {
+  if (status === "loading" || !userSettings) { // Wait for userSettings to load
     return <p>Loading tasks…</p>;
   }
 
@@ -144,12 +152,62 @@ export default function TasksPage() {
           />
         </div>
         {/* Tags Input */}
-        <input
-          type="text"
-          className="border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-[var(--bg)]"
-          placeholder="Tags (comma-separated)"
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
+        <CreatableSelect
+          isMulti
+          options={userSettings?.globalTags.map(tag => ({ value: tag, label: tag })) || []} // Use global tags as options
+          onChange={(newValue) => setSelectedTags(newValue as { value: string; label: string }[])}
+          value={selectedTags}
+          placeholder="Select or create tags..."
+          className="flex-1" // Allow it to grow
+          styles={{ // Basic styling to match other inputs
+            control: (provided, state) => ({
+              ...provided,
+              backgroundColor: 'var(--bg)',
+              borderColor: state.isFocused ? 'var(--primary)' : 'var(--neutral-300)',
+              color: 'var(--fg)',
+              '&:hover': {
+                borderColor: 'var(--primary)',
+              },
+              boxShadow: state.isFocused ? '0 0 0 1px var(--primary)' : 'none',
+            }),
+            input: (provided) => ({
+              ...provided,
+              color: 'var(--fg)',
+            }),
+            singleValue: (provided) => ({
+              ...provided,
+              color: 'var(--fg)',
+            }),
+            multiValue: (provided) => ({
+              ...provided,
+              backgroundColor: 'var(--surface)',
+              color: 'var(--fg)',
+            }),
+            multiValueLabel: (provided) => ({
+              ...provided,
+              color: 'var(--fg)',
+            }),
+            multiValueRemove: (provided) => ({
+              ...provided,
+              color: 'var(--fg)',
+              '&:hover': {
+                backgroundColor: 'var(--neutral-200)',
+                color: 'var(--fg)',
+              },
+            }),
+            menu: (provided) => ({
+              ...provided,
+              backgroundColor: 'var(--bg)',
+            }),
+            option: (provided, state) => ({
+              ...provided,
+              backgroundColor: state.isFocused ? 'var(--neutral-200)' : 'var(--bg)',
+              color: 'var(--fg)',
+              '&:active': {
+                backgroundColor: 'var(--neutral-300)',
+              },
+            }),
+          }}
         />
         <button
           type="submit"
