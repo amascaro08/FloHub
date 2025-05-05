@@ -56,14 +56,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const PdfPrinter = require('pdfmake');
     const vfsFonts = require('pdfmake/build/vfs_fonts');
 
-    const printer = new PdfPrinter({
+    const printer = new PdfPrinter(vfsFonts.pdfMake.vfs);
+
+    const fonts = {
       Roboto: {
-        normal: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Regular.ttf'], 'base64'),
-        bold: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Medium.ttf'], 'base64'),
-        italics: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Italic.ttf'], 'base64'),
-        bolditalics: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-MediumItalic.ttf'], 'base64')
+        normal: 'Roboto-Regular.ttf',
+        bold: 'Roboto-Medium.ttf',
+        italics: 'Roboto-Italic.ttf',
+        bolditalics: 'Roboto-MediumItalic.ttf'
       }
-    });
+    };
+
+    const printerWithFonts = new PdfPrinter(fonts);
 
     const documentDefinition = {
       content: notes.map(note => ({
@@ -78,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    const pdfDoc = printer.createPdfKitDocument(documentDefinition);
+    const pdfDoc = printerWithFonts.createPdfKitDocument(documentDefinition);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="exported_notes.pdf"');
     pdfDoc.pipe(res);
