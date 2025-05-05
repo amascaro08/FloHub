@@ -66,6 +66,7 @@ export default function CalendarWidget() {
     summary: string;
     start: string;
     end: string;
+    timeZone?: string; // Add timezone field
   }>({ calendarId: '', summary: '', start: '', end: '' });
 
   // Update local state when loadedSettings changes
@@ -290,12 +291,15 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
       const method = editingEvent ? 'PUT' : 'POST';
       const url = editingEvent ? `/api/calendar/event?id=${editingEvent.id}` : '/api/calendar/event';
 
+      // Get user's timezone
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
       const res = await fetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, timeZone: userTimeZone }), // Include timezone in the body
       });
 
       if (!res.ok) {

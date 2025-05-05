@@ -37,17 +37,20 @@ export default async function handler(
     // Format start and end times for Google Calendar API
     // Assuming the frontend sends datetime-local strings (YYYY-MM-DDTHH:mm)
     // Google API expects { dateTime: '...', timeZone: '...' } or { date: '...' }
+    // Use the timezone provided by the frontend
+    const { timeZone } = req.body;
+
     if (start) {
       payload.start = {
         dateTime: new Date(start).toISOString(), // Convert to ISO 8601 format
-        timeZone: 'UTC', // Assuming UTC or determine user's timezone
+        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
       };
     }
 
     if (end) {
       payload.end = {
         dateTime: new Date(end).toISOString(), // Convert to ISO 8601 format
-        timeZone: 'UTC', // Assuming UTC or determine user's timezone
+        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
       };
     }
 
