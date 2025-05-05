@@ -32,11 +32,9 @@ export default function QuickNoteWidget() {
 
   // Combine global tags and quick note tags
   const allAvailableTags = useMemo(() => {
-    const quickNoteTags = notesResponse?.notes?.flatMap(note => note.tags) || [];
     const globalTags = userSettings?.globalTags || [];
-    const combinedTags = [...quickNoteTags, ...globalTags];
-    return Array.from(new Set(combinedTags)).sort();
-  }, [notesResponse, userSettings]);
+    return Array.from(new Set(globalTags)).sort();
+  }, [userSettings]);
 
   const tagOptions = allAvailableTags.map(tag => ({ value: tag, label: tag }));
 
