@@ -244,6 +244,17 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
         <label htmlFor="meeting-adhoc" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label> {/* Updated ID and label */}
       </div>
 
+      {/* Display Agenda/Description if event is selected */}
+      {selectedEventId && calendarEvents.find(event => event.id === selectedEventId)?.description && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
+          <div
+            className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: calendarEvents.find(event => event.id === selectedEventId)?.description || '' }}
+          />
+        </div>
+      )}
+
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1"> {/* Use flex-1 to make form take available space */}
         <div>
