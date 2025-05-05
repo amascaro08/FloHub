@@ -92,7 +92,7 @@ const AtAGlanceWidget = () => {
 
        console.log("AtAGlanceWidget: Using powerAutomateUrl:", powerAutomateUrl);
        const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${calendarIdQuery}${
-         powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
+         loadedSettings?.powerAutomateUrl ? `&o365Url=${encodeURIComponent(loadedSettings.powerAutomateUrl)}` : ''
        }`;
        console.log("AtAGlanceWidget: Fetching events from URL:", eventsApiUrl);
 
@@ -236,7 +236,7 @@ const AtAGlanceWidget = () => {
    if (session && loadedSettings) { // Only fetch data if session and settings are loaded
       fetchData();
    }
- }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
+  }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
 
  let loadingMessage = "Planning your day...";
  if (loading) {
