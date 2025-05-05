@@ -161,6 +161,8 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
         minDate = startOfDay(new Date(monday3));
         maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
     }
+    console.log("Calculated minDate (local):", minDate);
+    console.log("Calculated maxDate (local):", maxDate);
     setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
   }, [activeView, customRange]);
 
@@ -198,19 +200,25 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
 
   // Filter out past events and find the next upcoming event
   const now = new Date();
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   const upcomingEvents = data
     ? data.filter(ev => {
         const eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) : (ev.start.date ? parseISO(ev.start.date) : null);
         const eventEndDate = ev.end?.dateTime ? parseISO(ev.end.dateTime) : (ev.end?.date ? parseISO(ev.end.date) : null);
+
+        console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
+        console.log("Current time (local):", now);
+        console.log("Start of today (local):", startOfToday);
+        console.log("Active view:", activeView);
+
 
         if (!eventStartDate) return false; // Must have a start time/date
 
         // For 'today' and 'tomorrow' views, filter out events that have already ended relative to the current time.
         // For other views, assume the API has provided events within the requested range,
         // and we only need to ensure the event hasn't ended before the start of the *current* day.
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-
         if (activeView === 'today' || activeView === 'tomorrow') {
            if (eventEndDate) {
              return eventEndDate.getTime() >= now.getTime();
