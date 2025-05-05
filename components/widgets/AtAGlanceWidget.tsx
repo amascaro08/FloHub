@@ -266,7 +266,7 @@ const AtAGlanceWidget = () => {
 
   return (
     <div className="p-4 border rounded-lg shadow-sm flex flex-col h-full justify-between">
-      <div className="text-lg prose flex-1 overflow-auto" dangerouslySetInnerHTML={{ __html: formattedMessage }}>
+      <div className="text-lg flex-1 overflow-auto" dangerouslySetInnerHTML={{ __html: formattedMessage }}>
         {/* Message will be rendered here by dangerouslySetInnerHTML */}
       </div>
       <p className="text-sm mt-2 self-end">- FloCat 😼</p>
