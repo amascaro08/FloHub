@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { parseISO } from 'date-fns'; // Keep parseISO if needed elsewhere, otherwise remove
+// import { parseISO } from 'date-fns'; // Remove parseISO as it's not used in the current logic
 // import { zonedTimeToUtc } from 'date-fns-tz'; // Remove zonedTimeToUtc import
 
 export default async function handler(
@@ -75,7 +75,40 @@ export default async function handler(
     return res.status(200).json(data);
   }
 
+  // DELETE = delete
+  if (req.method === "DELETE") {
+    const { id, calendarId } = req.query;
+
+    if (!id || !calendarId) {
+      console.error("[API] Missing required fields for delete:", { id, calendarId });
+      return res.status(400).json({ error: "Missing required fields for delete" });
+    }
+
+    // Build endpoint URL for delete
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      calendarId as string
+    )}/events/${encodeURIComponent(id as string)}`;
+
+    // Call Google API to delete event
+    const apiRes = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!apiRes.ok) {
+      const err = await apiRes.json();
+      console.error("Google Calendar API delete error:", apiRes.status, err);
+      return res.status(apiRes.status).json({ error: err.error?.message || "Google API delete error" });
+    }
+
+    // Successful deletion returns 204 No Content, but Google API might return 200 with empty body
+    // We'll just return a success message
+    return res.status(200).json({ message: "Event deleted successfully" });
+  }
+
   // Method not allowed
-  res.setHeader("Allow", ["POST", "PUT"]);
+  res.setHeader("Allow", ["POST", "PUT", "DELETE"]);
   res.status(405).json({ error: "Method Not Allowed" });
 }

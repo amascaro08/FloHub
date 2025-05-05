@@ -17,6 +17,7 @@ type CustomRange = { start: string; end: string };
 
 export interface CalendarEvent {
   id: string;
+  calendarId: string; // Add calendarId field
   summary?: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
@@ -332,11 +333,31 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    // TODO: Implement actual delete logic using API
     console.log("Deleting event:", eventId);
-    setViewingEvent(null);
-    // Trigger revalidation after potential delete
-    if (apiUrl) mutate(apiUrl);
+    if (!viewingEvent) return; // Should not happen if button is visible, but for safety
+
+    try {
+      const url = `/api/calendar/event?id=${eventId}&calendarId=${viewingEvent.calendarId}`;
+
+      const res = await fetch(url, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorInfo = await res.json();
+        throw new Error(errorInfo.error || `HTTP error! status: ${res.status}`);
+      }
+
+      console.log("Event deleted successfully:", eventId);
+
+      setViewingEvent(null); // Close the details modal
+      // Trigger revalidation after successful delete
+      if (apiUrl) mutate(apiUrl);
+
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      // TODO: Show error message to user
+    }
   };
 
 
@@ -376,9 +397,13 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
               )}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              {/* TODO: Implement actual edit/delete functionality */}
-              {/* <button onClick={() => { setViewingEvent(null); openEdit(viewingEvent); }} className="px-3 py-1 border rounded">Edit</button> */}
-              {/* <button onClick={() => handleDeleteEvent(viewingEvent.id)} className="px-3 py-1 bg-red-500 text-white rounded">Delete</button> */}
+              {/* Implement actual edit/delete functionality */}
+              {viewingEvent?.source === "personal" && ( // Only allow editing/deleting personal (Google) events for now
+                <>
+                  <button onClick={() => { setViewingEvent(null); openEdit(viewingEvent); }} className="px-3 py-1 border rounded">Edit</button>
+                  <button onClick={() => handleDeleteEvent(viewingEvent.id)} className="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
+                </>
+              )}
               <button onClick={() => setViewingEvent(null)} className="px-3 py-1 border rounded">Close</button>
             </div>
           </div>
