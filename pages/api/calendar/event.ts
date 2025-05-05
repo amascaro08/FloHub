@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
+import { parseISO } from 'date-fns'; // Keep parseISO if needed elsewhere, otherwise remove
+// import { zonedTimeToUtc } from 'date-fns-tz'; // Remove zonedTimeToUtc import
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,21 +37,20 @@ export default async function handler(
     };
 
     // Format start and end times for Google Calendar API
-    // Assuming the frontend sends datetime-local strings (YYYY-MM-DDTHH:mm)
-    // Google API expects { dateTime: '...', timeZone: '...' } or { date: '...' }
-    // Use the timezone provided by the frontend
+    // Frontend sends datetime-local strings (YYYY-MM-DDTHH:mm) and the user's timezone.
+    // Send these directly to Google API, letting it handle the timezone interpretation.
     const { timeZone } = req.body;
 
     if (start) {
       payload.start = {
-        dateTime: new Date(start).toISOString(), // Convert to ISO 8601 format
+        dateTime: start, // Send raw datetime-local string
         timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
       };
     }
 
     if (end) {
       payload.end = {
-        dateTime: new Date(end).toISOString(), // Convert to ISO 8601 format
+        dateTime: end, // Send raw datetime-local string
         timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
       };
     }

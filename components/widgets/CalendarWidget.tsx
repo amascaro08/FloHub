@@ -291,15 +291,26 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
       const method = editingEvent ? 'PUT' : 'POST';
       const url = editingEvent ? `/api/calendar/event?id=${editingEvent.id}` : '/api/calendar/event';
 
-      // Get user's timezone
-      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      // Parse start and end times from datetime-local strings and convert to UTC ISO strings
+      // new Date('YYYY-MM-DDTHH:mm') is parsed as local time
+      const startLocal = form.start ? new Date(form.start) : undefined;
+      const endLocal = form.end ? new Date(form.end) : undefined;
+
+      const startUtc = startLocal && !isNaN(startLocal.getTime()) ? startLocal.toISOString() : undefined;
+      const endUtc = endLocal && !isNaN(endLocal.getTime()) ? endLocal.toISOString() : undefined;
 
       const res = await fetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...form, timeZone: userTimeZone }), // Include timezone in the body
+        body: JSON.stringify({
+          calendarId: form.calendarId,
+          summary: form.summary,
+          start: startUtc, // Send UTC ISO string
+          end: endUtc,     // Send UTC ISO string
+          // No need to send timezone if backend expects UTC
+        }),
       });
 
       if (!res.ok) {
