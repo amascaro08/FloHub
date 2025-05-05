@@ -9,21 +9,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
+        primary: { // FloHub Teal
           50:  '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4',
           300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6',
           600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a',
         },
-        accent: {
-          50:  '#fff7ed', 100: '#ffedd5', 200: '#fed7aa',
-          300: '#fdba74', 400: '#fb923c', 500: '#f97316',
-          600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12',
-        },
-        neutral: {
-          100: '#fafafa', 200: '#f5f5f5', 300: '#e5e5e5',
-          400: '#d4d4d4', 500: '#a3a3a3', 600: '#737373',
-          700: '#525252', 800: '#404040', 900: '#262626',
-        },
+        accent: '#FB7185', // FloHub Coral
+        charcoal: '#1F2937', // Dark Charcoal
+        'cool-grey': '#9CA3AF', // Cool Grey
+        'off-white': '#F9FAFB', // Off-White
+        'soft-yellow': '#FACC15', // Soft Yellow
+        'sky-blue': '#38BDF8', // Sky Blue
       },
       borderRadius: { xl: '1.5rem' },
       boxShadow: {

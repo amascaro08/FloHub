@@ -251,7 +251,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              className="px-4 py-2 rounded border border-[var(--neutral-300)] hover:bg-[var(--neutral-200)] transition"
+              className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition"
               onClick={onClose}
               disabled={isSaving}
             >

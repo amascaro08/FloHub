@@ -310,7 +310,7 @@ export default function TaskWidget() {
                 )}
                 {/* Display task tags */}
                 {t.tags && t.tags.map(tag => (
-                  <span key={tag} className="inline-block px-2 py-0.5 rounded text-xs ml-2 bg-gray-200 text-gray-700">
+                  <span key={tag} className="inline-block px-2 py-0.5 rounded text-xs ml-2 bg-off-white text-cool-grey">
                     {tag}
                   </span>
                 ))}

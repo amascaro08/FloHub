@@ -127,7 +127,7 @@ export default function QuickNoteWidget() {
           {isSaving ? "Saving..." : "Save Note"}
         </button>
         {saveStatus === "success" && (
-          <p className="text-green-500 text-sm mt-1">Note saved!</p>
+          <p className="text-soft-yellow text-sm mt-1">Note saved!</p>
         )}
         {saveStatus === "error" && (
           <p className="text-red-500 text-sm mt-1">Failed to save note.</p>

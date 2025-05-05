@@ -485,26 +485,26 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
       {/* Filter Buttons */}
       <div className="flex space-x-2 mb-4">
         <button
-          className={`px-3 py-1 rounded text-sm ${activeView === 'today' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 py-1 rounded text-sm ${activeView === 'today' ? 'bg-primary-500 text-white' : 'bg-off-white text-cool-grey'}`}
           onClick={() => setActiveView('today')}
         >
           Today
         </button>
         <button
-          className={`px-3 py-1 rounded text-sm ${activeView === 'week' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 py-1 rounded text-sm ${activeView === 'week' ? 'bg-primary-500 text-white' : 'bg-off-white text-cool-grey'}`}
           onClick={() => setActiveView('week')}
         >
           This Week
         </button>
         <button
-          className={`px-3 py-1 rounded text-sm ${activeView === 'month' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 py-1 rounded text-sm ${activeView === 'month' ? 'bg-primary-500 text-white' : 'bg-off-white text-cool-grey'}`}
           onClick={() => setActiveView('month')}
         >
           This Month
         </button>
         {/* Custom Range button and inputs */}
         <button
-          className={`px-3 py-1 rounded text-sm ${activeView === 'custom' ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 py-1 rounded text-sm ${activeView === 'custom' ? 'bg-primary-500 text-white' : 'bg-off-white text-cool-grey'}`}
           onClick={() => setActiveView('custom')}
         >
           Custom Range
@@ -547,7 +547,7 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
                 key={ev.id}
                 className={`border-b pb-2 flex justify-between items-center cursor-pointer transition ${
                   ev.id === nextUpcomingEvent?.id // Check if it's the next upcoming event
-                    ? 'bg-yellow-100 hover:bg-yellow-200 border-yellow-500' // Highlight style
+                    ? 'bg-soft-yellow hover:bg-soft-yellow border-soft-yellow' // Highlight style
                     : 'hover:bg-[var(--neutral-100)]' // Default hover style
                 }`}
                 onClick={() => setViewingEvent(ev)}
