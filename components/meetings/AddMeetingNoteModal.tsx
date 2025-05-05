@@ -169,6 +169,14 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
             />
           </div>
+          {selectedEventDescription && ( // Display agenda if event is selected and has a description
+            <div>
+              <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
+              <div className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap">
+                {selectedEventDescription}
+              </div>
+            </div>
+          )}
           <div>
             <label htmlFor="note-content" className="block text-sm font-medium text-[var(--fg)] mb-1">Content</label>
             <textarea
@@ -180,65 +188,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               onChange={(e) => setContent(e.target.value)}
               disabled={isSaving}
             />
-          </div>
-          <div>
-            <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
-            <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-              isMulti
-              options={tagOptions}
-              onChange={handleTagChange}
-              placeholder="Select or create tags..."
-              isDisabled={isSaving}
-              isSearchable
-            />
-          </div>
-          {/* New fields for meeting notes */}
-          <div>
-            <label htmlFor="calendar-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Calendar (Optional)</label> {/* Updated label */}
-            <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-              options={calendarOptions}
-              onChange={handleCalendarChange}
-              placeholder="Select a calendar..."
-              isDisabled={isSaving || isAdhoc} // Disable if saving or ad-hoc is checked
-              isClearable
-              isSearchable
-              value={selectedCalendarId ? { value: selectedCalendarId, label: calendarList.find(cal => cal.id === selectedCalendarId)?.summary || '' } : null}
-            />
-          </div>
-           {selectedCalendarId && ( // Show event selection only if a calendar is selected
-            <div>
-              <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
-              <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-                options={eventOptions}
-                onChange={handleEventChange}
-                placeholder="Select an event..."
-                isDisabled={isSaving || isAdhoc || !calendarEvents} // Disable if saving, ad-hoc is checked, or events are loading/failed
-                isClearable
-                isSearchable
-                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
-              />
-               {calendarEventsError && <p className="text-red-500 text-sm mt-1">Error loading events.</p>} {/* Show error if events fail to load */}
-               {!calendarEvents && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
-            </div>
-          )}
-          {selectedEventDescription && ( // Display agenda if event is selected and has a description
-            <div>
-              <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
-              <div className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap">
-                {selectedEventDescription}
-              </div>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="adhoc-meeting"
-              className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
-              checked={isAdhoc}
-              onChange={handleAdhocChange}
-              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
-            />
-            <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
           </div>
           {/* Actions Section */}
           <div>
@@ -281,6 +230,57 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
                 ))}
               </ul>
             )}
+          </div>
+          <div>
+            <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--fg)] mb-1">Tags</label>
+            <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
+              isMulti
+              options={tagOptions}
+              onChange={handleTagChange}
+              placeholder="Select or create tags..."
+              isDisabled={isSaving}
+              isSearchable
+            />
+          </div>
+          {/* New fields for meeting notes */}
+          <div>
+            <label htmlFor="calendar-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Calendar (Optional)</label> {/* Updated label */}
+            <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
+              options={calendarOptions}
+              onChange={handleCalendarChange}
+              placeholder="Select a calendar..."
+              isDisabled={isSaving} // Disable if saving
+              isClearable
+              isSearchable
+              value={selectedCalendarId ? { value: selectedCalendarId, label: calendarList.find(cal => cal.id === selectedCalendarId)?.summary || '' } : null}
+            />
+          </div>
+           {selectedCalendarId && ( // Show event selection only if a calendar is selected
+            <div>
+              <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
+              <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
+                options={eventOptions}
+                onChange={handleEventChange}
+                placeholder="Select an event..."
+                isDisabled={isSaving || !calendarEvents} // Disable if saving or events are loading/failed
+                isClearable
+                isSearchable
+                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
+              />
+               {calendarEventsError && <p className="text-red-500 text-sm mt-1">Error loading events.</p>} {/* Show error if events fail to load */}
+               {!calendarEvents && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="adhoc-meeting"
+              className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
+              checked={isAdhoc}
+              onChange={handleAdhocChange}
+              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
+            />
+            <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
           </div>
           <div className="flex justify-end gap-2">
             <button
