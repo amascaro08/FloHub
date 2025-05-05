@@ -86,12 +86,16 @@ export default async function handler(
     }
 //
     // Fetch O365 events if o365Url is provided
+:start_line:89
+-------
     if (typeof o365Url === "string" && o365Url.startsWith("http")) {
+      console.log("Attempting to fetch O365 events from URL:", o365Url); // Log the URL
       try {
         const o365Res = await fetch(o365Url);
+        console.log("O365 fetch response status:", o365Res.status); // Log the response status
         if (o365Res.ok) {
           const o365Data = await o365Res.json();
-          console.log("O365 events data fetched:", o365Data);
+          console.log("O365 events data fetched:", o365Data); // Log raw data
           // Try to normalize O365 events to CalendarEvent shape
           // Assume o365Data is an array of events or has an "events" property
           const o365EventsRaw = Array.isArray(o365Data)
@@ -124,7 +128,7 @@ export default async function handler(
 
               return (startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin;
             });
-          console.log("O365 mapped and filtered events:", o365Events); // Added logging for mapped and filtered O365 events
+          console.log("O365 mapped and filtered events:", o366Events); // Added logging for mapped and filtered O365 events
           allEvents.push(...o365Events);
         } else {
           console.error("Failed to fetch O365 events, status:", o365Res.status);
