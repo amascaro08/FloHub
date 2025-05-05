@@ -206,40 +206,44 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
   startOfToday.setHours(0, 0, 0, 0);
 
   const upcomingEvents = data
-    ? data.filter(ev => {
-        const eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) : (ev.start.date ? parseISO(ev.start.date) : null);
-        const eventEndDate = ev.end?.dateTime ? parseISO(ev.end.dateTime) : (ev.end?.date ? parseISO(ev.end.date) : null);
+    ? data
+        .filter((event, index, self) => // Filter out duplicates based on ID
+          index === self.findIndex((e) => e.id === event.id)
+        )
+        .filter(ev => {
+          const eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) : (ev.start.date ? parseISO(ev.start.date) : null);
+          const eventEndDate = ev.end?.dateTime ? parseISO(ev.end.dateTime) : (ev.end?.date ? parseISO(ev.end.date) : null);
 
-        console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
-        console.log("Current time (local):", now);
-        console.log("Start of today (local):", startOfToday);
-        console.log("Active view:", activeView);
+          console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
+          console.log("Current time (local):", now);
+          console.log("Start of today (local):", startOfToday);
+          console.log("Active view:", activeView);
 
 
-        if (!eventStartDate) return false; // Must have a start time/date
+          if (!eventStartDate) return false; // Must have a start time/date
 
-        // For 'today' and 'tomorrow' views, filter out events that have already ended relative to the current time.
-        // For other views, assume the API has provided events within the requested range,
-        // and we only need to ensure the event hasn't ended before the start of the *current* day.
-        if (activeView === 'today' || activeView === 'tomorrow') {
-           if (eventEndDate) {
-             return eventEndDate.getTime() >= now.getTime();
-           } else if (ev.start.date && !ev.start.dateTime) {
-             // All-day event today/tomorrow
-             const allDayEndDate = new Date(ev.start.date);
-             allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
-             return allDayEndDate.getTime() >= now.getTime();
-           } else {
-              // Timed event with no end time? Assume it's ongoing from start time
-              return eventStartDate.getTime() >= now.getTime();
-           }
-        } else {
-          // For week, month, custom, show events that start on or after the start of today,
-          // and are within the API's fetched range (which is handled by timeRange).
-          // This prevents showing events from the past days of the current week/month/custom range.
-          return eventStartDate.getTime() >= startOfToday.getTime();
-        }
-      })
+          // For 'today' and 'tomorrow' views, filter out events that have already ended relative to the current time.
+          // For other views, assume the API has provided events within the requested range,
+          // and we only need to ensure the event hasn't ended before the start of the *current* day.
+          if (activeView === 'today' || activeView === 'tomorrow') {
+             if (eventEndDate) {
+               return eventEndDate.getTime() >= now.getTime();
+             } else if (ev.start.date && !ev.start.dateTime) {
+               // All-day event today/tomorrow
+               const allDayEndDate = new Date(ev.start.date);
+               allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
+               return allDayEndDate.getTime() >= now.getTime();
+             } else {
+                // Timed event with no end time? Assume it's ongoing from start time
+                return eventStartDate.getTime() >= now.getTime();
+             }
+          } else {
+            // For week, month, custom, show events that start on or after the start of today,
+            // and are within the API's fetched range (which is handled by timeRange).
+            // This prevents showing events from the past days of the current week/month/custom range.
+            return eventStartDate.getTime() >= startOfToday.getTime();
+          }
+        })
     : [];
 
   // The next upcoming event is the first one in the sorted, filtered list
