@@ -332,8 +332,8 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
     }
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
-    console.log("Deleting event:", eventId);
+  const handleDeleteEvent = async (eventId: string, calendarId: string) => {
+    console.log("Deleting event:", eventId, "from calendar:", calendarId);
     if (!viewingEvent) return; // Should not happen if button is visible, but for safety
 
     try {
@@ -401,7 +401,7 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
               {viewingEvent?.source === "personal" && ( // Only allow editing/deleting personal (Google) events for now
                 <>
                   <button onClick={() => { setViewingEvent(null); openEdit(viewingEvent); }} className="px-3 py-1 border rounded">Edit</button>
-                  <button onClick={() => handleDeleteEvent(viewingEvent.id)} className="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
+                  <button onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)} className="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
                 </>
               )}
               <button onClick={() => setViewingEvent(null)} className="px-3 py-1 border rounded">Close</button>

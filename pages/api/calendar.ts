@@ -5,6 +5,7 @@ import { parseISO } from 'date-fns'; // Import parseISO
 
 export type CalendarEvent = {
   id: string;
+  calendarId: string; // Add calendarId field
   summary: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
@@ -73,6 +74,7 @@ export default async function handler(
           // Tag as personal (Google) and normalize fields
           allEvents.push(...body.items.map((item: any) => ({
             id: item.id,
+            calendarId: id, // Include the calendarId
             summary: item.summary || "No Title",
             start: item.start || { dateTime: "", timeZone: "" },
             end: item.end || { dateTime: "", timeZone: "" },
@@ -143,7 +145,8 @@ export default async function handler(
     }
     const accessToken = token.accessToken as string;
 
-    const { summary, start, end, description, source } = req.body as {
+    const { calendarId, summary, start, end, description, source } = req.body as {
+      calendarId: string; // Include calendarId in the type
       summary: string;
       start: string;
       end: string;
@@ -160,6 +163,7 @@ export default async function handler(
 
     const newEvent = {
       id: `evt_${Date.now()}`,
+      calendarId, // Include calendarId in the new event object
       summary,
       start: { dateTime: start },
       end: { dateTime: end },
