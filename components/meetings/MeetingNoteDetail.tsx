@@ -10,7 +10,7 @@ import type { CalendarEvent } from "@/components/widgets/CalendarWidget"; // Imp
 type MeetingNoteDetailProps = { // Renamed type
   note: Note;
   // Update onSave type to include new fields and actions
-  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[]) => Promise<void>; // Include updatedActions
+  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string) => Promise<void>; // Include updatedActions and updatedAgenda
   onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
   isSaving: boolean;
   existingTags: string[]; // Add existingTags to props
@@ -21,6 +21,7 @@ type MeetingNoteDetailProps = { // Renamed type
 export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, existingTags, calendarEvents }: MeetingNoteDetailProps) { // Destructure new prop
   const [title, setTitle] = useState(note.title || ""); // Add state for title
   const [content, setContent] = useState(note.content);
+  const [agenda, setAgenda] = useState(""); // Add state for agenda
   const [selectedTags, setSelectedTags] = useState<string[]>(note.tags || []); // State for selected tags (allow multiple)
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(note.eventId); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(note.eventTitle); // State for selected event title
@@ -34,6 +35,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   useEffect(() => {
     setTitle(note.title || ""); // Update title state
     setContent(note.content);
+    setAgenda(""); // Clear agenda when a new note is selected (or initialize from note.agenda if it exists)
     setSelectedTags(note.tags || []); // Update selected tags state
     setSelectedEventId(note.eventId); // Update selected event ID state
     setSelectedEventTitle(note.eventTitle); // Update selected event title state
@@ -84,6 +86,10 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
      emailContent += `Associated Event: ${note.eventTitle}\n\n`;
    } else if (note.isAdhoc) {
      emailContent += `Ad-hoc Meeting\n\n`;
+   }
+
+   if (agenda.trim()) { // Include agenda in email content
+     emailContent += `Agenda:\n${agenda}\n\n`;
    }
 
    if (note.content) {
@@ -163,7 +169,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     e.preventDefault();
     if (!content.trim() || isSaving) return;
 
-    await onSave(note.id, title, content, selectedTags, selectedEventId, selectedEventTitle, isAdhoc, actions); // Include actions in onSave call
+    await onSave(note.id, title, content, selectedTags, selectedEventId, selectedEventTitle, isAdhoc, actions, agenda); // Include actions and agenda in onSave call
   };
 
 
@@ -244,16 +250,19 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
         <label htmlFor="meeting-adhoc" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label> {/* Updated ID and label */}
       </div>
 
-      {/* Display Agenda/Description if event is selected */}
-      {selectedEventId && calendarEvents.find(event => event.id === selectedEventId)?.description && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
-          <div
-            className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: calendarEvents.find(event => event.id === selectedEventId)?.description || '' }}
-          />
-        </div>
-      )}
+      {/* Agenda Input Field */}
+      <div className="mb-4">
+        <label htmlFor="meeting-note-agenda" className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label> {/* New Agenda label */}
+        <textarea
+          id="meeting-note-agenda" // New Agenda ID
+          className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
+          rows={3} // Adjust rows as needed
+          placeholder="Enter meeting agenda here..." // New Agenda placeholder
+          value={agenda}
+          onChange={(e) => setAgenda(e.target.value)}
+          disabled={isSaving}
+        />
+      </div>
 
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1"> {/* Use flex-1 to make form take available space */}

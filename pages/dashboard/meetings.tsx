@@ -138,7 +138,7 @@ export default function MeetingsPage() {
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
 
-  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[] }) => { // Add actions to type
+  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => { // Add actions and agenda to type
     setIsSaving(true);
     try {
       // Call the new create meeting note API
@@ -162,7 +162,7 @@ export default function MeetingsPage() {
   };
 
   // Implement handleUpdateMeetingNote
-  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[]) => { // Add updatedActions to type
+  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string) => { // Add updatedActions and updatedAgenda to type
     setIsSaving(true);
     try {
       // Call the new update meeting note API
@@ -178,6 +178,7 @@ export default function MeetingsPage() {
           eventTitle: updatedEventTitle,
           isAdhoc: updatedIsAdhoc,
           actions: updatedActions, // Include actions
+          agenda: updatedAgenda, // Include agenda
         }),
       });
 
