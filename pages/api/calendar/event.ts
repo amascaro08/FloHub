@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-// import { parseISO } from 'date-fns'; // Remove parseISO as it's not used in the current logic
-// import { zonedTimeToUtc } from 'date-fns-tz'; // Remove zonedTimeToUtc import
+// Remove unused imports
+// import { parseISO } from 'date-fns';
+// import { zonedTimeToUtc } from 'date-fns-tz';
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,32 +15,22 @@ export default async function handler(
   const accessToken = token.accessToken as string;
 
   // POST = create, PUT = update
-  if (req.method === "POST" || req.method === "PUT") {
-    const { calendarId, eventId, summary, start, end } = req.body;
+  if (req.method === "POST") {
+    const { calendarId, summary, start, end, timeZone } = req.body;
     if (!calendarId || !summary || !start || !end) {
-      console.error("[API] Missing required fields:", { calendarId, summary, start, end }); // Log missing fields
-      return res.status(400).json({ error: "Missing required fields" });
+      console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });
+      return res.status(400).json({ error: "Missing required fields for create" });
     }
 
-    // Build endpoint URL
-    const baseUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+    // Build endpoint URL for create
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       calendarId
     )}/events`;
-    const url =
-      req.method === "POST"
-        ? baseUrl
-        : `${baseUrl}/${encodeURIComponent(eventId)}`;
 
-    // Prepare payload
     // Prepare payload for Google Calendar API
     const payload: any = {
       summary,
     };
-
-    // Format start and end times for Google Calendar API
-    // Frontend sends datetime-local strings (YYYY-MM-DDTHH:mm) and the user's timezone.
-    // Send these directly to Google API, letting it handle the timezone interpretation.
-    const { timeZone } = req.body;
 
     if (start) {
       payload.start = {
@@ -55,9 +46,9 @@ export default async function handler(
       };
     }
 
-    // Call Google API
+    // Call Google API to create event
     const apiRes = await fetch(url, {
-      method: req.method,
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
@@ -67,8 +58,61 @@ export default async function handler(
 
     if (!apiRes.ok) {
       const err = await apiRes.json();
-      console.error("Google Calendar API error:", apiRes.status, err); // Log Google API error status and body
-      return res.status(apiRes.status).json({ error: err.error?.message || "Google API error" });
+      console.error("Google Calendar API create error:", apiRes.status, err);
+      return res.status(apiRes.status).json({ error: err.error?.message || "Google API create error" });
+    }
+
+    const data = await apiRes.json();
+    return res.status(200).json(data);
+  }
+
+  if (req.method === "PUT") {
+    const { calendarId, summary, start, end, timeZone } = req.body;
+    const { id } = req.query; // Get eventId from query parameters
+
+    if (!id || !calendarId || !summary || !start || !end) {
+      console.error("[API] Missing required fields for update:", { id, calendarId, summary, start, end });
+      return res.status(400).json({ error: "Missing required fields for update" });
+    }
+
+    // Build endpoint URL for update
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      calendarId
+    )}/events/${encodeURIComponent(id as string)}`;
+
+    // Prepare payload for Google Calendar API
+    const payload: any = {
+      summary,
+    };
+
+    if (start) {
+      payload.start = {
+        dateTime: start, // Send raw datetime-local string
+        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+      };
+    }
+
+    if (end) {
+      payload.end = {
+        dateTime: end, // Send raw datetime-local string
+        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+      };
+    }
+
+    // Call Google API to update event
+    const apiRes = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!apiRes.ok) {
+      const err = await apiRes.json();
+      console.error("Google Calendar API update error:", apiRes.status, err);
+      return res.status(apiRes.status).json({ error: err.error?.message || "Google API update error" });
     }
 
     const data = await apiRes.json();
