@@ -11,7 +11,7 @@ export type CalendarEvent = {
   description?: string; // Add optional description field
 };
 
-type GetCalendarEventsResponse = {
+export type GetCalendarEventsResponse = {
   events?: CalendarEvent[];
   error?: string;
 };

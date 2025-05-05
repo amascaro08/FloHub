@@ -4,7 +4,7 @@
 import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
 import useSWR from "swr"; // Import useSWR
-import type { CalendarEvent } from "@/pages/api/calendar/events"; // Import CalendarEvent type with description
+import type { CalendarEvent, GetCalendarEventsResponse } from "@/pages/api/calendar/events"; // Import CalendarEvent type with description
 import type { Action } from "@/types/app"; // Import Action type
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 
@@ -40,14 +40,16 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
 
   // Fetch events for the selected calendar
-  const { data: calendarEvents, error: calendarEventsError } = useSWR<CalendarEvent[]>(
+  // Fetch events for the selected calendar
+  const { data: calendarEventsResponse, error: calendarEventsError } = useSWR<GetCalendarEventsResponse>(
     selectedCalendarId ? `/api/calendar/events?calendarId=${selectedCalendarId}` : null,
     fetcher
   );
 
   // Log fetched events for debugging
   useEffect(() => {
-  }, [calendarEvents, calendarEventsError]);
+  console.log("Fetched calendar events:", calendarEventsResponse);
+  }, [calendarEventsResponse, calendarEventsError]);
 
 
   const handleAddAction = () => {
@@ -98,7 +100,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
   const calendarOptions = calendarList.map(calendar => ({ value: calendar.id, label: calendar.summary }));
-  const eventOptions = calendarEvents?.map(event => ({ value: event.id, label: event.summary })) || []; // Use fetched events
+  const eventOptions = calendarEventsResponse?.events?.map(event => ({ value: event.id, label: event.summary })) || []; // Use fetched events array
 
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
@@ -125,7 +127,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
 
   const handleEventChange = (selectedOption: any) => {
     if (selectedOption) {
-      const selectedEvent = calendarEvents?.find(event => event.id === selectedOption.value);
+      const selectedEvent = calendarEventsResponse?.events?.find(event => event.id === selectedOption.value);
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
       setSelectedEventDescription(selectedEvent?.description); // Set the description
@@ -255,20 +257,20 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               value={selectedCalendarId ? { value: selectedCalendarId, label: calendarList.find(cal => cal.id === selectedCalendarId)?.summary || '' } : null}
             />
           </div>
-           {selectedCalendarId && ( // Show event selection only if a calendar is selected
+           {selectedCalendarId && Array.isArray(calendarEventsResponse?.events) && ( // Show event selection only if a calendar is selected and events are an array
             <div>
               <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
               <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
                 options={eventOptions}
                 onChange={handleEventChange}
                 placeholder="Select an event..."
-                isDisabled={isSaving || !calendarEvents} // Disable if saving or events are loading/failed
+                isDisabled={isSaving || !calendarEventsResponse?.events} // Disable if saving or events are loading/failed
                 isClearable
                 isSearchable
                 value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
               />
                {calendarEventsError && <p className="text-red-500 text-sm mt-1">Error loading events.</p>} {/* Show error if events fail to load */}
-               {!calendarEvents && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
+               {!calendarEventsResponse?.events && !calendarEventsError && selectedCalendarId && <p className="text-sm text-[var(--neutral-500)] mt-1">Loading events...</p>} {/* Show loading state */}
             </div>
           )}
           <div className="flex items-center gap-2">
