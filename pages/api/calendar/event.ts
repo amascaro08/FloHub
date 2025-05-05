@@ -29,11 +29,27 @@ export default async function handler(
         : `${baseUrl}/${encodeURIComponent(eventId)}`;
 
     // Prepare payload
-    const payload = {
+    // Prepare payload for Google Calendar API
+    const payload: any = {
       summary,
-      start,
-      end,
     };
+
+    // Format start and end times for Google Calendar API
+    // Assuming the frontend sends datetime-local strings (YYYY-MM-DDTHH:mm)
+    // Google API expects { dateTime: '...', timeZone: '...' } or { date: '...' }
+    if (start) {
+      payload.start = {
+        dateTime: new Date(start).toISOString(), // Convert to ISO 8601 format
+        timeZone: 'UTC', // Assuming UTC or determine user's timezone
+      };
+    }
+
+    if (end) {
+      payload.end = {
+        dateTime: new Date(end).toISOString(), // Convert to ISO 8601 format
+        timeZone: 'UTC', // Assuming UTC or determine user's timezone
+      };
+    }
 
     // Call Google API
     const apiRes = await fetch(url, {
