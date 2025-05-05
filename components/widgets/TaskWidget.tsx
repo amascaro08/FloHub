@@ -234,28 +234,27 @@ export default function TaskWidget() {
         </div>
 
         {/* Source and Tags */}
-        <div className="flex gap-2 items-center">
-           {/* Task Source Selection */}
-           <div className="flex gap-2 items-center">
-              <label className="text-sm font-medium text-[var(--fg)]">Source:</label>
-              <select
-                value={taskSource}
-                onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
-                className="
-                  border border-[var(--neutral-300)]
-                  px-3 py-1 rounded focus:outline-none
-                  focus:ring-2 focus:ring-[var(--primary)]
-                  text-[var(--fg)]
-                "
-              >
-                <option value="personal">Personal</option>
-                <option value="work">Work</option>
-              </select>
-           </div>
+        {/* Source and Tags on the same line */}
+        <div className="flex flex-row gap-2 items-center w-full"> {/* Source label, Source select, and Tags input, added w-full */}
+           <label className="text-sm font-medium text-[var(--fg)]">Source:</label>
+           <select
+             value={taskSource}
+             onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
+             className="
+               border border-[var(--neutral-300)]
+               px-3 py-1 rounded focus:outline-none
+               focus:ring-2 focus:ring-[var(--primary)]
+               text-[var(--fg)]
+             "
+           >
+             <option value="personal">Personal</option>
+             <option value="work">Work</option>
+           </select>
 
            {/* Tags Input */}
-           <div className="flex-1"> {/* Use flex-1 to make tags take available space */}
-             <label htmlFor="task-tags" className="block text-sm font-medium text-[var(--fg)] mb-1 sr-only">Tags</label> {/* Add sr-only to hide label visually */}
+           <div className="flex-1 flex-grow"> {/* This div is just for the CreatableSelect, added flex-grow */}
+             {/* The "Tags" label is not needed visually here, but keep it for accessibility with sr-only */}
+             <label htmlFor="task-tags" className="sr-only">Tags</label>
              <CreatableSelect // Use CreatableSelect for tags
                isMulti
                options={tagOptions}
