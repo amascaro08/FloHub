@@ -37,8 +37,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
     }
   }, [history]); // Scroll when history changes
 
-  if (status === "loading") return null;
-
   return (
     <div role="dialog" aria-label="FloCat chat" className="
       w-80 h-96
