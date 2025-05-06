@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { collection, addDoc } from "firebase/firestore"; // Import modular Firestore functions
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import modular Firestore functions and serverTimestamp
 
 import type { Action } from "@/types/app"; // Import Action type
 
@@ -63,7 +63,7 @@ export default async function handler(
       title: title || "", // Save title, default to empty string if not provided
       content: content,
       tags: tags || [], // Save tags as an empty array if none provided
-      createdAt: new Date(),
+      createdAt: serverTimestamp(), // Use serverTimestamp for consistency
       // Save new fields if provided
       ...(eventId && { eventId }),
       ...(eventTitle && { eventTitle }),
@@ -71,6 +71,22 @@ export default async function handler(
       ...(actions && { actions }), // Save actions if provided
     });
     const noteId = newNoteRef.id;
+
+    // 4) Process and save actions to the tasks collection if assigned to "Me"
+    if (actions && actions.length > 0) {
+      for (const action of actions) {
+        if (action.assignedTo === "Me") {
+          await addDoc(collection(db, "tasks"), {
+            userId: userId,
+            description: action.description,
+            status: action.status || "todo", // Default to "todo" if not provided
+            createdAt: serverTimestamp(), // Use serverTimestamp
+            // Optional: Link back to the meeting note if needed in the future
+            // meetingNoteId: noteId,
+          });
+        }
+      }
+    }
 
     return res.status(201).json({ success: true, noteId: noteId });
 
