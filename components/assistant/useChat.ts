@@ -25,20 +25,17 @@ const useChat = (): UseChatHook => {
     if (!message.trim()) return;
 
     const newUserMessage: ChatMessage = { role: 'user', content: message };
+    
+    // Optimistically update history with the user message
     setHistory(prevHistory => [...prevHistory, newUserMessage]);
     setInput('');
     setLoading(true);
     setStatus('loading');
 
     try {
-      // Create the updated history including the new user message
-      const updatedHistory = [...history, newUserMessage];
-
-      // Update the state with the user message immediately
-      setHistory(updatedHistory);
-
-      // Call chatWithFloCat with the updated history
-      const assistantContent = await chatWithFloCat(updatedHistory);
+      // Call chatWithFloCat with the *current* history plus the new user message
+      // Use the functional update form of setHistory to get the most recent state
+      const assistantContent = await chatWithFloCat([...history, newUserMessage]);
 
       // Add the assistant's response to the history
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
@@ -53,7 +50,6 @@ const useChat = (): UseChatHook => {
     } finally {
       setLoading(false);
     }
-
   };
 
   return {
