@@ -1,3 +1,4 @@
+import chatWithFloCat from '../../lib/assistant';
 import { useState } from 'react';
 
 interface ChatMessage {
@@ -29,16 +30,21 @@ const useChat = (): UseChatHook => {
     setLoading(true);
     setStatus('loading');
 
-    // Placeholder for sending message to the API
-    // In a real implementation, you would call chatWithFloCat here
-    console.log("Sending message to API:", message);
-
-    // Simulate a response
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const assistantResponse: ChatMessage = { role: 'assistant', content: `You said: "${message}" (This is a placeholder response)` };
-    setHistory(prevHistory => [...prevHistory, assistantResponse]);
-    setLoading(false);
-    setStatus('success');
+    // Call the chatWithFloCat API function
+    try {
+      // Assuming chatWithFloCat takes the entire history as context
+      const currentHistory = [...history, newUserMessage];
+      const assistantContent = await chatWithFloCat(currentHistory);
+      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
+      setHistory(prevHistory => [...prevHistory, assistantResponse]);
+      setStatus('success');
+    } catch (error) {
+      console.error("Error sending message to API:", error);
+      setStatus('error');
+      setHistory(prevHistory => [...prevHistory, { role: 'assistant', content: 'Error: Unable to get a response from the assistant.' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
