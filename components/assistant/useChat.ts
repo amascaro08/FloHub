@@ -30,19 +30,22 @@ const useChat = (): UseChatHook => {
     setLoading(true);
     setStatus('loading');
 
-    // Simulate an asynchronous response to test responsiveness
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const assistantContent = `Simulated response to: "${message}"`;
-    const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
-    setHistory(prevHistory => [...prevHistory, assistantResponse]);
-    setStatus('success');
-  } catch (error) {
-    console.error("Error simulating response:", error);
-    setStatus('error');
-    setHistory(prevHistory => [...prevHistory, { role: 'assistant', content: 'Error: Unable to get a simulated response.' }]);
-  } finally {
-    setLoading(false);
-  }
+    try {
+      // Simulate an asynchronous response to test responsiveness
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const assistantContent = `Simulated response to: "${message}"`;
+      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
+      setHistory(prevHistory => [...prevHistory, assistantResponse]);
+      setStatus('success');
+    } catch (error) {
+      console.error("Error simulating response:", error);
+      setStatus('error');
+      setHistory(prevHistory => [...prevHistory, { role: 'assistant', content: 'Error: Unable to get a simulated response.' }]);
+    } finally {
+      setLoading(false);
+    }
+
+  };
 
   return {
     history,
