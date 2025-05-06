@@ -104,32 +104,6 @@ export default function DashboardGrid() {
     fetchLayout();
   }, [session]);
 
-  // Load layout from Firestore on component mount
-  useEffect(() => {
-    const fetchLayout = async () => {
-      if (session?.user?.email) {
-        const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
-        try {
-          const docSnap = await getDoc(layoutRef);
-          if (docSnap.exists()) {
-            const savedLayouts = docSnap.data()?.layouts;
-            if (savedLayouts) {
-              setLayouts(savedLayouts);
-            } else {
-              setLayouts(defaultLayouts);
-            }
-          } else {
-            // If no layout exists, save the default layouts
-            await setDoc(layoutRef, { layouts: defaultLayouts });
-          }
-        } catch (e) {
-          console.error("[DashboardGrid] Error fetching layout:", e);
-        }
-      }
-    };
-
-    fetchLayout();
-  }, [session]); // Dependency on session to refetch if user changes
 
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);

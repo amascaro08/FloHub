@@ -29,19 +29,24 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
   const [actions, setActions] = useState<Action[]>([]); // State for actions
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
-  const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
+  const [assignedToType, setAssignedToType] = useState("Me"); // State for assigned to type (Me or Other)
+  const [otherAssignedToName, setOtherAssignedToName] = useState(""); // State for the name when assigned to Other
+
 
   const handleAddAction = () => {
-    if (newActionDescription.trim()) {
+    const assignedTo = assignedToType === "Me" ? "Me" : otherAssignedToName.trim();
+    if (newActionDescription.trim() && assignedTo) { // Ensure description and assignedTo are not empty
       const newAction: Action = {
         id: uuidv4(), // Generate a unique ID
         description: newActionDescription.trim(),
-        assignedTo: "Me", // Default assignment
+        assignedTo: assignedTo, // Use the determined assigned person
         status: "todo", // Default status
         createdAt: new Date().toISOString(), // Timestamp
       };
       setActions([...actions, newAction]);
       setNewActionDescription(""); // Clear the input field
+      setAssignedToType("Me"); // Reset assigned to type
+      setOtherAssignedToName(""); // Clear other assigned to name
     }
   };
 
@@ -71,7 +76,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setIsAdhoc(false);
     setActions([]); // Clear actions
     setNewActionDescription(""); // Clear new action input
-    setNewActionAssignedTo("Me"); // Reset assigned to
+    setAssignedToType("Me"); // Reset assigned to type
+    setOtherAssignedToName(""); // Clear other assigned to name
     onClose(); // Close modal after saving
   };
 
@@ -158,24 +164,40 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
                 onChange={(e) => setNewActionDescription(e.target.value)}
                 disabled={isSaving}
               />
-              <div className="flex gap-2"> {/* Flex container for assignedTo and Add button */}
-                <input
-                  type="text"
+              <div className="flex flex-col gap-2 w-full"> {/* Use flex-col for stacking assignedTo inputs */}
+                <select
                   className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
-                  placeholder="Assigned to (e.g., Me, John Doe)..."
-                  value={newActionAssignedTo}
-                  onChange={(e) => setNewActionAssignedTo(e.target.value)}
+                  value={assignedToType}
+                  onChange={(e) => {
+                    setAssignedToType(e.target.value);
+                    if (e.target.value !== "Other") {
+                      setOtherAssignedToName(""); // Clear the other name if not "Other"
+                    }
+                  }}
                   disabled={isSaving}
-                />
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleAddAction}
-                  disabled={isSaving || !newActionDescription.trim()}
                 >
-                  Add
-                </button>
+                  <option value="Me">Me</option>
+                  <option value="Other">Other</option>
+                </select>
+                {assignedToType === "Other" && (
+                  <input
+                    type="text"
+                    className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
+                    placeholder="Enter name..."
+                    value={otherAssignedToName}
+                    onChange={(e) => setOtherAssignedToName(e.target.value)}
+                    disabled={isSaving}
+                  />
+                )}
               </div>
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleAddAction}
+                disabled={isSaving || !newActionDescription.trim() || (assignedToType === "Other" && !otherAssignedToName.trim())} // Disable if description is empty or "Other" is selected and name is empty
+              >
+                Add
+              </button>
             </div>
             {actions.length > 0 && (
               <ul className="list-disc list-inside space-y-1 text-sm text-[var(--fg)]">
