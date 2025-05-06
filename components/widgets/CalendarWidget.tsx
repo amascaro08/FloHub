@@ -166,7 +166,7 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
     console.log("Calculated minDate (local):", minDate);
     console.log("Calculated maxDate (local):", maxDate);
     setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
-  }, [activeView, customRange]);
+  }, [activeView, customRange, loadedSettings]);
 
   // Build API URL for calendar events
   const apiUrl =

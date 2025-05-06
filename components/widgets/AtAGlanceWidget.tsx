@@ -237,7 +237,7 @@ const AtAGlanceWidget = () => {
    if (session && loadedSettings) { // Only fetch data if session and settings are loaded
       fetchData();
    }
-  }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
+  }, [session, loadedSettings, powerAutomateUrl]); // Refetch when session, loadedSettings, or powerAutomateUrl changes
 
  let loadingMessage = "Planning your day...";
  if (loading) {

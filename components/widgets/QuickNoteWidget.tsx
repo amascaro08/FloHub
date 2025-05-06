@@ -34,7 +34,7 @@ export default function QuickNoteWidget() {
   const allAvailableTags = useMemo(() => {
     const globalTags = userSettings?.globalTags || [];
     return Array.from(new Set(globalTags)).sort();
-  }, [userSettings]);
+  }, [userSettings, notesResponse]);
 
   const tagOptions = allAvailableTags.map(tag => ({ value: tag, label: tag }));
 

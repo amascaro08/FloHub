@@ -256,6 +256,7 @@ export default function TaskWidget() {
              {/* The "Tags" label is not needed visually here, but keep it for accessibility with sr-only */}
              <label htmlFor="task-tags" className="sr-only">Tags</label>
              <CreatableSelect // Use CreatableSelect for tags
+               key={JSON.stringify(tagOptions)}
                isMulti
                options={tagOptions}
                onChange={handleTagChange}

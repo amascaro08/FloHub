@@ -52,6 +52,7 @@ function removeUndefined(obj: any): any {
 export default function DashboardGrid() {
   const { data: session } = useSession();
   const { isLocked } = useAuth();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Define a default layout for different breakpoints
   const defaultLayouts = {
@@ -102,11 +103,14 @@ export default function DashboardGrid() {
     };
 
     fetchLayout();
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [session]);
 
-
-  // Ref to store the timeout ID for debouncing
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     // Recursively remove undefined values from the layouts object
@@ -132,7 +136,7 @@ export default function DashboardGrid() {
           console.error("[DashboardGrid] Error saving layout:", e);
         }
       }
-    }, 500); // Debounce time
+    }, 500);
   };
 
   return (
