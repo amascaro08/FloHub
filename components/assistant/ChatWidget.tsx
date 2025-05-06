@@ -24,11 +24,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
       send(messageToSend);
       // Call onMessageProcessed after sending
       onMessageProcessed();
-      // Mutate calls to refetch data after sending a message
-      mutate("/api/tasks");
-      mutate("/api/calendar");
+      // Temporarily commented out mutate calls for debugging unresponsiveness
+      // mutate("/api/tasks");
+      // mutate("/api/calendar");
     }
-  }, [messageToSend, send, onMessageProcessed]);
+  }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
   // Effect to scroll to the bottom
   useEffect(() => {
