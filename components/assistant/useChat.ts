@@ -26,7 +26,6 @@ const useChat = (): UseChatHook => {
 
     const newUserMessage: ChatMessage = { role: 'user', content: message };
     
-    setInput('');
     setLoading(true);
     setStatus('loading');
 
@@ -46,6 +45,7 @@ const useChat = (): UseChatHook => {
       setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Unable to get a response from FloCat.' }]);
     } finally {
       setLoading(false);
+      setInput('');
     }
   }, [history]);
 
