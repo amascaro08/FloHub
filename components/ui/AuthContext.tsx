@@ -40,7 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = () => signIn("google");
   const logout = () => signOut();
   const toggleLock = () => {
+    console.log("[AuthContext] toggleLock called, current isLocked:", isLocked);
     setIsLocked(!isLocked);
+    console.log("[AuthContext] toggleLock called, new isLocked:", !isLocked);
   };
 
   return (
