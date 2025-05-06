@@ -22,10 +22,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
   useEffect(() => {
     if (messageToSend) {
       send(messageToSend);
-      // Call onMessageProcessed and revalidate data after sending
+      // Call onMessageProcessed after sending
       onMessageProcessed();
-      mutate("/api/tasks");
-      mutate("/api/calendar");
+      // Temporarily commented out mutate calls for debugging unresponsiveness
+      // mutate("/api/tasks");
+      // mutate("/api/calendar");
     }
   }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
