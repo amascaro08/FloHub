@@ -1,14 +1,14 @@
 {
-  "short_name": "FlowHub",
-  "name": "FlowHub",
+  "short_name": "FloHub",
+  "name": "FloHub",
   "icons": [
     {
-      "src": "/flohub_logo.png",
+      "src": "/FloHub_Logo_Transparent.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/flohub_logo.png",
+      "src": "/FloHub_Logo_Transparent.png",
       "sizes": "512x512",
       "type": "image/png"
     }
