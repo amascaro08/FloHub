@@ -1,17 +1,40 @@
-      mutate("/api/tasks");
-      mutate("/api/calendar");
-    }
-  };
+import React, { useEffect, useRef } from 'react';
+import { mutate } from 'swr';
+import useChat from './useChat';
+
+interface ChatWidgetProps {
+  messageToSend: string | null;
+  onMessageProcessed: () => void;
+  onClose: () => void;
+}
+
+// Define a type for the message object in history
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcessed, onClose }) => {
+  const { history, send, status, loading, input, setInput } = useChat();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Effect to handle messages sent from the top input
   useEffect(() => {
     if (messageToSend) {
       send(messageToSend);
+      // Call onMessageProcessed and revalidate data after sending
       onMessageProcessed();
+      mutate("/api/tasks");
+      mutate("/api/calendar");
     }
-  }, [messageToSend]); // Dependency on messageToSend
+  }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
-  // Removed the 'toggle' function as it's no longer needed
+  // Effect to scroll to the bottom
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  }, [history]); // Scroll when history changes
 
   if (status === "loading") return null;
 
@@ -23,13 +46,9 @@
     ">
         <div
           className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]"
-          ref={el => {
-            if (el) {
-              el.scrollTop = el.scrollHeight;
-            }
-          }}
+          ref={messagesEndRef}
         >
-          {history.map((m, i) => (
+          {history.map((m: ChatMessage, i: number) => ( // Added types for m and i
             <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
               <span className={`
                 inline-block px-3 py-1 rounded-lg whitespace-pre-wrap
@@ -39,13 +58,13 @@
                 }
               `}>
                 {/* Render content, parsing markdown links */}
-                {m.content.split('\n').map((line, lineIndex) => {
+                {m.content.split('\n').map((line: string, lineIndex: number) => { // Added types for line and lineIndex
                   // Simple regex to find markdown links [text](url)
                   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
                   let lastIndex = 0;
-                  const elements = [];
+                  const elements: (string | React.ReactNode)[] = []; // Added type for elements
 
-                  line.replace(linkRegex, (match, text, url, offset) => {
+                  line.replace(linkRegex, (match: string, text: string, url: string, offset: number) => { // Added types for replace parameters
                     // Add text before the link
                     if (offset > lastIndex) {
                       elements.push(line.substring(lastIndex, offset));
@@ -94,10 +113,10 @@
             placeholder="Type a message…"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && send()} // Keep existing handler for local input
+            onKeyDown={e => e.key === "Enter" && send(input)} // Keep existing handler for local input
           />
           <button
-            onClick={() => send()}
+            onClick={() => send(input)}
             disabled={loading}
             className="
               ml-2 px-3 rounded-r text-white
@@ -118,3 +137,5 @@
       </div>
   );
 }
+
+export default ChatWidget;
