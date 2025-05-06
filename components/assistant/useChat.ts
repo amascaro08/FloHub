@@ -26,27 +26,24 @@ const useChat = (): UseChatHook => {
 
     const newUserMessage: ChatMessage = { role: 'user', content: message };
     
-    // Optimistically update history with the user message
-    setHistory(prevHistory => [...prevHistory, newUserMessage]);
     setInput('');
     setLoading(true);
     setStatus('loading');
 
     try {
-      // Call chatWithFloCat with the *current* history plus the new user message
-      // Use the functional update form of setHistory to get the most recent state
+      // Call chatWithFloCat with the current history plus the new user message
       const assistantContent = await chatWithFloCat([...history, newUserMessage]);
 
-      // Add the assistant's response to the history
+      // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
-      setHistory(prevHistory => [...prevHistory, assistantResponse]);
+      setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
 
       setStatus('success');
     } catch (error) {
       console.error("Error calling chatWithFloCat:", error);
       setStatus('error');
-      // Add error message to history
-      setHistory(prevHistory => [...prevHistory, { role: 'assistant', content: 'Error: Unable to get a response from FloCat.' }]);
+      // Add user message and error message to history
+      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Unable to get a response from FloCat.' }]);
     } finally {
       setLoading(false);
     }
