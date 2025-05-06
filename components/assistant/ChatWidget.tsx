@@ -35,7 +35,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
     }
-  }, [history]); // Scroll when history changes
+  }, [history, status]); // Scroll when history or status changes
 
   return (
     <div role="dialog" aria-label="FloCat chat" className="

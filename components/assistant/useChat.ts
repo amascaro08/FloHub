@@ -36,7 +36,9 @@ const useChat = (): UseChatHook => {
 
       // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
-      setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
+      if (assistantContent.trim() !== '') {
+        setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
+      }
 
       setStatus('success');
     } catch (error) {
