@@ -1,120 +1,3 @@
-// components/assistant/ChatWidget.tsx
-"use client";
-
-import { useState, useEffect } from "react";
-import { useSession }          from "next-auth/react";
-import useSWR, { mutate }      from "swr";
-import type { Task as TaskType } from "@/types/app";
-
-// Simple fetcher for SWR
-const fetcher = (url: string) => fetch(url).then(res => res.json());
-
-interface ChatWidgetProps {
-  onClose: () => void;
-  messageToSend: string | null;
-  onMessageProcessed: () => void;
-}
-
-export default function ChatWidget({ onClose, messageToSend, onMessageProcessed }: ChatWidgetProps) {
-  const { data: session, status } = useSession();
-  const isAuthed                   = status === "authenticated";
-
-  const [unread, setUnread]       = useState(false);
-  const [history, setHistory]     = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >(() => {
-    // Load chat history from localStorage if available
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("floCatChatHistory");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return [];
-        }
-      }
-    }
-    return [];
-  });
-  const [input, setInput]         = useState("");
-  const [loading, setLoading]     = useState(false);
-
-  // Fetch tasks & events for initial greeting
-  const { data: tasks }  = useSWR(isAuthed ? "/api/tasks"    : null, fetcher);
-  const { data: events } = useSWR(isAuthed ? "/api/calendar" : null, fetcher);
-
-  // On first load after sign-in, push a greeting
-  useEffect(() => {
-    if (
-      isAuthed &&
-      Array.isArray(tasks) &&
-      Array.isArray(events) &&
-      history.length === 0
-    ) {
-      const todayStr = new Date().toDateString();
-      const dueToday = (tasks as TaskType[]).filter((t) => {
-        const d = new Date(t.dueDate ?? "");
-        return !t.done && d.toDateString() === todayStr;
-      }).length;
-      const evtToday = events.filter((e: any) => {
-        const d = new Date(e.start.dateTime || e.start.date || "");
-        return d.toDateString() === todayStr;
-      }).length;
-
-      const hour = new Date().getHours();
-      const greet = hour < 12
-        ? "Good morning"
-        : hour < 18
-        ? "Good afternoon"
-        : "Good evening";
-
-      setHistory([
-        {
-          role: "assistant",
-          content:
-            `${greet}! I’m FloCat 🐱 — your FloHub buddy!\n` +
-            `You have ${dueToday} task${dueToday===1?"":"s"} due today and ` +
-            `${evtToday} event${evtToday===1?"":"s"} scheduled.\n` +
-            `What can I do for you today?`
-        }
-      ]);
-      setUnread(true);
-    }
-  }, [isAuthed, tasks, events, history.length]);
-
-  // Save chat history to localStorage on change
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("floCatChatHistory", JSON.stringify(history));
-    }
-  }, [history]);
-
-  // Send message to /api/assistant
-  const send = async (message?: string) => {
-    const messageContent = message ?? input.trim();
-    if (!messageContent) return;
-
-    const userMsg: { role: "user" | "assistant"; content: string } = { role: "user", content: messageContent };
-    setHistory(h => [...h, userMsg]);
-    if (!message) { // Only clear input if sending from the local input field
-      setInput("");
-    }
-    setLoading(true);
-
-    try {
-      const res  = await fetch("/api/assistant", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ history, prompt: userMsg.content }),
-      });
-      const json = await res.json();
-      const botContent = json.reply ?? json.error ?? "🤔 Hmm, something went wrong.";
-      setHistory(h => [...h, { role: "assistant", content: botContent }]);
-    } catch {
-      setHistory(h => [...h, { role: "assistant", content: "Network error. Please try again." }]);
-    } finally {
-      setLoading(false);
-      // Refresh widgets
       mutate("/api/tasks");
       mutate("/api/calendar");
     }
@@ -149,13 +32,51 @@ export default function ChatWidget({ onClose, messageToSend, onMessageProcessed 
           {history.map((m, i) => (
             <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
               <span className={`
-                inline-block px-3 py-1 rounded-lg
+                inline-block px-3 py-1 rounded-lg whitespace-pre-wrap
                 ${m.role === "assistant"
                   ? "bg-[var(--primary)] text-white"
                   : "bg-[var(--neutral-200)] text-[var(--fg)]"
                 }
               `}>
-                {m.content}
+                {/* Render content, parsing markdown links */}
+                {m.content.split('\n').map((line, lineIndex) => {
+                  // Simple regex to find markdown links [text](url)
+                  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                  let lastIndex = 0;
+                  const elements = [];
+
+                  line.replace(linkRegex, (match, text, url, offset) => {
+                    // Add text before the link
+                    if (offset > lastIndex) {
+                      elements.push(line.substring(lastIndex, offset));
+                    }
+                    // Add the link
+                    elements.push(
+                      <a
+                        key={`${i}-${lineIndex}-${offset}`}
+                        href={url}
+                        target="_blank" // Open links in a new tab
+                        rel="noopener noreferrer"
+                        className="text-[var(--accent)] hover:underline"
+                      >
+                        {text}
+                      </a>
+                    );
+                    lastIndex = offset + match.length;
+                    return match; // Return match to satisfy replace signature
+                  });
+
+                  // Add any remaining text after the last link
+                  if (lastIndex < line.length) {
+                    elements.push(line.substring(lastIndex));
+                  }
+
+                  return (
+                    <p key={`${i}-${lineIndex}`} className="mb-1 last:mb-0">
+                      {elements.length > 0 ? elements : line}
+                    </p>
+                  );
+                })}
               </span>
             </div>
           ))}
