@@ -32,9 +32,9 @@ const useChat = (): UseChatHook => {
 
     // Call the chatWithFloCat API function
     try {
-      // Assuming chatWithFloCat takes the entire history as context
-      const currentHistory = [...history, newUserMessage];
-      const assistantContent = await chatWithFloCat(currentHistory);
+      // Sending only the new message for now to test performance
+      // A more sophisticated approach might send a limited history or summary
+      const assistantContent = await chatWithFloCat([newUserMessage]);
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
       setHistory(prevHistory => [...prevHistory, assistantResponse]);
       setStatus('success');
