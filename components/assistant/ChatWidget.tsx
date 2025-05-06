@@ -25,8 +25,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
       // Call onMessageProcessed after sending
       onMessageProcessed();
       // Temporarily commented out mutate calls for debugging unresponsiveness
-      mutate("/api/tasks");
-      mutate("/api/calendar");
+      // mutate("/api/tasks");
+      // mutate("/api/calendar");
     }
   }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
