@@ -30,25 +30,20 @@ const useChat = (): UseChatHook => {
     setLoading(true);
     setStatus('loading');
 
-    try {
-      // Call chatWithFloCat with the current history plus the new user message
-      const assistantContent = await chatWithFloCat([...history, newUserMessage]);
+    // Simulate an asynchronous response to test responsiveness
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const assistantContent = `Simulated response to: "${message}"`;
+    const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
+    setHistory(prevHistory => [...prevHistory, assistantResponse]);
+    setStatus('success');
+  } catch (error) {
+    console.error("Error simulating response:", error);
+    setStatus('error');
+    setHistory(prevHistory => [...prevHistory, { role: 'assistant', content: 'Error: Unable to get a simulated response.' }]);
+  } finally {
+    setLoading(false);
+  }
 
-      // Update history with both the user message and the assistant's response
-      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
-      if (assistantContent.trim() !== '') {
-        setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
-      }
-
-      setStatus('success');
-    } catch (error) {
-      console.error("Error calling chatWithFloCat:", error);
-      setStatus('error');
-      // Add user message and error message to history
-      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Unable to get a response from FloCat.' }]);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return {
