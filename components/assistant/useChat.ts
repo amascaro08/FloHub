@@ -1,5 +1,5 @@
 import chatWithFloCat from '../../lib/assistant';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -21,7 +21,7 @@ const useChat = (): UseChatHook => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [loading, setLoading] = useState(false);
 
-  const send = async (message: string) => {
+  const send = useCallback(async (message: string) => {
     if (!message.trim()) return;
 
     const newUserMessage: ChatMessage = { role: 'user', content: message };
@@ -47,7 +47,7 @@ const useChat = (): UseChatHook => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [history]);
 
   return {
     history,
