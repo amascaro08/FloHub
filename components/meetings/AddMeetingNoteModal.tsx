@@ -26,7 +26,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
-  const [selectedEventDescription, setSelectedEventDescription] = useState<string | undefined>(undefined); // State for selected event description/agenda
   const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
   const [actions, setActions] = useState<Action[]>([]); // State for actions
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
@@ -69,7 +68,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     setSelectedTags([]);
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
-    setSelectedEventDescription(undefined); // Clear selected event description
     setIsAdhoc(false);
     setActions([]); // Clear actions
     setNewActionDescription(""); // Clear new action input
@@ -99,13 +97,11 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       const selectedEvent = workCalendarEvents.find(event => event.id === selectedOption.value); // Use workCalendarEvents
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
-      setSelectedEventDescription(selectedEvent?.description); // Set the description
       setTitle(selectedOption.label); // Set title to event summary
       setIsAdhoc(false); // If an event is selected, it's not ad-hoc
     } else {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setSelectedEventDescription(undefined); // Clear the description
       setTitle(""); // Clear title
     }
   };
@@ -115,7 +111,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     if (e.target.checked) {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setSelectedEventDescription(undefined); // Clear selected event description
       setTitle(""); // Clear title for ad-hoc
     }
   };
@@ -139,14 +134,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
             />
           </div>
-          {selectedEventDescription && ( // Display agenda if event is selected and has a description
-            <div>
-              <label className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
-              <div className="border border-[var(--neutral-300)] px-3 py-2 rounded bg-transparent text-[var(--fg)] whitespace-pre-wrap">
-                {selectedEventDescription}
-              </div>
-            </div>
-          )}
           <div>
             <label htmlFor="note-content" className="block text-sm font-medium text-[var(--fg)] mb-1">Content</label>
             <textarea
