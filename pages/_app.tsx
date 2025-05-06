@@ -20,3 +20,16 @@ export default function App({
 }
 
 import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider
+
+// Register service worker
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('Service worker registered: ', registration);
+      })
+      .catch((error) => {
+        console.log('Service worker registration failed: ', error);
+      });
+  });
+}
