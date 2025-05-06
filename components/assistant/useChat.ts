@@ -1,3 +1,4 @@
+import { findMatchingCapability } from '../../lib/floCatCapabilities';
 import chatWithFloCat from '../../lib/assistant';
 import { useState } from 'react';
 
@@ -31,8 +32,19 @@ const useChat = (): UseChatHook => {
     setStatus('loading');
 
     try {
-      // Call chatWithFloCat with the current history plus the new user message
-      const assistantContent = await chatWithFloCat([...history, newUserMessage]);
+      // Attempt to match user input to a registered capability
+      const match = findMatchingCapability(message);
+      let assistantContent: string;
+
+      if (match) {
+        console.log(`Matched capability: ${match.capability.featureName}, Command: ${match.command}, Args: ${match.args}`);
+        // Execute the handler for the matched capability
+        assistantContent = await match.capability.handler(match.command, match.args);
+      } else {
+        console.log("No capability match, falling back to general chat.");
+        // Fallback to general chat if no capability matches
+        assistantContent = await chatWithFloCat([...history, newUserMessage]);
+      }
 
       // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
@@ -40,10 +52,10 @@ const useChat = (): UseChatHook => {
 
       setStatus('success');
     } catch (error) {
-      console.error("Error calling chatWithFloCat:", error);
+      console.error("Error processing message:", error);
       setStatus('error');
       // Add user message and error message to history
-      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Unable to get a response from FloCat.' }]);
+      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Something went wrong while processing your request.' }]);
     } finally {
       setLoading(false);
     }
