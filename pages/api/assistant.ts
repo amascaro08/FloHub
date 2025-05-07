@@ -147,21 +147,23 @@ export default async function handler(
   }
 
   // ── Fetch Context & Fallback to OpenAI ─────────────
-  try {
-    const notes = await fetchUserNotes(email);
-    const meetings = await fetchUserMeetingNotes(email);
-    const conversations = await fetchUserConversations(email);
-    const relevantContext = await findRelevantContext(prompt, notes, meetings, conversations);
+  // Temporarily skip context fetching and semantic search for debugging
+  // try {
+  //   const notes = await fetchUserNotes(email);
+  //   const meetings = await fetchUserMeetingNotes(email);
+  //   const conversations = await fetchUserConversations(email);
+  //   const relevantContext = await findRelevantContext(prompt, notes, meetings, conversations);
 
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺.`,
       },
-      {
-        role: "system",
-        content: `Relevant context:\n${relevantContext}`,
-      },
+      // Temporarily removed relevant context for debugging
+      // {
+      //   role: "system",
+      //   content: `Relevant context:\n${relevantContext}`,
+      // },
       ...history.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
@@ -172,19 +174,24 @@ export default async function handler(
       },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages,
-    });
+    try { // Moved try block to wrap only the OpenAI call
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages,
+      });
 
-    const aiReply = completion.choices[0]?.message?.content;
-    if (!aiReply) {
-      return res.status(500).json({ error: "OpenAI did not return a message." });
+      const aiReply = completion.choices[0]?.message?.content;
+      if (!aiReply) {
+        return res.status(500).json({ error: "OpenAI did not return a message." });
+      }
+
+      return res.status(200).json({ reply: aiReply });
+    } catch (err: any) {
+      console.error("Assistant error:", err);
+      return res.status(500).json({ error: err.message || "Internal server error" });
     }
-
-    return res.status(200).json({ reply: aiReply });
-  } catch (err: any) {
-    console.error("Assistant error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
-  }
+  // } catch (err: any) { // Temporarily commented out outer catch
+  //   console.error("Assistant error:", err);
+  //   return res.status(500).json({ error: err.message || "Internal server error" });
+  // }
 }
