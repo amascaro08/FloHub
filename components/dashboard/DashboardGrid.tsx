@@ -108,19 +108,31 @@ export default function DashboardGrid() {
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Ref to store the timeout ID for debouncing state updates
+  const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const onLayoutChange = (layout: any, allLayouts: any) => {
     // Recursively remove undefined values from the layouts object
     const cleanedLayouts = removeUndefined(allLayouts);
 
-    // Update the state immediately for responsiveness
-    setLayouts(cleanedLayouts);
+    // Clear any existing state update timeout
+    if (layoutChangeTimeoutRef.current) {
+      clearTimeout(layoutChangeTimeoutRef.current);
+    }
 
-    // Clear any existing timeout
+    // Set a new timeout to update the state after a short delay
+    layoutChangeTimeoutRef.current = setTimeout(() => {
+      setLayouts(cleanedLayouts);
+      console.log("[DashboardGrid] Layout state updated after debounce.");
+    }, 50); // Short debounce time for state update (e.g., 50ms)
+
+
+    // Clear any existing save timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Set a new timeout to save the cleaned layout after a delay
+    // Set a new timeout to save the cleaned layout after a longer delay
     saveTimeoutRef.current = setTimeout(async () => {
       console.log("[DashboardGrid] Attempting to save layout...");
       if (session?.user?.email) {
@@ -132,7 +144,7 @@ export default function DashboardGrid() {
           console.error("[DashboardGrid] Error saving layout:", e);
         }
       }
-    }, 500); // Debounce time
+    }, 500); // Debounce time for saving (e.g., 500ms)
   };
 
   return (
