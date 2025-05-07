@@ -64,7 +64,7 @@ export default function MeetingNoteList({ notes, selectedNoteId, onSelectNote, o
       {selectedNotes.length > 0 && (
         <button
           onClick={handleDelete}
-          className={`bg-red-500 text-white px-4 py-2 rounded ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-red-500 text-white px-4 py-2 rounded text-sm md:text-base w-full md:w-auto ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={isSaving}
         >
           Delete Selected ({selectedNotes.length})
@@ -89,18 +89,19 @@ export default function MeetingNoteList({ notes, selectedNoteId, onSelectNote, o
               {notesInGroup.map((note: Note) => (
                 <div
                   key={note.id}
-                  className={`p-3 rounded-md cursor-pointer hover:bg-[var(--neutral-200)] ${
+                  className={`p-3 rounded-md cursor-pointer hover:bg-[var(--neutral-200)] flex items-start ${
                     selectedNoteId === note.id ? "bg-[var(--neutral-300)]" : ""
                   }`}
                 >
                   <input
                     type="checkbox"
-                    id={`meeting-note-${note.id}`} // Updated ID
+                    id={`meeting-note-${note.id}`}
                     checked={selectedNotes.includes(note.id)}
                     onChange={(e) => handleNoteSelect(note.id, e.target.checked)}
                     disabled={isSaving}
+                    className="mt-1 flex-shrink-0"
                   />
-                  <label htmlFor={`meeting-note-${note.id}`} onClick={() => onSelectNote(note.id)} className="ml-2 cursor-pointer"> {/* Added ml-2 for spacing */}
+                  <label htmlFor={`meeting-note-${note.id}`} onClick={() => onSelectNote(note.id)} className="ml-2 cursor-pointer flex-1"> {/* Added flex-1 to allow text to wrap */}
                     <h3 className="font-semibold text-sm">
                       {note.title || note.eventTitle || `${note.content.substring(0, 50)}...`} {/* Display title or event title */}
                     </h3>

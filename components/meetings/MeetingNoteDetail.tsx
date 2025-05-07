@@ -259,7 +259,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
       </div>
       
       {/* AI Summary Section */}
-      <div className="mb-4 p-4 bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-lg">
+      <div className="mb-4 p-3 md:p-4 bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-lg">
         <h3 className="text-md font-semibold mb-2 text-[var(--primary-700)]">AI Summary</h3>
         {note.aiSummary ? (
           <p className="text-sm text-[var(--fg)]">{note.aiSummary}</p>
@@ -286,7 +286,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
           value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
         />
       </div>
-      <div className="flex items-center gap-2 mb-4"> {/* Added mb-4 for spacing */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap"> {/* Added flex-wrap for mobile */}
         <input
           type="checkbox"
           id="meeting-adhoc" // Updated ID
@@ -344,8 +344,8 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
           <h3 className="text-lg font-semibold mb-2">Actions</h3>
           <div className="space-y-2">
             {actions.map(action => (
-              <div key={action.id} className="flex items-center justify-between bg-[var(--neutral-100)] p-2 rounded">
-                <div className="flex items-center">
+              <div key={action.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[var(--neutral-100)] p-2 rounded">
+                <div className="flex items-start mb-2 sm:mb-0">
                   <input
                     type="checkbox"
                     checked={action.status === "done"}
@@ -353,16 +353,16 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
                     className="form-checkbox h-4 w-4 text-[var(--primary)] rounded mr-2"
                     disabled={isSaving}
                   />
-                  <div>
+                  <div className="flex-1">
                     <p className={`text-sm ${action.status === "done" ? "line-through text-[var(--neutral-500)]" : ""}`}>{action.description}</p>
                     <p className="text-xs text-[var(--neutral-600)]">Assigned to: {action.assignedTo}</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => handleActionDelete(action.id)} className="text-red-500 hover:text-red-700 text-sm" disabled={isSaving}>Delete</button>
+                <button type="button" onClick={() => handleActionDelete(action.id)} className="text-red-500 hover:text-red-700 text-sm self-end sm:self-auto" disabled={isSaving}>Delete</button>
               </div>
             ))}
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
             <input
               type="text"
               className="flex-1 border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent text-sm"
@@ -392,46 +392,50 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
         </div>
 
 
-        <div className="flex justify-end gap-2 mt-4"> {/* Added mt-4 for spacing */}
+        <div className="flex flex-wrap justify-end gap-2 mt-4"> {/* Added flex-wrap for mobile */}
           {/* Export Buttons */}
           {saveSuccess && (
             <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md mr-2">
               Saved successfully!
             </div>
           )}
-          <button
-            type="button"
-            className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleExportPdf}
-            disabled={isSaving}
-          >
-            Export as PDF
-          </button>
-          <button
-            type="button"
-            className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleCopyForEmail}
-            disabled={isSaving}
-          >
-            Copy for Email
-          </button>
+          <div className="flex gap-2 mb-2 w-full sm:w-auto sm:mb-0">
+            <button
+              type="button"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm sm:text-base rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleExportPdf}
+              disabled={isSaving}
+            >
+              Export PDF
+            </button>
+            <button
+              type="button"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm sm:text-base rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleCopyForEmail}
+              disabled={isSaving}
+            >
+              Copy Email
+            </button>
+          </div>
 
           {/* Action Buttons */}
-          <button
-            type="button" // Change type to button to prevent form submission
-            className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => onDelete(note.id)} // Call onDelete with note ID
-            disabled={isSaving}
-          >
-            Delete Meeting Note {/* Updated button text */}
-          </button>
-          <button
-            type="submit"
-            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              className={`flex-1 sm:flex-none bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 sm:px-4 text-sm sm:text-base rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={() => onDelete(note.id)}
+              disabled={isSaving}
+            >
+              Delete
+            </button>
+            <button
+              type="submit"
+              className={`flex-1 sm:flex-none bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 text-sm sm:text-base rounded focus:outline-none focus:shadow-outline ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
       </form>
       <p className="text-xs text-[var(--neutral-500)] mt-4">

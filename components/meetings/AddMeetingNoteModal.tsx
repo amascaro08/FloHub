@@ -149,8 +149,8 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="glass p-6 rounded-xl shadow-elevate-sm w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="glass p-4 md:p-6 rounded-xl shadow-elevate-sm w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">Add New Meeting Note</h2> {/* Updated title */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -167,7 +167,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
           
           {/* New fields for meeting notes */}
           {workCalendarEvents.length > 0 && ( // Show event selection only if workCalendarEvents are available
-            <div>
+            <div className="mb-2">
               <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
               <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
                 options={eventOptions}
@@ -181,7 +181,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
                {workCalendarEvents.length === 0 && <p className="text-sm text-[var(--neutral-500)] mt-1">No work calendar events found for the selected time range.</p>} {/* Show message if no events */}
             </div>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-2">
             <input
               type="checkbox"
               id="adhoc-meeting"
@@ -222,7 +222,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
           {/* Actions Section */}
           <div>
             <label className="block text-sm font-medium text-[var(--fg)] mb-1">Actions</label>
-            <div className="flex flex-col gap-2 mb-2"> {/* Use flex-col for stacking inputs */}
+            <div className="flex flex-col gap-2 mb-2"> {/* Already using flex-col for stacking inputs */}
               <input
                 type="text"
                 className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
@@ -259,11 +259,11 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               </div>
               <button
                 type="button"
-                className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 onClick={handleAddAction}
                 disabled={isSaving || !newActionDescription.trim() || (assignedToType === "Other" && !otherAssignedToName.trim())} // Disable if description is empty or "Other" is selected and name is empty
               >
-                Add
+                Add Action
               </button>
             </div>
             {actions.length > 0 && (
@@ -288,10 +288,10 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               isSearchable
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
             <button
               type="button"
-              className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition"
+              className="w-full sm:w-auto px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition text-sm sm:text-base"
               onClick={onClose}
               disabled={isSaving}
             >
@@ -299,10 +299,10 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
             </button>
             <button
               type="submit"
-              className={`bg-primary-500 text-white px-4 py-2 rounded hover:bg-primary-600 ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`w-full sm:w-auto bg-primary-500 text-white px-4 py-2 rounded hover:bg-primary-600 text-sm sm:text-base ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={isSaving || (!content.trim() || (!selectedEventId && !isAdhoc))} // Disable if content is empty AND no event/adhoc selected
             >
-              {isSaving ? "Saving..." : "Save Meeting Note"} {/* Updated button text */}
+              {isSaving ? "Saving..." : "Save Note"}
             </button>
           </div>
         </form>

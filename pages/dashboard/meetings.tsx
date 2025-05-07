@@ -287,9 +287,9 @@ export default function MeetingsPage() {
 
 
   return (
-    <div className="p-4 flex h-full"> {/* Use flex for two-column layout */}
+    <div className="p-4 flex flex-col md:flex-row h-full"> {/* Use flex-col for mobile, flex-row for larger screens */}
       {/* Left Column: Meeting Note List */}
-      <div className="w-80 border-r border-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0"> {/* Set a fixed width and prevent shrinking */}
+      <div className="w-full md:w-80 md:border-r border-[var(--neutral-300)] md:pr-4 overflow-y-auto flex-shrink-0 mb-6 md:mb-0"> {/* Full width on mobile, fixed width on larger screens */}
         <h1 className="text-2xl font-semibold mb-4">Meeting Notes</h1>
 
         <button
@@ -341,7 +341,7 @@ export default function MeetingsPage() {
       </div>
 
       {/* Right Column: Meeting Note Detail */}
-      <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
+      <div className="flex-1 p-3 md:p-6 overflow-y-auto"> {/* Smaller padding on mobile */}
         {selectedNote ? (
           // Render the MeetingNoteDetail component if a note is selected
           <MeetingNoteDetail
