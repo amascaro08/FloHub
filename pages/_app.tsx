@@ -13,18 +13,19 @@ export default function App({
   
   // Register service worker for PWA
   useEffect(() => {
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js').then(
-          function(registration) {
-            console.log('Service Worker registration successful with scope: ', registration.scope);
-          },
-          function(err) {
-            console.log('Service Worker registration failed: ', err);
-          }
-        );
-      });
-    }
+    const registerSW = async () => {
+      if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('Service Worker registration successful with scope: ', registration.scope);
+        } catch (err) {
+          console.log('Service Worker registration failed: ', err);
+        }
+      }
+    };
+    
+    // Register immediately instead of waiting for load event
+    registerSW();
   }, []);
   
   return (

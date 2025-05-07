@@ -21,18 +21,30 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   // Initialize state from localStorage, default to false if not found
-  const [isLocked, setIsLocked] = useState(() => {
-    if (typeof window !== 'undefined') { // Check if window is defined (client-side)
-      const savedLockState = localStorage.getItem('isLocked');
-      return savedLockState === 'true';
+  const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
+  
+  // Load lock state from localStorage on mount (client-side only)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') { // Check if window is defined (client-side)
+        const savedLockState = localStorage.getItem('isLocked');
+        if (savedLockState !== null) {
+          setIsLocked(savedLockState === 'true');
+        }
+      }
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
     }
-    return false; // Default to false on server-side render
-  });
+  }, []);
 
   // Save lock state to localStorage whenever it changes
   useEffect(() => {
-    if (typeof window !== 'undefined') { // Check if window is defined (client-side)
-      localStorage.setItem('isLocked', String(isLocked));
+    try {
+      if (typeof window !== 'undefined') { // Check if window is defined (client-side)
+        localStorage.setItem('isLocked', String(isLocked));
+      }
+    } catch (error) {
+      console.error("Error writing to localStorage:", error);
     }
   }, [isLocked]);
 

@@ -26,7 +26,27 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const [topInput, setTopInput] = useState('');
   
   // Get chat state from context
-  const { history, send, status, loading, input: chatInput, setInput: setChatInput, isChatOpen, setIsChatOpen } = useChat();
+  // Get chat state from context with error handling
+  const chatContext = useChat();
+  const {
+    history,
+    send,
+    status,
+    loading,
+    input: chatInput,
+    setInput: setChatInput,
+    isChatOpen,
+    setIsChatOpen
+  } = chatContext || {
+    history: [],
+    send: async () => {},
+    status: 'idle',
+    loading: false,
+    input: '',
+    setInput: () => {},
+    isChatOpen: false,
+    setIsChatOpen: () => {}
+  };
 
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
@@ -34,10 +54,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   // Handle sending message from the top input
   const handleTopInputSend = async () => {
-    if (topInput.trim()) {
-      await send(topInput.trim());
-      setTopInput(''); // Clear input after sending
-      setIsChatOpen(true); // Open chat widget after sending from top input
+    if (topInput.trim() && send) {
+      try {
+        await send(topInput.trim());
+        setTopInput(''); // Clear input after sending
+        setIsChatOpen(true); // Open chat widget after sending from top input
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
     }
   };
 

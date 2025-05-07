@@ -121,39 +121,46 @@ const DashboardGrid = () => {
   const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
-    // Recursively remove undefined values from the layouts object
-    const cleanedLayouts = removeUndefined(allLayouts);
+    try {
+      // Recursively remove undefined values from the layouts object
+      const cleanedLayouts = removeUndefined(allLayouts);
 
-    // Clear any existing state update timeout
-    if (layoutChangeTimeoutRef.current) {
-      clearTimeout(layoutChangeTimeoutRef.current);
-    }
+      // Clear any existing state update timeout
+      if (layoutChangeTimeoutRef.current) {
+        clearTimeout(layoutChangeTimeoutRef.current);
+      }
 
-    // Set a new timeout to update the state after a short delay
-    layoutChangeTimeoutRef.current = setTimeout(() => {
-      setLayouts(cleanedLayouts);
-      console.log("[DashboardGrid] Layout state updated after debounce.");
-    }, 50); // Short debounce time for state update (e.g., 50ms)
-
-
-    // Clear any existing save timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    // Set a new timeout to save the cleaned layout after a longer delay
-    saveTimeoutRef.current = setTimeout(async () => {
-      console.log("[DashboardGrid] Attempting to save layout...");
-      if (session?.user?.email) {
-        const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
+      // Set a new timeout to update the state after a short delay
+      layoutChangeTimeoutRef.current = setTimeout(() => {
         try {
-          await setDoc(layoutRef, { layouts: cleanedLayouts }); // Use cleanedLayouts directly
-          console.log("[DashboardGrid] Layout saved successfully!");
+          setLayouts(cleanedLayouts);
+          console.log("[DashboardGrid] Layout state updated after debounce.");
+        } catch (err) {
+          console.error("[DashboardGrid] Error updating layout state:", err);
+        }
+      }, 50); // Short debounce time for state update (e.g., 50ms)
+
+      // Clear any existing save timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Set a new timeout to save the cleaned layout after a longer delay
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          console.log("[DashboardGrid] Attempting to save layout...");
+          if (session?.user?.email) {
+            const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
+            await setDoc(layoutRef, { layouts: cleanedLayouts }); // Use cleanedLayouts directly
+            console.log("[DashboardGrid] Layout saved successfully!");
+          }
         } catch (e) {
           console.error("[DashboardGrid] Error saving layout:", e);
         }
-      }
-    }, 500); // Debounce time for saving (e.g., 500ms)
+      }, 500); // Debounce time for saving (e.g., 500ms)
+    } catch (err) {
+      console.error("[DashboardGrid] Error in onLayoutChange:", err);
+    }
   };
 
   return (

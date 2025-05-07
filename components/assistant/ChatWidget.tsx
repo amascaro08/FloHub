@@ -13,7 +13,7 @@ interface ChatMessage {
   htmlContent?: string; // Add optional field for parsed HTML content
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = memo(({ onClose }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
   // Get chat state from context
   const { history, send, status, loading, input, setInput } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +83,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = memo(({ onClose }) => {
         </button>
       </div>
   );
-});
+};
 
 export default memo(ChatWidget);

@@ -3,7 +3,11 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
-marked.setOptions({ gfm: true }); // Initialize marked with GFM options
+// Initialize marked with GFM options and ensure it doesn't return promises
+marked.setOptions({
+  gfm: true,
+  async: false
+});
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'; // Import formatInTimeZone and toZonedTime
 import { isSameDay } from 'date-fns'; // Import isSameDay from date-fns
 import useSWR from 'swr'; // Import useSWR
@@ -284,17 +288,25 @@ const AtAGlanceWidget = () => {
     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
   }
 
-  // Handle markdown conversion, accounting for potential Promise return
+  // Handle markdown conversion
   useEffect(() => {
     if (aiMessage) {
-      const result = marked(aiMessage);
-      if (result instanceof Promise) {
-        // If marked returns a Promise, handle it
-        result.then(html => setFormattedHtml(html))
-          .catch(err => console.error("Error converting markdown:", err));
-      } else {
-        // If marked returns a string directly
-        setFormattedHtml(result);
+      try {
+        const result = marked(aiMessage);
+        if (result instanceof Promise) {
+          // If marked returns a Promise, handle it
+          result.then(html => setFormattedHtml(html))
+            .catch(err => {
+              console.error("Error converting markdown:", err);
+              setFormattedHtml(aiMessage); // Fallback to plain text
+            });
+        } else {
+          // If marked returns a string directly
+          setFormattedHtml(result);
+        }
+      } catch (err) {
+        console.error("Error converting markdown:", err);
+        setFormattedHtml(aiMessage); // Fallback to plain text
       }
     }
   }, [aiMessage]);

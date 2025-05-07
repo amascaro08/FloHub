@@ -1,6 +1,11 @@
 import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { marked } from 'marked';
 
+// Configure marked to return strings directly instead of promises
+marked.setOptions({
+  async: false
+});
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -60,7 +65,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const assistantContent = data.reply || "Sorry, I couldn't process that request.";
 
       // Parse assistant's response markdown to HTML
-      const assistantHtmlContent = await marked(assistantContent);
+      let assistantHtmlContent;
+      try {
+        const result = marked(assistantContent);
+        assistantHtmlContent = result instanceof Promise ? await result : result;
+      } catch (error) {
+        console.error("Error parsing markdown:", error);
+        assistantHtmlContent = assistantContent;
+      }
 
       // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent, htmlContent: assistantHtmlContent };
@@ -70,7 +82,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error("Error processing message:", error);
       const errorMessage = 'Error: Something went wrong while processing your request.';
-      const errorHtmlMessage = await marked(errorMessage);
+      let errorHtmlMessage;
+      try {
+        const result = marked(errorMessage);
+        errorHtmlMessage = result instanceof Promise ? await result : result;
+      } catch (error) {
+        console.error("Error parsing markdown:", error);
+        errorHtmlMessage = errorMessage;
+      }
       
       setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage }]);
       setStatus('error');
