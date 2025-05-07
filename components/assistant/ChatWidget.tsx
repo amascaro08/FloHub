@@ -43,31 +43,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose, send, history, status,
       glass p-4 rounded-xl shadow-elevate-lg
       flex flex-col
     ">
-        <div
-          className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]"
-          ref={messagesEndRef}
-        >
-          {history.map((m: ChatMessage, i: number) => (
-            <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
-              <span className={`
-                inline-block px-3 py-1 rounded-lg whitespace-pre-wrap
-                ${m.role === "assistant"
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--neutral-200)] text-[var(--fg)]"
-                }
-              `}>
-                {/* Render pre-parsed HTML content */}
-                {m.htmlContent ? (
-                  <div dangerouslySetInnerHTML={{ __html: m.htmlContent }} />
-                ) : (
-                  m.content // Fallback to raw content if htmlContent is not available
-                )}
-              </span>
-            </div>
-          ))}
-          {loading && (
-            <p className="italic text-[var(--neutral-500)]">FloCat is typing…</p>
-          )}
+        {/* Temporarily removed message history for debugging */}
+        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
+           <p>Chat history temporarily disabled for debugging...</p>
         </div>
         <div className="flex border-t border-[var(--neutral-300)] pt-2">
           <input
