@@ -5,6 +5,7 @@ import { useSession, signIn } from "next-auth/react";
 import useSWR from "swr";
 import Link from "next/link";
 import { UserSettings } from "../../types/app"; // Import UserSettings
+import NotificationManager from "@/components/ui/NotificationManager";
 
 type CalItem = { id: string; summary: string };
 
@@ -289,6 +290,12 @@ export default function CalendarSettingsPage() {
             </span>
           ))}
         </div>
+      </section>
+
+      {/* Notifications Section */}
+      <section>
+        <h2 className="text-lg font-medium mb-2">Notifications</h2>
+        <NotificationManager />
       </section>
 
       <button

@@ -13,6 +13,7 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@types/pdfmake": "^0.2.11",
+    "@types/web-push": "^3.6.4",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.0.0",
     "firebase": "^11.6.0",
@@ -31,7 +32,8 @@
     "react-grid-layout": "^1.5.1",
     "react-select": "^5.10.1",
     "sharp": "^0.34.1",
-    "swr": "^2.3.3"
+    "swr": "^2.3.3",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

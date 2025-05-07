@@ -2,6 +2,7 @@
   "short_name": "FloHub",
   "name": "FloHub",
   "description": "Your productivity dashboard",
+  "gcm_sender_id": "103953800507",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
