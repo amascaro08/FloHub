@@ -20,13 +20,13 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote";
 
-// Memoize widget components to prevent unnecessary re-renders
-const widgetComponents: Record<WidgetType, ReactElement> = useMemo(() => ({
+// Define widget components
+const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
-}), []);
+};
 
 // Helper function to recursively remove undefined values from an object
 function removeUndefined(obj: any): any {
@@ -53,6 +53,9 @@ function removeUndefined(obj: any): any {
 const DashboardGrid = () => {
   const { data: session } = useSession();
   const { isLocked } = useAuth();
+  
+  // Memoize widget components to prevent unnecessary re-renders
+  const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
 
   // Define a default layout for different breakpoints
   const defaultLayouts = {
@@ -159,13 +162,13 @@ const DashboardGrid = () => {
       isDraggable={!isLocked}
       isResizable={!isLocked}
     >
-      {Object.keys(widgetComponents).map((key) => (
+      {Object.keys(memoizedWidgetComponents).map((key) => (
         <div key={key} className="glass p-4 rounded-xl shadow-md flex flex-col">
           <h2 className="font-semibold capitalize mb-2">
             {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
           </h2>
           <div className="flex-1 overflow-auto">
-            {widgetComponents[key as WidgetType]}
+            {memoizedWidgetComponents[key as WidgetType]}
           </div>
         </div>
       ))}
