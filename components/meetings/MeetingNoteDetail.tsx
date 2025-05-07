@@ -43,6 +43,12 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     setActions(note.actions || []); // Update actions state
     setNewActionDescription(""); // Clear new action description
     setNewActionAssignedTo("Me"); // Reset assigned to
+    
+    // Log if AI summary exists
+    console.log("Note loaded with AI summary:", note.aiSummary ? "Yes" : "No");
+    if (note.aiSummary) {
+      console.log("AI Summary content:", note.aiSummary);
+    }
   }, [note]);
 
  const handleExportPdf = async () => {
@@ -226,12 +232,19 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
       </div>
       
       {/* AI Summary Section */}
-      {note.aiSummary && (
-        <div className="mb-4 p-4 bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-lg">
-          <h3 className="text-md font-semibold mb-2 text-[var(--primary-700)]">AI Summary</h3>
+      <div className="mb-4 p-4 bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-lg">
+        <h3 className="text-md font-semibold mb-2 text-[var(--primary-700)]">AI Summary</h3>
+        {note.aiSummary ? (
           <p className="text-sm text-[var(--fg)]">{note.aiSummary}</p>
-        </div>
-      )}
+        ) : (
+          <div>
+            <p className="text-sm text-[var(--neutral-600)] italic mb-2">No AI summary available yet.</p>
+            <p className="text-xs text-[var(--neutral-500)]">
+              Fill in the agenda, content, and action items, then save the meeting note to generate an AI summary.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* New fields for meeting notes */}
       <div className="mb-4">

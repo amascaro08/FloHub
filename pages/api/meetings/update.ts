@@ -174,6 +174,7 @@ export default async function handler(
           });
           
           updateData.aiSummary = completion.choices[0]?.message?.content || undefined;
+          console.log("AI Summary updated:", updateData.aiSummary);
         }
       } catch (error) {
         console.error("Error generating AI summary:", error);

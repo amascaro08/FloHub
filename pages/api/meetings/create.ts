@@ -101,6 +101,7 @@ export default async function handler(
         });
         
         aiSummary = completion.choices[0]?.message?.content || undefined;
+        console.log("AI Summary generated:", aiSummary);
       } catch (error) {
         console.error("Error generating AI summary:", error);
         // Continue without AI summary if there's an error
