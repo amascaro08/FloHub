@@ -30,6 +30,7 @@ const useChat = (): UseChatHook => {
     // User messages don't need markdown parsing here, but we'll add the structure
     const newUserMessage: ChatMessage = { role: 'user', content: message, htmlContent: message };
     
+    // Update input, loading, and status states together
     setInput('');
     setLoading(true);
     setStatus('loading');
@@ -54,16 +55,20 @@ const useChat = (): UseChatHook => {
 
       // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent, htmlContent: assistantHtmlContent };
+      
+      // Update history, status, and loading states together
       setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
-
       setStatus('success');
+
     } catch (error) {
       console.error("Error processing message:", error);
-      setStatus('error');
-      // Add user message and error message to history
       const errorMessage = 'Error: Something went wrong while processing your request.';
       const errorHtmlMessage = await marked(errorMessage);
+      
+      // Update history, status, and loading states together on error
       setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage }]);
+      setStatus('error');
+
     } finally {
       setLoading(false);
     }
