@@ -1,13 +1,13 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, memo } from 'react'
 import { signOut } from "next-auth/react";
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon } from 'lucide-react' // Import icons
 import Link from 'next/link'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from "./AuthContext";
-import useChat from '../assistant/useChat'; // Import useChat hook
+import { useChat } from '../assistant/ChatContext'; // Import useChat from context
 
 const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
@@ -19,16 +19,14 @@ const nav = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export default function Layout({ children }: { children: ReactNode }) {
+const Layout = ({ children }: { children: ReactNode }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
   const { isLocked, toggleLock } = useAuth();
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [topInput, setTopInput] = useState('');
-  // Removed messageToSend state
-
-  // Instantiate useChat hook
-  const { history, send, status, loading, input: chatInput, setInput: setChatInput } = useChat();
+  
+  // Get chat state from context
+  const { history, send, status, loading, input: chatInput, setInput: setChatInput, isChatOpen, setIsChatOpen } = useChat();
 
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
@@ -130,7 +128,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               onFocus={() => setIsChatOpen(true)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && isChatOpen && topInput.trim()) {
-                  handleTopInputSend(); // Use the new handler
+                  handleTopInputSend();
                 }
               }}
             />
@@ -139,12 +137,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <ChatWidget
                   onClose={() => setIsChatOpen(false)}
                   key="chatwidget"
-                  send={send} // Pass send function
-                  status={status} // Pass status
-                  loading={loading} // Pass loading
-                  input={chatInput} // Pass chatInput
-                  setInput={setChatInput} // Pass setChatInput
-                  history={history} // Pass history
                 />
               </div>
             )}
@@ -171,4 +163,6 @@ export default function Layout({ children }: { children: ReactNode }) {
       </div>
     </div>
   );
-}
+};
+
+export default memo(Layout);

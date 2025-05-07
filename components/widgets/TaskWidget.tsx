@@ -3,13 +3,13 @@
 
 import { useSession } from "next-auth/react";
 import useSWR         from "swr";
-import { useState, FormEvent, useMemo } from "react"; // Import useMemo
+import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export default function TaskWidget() {
+function TaskWidget() {
   const { data: session, status } = useSession();
   const shouldFetch               = status === "authenticated";
   const { data: tasks, mutate }   = useSWR<Task[]>(
@@ -341,3 +341,5 @@ export default function TaskWidget() {
     </div>
   );
 }
+
+export default memo(TaskWidget);

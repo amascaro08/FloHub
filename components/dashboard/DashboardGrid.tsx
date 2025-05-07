@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
@@ -20,12 +20,13 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote";
 
-const widgetComponents: Record<WidgetType, ReactElement> = {
+// Memoize widget components to prevent unnecessary re-renders
+const widgetComponents: Record<WidgetType, ReactElement> = useMemo(() => ({
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
-};
+}), []);
 
 // Helper function to recursively remove undefined values from an object
 function removeUndefined(obj: any): any {
@@ -49,7 +50,7 @@ function removeUndefined(obj: any): any {
  return cleanedObj;
 }
 
-export default function DashboardGrid() {
+const DashboardGrid = () => {
   const { data: session } = useSession();
   const { isLocked } = useAuth();
 
@@ -170,4 +171,6 @@ export default function DashboardGrid() {
       ))}
     </ResponsiveGridLayout>
   );
-}
+};
+
+export default memo(DashboardGrid);

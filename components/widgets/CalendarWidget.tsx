@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useSession } from "next-auth/react"; // Import useSession
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
@@ -43,7 +43,7 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   return data;
 };
 
-export default function CalendarWidget() {
+function CalendarWidget() {
   const { data: session } = useSession(); // Get session for conditional fetching
   const { mutate } = useSWRConfig();
 
@@ -577,3 +577,5 @@ console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: 
     </div>
   );
 }
+
+export default memo(CalendarWidget);

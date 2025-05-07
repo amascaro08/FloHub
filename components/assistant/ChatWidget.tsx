@@ -1,15 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { mutate } from 'swr';
-import useChat from './useChat';
+import { useChat } from './ChatContext';
 
 interface ChatWidgetProps {
   onClose: () => void;
-  send: (message: string) => Promise<void>; // Accept send function as a prop
-  history: ChatMessage[]; // Accept history as a prop
-  status: 'idle' | 'loading' | 'success' | 'error'; // Accept status as a prop
-  loading: boolean; // Accept loading as a prop
-  input: string; // Accept input as a prop
-  setInput: (input: string) => void; // Accept setInput as a prop
 }
 
 // Define a type for the message object in history
@@ -19,7 +13,9 @@ interface ChatMessage {
   htmlContent?: string; // Add optional field for parsed HTML content
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose, send, history, status, loading, input, setInput }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = memo(({ onClose }) => {
+  // Get chat state from context
+  const { history, send, status, loading, input, setInput } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Effect to scroll to the bottom
@@ -43,9 +39,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose, send, history, status,
       glass p-4 rounded-xl shadow-elevate-lg
       flex flex-col
     ">
-        {/* Temporarily removed message history for debugging */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]">
-           <p>Chat history temporarily disabled for debugging...</p>
+        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]" ref={messagesEndRef}>
+          {history.map((message, index) => (
+            <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-[var(--neutral-200)]' : 'bg-[var(--neutral-100)]'}`}>
+              {message.htmlContent ? (
+                <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} />
+              ) : (
+                <p>{message.content}</p>
+              )}
+            </div>
+          ))}
         </div>
         <div className="flex border-t border-[var(--neutral-300)] pt-2">
           <input
@@ -80,6 +83,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose, send, history, status,
         </button>
       </div>
   );
-}
+});
 
-export default ChatWidget;
+export default memo(ChatWidget);

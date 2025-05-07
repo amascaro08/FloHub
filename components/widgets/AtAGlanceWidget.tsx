@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked'; // Import marked
 marked.setOptions({ gfm: true }); // Initialize marked with GFM options
@@ -297,4 +297,4 @@ const AtAGlanceWidget = () => {
   );
 };
 
-export default AtAGlanceWidget;
+export default memo(AtAGlanceWidget);

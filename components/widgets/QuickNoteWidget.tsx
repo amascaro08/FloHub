@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, FormEvent, useMemo } from "react"; // Import useMemo
+import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import useSWR from "swr"; // Import useSWR
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import type { UserSettings, Note } from "@/types/app"; // Import UserSettings and Note types
@@ -9,7 +9,7 @@ import type { GetNotesResponse } from "@/pages/api/notes"; // Import GetNotesRes
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export default function QuickNoteWidget() {
+function QuickNoteWidget() {
   const { data: session, status } = useSession();
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // Use state for selected tags
@@ -136,3 +136,5 @@ export default function QuickNoteWidget() {
     </div>
   );
 }
+
+export default memo(QuickNoteWidget);
