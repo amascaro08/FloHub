@@ -7,6 +7,7 @@ import Link from 'next/link'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from "./AuthContext";
+import useChat from '../assistant/useChat'; // Import useChat hook
 
 const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
@@ -24,11 +25,24 @@ export default function Layout({ children }: { children: ReactNode }) {
   const { isLocked, toggleLock } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [topInput, setTopInput] = useState('');
-  const [messageToSend, setMessageToSend] = useState<string | null>(null);
+  // Removed messageToSend state
+
+  // Instantiate useChat hook
+  const { history, send, status, loading, input: chatInput, setInput: setChatInput } = useChat();
 
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
+
+  // Handle sending message from the top input
+  const handleTopInputSend = async () => {
+    if (topInput.trim()) {
+      await send(topInput.trim());
+      setTopInput(''); // Clear input after sending
+      setIsChatOpen(true); // Open chat widget after sending from top input
+    }
+  };
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
@@ -116,8 +130,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               onFocus={() => setIsChatOpen(true)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && isChatOpen && topInput.trim()) {
-                  setMessageToSend(topInput.trim());
-                  setTopInput('');
+                  handleTopInputSend(); // Use the new handler
                 }
               }}
             />
@@ -126,8 +139,12 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <ChatWidget
                   onClose={() => setIsChatOpen(false)}
                   key="chatwidget"
-                  messageToSend={messageToSend}
-                  onMessageProcessed={() => setMessageToSend(null)}
+                  history={history} // Pass history
+                  send={send} // Pass send function
+                  status={status} // Pass status
+                  loading={loading} // Pass loading
+                  input={chatInput} // Pass chatInput
+                  setInput={setChatInput} // Pass setChatInput
                 />
               </div>
             )}

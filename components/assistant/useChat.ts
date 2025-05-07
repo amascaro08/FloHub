@@ -11,7 +11,7 @@ interface ChatMessage {
 
 interface UseChatHook {
   history: ChatMessage[];
-  send: (message: string) => void;
+  send: (message: string) => Promise<void>; // Corrected return type to Promise<void>
   status: 'idle' | 'loading' | 'success' | 'error';
   loading: boolean;
   input: string;

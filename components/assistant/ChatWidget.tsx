@@ -3,9 +3,13 @@ import { mutate } from 'swr';
 import useChat from './useChat';
 
 interface ChatWidgetProps {
-  messageToSend: string | null;
-  onMessageProcessed: () => void;
   onClose: () => void;
+  send: (message: string) => Promise<void>; // Accept send function as a prop
+  history: ChatMessage[]; // Accept history as a prop
+  status: 'idle' | 'loading' | 'success' | 'error'; // Accept status as a prop
+  loading: boolean; // Accept loading as a prop
+  input: string; // Accept input as a prop
+  setInput: (input: string) => void; // Accept setInput as a prop
 }
 
 // Define a type for the message object in history
@@ -15,26 +19,8 @@ interface ChatMessage {
   htmlContent?: string; // Add optional field for parsed HTML content
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcessed, onClose }) => {
-  const { history, send, status, loading, input, setInput } = useChat();
+const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose, send, history, status, loading, input, setInput }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Effect to handle messages sent from the top input
-  useEffect(() => {
-    const processMessage = async () => {
-      if (messageToSend) {
-        await send(messageToSend);
-        // Call onMessageProcessed AFTER sending is complete
-        onMessageProcessed();
-        // Temporarily commented out mutate calls for debugging unresponsiveness
-        // mutate("/api/tasks");
-        // mutate("/api/calendar");
-      }
-    };
-
-    processMessage();
-
-  }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
   // Effect to scroll to the bottom
   useEffect(() => {
@@ -42,6 +28,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
       messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
     }
   }, [history]); // Scroll when history changes
+
+  // Handle sending message from input
+  const handleSend = async () => {
+    if (input.trim()) {
+      await send(input.trim());
+      setInput(''); // Clear input after sending
+    }
+  };
 
   return (
     <div role="dialog" aria-label="FloCat chat" className="
@@ -85,11 +79,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
             placeholder="Type a message…"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && send(input)} // Keep existing handler for local input
+            onKeyDown={e => e.key === "Enter" && handleSend()} // Use handleSend
           />
           <button
-            onClick={() => send(input)}
-            disabled={loading}
+            onClick={handleSend} // Use handleSend
+            disabled={loading || !input.trim()} // Disable if loading or input is empty
             className="
               ml-2 px-3 rounded-r text-white
               bg-[var(--accent)] hover:opacity-90
