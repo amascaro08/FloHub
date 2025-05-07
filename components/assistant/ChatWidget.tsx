@@ -20,14 +20,19 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
 
   // Effect to handle messages sent from the top input
   useEffect(() => {
-    if (messageToSend) {
-      send(messageToSend);
-      // Call onMessageProcessed after sending
-      onMessageProcessed();
-      // Temporarily commented out mutate calls for debugging unresponsiveness
-      // mutate("/api/tasks");
-      // mutate("/api/calendar");
-    }
+    const processMessage = async () => {
+      if (messageToSend) {
+        await send(messageToSend);
+        // Call onMessageProcessed AFTER sending is complete
+        onMessageProcessed();
+        // Temporarily commented out mutate calls for debugging unresponsiveness
+        // mutate("/api/tasks");
+        // mutate("/api/calendar");
+      }
+    };
+
+    processMessage();
+
   }, [messageToSend, send, onMessageProcessed]); // Add dependencies
 
   // Effect to scroll to the bottom
