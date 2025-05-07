@@ -30,6 +30,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<UpdateMeetingNoteResponse> // Use renamed type
 ) {
+  console.log("update.ts - API handler called with method:", req.method);
+  console.log("update.ts - Request body:", req.body);
+  
   if (req.method !== "PUT" && req.method !== "PATCH") {
     res.setHeader("Allow", "PUT, PATCH");
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -186,9 +189,21 @@ export default async function handler(
 
 
     // 5) Update the meeting note in the database
-    await updateDoc(noteRef, updateData);
-
-    return res.status(200).json({ success: true });
+    console.log("update.ts - Updating document with data:", updateData);
+    try {
+      await updateDoc(noteRef, updateData);
+      console.log("update.ts - Document updated successfully");
+      
+      // Fetch the updated document to verify the changes
+      const updatedNoteSnap = await getDoc(noteRef);
+      const updatedNoteData = updatedNoteSnap.data();
+      console.log("update.ts - Updated document data:", updatedNoteData);
+      
+      return res.status(200).json({ success: true });
+    } catch (updateError: any) {
+      console.error("update.ts - Error updating document:", updateError);
+      return res.status(500).json({ error: `Error updating document: ${updateError.message}` });
+    }
 
   } catch (err: any) {
     console.error("Update meeting note error:", err); // Updated error log

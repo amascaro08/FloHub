@@ -162,34 +162,57 @@ export default function MeetingsPage() {
   };
 
   // Implement handleUpdateMeetingNote
-  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string) => { // Add updatedActions and updatedAgenda to type
+  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string): Promise<void> => { // Add updatedActions and updatedAgenda to type
+    console.log("meetings.tsx - handleUpdateMeetingNote called with:", {
+      noteId,
+      updatedTitle,
+      updatedContent,
+      updatedTags,
+      updatedEventId,
+      updatedEventTitle,
+      updatedIsAdhoc,
+      updatedActions,
+      updatedAgenda
+    });
+    
     setIsSaving(true);
     try {
       // Call the new update meeting note API
+      console.log("meetings.tsx - Sending update request to API");
+      const requestBody = {
+        id: noteId,
+        title: updatedTitle,
+        content: updatedContent,
+        tags: updatedTags,
+        eventId: updatedEventId,
+        eventTitle: updatedEventTitle,
+        isAdhoc: updatedIsAdhoc,
+        actions: updatedActions, // Include actions
+        agenda: updatedAgenda, // Include agenda
+      };
+      console.log("meetings.tsx - Request body:", requestBody);
+      
       const response = await fetch(`/api/meetings/update`, {
         method: "PUT", // Or PATCH, depending on API design
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: noteId,
-          title: updatedTitle,
-          content: updatedContent,
-          tags: updatedTags,
-          eventId: updatedEventId,
-          eventTitle: updatedEventTitle,
-          isAdhoc: updatedIsAdhoc,
-          actions: updatedActions, // Include actions
-          agenda: updatedAgenda, // Include agenda
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log("meetings.tsx - Update response status:", response.status);
+      
       if (response.ok) {
-        mutate(); // Re-fetch meeting notes to update the list
+        console.log("meetings.tsx - Update successful, mutating data");
+        // Force a refresh of the data to ensure we get the latest version with AI summary
+        await mutate(); // Re-fetch meeting notes to update the list
+        // Don't return anything to match the Promise<void> return type
       } else {
         const errorData = await response.json();
         console.error("Failed to update meeting note:", errorData.error);
+        throw new Error(errorData.error || "Failed to update meeting note");
       }
     } catch (error) {
       console.error("Error updating meeting note:", error);
+      throw error; // Re-throw the error so the component can handle it
     } finally {
       setIsSaving(false);
     }

@@ -29,6 +29,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   const [actions, setActions] = useState<Action[]>(note.actions || []); // State for actions
   const [newActionDescription, setNewActionDescription] = useState(""); // State for new action description
   const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me"); // State for new action assigned to
+  const [saveSuccess, setSaveSuccess] = useState(false); // State to track save success
 
 
   // Update state when a different note is selected
@@ -175,7 +176,33 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
     e.preventDefault();
     if (!content.trim() || isSaving) return;
 
-    await onSave(note.id, title, content, selectedTags, selectedEventId, selectedEventTitle, isAdhoc, actions, agenda); // Include actions and agenda in onSave call
+    setSaveSuccess(false); // Reset save success state
+
+    console.log("MeetingNoteDetail - Submitting update with:", {
+      noteId: note.id,
+      title,
+      content,
+      selectedTags,
+      selectedEventId,
+      selectedEventTitle,
+      isAdhoc,
+      actions,
+      agenda
+    });
+
+    try {
+      await onSave(note.id, title, content, selectedTags, selectedEventId, selectedEventTitle, isAdhoc, actions, agenda); // Include actions and agenda in onSave call
+      console.log("MeetingNoteDetail - Update submitted successfully");
+      setSaveSuccess(true); // Set save success to true
+      
+      // Show success message for 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error("MeetingNoteDetail - Error submitting update:", error);
+      alert("Failed to save meeting note. Please try again.");
+    }
   };
 
 
@@ -367,6 +394,11 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
 
         <div className="flex justify-end gap-2 mt-4"> {/* Added mt-4 for spacing */}
           {/* Export Buttons */}
+          {saveSuccess && (
+            <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md mr-2">
+              Saved successfully!
+            </div>
+          )}
           <button
             type="button"
             className="px-4 py-2 rounded border border-[var(--neutral-300)] bg-off-white text-cool-grey hover:bg-[var(--neutral-200)] transition disabled:opacity-50 disabled:cursor-not-allowed"
