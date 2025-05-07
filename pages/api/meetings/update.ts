@@ -194,38 +194,22 @@ export default async function handler(
 
     // 5) Update the meeting note in the database
     console.log("update.ts - Updating document with data:", updateData);
-    try {
-      // Add a timestamp to the update data to ensure the document is actually modified
-      updateData.updatedAt = serverTimestamp();
-      
-      // Log the final update data being sent to Firestore
-      console.log("update.ts - Final update data with timestamp:", updateData);
-      
-      // Perform the update
-      await updateDoc(noteRef, updateData);
-      console.log("update.ts - Document updated successfully");
-      
-      // Fetch the updated document to verify the changes
-      const updatedNoteSnap = await getDoc(noteRef);
-      if (!updatedNoteSnap.exists()) {
-        throw new Error("Document no longer exists after update");
-      }
-      
-      const updatedNoteData = updatedNoteSnap.data();
-      console.log("update.ts - Updated document data:", updatedNoteData);
-      
-      // Return the updated document data in the response
-      return res.status(200).json({
-        success: true,
-        updatedNote: {
-          id: id,
-          ...updatedNoteData
-        }
-      });
-    } catch (updateError: any) {
-      console.error("update.ts - Error updating document:", updateError);
-      return res.status(500).json({ error: `Error updating document: ${updateError.message}` });
-    }
+    
+    // Add a timestamp to the update data to ensure the document is actually modified
+    updateData.updatedAt = serverTimestamp();
+    
+    // Log the final update data being sent to Firestore
+    console.log("update.ts - Final update data with timestamp:", updateData);
+    
+    // Perform the update
+    await updateDoc(noteRef, updateData);
+    console.log("update.ts - Document updated successfully");
+    
+    // Return success response immediately without fetching the updated document
+    // This avoids issues with serverTimestamp() not being immediately available
+    return res.status(200).json({
+      success: true
+    });
 
   } catch (err: any) {
     console.error("Update meeting note error:", err); // Updated error log
