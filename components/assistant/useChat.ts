@@ -1,10 +1,12 @@
 import { findMatchingCapability } from '../../lib/floCatCapabilities';
 import chatWithFloCat from '../../lib/assistant';
 import { useState } from 'react';
+import { marked } from 'marked'; // Import marked
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  htmlContent?: string; // Add optional field for parsed HTML content
 }
 
 interface UseChatHook {
@@ -25,7 +27,8 @@ const useChat = (): UseChatHook => {
   const send = async (message: string) => {
     if (!message.trim()) return;
 
-    const newUserMessage: ChatMessage = { role: 'user', content: message };
+    // User messages don't need markdown parsing here, but we'll add the structure
+    const newUserMessage: ChatMessage = { role: 'user', content: message, htmlContent: message };
     
     setInput('');
     setLoading(true);
@@ -46,8 +49,11 @@ const useChat = (): UseChatHook => {
         assistantContent = await chatWithFloCat([...history, newUserMessage]);
       }
 
+      // Parse assistant's response markdown to HTML
+      const assistantHtmlContent = await marked(assistantContent);
+
       // Update history with both the user message and the assistant's response
-      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent };
+      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent, htmlContent: assistantHtmlContent };
       setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
 
       setStatus('success');
@@ -55,7 +61,9 @@ const useChat = (): UseChatHook => {
       console.error("Error processing message:", error);
       setStatus('error');
       // Add user message and error message to history
-      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: 'Error: Something went wrong while processing your request.' }]);
+      const errorMessage = 'Error: Something went wrong while processing your request.';
+      const errorHtmlMessage = await marked(errorMessage);
+      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage }]);
     } finally {
       setLoading(false);
     }

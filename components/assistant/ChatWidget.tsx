@@ -12,6 +12,7 @@ interface ChatWidgetProps {
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  htmlContent?: string; // Add optional field for parsed HTML content
 }
 
 const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcessed, onClose }) => {
@@ -52,7 +53,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
           className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]"
           ref={messagesEndRef}
         >
-          {history.map((m: ChatMessage, i: number) => ( // Added types for m and i
+          {history.map((m: ChatMessage, i: number) => (
             <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
               <span className={`
                 inline-block px-3 py-1 rounded-lg whitespace-pre-wrap
@@ -61,45 +62,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ messageToSend, onMessageProcess
                   : "bg-[var(--neutral-200)] text-[var(--fg)]"
                 }
               `}>
-                {/* Render content, parsing markdown links */}
-                {m.content.split('\n').map((line: string, lineIndex: number) => { // Added types for line and lineIndex
-                  // Simple regex to find markdown links [text](url)
-                  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                  let lastIndex = 0;
-                  const elements: (string | React.ReactNode)[] = []; // Added type for elements
-
-                  line.replace(linkRegex, (match: string, text: string, url: string, offset: number) => { // Added types for replace parameters
-                    // Add text before the link
-                    if (offset > lastIndex) {
-                      elements.push(line.substring(lastIndex, offset));
-                    }
-                    // Add the link
-                    elements.push(
-                      <a
-                        key={`${i}-${lineIndex}-${offset}`}
-                        href={url}
-                        target="_blank" // Open links in a new tab
-                        rel="noopener noreferrer"
-                        className="text-[var(--accent)] hover:underline"
-                      >
-                        {text}
-                      </a>
-                    );
-                    lastIndex = offset + match.length;
-                    return match; // Return match to satisfy replace signature
-                  });
-
-                  // Add any remaining text after the last link
-                  if (lastIndex < line.length) {
-                    elements.push(line.substring(lastIndex));
-                  }
-
-                  return (
-                    <p key={`${i}-${lineIndex}`} className="mb-1 last:mb-0">
-                      {elements.length > 0 ? elements : line}
-                    </p>
-                  );
-                })}
+                {/* Render pre-parsed HTML content */}
+                {m.htmlContent ? (
+                  <div dangerouslySetInnerHTML={{ __html: m.htmlContent }} />
+                ) : (
+                  m.content // Fallback to raw content if htmlContent is not available
+                )}
               </span>
             </div>
           ))}

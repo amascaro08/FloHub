@@ -121,8 +121,16 @@ export default function Layout({ children }: { children: ReactNode }) {
                 }
               }}
             />
-            {/* Temporarily commented out ChatWidget to diagnose hang issue */}
-            {/* ChatWidget temporarily removed for debugging hang issue */}
+            {isChatOpen && (
+              <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50"> {/* Position below input */}
+                <ChatWidget
+                  onClose={() => setIsChatOpen(false)}
+                  key="chatwidget"
+                  messageToSend={messageToSend}
+                  onMessageProcessed={() => setMessageToSend(null)}
+                />
+              </div>
+            )}
           </div>
         </header>
 
