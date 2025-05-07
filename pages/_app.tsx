@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app'
 import { SessionProvider } from 'next-auth/react'
 import Layout from '@/components/ui/Layout'
 import { ChatProvider } from '@/components/assistant/ChatContext'
+import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider at the top
 
 export default function App({
   Component,
@@ -21,5 +22,3 @@ export default function App({
     </SessionProvider>
   )
 }
-
-import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider

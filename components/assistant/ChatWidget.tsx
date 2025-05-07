@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { mutate } from 'swr';
-import { useChat } from './ChatContext';
+import { useChat } from './ChatContext'; // Make sure we're using the context version
 
 interface ChatWidgetProps {
   onClose: () => void;
