@@ -37,6 +37,7 @@ const AtAGlanceWidget = () => {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formattedHtml, setFormattedHtml] = useState<string>("FloCat is thinking...");
 
   // Fetch user settings
   const fetcher = async (url: string) => {
@@ -283,9 +284,6 @@ const AtAGlanceWidget = () => {
     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
   }
 
-  // Convert markdown to HTML
-  const [formattedHtml, setFormattedHtml] = useState<string>("FloCat is thinking...");
-  
   // Handle markdown conversion, accounting for potential Promise return
   useEffect(() => {
     if (aiMessage) {
