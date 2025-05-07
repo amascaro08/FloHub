@@ -6,6 +6,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { UserSettings } from "../../types/app"; // Import UserSettings
 import NotificationManager from "@/components/ui/NotificationManager";
+import WidgetManager from "@/components/ui/WidgetManager";
 
 type CalItem = { id: string; summary: string };
 
@@ -37,6 +38,7 @@ export default function CalendarSettingsPage() {
     },
     powerAutomateUrl: "",
     globalTags: [], // Initialize globalTags
+    activeWidgets: ["tasks", "calendar", "ataglance", "quicknote", "debug"], // Initialize active widgets
   });
 
   // 4) Fetch persistent user settings via SWR
@@ -290,6 +292,14 @@ export default function CalendarSettingsPage() {
             </span>
           ))}
         </div>
+      </section>
+
+      {/* Widget Manager Section */}
+      <section>
+        <WidgetManager
+          settings={settings}
+          onSettingsChange={setSettings}
+        />
       </section>
 
       {/* Notifications Section */}

@@ -8,7 +8,16 @@ export type UserSettings = {
   defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
   customRange: { start: string; end: string };
   powerAutomateUrl?: string;
-  globalTags: string[]; // New field for global tags
+  globalTags: string[]; // Field for global tags
+  activeWidgets?: string[]; // Array of active widget IDs
+};
+
+// Define a type for widget configuration
+export type WidgetConfig = {
+  id: string;
+  name: string;
+  description: string;
+  component: string;
 };
 
 // Define a type for actions within a meeting note

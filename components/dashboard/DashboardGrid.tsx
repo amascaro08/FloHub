@@ -16,6 +16,7 @@ import { useAuth } from "../ui/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useSession } from "next-auth/react";
+import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -55,6 +56,7 @@ function removeUndefined(obj: any): any {
 const DashboardGrid = () => {
   const { data: session } = useSession();
   const { isLocked } = useAuth();
+  const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
   
   // Memoize widget components to prevent unnecessary re-renders
   const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
@@ -85,6 +87,37 @@ const DashboardGrid = () => {
   };
 
   const [layouts, setLayouts] = useState(defaultLayouts);
+  
+  // Fetch user settings to get active widgets
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      if (session?.user?.email) {
+        try {
+          const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
+          const docSnap = await getDoc(settingsDocRef);
+          
+          if (docSnap.exists()) {
+            const userSettings = docSnap.data() as UserSettings;
+            if (userSettings.activeWidgets) {
+              setActiveWidgets(userSettings.activeWidgets);
+            } else {
+              // If activeWidgets doesn't exist, use all widgets
+              setActiveWidgets(Object.keys(widgetComponents) as string[]);
+            }
+          } else {
+            // If no settings exist, use all widgets
+            setActiveWidgets(Object.keys(widgetComponents) as string[]);
+          }
+        } catch (e) {
+          console.error("[DashboardGrid] Error fetching user settings:", e);
+          // Default to all widgets on error
+          setActiveWidgets(Object.keys(widgetComponents) as string[]);
+        }
+      }
+    };
+    
+    fetchUserSettings();
+  }, [session]);
 
   // Load layout from Firestore on component mount
   useEffect(() => {
@@ -119,6 +152,25 @@ const DashboardGrid = () => {
 
   // Ref to store the timeout ID for debouncing state updates
   const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Effect to update layouts when activeWidgets changes
+  useEffect(() => {
+    // Only update if we have active widgets and layouts
+    if (activeWidgets.length > 0 && Object.keys(layouts).length > 0) {
+      // Create new layouts that only include active widgets
+      const newLayouts: any = {};
+      
+      // For each breakpoint (lg, md, sm)
+      (Object.keys(layouts) as Array<keyof typeof layouts>).forEach(breakpoint => {
+        // Filter layouts to only include active widgets
+        newLayouts[breakpoint] = layouts[breakpoint].filter(
+          (item: any) => activeWidgets.includes(item.i)
+        );
+      });
+      
+      setLayouts(newLayouts);
+    }
+  }, [activeWidgets]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     try {
@@ -174,7 +226,7 @@ const DashboardGrid = () => {
       isDraggable={!isLocked}
       isResizable={!isLocked}
     >
-      {Object.keys(memoizedWidgetComponents).map((key) => (
+      {activeWidgets.map((key) => (
         <div key={key} className="glass p-4 rounded-xl shadow-md flex flex-col">
           <h2 className="font-semibold capitalize mb-2">
             {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
