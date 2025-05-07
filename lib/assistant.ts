@@ -1,30 +1,33 @@
 // lib/assistant.ts
 
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-/**
- * Send a chat‑style conversation to OpenAI and return FloCat’s reply.
- *
- * @param messages - an array of { role, content } objects,
- *                   where role is "system" | "user" | "assistant"
- */
+// This function should only be called from server-side code
 export default async function chatWithFloCat(
   messages: { role: "system" | "user" | "assistant"; content: string }[]
 ): Promise<string> {
-  // You can override the model via env; otherwise use gpt-3.5-turbo
-  const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
+  // Check if we're on the server side
+  if (typeof window !== 'undefined') {
+    console.error('chatWithFloCat should only be called from server-side code');
+    return "Error: This function can only be used on the server side.";
+  }
 
-  const completion = await openai.chat.completions.create({
-    model,
-    messages,
-    temperature: 0.7,
-    max_tokens: 500,
-  });
+  try {
+    // Make a request to our API endpoint instead of using OpenAI directly
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages }),
+    });
 
-  // content may be null, so coalesce to empty string
-  return completion.choices[0].message.content ?? "";
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.reply || "Sorry, I couldn't process that request.";
+  } catch (error) {
+    console.error('Error in chatWithFloCat:', error);
+    return "Sorry, there was an error processing your request.";
+  }
 }

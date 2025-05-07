@@ -1,6 +1,4 @@
 import React, { createContext, useContext, ReactNode, useState } from 'react';
-import { findMatchingCapability } from '../../lib/floCatCapabilities';
-import chatWithFloCat from '../../lib/assistant';
 import { marked } from 'marked';
 
 interface ChatMessage {
@@ -41,19 +39,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setStatus('loading');
 
     try {
-      // Attempt to match user input to a registered capability
-      const match = findMatchingCapability(message);
-      let assistantContent: string;
+      // Instead of using the client-side capability matching and OpenAI directly,
+      // we'll make a request to our API endpoint
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          history: history.map(msg => ({ role: msg.role, content: msg.content }))
+        }),
+      });
 
-      if (match) {
-        console.log(`Matched capability: ${match.capability.featureName}, Command: ${match.command}, Args: ${match.args}`);
-        // Execute the handler for the matched capability
-        assistantContent = await match.capability.handler(match.command, match.args);
-      } else {
-        console.log("No capability match, falling back to general chat.");
-        // Fallback to general chat if no capability matches
-        assistantContent = await chatWithFloCat([...history, newUserMessage]);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      const assistantContent = data.reply || "Sorry, I couldn't process that request.";
 
       // Parse assistant's response markdown to HTML
       const assistantHtmlContent = await marked(assistantContent);

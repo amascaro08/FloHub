@@ -11,8 +11,9 @@ import { ChatCompletionMessageParam } from "openai/resources";
 
 // Types
 type ChatRequest = {
-  history: { role: string; content: string }[];
-  prompt: string;
+  history?: { role: string; content: string }[];
+  prompt?: string;
+  message?: string; // Added for direct message support
 };
 
 type ChatResponse = {
@@ -89,13 +90,16 @@ export default async function handler(
   }
 
   const email = token.email as string;
-  const { history, prompt } = req.body as ChatRequest;
+  const { history = [], prompt, message } = req.body as ChatRequest;
 
-  if (!Array.isArray(history) || typeof prompt !== "string") {
-    return res.status(400).json({ error: "Invalid request body" });
+  // Use either prompt or message, with message taking precedence
+  const userInput = message || prompt || "";
+
+  if (!Array.isArray(history) || typeof userInput !== "string" || !userInput) {
+    return res.status(400).json({ error: "Invalid request body - missing message/prompt or invalid history" });
   }
 
-  const lowerPrompt = prompt.toLowerCase();
+  const lowerPrompt = userInput.toLowerCase();
 
   const callInternalApi = async (path: string, method: string, body: any) => {
     const url = path;
@@ -114,7 +118,7 @@ export default async function handler(
   };
 
   // ── Add Task Detection ─────────────────────────────
-  const taskMatch = prompt.match(/(?:add|new) task(?: called)? (.+?)(?: due ([\w\s]+))?$/i);
+  const taskMatch = userInput.match(/(?:add|new) task(?: called)? (.+?)(?: due ([\w\s]+))?$/i);
   if (taskMatch && taskMatch[1]) {
     const taskText = taskMatch[1].trim();
     const duePhrase = taskMatch[2]?.trim().toLowerCase();
@@ -135,7 +139,7 @@ export default async function handler(
     lowerPrompt.includes("new event") ||
     lowerPrompt.includes("schedule event")
   ) {
-    const eventMatch = prompt.match(/(?:add|new|schedule) event (.+)/i);
+    const eventMatch = userInput.match(/(?:add|new|schedule) event (.+)/i);
     if (eventMatch && eventMatch[1]) {
       const summary = eventMatch[1].trim();
       const now = new Date();
@@ -166,11 +170,11 @@ export default async function handler(
       // },
       ...history.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
-        content: msg.content,
+        content: msg.content || "", // Ensure content is never undefined
       })),
       {
         role: "user",
-        content: prompt,
+        content: userInput, // Use userInput instead of prompt
       },
     ];
 
