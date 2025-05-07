@@ -154,7 +154,7 @@ const AtAGlanceWidget = () => {
         if (!meetingsRes.ok) {
           throw new Error(`Error fetching meetings: ${meetingsRes.statusText}`);
         }
-        const meetingsData: MeetingNote[] = await meetingsRes.json();
+        const meetingsData: Note[] = await meetingsRes.json();
         setMeetings(meetingsData);
 
 
