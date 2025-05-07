@@ -10,6 +10,7 @@ import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import QuickNoteWidget from "@/components/widgets/QuickNoteWidget";
+import DebugWidget from "@/components/widgets/DebugWidget";
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext";
 import { db } from "@/lib/firebase";
@@ -18,7 +19,7 @@ import { useSession } from "next-auth/react";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "debug";
 
 // Define widget components
 const widgetComponents: Record<WidgetType, ReactElement> = {
@@ -26,6 +27,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
+  debug: <DebugWidget />,
 };
 
 // Helper function to recursively remove undefined values from an object
@@ -64,18 +66,21 @@ const DashboardGrid = () => {
       { i: "calendar", x: 3, y: 0, w: 3, h: 5 },
       { i: "ataglance", x: 0, y: 5, w: 3, h: 5 },
       { i: "quicknote", x: 3, y: 5, w: 3, h: 5 },
+      { i: "debug", x: 0, y: 10, w: 6, h: 5 },
     ],
     md: [
       { i: "tasks", x: 0, y: 0, w: 4, h: 5 },
       { i: "calendar", x: 4, y: 0, w: 4, h: 5 },
       { i: "ataglance", x: 0, y: 5, w: 4, h: 5 },
       { i: "quicknote", x: 4, y: 5, w: 4, h: 5 },
+      { i: "debug", x: 0, y: 10, w: 8, h: 5 },
     ],
     sm: [
       { i: "tasks", x: 0, y: 0, w: 6, h: 5 },
       { i: "calendar", x: 0, y: 5, w: 6, h: 5 },
       { i: "ataglance", x: 0, y: 10, w: 6, h: 5 },
       { i: "quicknote", x: 0, y: 15, w: 6, h: 5 },
+      { i: "debug", x: 0, y: 20, w: 6, h: 5 },
     ],
   };
 
