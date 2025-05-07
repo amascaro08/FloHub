@@ -71,8 +71,23 @@ const AtAGlanceWidget = () => {
    return 'other'; // Should not happen with the current logic, but as a fallback
  };
 
+ // Function to safely parse markdown (memoized to prevent unnecessary re-renders)
+ const parseMarkdown = React.useCallback((text: string): string => {
+   try {
+     const result = marked(text);
+     return typeof result === 'string' ? result : '';
+   } catch (err) {
+     console.error("Error parsing markdown:", err);
+     return text;
+   }
+ }, []);
+
  useEffect(() => {
+   let isMounted = true; // Flag to prevent state updates after unmount
+   
    const fetchData = async () => {
+     if (!isMounted) return;
+     
      setLoading(true);
      setError(null);
      setAiMessage(null); // Clear previous message while loading
@@ -203,15 +218,18 @@ const AtAGlanceWidget = () => {
           console.log("AtAGlanceWidget: upcomingEventsForPrompt:", upcomingEventsForPrompt); // Add this log
 
        // Check for cached message *after* fetching data
-       const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
-       const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
-       const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
+       try {
+         const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
+         const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
+         const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
 
-       if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval) {
-         // Use cached message if it's from the current time interval
-         setAiMessage(cachedMessage);
-         console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
-       } else {
+         if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval && isMounted) {
+           // Use cached message if it's from the current time interval
+           setAiMessage(cachedMessage);
+           // Pre-parse the markdown for the cached message
+           setFormattedHtml(parseMarkdown(cachedMessage));
+           console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
+         } else if (isMounted) {
          console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
          // Generate AI message
          const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => {
@@ -237,33 +255,50 @@ const AtAGlanceWidget = () => {
           }
 
           const aiData = await aiRes.json();
-          if (aiData.reply) {
+          if (aiData.reply && isMounted) {
             setAiMessage(aiData.reply);
+            // Pre-parse the markdown
+            setFormattedHtml(parseMarkdown(aiData.reply));
+            
             // Store the new message and timestamp in localStorage
-            localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
-            localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
-            localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
-          } else {
+            try {
+              localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
+              localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
+              localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
+            } catch (err) {
+              console.error("Error saving to localStorage:", err);
+            }
+          } else if (isMounted) {
             setError("AI assistant did not return a message.");
           }
+         }
+       } catch (err) {
+         console.error("Error accessing localStorage:", err);
        }
 
 
      } catch (err: any) {
-       setError(err.message);
-       console.error("Error fetching data or generating AI message for At A Glance widget:", err);
+       if (isMounted) {
+         setError(err.message);
+         console.error("Error fetching data or generating AI message for At A Glance widget:", err);
+       }
      } finally {
-       setLoading(false);
+       if (isMounted) {
+         setLoading(false);
+       }
      }
    };
 
-    // Fetch data when session or powerAutomateUrl changes
-   // Fetch data when session or loadedSettings changes, or when the time interval changes
-   // We don't need powerAutomateUrl in dependencies anymore as it's handled by loadedSettings
+   // Fetch data when session or loadedSettings changes
    if (session && loadedSettings) { // Only fetch data if session and settings are loaded
-      fetchData();
+     fetchData();
    }
-  }, [session, loadedSettings]); // Refetch when session or loadedSettings changes
+   
+   // Cleanup function to prevent state updates after unmount
+   return () => {
+     isMounted = false;
+   };
+  }, [session, loadedSettings, parseMarkdown]); // Include all dependencies
 
  let loadingMessage = "Planning your day...";
  if (loading) {
@@ -288,28 +323,8 @@ const AtAGlanceWidget = () => {
     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
   }
 
-  // Handle markdown conversion
-  useEffect(() => {
-    if (aiMessage) {
-      try {
-        const result = marked(aiMessage);
-        if (result instanceof Promise) {
-          // If marked returns a Promise, handle it
-          result.then(html => setFormattedHtml(html))
-            .catch(err => {
-              console.error("Error converting markdown:", err);
-              setFormattedHtml(aiMessage); // Fallback to plain text
-            });
-        } else {
-          // If marked returns a string directly
-          setFormattedHtml(result);
-        }
-      } catch (err) {
-        console.error("Error converting markdown:", err);
-        setFormattedHtml(aiMessage); // Fallback to plain text
-      }
-    }
-  }, [aiMessage]);
+  // We've removed the separate useEffect for markdown conversion
+  // and integrated it directly into the data fetching flow
 
   return (
     <div className="p-4 border rounded-lg shadow-sm flex flex-col h-full justify-between">
