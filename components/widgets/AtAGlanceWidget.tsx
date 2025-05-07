@@ -284,12 +284,26 @@ const AtAGlanceWidget = () => {
   }
 
   // Convert markdown to HTML
-  // Convert markdown to HTML
-  const formattedMessage = aiMessage ? marked(aiMessage) : "FloCat is thinking...";
+  const [formattedHtml, setFormattedHtml] = useState<string>("FloCat is thinking...");
+  
+  // Handle markdown conversion, accounting for potential Promise return
+  useEffect(() => {
+    if (aiMessage) {
+      const result = marked(aiMessage);
+      if (result instanceof Promise) {
+        // If marked returns a Promise, handle it
+        result.then(html => setFormattedHtml(html))
+          .catch(err => console.error("Error converting markdown:", err));
+      } else {
+        // If marked returns a string directly
+        setFormattedHtml(result);
+      }
+    }
+  }, [aiMessage]);
 
   return (
     <div className="p-4 border rounded-lg shadow-sm flex flex-col h-full justify-between">
-      <div className="text-lg flex-1 overflow-auto" dangerouslySetInnerHTML={{ __html: formattedMessage }}>
+      <div className="text-lg flex-1 overflow-auto" dangerouslySetInnerHTML={{ __html: formattedHtml }}>
         {/* Message will be rendered here by dangerouslySetInnerHTML */}
       </div>
       <p className="text-sm mt-2 self-end">- FloCat 😼</p>
