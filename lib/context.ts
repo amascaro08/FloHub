@@ -108,8 +108,20 @@ export async function findRelevantContextSemantic(
   });
 
   meetings.forEach((meeting) => {
-    const text = `Meeting Note: ${meeting.eventTitle ?? "(no title)"} - ${meeting.content}`;
+    // Include AI summary if available
+    const summaryText = meeting.aiSummary ? `Summary: ${meeting.aiSummary}\n` : '';
+    const agendaText = meeting.agenda ? `Agenda: ${meeting.agenda}\n` : '';
+    
+    const text = `Meeting Note: ${meeting.eventTitle ?? "(no title)"}\n${summaryText}${agendaText}Content: ${meeting.content}`;
     contexts.push({ text, score: 0 });
+    
+    // Add actions as separate context if available
+    if (meeting.actions && meeting.actions.length > 0) {
+      const actionsText = `Meeting Actions for ${meeting.eventTitle ?? "(no title)"}: \n${meeting.actions.map(action =>
+        `- ${action.description} (Assigned to: ${action.assignedTo}, Status: ${action.status})`
+      ).join('\n')}`;
+      contexts.push({ text: actionsText, score: 0 });
+    }
   });
 
   conversations.forEach((conv) => {

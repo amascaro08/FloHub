@@ -3,7 +3,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import modular Firestore functions
+import { doc, updateDoc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import modular Firestore functions
+import OpenAI from "openai"; // Import OpenAI
+import admin from "firebase-admin"; // Import admin for serverTimestamp
 
 import type { Action } from "@/types/app"; // Import Action type
 
@@ -16,6 +18,7 @@ type UpdateMeetingNoteRequest = { // Renamed type
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
   actions?: Action[]; // Optional: Array of actions
+  agenda?: string; // Optional: Meeting agenda
 };
 
 type UpdateMeetingNoteResponse = { // Renamed type
@@ -43,13 +46,13 @@ export default async function handler(
   const userId = token.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
-  const { id, title, content, tags, eventId, eventTitle, isAdhoc, actions } = req.body as UpdateMeetingNoteRequest; // Include new fields
+  const { id, title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda } = req.body as UpdateMeetingNoteRequest; // Include new fields
   if (typeof id !== "string" || id.trim() === "") {
     return res.status(400).json({ error: "Meeting Note ID is required" }); // Updated error message
   }
 
   // Ensure at least one update field is provided
-  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && actions === undefined) {
+  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && actions === undefined && agenda === undefined) {
       return res.status(400).json({ error: "No update fields provided" });
   }
 
@@ -103,6 +106,79 @@ export default async function handler(
     }
     if (actions !== undefined) { // Allow updating actions
         updateData.actions = actions;
+        
+        // Process actions assigned to "Me" and add them to tasks
+        if (actions.length > 0) {
+            for (const action of actions) {
+                // Only process new actions that weren't in the original note
+                const existingAction = noteData.actions?.find((a: Action) => a.id === action.id);
+                if (!existingAction && action.assignedTo === "Me") {
+                    await addDoc(collection(db, "tasks"), {
+                        userId: userId,
+                        text: action.description,
+                        done: action.status === "done",
+                        createdAt: serverTimestamp(),
+                        source: "work", // Tag as a work task
+                    });
+                }
+            }
+        }
+    }
+    if (agenda !== undefined) { // Allow updating agenda
+        updateData.agenda = agenda;
+    }
+    
+    // Generate AI summary if agenda and content are provided
+    if ((agenda !== undefined || noteData.agenda) && (content !== undefined || noteData.content)) {
+      try {
+        // Use the updated values or fall back to existing values
+        const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
+        const currentContent = content !== undefined ? content : noteData.content;
+        const currentActions = actions !== undefined ? actions : noteData.actions || [];
+        
+        if (currentAgenda && currentContent) {
+          // Create a prompt for the OpenAI API
+          const prompt = `
+            Please provide a concise summary of this meeting based on the following information:
+            
+            Agenda:
+            ${currentAgenda}
+            
+            Meeting Notes:
+            ${currentContent}
+            
+            ${currentActions.length > 0 ? `Action Items:
+            ${currentActions.map((action: Action) => `- ${action.description} (Assigned to: ${action.assignedTo})`).join('\n')}` : ''}
+            
+            Provide a 2-3 sentence summary that captures the key points and decisions.
+          `;
+          
+          // Initialize OpenAI client
+          const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+          });
+          
+          // Call OpenAI API
+          const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content: "You are a helpful assistant that summarizes meeting notes concisely and professionally."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+          });
+          
+          updateData.aiSummary = completion.choices[0]?.message?.content || undefined;
+        }
+      } catch (error) {
+        console.error("Error generating AI summary:", error);
+        // Continue without updating AI summary if there's an error
+      }
     }
     // Optionally update a 'updatedAt' timestamp
     // updateData.updatedAt = new Date();

@@ -35,7 +35,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
   useEffect(() => {
     setTitle(note.title || ""); // Update title state
     setContent(note.content);
-    setAgenda(""); // Clear agenda when a new note is selected (or initialize from note.agenda if it exists)
+    setAgenda(note.agenda || ""); // Initialize agenda from note.agenda if it exists
     setSelectedTags(note.tags || []); // Update selected tags state
     setSelectedEventId(note.eventId); // Update selected event ID state
     setSelectedEventTitle(note.eventTitle); // Update selected event title state
@@ -138,7 +138,7 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: newAction.description,
-            source: "meeting-note", // Add a source to identify where the task came from
+            source: "work", // Tag as a work task
             // Optionally add a dueDate if the Action type had one
           }),
         });
@@ -224,6 +224,14 @@ export default function MeetingNoteDetail({ note, onSave, onDelete, isSaving, ex
           placeholder="Meeting Note Title" // Updated placeholder
         />
       </div>
+      
+      {/* AI Summary Section */}
+      {note.aiSummary && (
+        <div className="mb-4 p-4 bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-lg">
+          <h3 className="text-md font-semibold mb-2 text-[var(--primary-700)]">AI Summary</h3>
+          <p className="text-sm text-[var(--fg)]">{note.aiSummary}</p>
+        </div>
+      )}
 
       {/* New fields for meeting notes */}
       <div className="mb-4">

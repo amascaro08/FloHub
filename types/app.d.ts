@@ -32,6 +32,8 @@ export type Note = {
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
   actions?: Action[]; // Optional: Array of actions associated with the meeting note
+  agenda?: string; // Optional: Meeting agenda
+  aiSummary?: string; // Optional: AI-generated summary of the meeting
 };
 
 // Define a type for tasks

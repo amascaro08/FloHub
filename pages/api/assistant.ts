@@ -151,23 +151,21 @@ export default async function handler(
   }
 
   // ── Fetch Context & Fallback to OpenAI ─────────────
-  // Temporarily skip context fetching and semantic search for debugging
-  // try {
-  //   const notes = await fetchUserNotes(email);
-  //   const meetings = await fetchUserMeetingNotes(email);
-  //   const conversations = await fetchUserConversations(email);
-  //   const relevantContext = await findRelevantContext(prompt, notes, meetings, conversations);
+  try {
+    const notes = await fetchUserNotes(email);
+    const meetings = await fetchUserMeetingNotes(email);
+    const conversations = await fetchUserConversations(email);
+    const relevantContext = await findRelevantContext(userInput, notes, meetings, conversations);
 
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺.`,
       },
-      // Temporarily removed relevant context for debugging
-      // {
-      //   role: "system",
-      //   content: `Relevant context:\n${relevantContext}`,
-      // },
+      {
+        role: "system",
+        content: `Relevant context:\n${relevantContext}`,
+      },
       ...history.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content || "", // Ensure content is never undefined
@@ -191,11 +189,11 @@ export default async function handler(
 
       return res.status(200).json({ reply: aiReply });
     } catch (err: any) {
-      console.error("Assistant error:", err);
+      console.error("OpenAI API error:", err);
       return res.status(500).json({ error: err.message || "Internal server error" });
     }
-  // } catch (err: any) { // Temporarily commented out outer catch
-  //   console.error("Assistant error:", err);
-  //   return res.status(500).json({ error: err.message || "Internal server error" });
-  // }
+  } catch (err: any) {
+    console.error("Assistant error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
 }

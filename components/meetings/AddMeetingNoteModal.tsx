@@ -12,7 +12,7 @@ type AddMeetingNoteModalProps = {
   isOpen: boolean;
   onClose: () => void;
   // Update onSave type to include new fields and actions
-  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[] }) => Promise<void>;
+  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => Promise<void>;
   isSaving: boolean;
   existingTags: string[]; // Add existingTags prop
   workCalendarEvents: CalendarEvent[]; // Add workCalendarEvents prop
@@ -23,6 +23,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json()); // Define fet
 export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, workCalendarEvents }: AddMeetingNoteModalProps) { // Receive workCalendarEvents prop
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [agenda, setAgenda] = useState(""); // Add state for agenda
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
   const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
@@ -33,7 +34,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   const [otherAssignedToName, setOtherAssignedToName] = useState(""); // State for the name when assigned to Other
 
 
-  const handleAddAction = () => {
+  const handleAddAction = async () => {
     const assignedTo = assignedToType === "Me" ? "Me" : otherAssignedToName.trim();
     if (newActionDescription.trim() && assignedTo) { // Ensure description and assignedTo are not empty
       const newAction: Action = {
@@ -47,6 +48,27 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       setNewActionDescription(""); // Clear the input field
       setAssignedToType("Me"); // Reset assigned to type
       setOtherAssignedToName(""); // Clear other assigned to name
+      
+      // If assignedTo is "Me", automatically add to tasks list as a work task
+      if (assignedTo === "Me") {
+        try {
+          const response = await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: newAction.description,
+              source: "work", // Tag as a work task
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Failed to create task from meeting action:", errorData.error);
+          }
+        } catch (error) {
+          console.error("Error creating task from meeting action:", error);
+        }
+      }
     }
   };
 
@@ -65,11 +87,13 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       eventTitle: selectedEventTitle,
       isAdhoc: isAdhoc,
       actions: actions, // Include actions in the saved note
+      agenda: agenda, // Include agenda in the saved note
     });
 
     // Clear form after saving
     setTitle("");
     setContent("");
+    setAgenda(""); // Clear agenda
     setSelectedTags([]);
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
@@ -140,6 +164,49 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
             />
           </div>
+          
+          {/* New fields for meeting notes */}
+          {workCalendarEvents.length > 0 && ( // Show event selection only if workCalendarEvents are available
+            <div>
+              <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
+              <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
+                options={eventOptions}
+                onChange={handleEventChange}
+                placeholder="Select an event..."
+                isDisabled={isSaving || eventOptions.length === 0} // Disable if saving or no events
+                isClearable
+                isSearchable
+                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
+              />
+               {workCalendarEvents.length === 0 && <p className="text-sm text-[var(--neutral-500)] mt-1">No work calendar events found for the selected time range.</p>} {/* Show message if no events */}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="adhoc-meeting"
+              className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
+              checked={isAdhoc}
+              onChange={handleAdhocChange}
+              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
+            />
+            <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
+          </div>
+          
+          {/* Agenda Input Field */}
+          <div>
+            <label htmlFor="meeting-note-agenda" className="block text-sm font-medium text-[var(--fg)] mb-1">Agenda</label>
+            <textarea
+              id="meeting-note-agenda"
+              className="w-full border border-[var(--neutral-300)] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--fg)] bg-transparent"
+              rows={3}
+              placeholder="Enter meeting agenda here..."
+              value={agenda}
+              onChange={(e) => setAgenda(e.target.value)}
+              disabled={isSaving}
+            />
+          </div>
+          
           <div>
             <label htmlFor="note-content" className="block text-sm font-medium text-[var(--fg)] mb-1">Content</label>
             <textarea
@@ -220,34 +287,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
               isDisabled={isSaving}
               isSearchable
             />
-          </div>
-          {/* New fields for meeting notes */}
-          {/* Removed calendar selection as events are passed directly */}
-           {workCalendarEvents.length > 0 && ( // Show event selection only if workCalendarEvents are available
-            <div>
-              <label htmlFor="event-select" className="block text-sm font-medium text-[var(--fg)] mb-1">Select Event (Optional)</label> {/* Updated label */}
-              <CreatableSelect // Using CreatableSelect for flexibility, though a standard select might suffice
-                options={eventOptions}
-                onChange={handleEventChange}
-                placeholder="Select an event..."
-                isDisabled={isSaving || eventOptions.length === 0} // Disable if saving or no events
-                isClearable
-                isSearchable
-                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
-              />
-               {workCalendarEvents.length === 0 && <p className="text-sm text-[var(--neutral-500)] mt-1">No work calendar events found for the selected time range.</p>} {/* Show message if no events */}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="adhoc-meeting"
-              className="form-checkbox h-4 w-4 text-[var(--primary)] rounded"
-              checked={isAdhoc}
-              onChange={handleAdhocChange}
-              disabled={isSaving || selectedEventId !== undefined} // Disable if saving or event is selected
-            />
-            <label htmlFor="adhoc-meeting" className="block text-sm font-medium text-[var(--fg)]">Ad-hoc Meeting</label>
           </div>
           <div className="flex justify-end gap-2">
             <button
