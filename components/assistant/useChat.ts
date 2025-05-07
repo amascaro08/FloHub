@@ -55,8 +55,6 @@ const useChat = (): UseChatHook => {
 
       // Update history with both the user message and the assistant's response
       const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent, htmlContent: assistantHtmlContent };
-      
-      // Update history, status, and loading states together
       setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
       setStatus('success');
 
@@ -65,7 +63,6 @@ const useChat = (): UseChatHook => {
       const errorMessage = 'Error: Something went wrong while processing your request.';
       const errorHtmlMessage = await marked(errorMessage);
       
-      // Update history, status, and loading states together on error
       setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage }]);
       setStatus('error');
 

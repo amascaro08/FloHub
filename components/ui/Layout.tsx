@@ -139,12 +139,12 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <ChatWidget
                   onClose={() => setIsChatOpen(false)}
                   key="chatwidget"
-                  history={history} // Pass history
                   send={send} // Pass send function
                   status={status} // Pass status
                   loading={loading} // Pass loading
                   input={chatInput} // Pass chatInput
                   setInput={setChatInput} // Pass setChatInput
+                  history={history} // Pass history
                 />
               </div>
             )}
