@@ -55,6 +55,8 @@ export default async function handler(
           eventTitle: data.eventTitle || undefined, // Include eventTitle
           isAdhoc: data.isAdhoc || undefined, // Include isAdhoc
           actions: data.actions || [], // Include actions
+          agenda: data.agenda || undefined, // Include agenda
+          aiSummary: data.aiSummary || undefined, // Include AI summary
         };
       })
       .filter(note => note.eventId !== undefined || note.isAdhoc === true); // Filter for meeting notes

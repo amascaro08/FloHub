@@ -203,7 +203,8 @@ export default function MeetingsPage() {
       if (response.ok) {
         console.log("meetings.tsx - Update successful, mutating data");
         // Force a refresh of the data to ensure we get the latest version with AI summary
-        await mutate(); // Re-fetch meeting notes to update the list
+        await mutate(undefined, { revalidate: true }); // Force revalidation to get fresh data
+        console.log("meetings.tsx - Data revalidation completed");
         // Don't return anything to match the Promise<void> return type
       } else {
         const errorData = await response.json();

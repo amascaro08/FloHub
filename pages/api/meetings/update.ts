@@ -136,14 +136,26 @@ export default async function handler(
     }
     
     // Generate AI summary if agenda and content are provided
+    console.log("update.ts - Checking conditions for AI summary generation:");
+    console.log("update.ts - agenda provided:", agenda !== undefined);
+    console.log("update.ts - noteData.agenda exists:", !!noteData.agenda);
+    console.log("update.ts - content provided:", content !== undefined);
+    console.log("update.ts - noteData.content exists:", !!noteData.content);
+    
     if ((agenda !== undefined || noteData.agenda) && (content !== undefined || noteData.content)) {
+      console.log("update.ts - Conditions met for AI summary generation");
       try {
         // Use the updated values or fall back to existing values
         const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
         const currentContent = content !== undefined ? content : noteData.content;
         const currentActions = actions !== undefined ? actions : noteData.actions || [];
         
+        console.log("update.ts - Current agenda:", currentAgenda);
+        console.log("update.ts - Current content length:", currentContent?.length);
+        console.log("update.ts - Current actions count:", currentActions?.length);
+        
         if (currentAgenda && currentContent) {
+          console.log("update.ts - Both agenda and content are available, generating AI summary");
           // Create a prompt for the OpenAI API
           const prompt = `
             Please provide a concise summary of this meeting based on the following information:
@@ -160,10 +172,20 @@ export default async function handler(
             Provide a 2-3 sentence summary that captures the key points and decisions.
           `;
           
+          // Check if OpenAI API key is configured
+          if (!process.env.OPENAI_API_KEY) {
+            console.error("update.ts - OpenAI API key is not configured");
+            throw new Error("OpenAI API key is not configured");
+          }
+          
+          console.log("update.ts - OpenAI API key is configured, initializing client");
+          
           // Initialize OpenAI client
           const openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
           });
+          
+          console.log("update.ts - Calling OpenAI API");
           
           // Call OpenAI API
           const completion = await openai.chat.completions.create({
@@ -180,36 +202,74 @@ export default async function handler(
             ],
           });
           
+          console.log("update.ts - OpenAI API call completed");
+          
           updateData.aiSummary = completion.choices[0]?.message?.content || undefined;
-          console.log("AI Summary updated:", updateData.aiSummary);
+          console.log("update.ts - AI Summary updated:", updateData.aiSummary);
+        } else {
+          console.log("update.ts - Either agenda or content is missing, skipping AI summary generation");
         }
       } catch (error) {
-        console.error("Error generating AI summary:", error);
+        console.error("update.ts - Error generating AI summary:", error);
         // Continue without updating AI summary if there's an error
       }
+    } else {
+      console.log("update.ts - Conditions not met for AI summary generation, skipping");
     }
     // Optionally update a 'updatedAt' timestamp
     // updateData.updatedAt = new Date();
 
 
     // 5) Update the meeting note in the database
-    console.log("update.ts - Updating document with data:", updateData);
+    console.log("update.ts - Updating document with data:", JSON.stringify(updateData, null, 2));
     
     // Add a timestamp to the update data to ensure the document is actually modified
     updateData.updatedAt = serverTimestamp();
     
     // Log the final update data being sent to Firestore
-    console.log("update.ts - Final update data with timestamp:", updateData);
+    console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateData, null, 2));
     
-    // Perform the update
-    await updateDoc(noteRef, updateData);
-    console.log("update.ts - Document updated successfully");
-    
-    // Return success response immediately without fetching the updated document
-    // This avoids issues with serverTimestamp() not being immediately available
-    return res.status(200).json({
-      success: true
-    });
+    try {
+      // Perform the update
+      console.log(`update.ts - Updating document in collection 'notes' with ID '${id}'`);
+      await updateDoc(noteRef, updateData);
+      console.log("update.ts - Document updated successfully");
+      
+      // Fetch the updated document to verify the changes
+      console.log("update.ts - Fetching updated document to verify changes");
+      const updatedNoteSnap = await getDoc(noteRef);
+      
+      if (!updatedNoteSnap.exists()) {
+        console.error("update.ts - Document no longer exists after update");
+        return res.status(404).json({
+          success: false,
+          error: "Document no longer exists after update"
+        });
+      }
+      
+      const updatedNoteData = updatedNoteSnap.data();
+      console.log("update.ts - Updated document data:", JSON.stringify(updatedNoteData, null, 2));
+      
+      // Check if the aiSummary was properly saved
+      if (updateData.aiSummary && !updatedNoteData.aiSummary) {
+        console.warn("update.ts - AI Summary was not saved properly");
+      }
+      
+      // Return success response with the updated document
+      return res.status(200).json({
+        success: true,
+        updatedNote: {
+          id: id,
+          ...updatedNoteData
+        }
+      });
+    } catch (updateError: any) {
+      console.error("update.ts - Error during update operation:", updateError);
+      return res.status(500).json({
+        success: false,
+        error: `Error updating document: ${updateError.message}`
+      });
+    }
 
   } catch (err: any) {
     console.error("Update meeting note error:", err); // Updated error log
