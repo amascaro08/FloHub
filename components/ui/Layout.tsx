@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { signOut } from "next-auth/react";
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon } from 'lucide-react' // Import icons
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react' // Import icons
 import Link from 'next/link'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
@@ -12,9 +12,9 @@ import { useChat } from '../assistant/ChatContext'; // Import useChat from conte
 const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
   { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-  { name: "Notes", href: "/dashboard/notes", icon: NotebookPen }, // Add Notes link with icon
+  { name: "Notes", href: "/dashboard/notes", icon: NotepadText }, // Add Notes link with icon
   { name: "Habits", href: "/habit-tracker", icon: Book },
-  { name: "Journal", href: "/dashboard/journal", icon: Calendar }, // Using Calendar icon for Journal for now
+  { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon }, // Using Calendar icon for Journal for now
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
