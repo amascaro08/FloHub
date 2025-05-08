@@ -73,8 +73,8 @@ const CalendarPage = () => {
         <Calendar
           localizer={localizer}
           events={events}
-          startAccessor={getStartDate}
-          endAccessor={getEndDate}
+          startAccessor={(event: CalendarEvent) => getStartDate(event)}
+          endAccessor={(event: CalendarEvent) => getEndDate(event)}
           defaultView="month"
           style={{ height: 500 }}
         />
