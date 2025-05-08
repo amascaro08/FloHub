@@ -191,33 +191,36 @@ function TaskWidget() {
       )}
 
       <form onSubmit={addOrUpdate} className="flex flex-col gap-3 mb-5">
-        <div className="flex gap-2">
+        {/* Task input and date selection - responsive layout */}
+        <div className="flex flex-col md:flex-row gap-2">
           <input
             type="text"
-            className="input-modern flex-1"
+            className="input-modern flex-1 order-1"
             placeholder="New task…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
 
-          <select
-            value={due}
-            onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
-            className="input-modern w-auto"
-          >
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="custom">Custom</option>
-          </select>
+          <div className="flex gap-2 order-2 md:order-1 w-full md:w-auto">
+            <select
+              value={due}
+              onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
+              className="input-modern w-auto min-w-[100px] md:min-w-0 flex-shrink-0"
+            >
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="custom">Custom</option>
+            </select>
 
-          {due === "custom" && (
-            <input
-              type="date"
-              className="input-modern w-auto"
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-            />
-          )}
+            {due === "custom" && (
+              <input
+                type="date"
+                className="input-modern w-auto flex-shrink-0"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+              />
+            )}
+          </div>
         </div>
 
         {/* Source and Tags */}
