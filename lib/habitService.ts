@@ -33,20 +33,25 @@ export const getTodayFormatted = (): string => {
 export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   try {
     const habitsRef = collection(db, HABITS_COLLECTION);
+    // Remove orderBy to avoid requiring a composite index
     const q = query(
       habitsRef,
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    // Sort the results in memory instead
+    const habits = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Habit));
+    
+    // Sort by createdAt in descending order
+    return habits.sort((a, b) => b.createdAt - a.createdAt);
   } catch (error) {
     console.error('Error getting habits:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent app from crashing
+    return [];
   }
 };
 
@@ -89,18 +94,28 @@ export const updateHabit = async (habitId: string, habitData: Partial<Habit>): P
 // Delete a habit
 export const deleteHabit = async (habitId: string): Promise<void> => {
   try {
+    // First delete the habit document
     const habitRef = doc(db, HABITS_COLLECTION, habitId);
     await deleteDoc(habitRef);
     
-    // Also delete all completions for this habit
-    const completionsRef = collection(db, COMPLETIONS_COLLECTION);
-    const q = query(completionsRef, where('habitId', '==', habitId));
-    const querySnapshot = await getDocs(q);
-    
-    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
+    // Then delete all completions for this habit
+    try {
+      const completionsRef = collection(db, COMPLETIONS_COLLECTION);
+      const q = query(completionsRef, where('habitId', '==', habitId));
+      const querySnapshot = await getDocs(q);
+      
+      // If there are completions to delete, delete them in batches
+      if (!querySnapshot.empty) {
+        const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+      }
+    } catch (completionsError) {
+      // Log the error but don't throw, as the main habit is already deleted
+      console.error('Error deleting habit completions:', completionsError);
+    }
   } catch (error) {
     console.error('Error deleting habit:', error);
+    // Re-throw the error so the UI can handle it
     throw error;
   }
 };
@@ -115,16 +130,21 @@ export const toggleHabitCompletion = async (
   try {
     // Check if there's already a completion record for this habit and date
     const completionsRef = collection(db, COMPLETIONS_COLLECTION);
+    // Simplify query to avoid potential index issues
     const q = query(
       completionsRef,
       where('habitId', '==', habitId),
-      where('userId', '==', userId),
-      where('date', '==', date)
+      where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
+    // Filter for the specific date in memory
+    const matchingDocs = querySnapshot.docs.filter(doc =>
+      doc.data().date === date
+    );
+    const empty = matchingDocs.length === 0;
     
-    if (querySnapshot.empty) {
+    if (empty) {
       // No completion record exists, create one (mark as completed)
       const newCompletion = {
         habitId,
@@ -142,7 +162,7 @@ export const toggleHabitCompletion = async (
       } as HabitCompletion;
     } else {
       // Completion record exists, toggle its state
-      const completionDoc = querySnapshot.docs[0];
+      const completionDoc = matchingDocs[0];
       const currentCompletion = completionDoc.data() as HabitCompletion;
       
       await updateDoc(completionDoc.ref, {
@@ -177,21 +197,28 @@ export const getHabitCompletionsForMonth = async (
     const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of month
     
     const completionsRef = collection(db, COMPLETIONS_COLLECTION);
+    // Simplify query to avoid requiring a composite index
     const q = query(
       completionsRef,
-      where('userId', '==', userId),
-      where('date', '>=', startDate),
-      where('date', '<=', endDate)
+      where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as HabitCompletion));
+    
+    // Filter results in memory for the date range
+    return querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as HabitCompletion))
+      .filter(completion =>
+        completion.date >= startDate &&
+        completion.date <= endDate
+      );
   } catch (error) {
     console.error('Error getting habit completions:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent app from crashing
+    return [];
   }
 };
 
@@ -199,26 +226,35 @@ export const getHabitCompletionsForMonth = async (
 export const calculateHabitStats = async (userId: string, habitId: string): Promise<HabitStats> => {
   try {
     const completionsRef = collection(db, COMPLETIONS_COLLECTION);
+    // Simplify query to avoid requiring a composite index
     const q = query(
       completionsRef,
       where('userId', '==', userId),
-      where('habitId', '==', habitId),
-      where('completed', '==', true),
-      orderBy('date', 'asc')
+      where('habitId', '==', habitId)
     );
     
     const querySnapshot = await getDocs(q);
-    const completions = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as HabitCompletion));
+    // Filter for completed=true in memory
+    const completions = querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as HabitCompletion))
+      .filter(completion => completion.completed === true);
     
     // Get the habit to check frequency
     const habitRef = doc(db, HABITS_COLLECTION, habitId);
     const habitDoc = await getDoc(habitRef);
     
     if (!habitDoc.exists()) {
-      throw new Error('Habit not found');
+      // Return default stats instead of throwing
+      return {
+        habitId,
+        currentStreak: 0,
+        longestStreak: 0,
+        totalCompletions: 0,
+        completionRate: 0
+      };
     }
     
     const habit = { id: habitDoc.id, ...habitDoc.data() } as Habit;

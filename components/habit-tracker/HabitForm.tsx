@@ -83,18 +83,18 @@ const HabitForm: React.FC<HabitFormProps> = ({
         // Update existing habit
         await updateHabit(habit.id, {
           name,
-          description: description || undefined,
+          description: description || '',
           frequency,
-          customDays: frequency === 'custom' ? customDays : undefined,
+          customDays: frequency === 'custom' ? customDays : [],
           color
         });
         
         savedHabit = {
           ...habit,
           name,
-          description: description || undefined,
+          description: description || '',
           frequency,
-          customDays: frequency === 'custom' ? customDays : undefined,
+          customDays: frequency === 'custom' ? customDays : [],
           color,
           updatedAt: Date.now()
         };
@@ -102,9 +102,9 @@ const HabitForm: React.FC<HabitFormProps> = ({
         // Create new habit
         const habitData = {
           name,
-          description: description || undefined,
+          description: description || '',
           frequency,
-          customDays: frequency === 'custom' ? customDays : undefined,
+          customDays: frequency === 'custom' ? customDays : [],
           color
         };
         
