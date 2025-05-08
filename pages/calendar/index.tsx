@@ -14,6 +14,14 @@ type Settings = {
   powerAutomateUrl?: string;
 };
 
+export type CalendarEvent = {
+  id: string;
+  summary: string;
+  start: { dateTime: string | null; date: string | null; timeZone: string | null };
+  end: { dateTime: string | null; date: string | null; timeZone: string | null };
+  description?: string; // Add optional description field
+};
+
 // Generic fetcher for SWR
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -25,7 +33,7 @@ const fetcher = async (url: string) => {
 };
 
 const CalendarPage = () => {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const { data: settings, error: settingsError } = useSWR<Settings>('/api/userSettings', fetcher);
 
   useEffect(() => {
@@ -48,6 +56,16 @@ const CalendarPage = () => {
     fetchEvents();
   }, [settings]);
 
+  // Function to determine the start date for the event
+  const getStartDate = (event: CalendarEvent) => {
+    return event.start.dateTime ? new Date(event.start.dateTime) : event.start.date ? new Date(event.start.date) : new Date();
+  };
+
+  // Function to determine the end date for the event
+  const getEndDate = (event: CalendarEvent) => {
+    return event.end.dateTime ? new Date(event.end.dateTime) : event.end.date ? new Date(event.end.date) : new Date();
+  };
+
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-bold mb-5">Calendar</h1>
@@ -55,8 +73,8 @@ const CalendarPage = () => {
         <Calendar
           localizer={localizer}
           events={events}
-          startAccessor="start"
-          endAccessor="end"
+          startAccessor={getStartDate}
+          endAccessor={getEndDate}
           defaultView="month"
           style={{ height: 500 }}
         />

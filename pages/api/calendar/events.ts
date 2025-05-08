@@ -6,8 +6,8 @@ import { getToken } from "next-auth/jwt";
 export type CalendarEvent = {
   id: string;
   summary: string;
-  start: { dateTime: string; timeZone: string };
-  end: { dateTime: string; timeZone: string };
+  start: { dateTime: string | null; date: string | null; timeZone: string | null };
+  end: { dateTime: string | null; date: string | null; timeZone: string | null };
   description?: string; // Add optional description field
 };
 
@@ -71,7 +71,7 @@ export default async function handler(
       }
 
       const body = await apiRes.json();
-      const events: CalendarEvent[] = Array.isArray(body.items)
+      const events: any[] = Array.isArray(body.items)
         ? body.items.map((event: any) => ({
             id: event.id,
             summary: event.summary || "No Title",
@@ -84,7 +84,24 @@ export default async function handler(
       allEvents.push(...events);
     }
 
-    return res.status(200).json({ events: allEvents });
+    // Ensure start and end are ISO strings
+    const formattedEvents: CalendarEvent[] = allEvents.map(event => ({
+      id: event.id,
+      summary: event.summary,
+      description: event.description,
+      start: {
+        dateTime: event.start.dateTime ? new Date(event.start.dateTime).toISOString() : null,
+        date: event.start.date ? new Date(event.start.date).toISOString() : null,
+        timeZone: event.start.timeZone || null
+      },
+      end: {
+        dateTime: event.end?.dateTime ? new Date(event.end.dateTime).toISOString() : null,
+        date: event.end?.date ? new Date(event.end.date).toISOString() : null,
+        timeZone: event.end?.timeZone || null
+      }
+    }));
+
+    return res.status(200).json({ events: formattedEvents });
 
   } catch (err: any) {
     console.error("Fetch calendar events error:", err);
