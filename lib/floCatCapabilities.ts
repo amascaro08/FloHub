@@ -1,4 +1,5 @@
 // lib/floCatCapabilities.ts
+import { habitCapability } from './capabilities/habitCapability';
 
 /**
  * Defines the structure for a FloCat capability.
@@ -15,8 +16,11 @@ export interface FloCatCapability {
  * New features should register their capabilities here by adding their config file import.
  */
 
-// Empty capabilities array to prevent client-side errors
-export const floCatCapabilities: FloCatCapability[] = [];
+// Register all capabilities here
+export const floCatCapabilities: FloCatCapability[] = [
+  habitCapability,
+  // Add more capabilities as they are developed
+];
 
 /**
  * Finds the best matching capability and command for a given user input.

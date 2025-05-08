@@ -13,6 +13,7 @@ import { isSameDay } from 'date-fns'; // Import isSameDay from date-fns
 import useSWR from 'swr'; // Import useSWR
 import type { UserSettings } from '../../types/app'; // Import UserSettings type
 import type { Note } from '../../types/app'; // Import shared Note type
+import type { Habit, HabitCompletion } from '../../types/habit-tracker'; // Import Habit types
 
 
 interface CalendarEvent {
@@ -38,6 +39,8 @@ const AtAGlanceWidget = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notes, setNotes] = useState<Note[]>([]); // Add state for notes
   const [meetings, setMeetings] = useState<Note[]>([]); // Meeting notes also use the Note type
+  const [habits, setHabits] = useState<Habit[]>([]); // Add state for habits
+  const [habitCompletions, setHabitCompletions] = useState<HabitCompletion[]>([]); // Add state for habit completions
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +180,24 @@ const AtAGlanceWidget = () => {
         const meetingsData: Note[] = await meetingsRes.json();
         setMeetings(meetingsData);
 
+        // Fetch habits
+        const habitsRes = await fetch('/api/habits');
+        if (!habitsRes.ok) {
+          console.log("Error fetching habits:", habitsRes.statusText);
+          // Don't throw error here, just log it and continue
+        } else {
+          const habitsData: Habit[] = await habitsRes.json();
+          setHabits(habitsData);
+          
+          // Fetch habit completions for the current month
+          const today = new Date();
+          const habitCompletionsRes = await fetch(`/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`);
+          if (habitCompletionsRes.ok) {
+            const completionsData: HabitCompletion[] = await habitCompletionsRes.json();
+            setHabitCompletions(completionsData);
+          }
+        }
+
 
         // Filter out completed tasks for the AI prompt
         const incompleteTasks = tasksData.filter(task => !task.done);
@@ -231,6 +252,40 @@ const AtAGlanceWidget = () => {
            console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
          } else if (isMounted) {
          console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
+         
+         // Get today's date in YYYY-MM-DD format for habit completions
+         const todayFormatted = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd');
+         
+         // Filter habits that should be completed today
+         const todaysHabits = habits.filter(habit => {
+           const dayOfWeek = now.getDay(); // 0-6, Sunday-Saturday
+           
+           switch (habit.frequency) {
+             case 'daily':
+               return true;
+             case 'weekly':
+               return dayOfWeek === 0; // Sunday
+             case 'custom':
+               return habit.customDays?.includes(dayOfWeek) || false;
+             default:
+               return false;
+           }
+         });
+         
+         // Check which habits are completed today
+         const completedHabits = todaysHabits.filter(habit =>
+           habitCompletions.some(c =>
+             c.habitId === habit.id &&
+             c.date === todayFormatted &&
+             c.completed
+           )
+         );
+         
+         // Calculate habit completion rate
+         const habitCompletionRate = todaysHabits.length > 0
+           ? Math.round((completedHabits.length / todaysHabits.length) * 100)
+           : 0;
+         
          // Generate AI message
          const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic, and slightly quirky cat personality 🐾.\n\nGenerate a personalized "At A Glance" daily message for the user **${userName}**, based on the following information:\n\n### 🗓️ Upcoming Events Today:\n${upcomingEventsForPrompt.map(event => {
            // Format the time for display in the user's timezone
@@ -239,7 +294,10 @@ const AtAGlanceWidget = () => {
              : event.start.date; // All-day events use the date
 
            return `- ${event.summary} at ${eventTime} (${event.source || 'personal'})`;
-         }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n### 📝 Recent Notes:\n${notes.slice(0, 5).map(note => `- ${note.title || 'Untitled Note'}: ${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}`).join('\n') || 'None'}\n\n### 🗣️ Recent Meeting Notes:\n${meetings.slice(0, 5).map(meeting => `- ${meeting.title || 'Untitled Meeting'}: ${meeting.content.substring(0, 100)}${meeting.content.length > 100 ? '...' : ''}`).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be witty, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Include a brief mention of recent notes and meeting notes.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events, tasks, notes, and meetings\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
+         }).join('\n') || 'None'}\n\n### ✅ Incomplete Tasks:\n${incompleteTasks.map(task => `- ${task.text} (${task.source || 'personal'})`).join('\n') || 'None'}\n\n### 📝 Recent Notes:\n${notes.slice(0, 5).map(note => `- ${note.title || 'Untitled Note'}: ${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}`).join('\n') || 'None'}\n\n### 🗣️ Recent Meeting Notes:\n${meetings.slice(0, 5).map(meeting => `- ${meeting.title || 'Untitled Meeting'}: ${meeting.content.substring(0, 100)}${meeting.content.length > 100 ? '...' : ''}`).join('\n') || 'None'}\n\n### 🔄 Habits for Today (${completedHabits.length}/${todaysHabits.length} completed - ${habitCompletionRate}%):\n${todaysHabits.map(habit => {
+           const isCompleted = completedHabits.some(h => h.id === habit.id);
+           return `- ${isCompleted ? '✅' : '⬜'} ${habit.name}`;
+         }).join('\n') || 'None'}\n\n**Guidelines:**\n- The tone must be witty, sarcastic, and a little mischievous (you're a cat, after all 😼).\n- Start with a warm and cheeky welcome to the user's day.\n- Summarize the "upcoming" schedule — **ONLY include events that haven't passed yet** (based on current time).\n- Separate **work** and **personal** tasks clearly under different headings.\n- Suggest a "Focus Task" for the user — ideally picking a high-priority incomplete task.\n- Include a brief mention of recent notes and meeting notes.\n- Mention the user's habit progress for today and encourage them to complete remaining habits.\n- Use **Markdown** for formatting:\n  - **Bold** for section titles\n  - Bulleted lists for events, tasks, notes, and meetings\n- Include the event/task **source tag** in parentheses (e.g., "(work)" or "(personal)").\n- Add appropriate emojis throughout to keep it light-hearted.\n- Consider the **time of day** (e.g., morning greeting vs afternoon pep talk).\n\n**Tone examples:**\n- "Rise and shine, ${userName} 🐱☀️ — here's what the universe (and your calendar) have in store for you."\n- "Not to be dramatic, but you've got things to do, hooman. Here's your 'don't mess this up' list:"\n\nMake the message feel alive and *FloCat-like* while staying useful and clear!`;
 
 
           const aiRes = await fetch('/api/assistant', {
