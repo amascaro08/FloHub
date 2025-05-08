@@ -10,11 +10,23 @@ type Data = {
 };
 
 // Configure web-push with VAPID keys
-webpush.setVapidDetails(
-  'mailto:' + process.env.VAPID_MAILTO!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+// Use default values if environment variables are not set
+const vapidMailto = process.env.VAPID_MAILTO || 'example@example.com';
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+  'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ||
+  'UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTWKSKHw';
+
+try {
+  webpush.setVapidDetails(
+    'mailto:' + vapidMailto,
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+  console.log('Web-push configured with VAPID keys');
+} catch (error) {
+  console.error('Failed to configure web-push with VAPID keys:', error);
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -107,9 +119,22 @@ export default async function handler(
     });
   } catch (error: any) {
     console.error('Error sending test notification:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: `Internal server error: ${error.message}` 
+    
+    // Check if the error is related to VAPID keys
+    if (error.message && (
+      error.message.includes('VAPID') ||
+      error.message.includes('vapid') ||
+      error.message.includes('key')
+    )) {
+      return res.status(500).json({
+        success: false,
+        message: 'VAPID keys are not properly configured. Please run the generate-vapid-keys.js script and add the keys to your environment variables.'
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: `Internal server error: ${error.message}`
     });
   }
 }

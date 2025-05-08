@@ -100,16 +100,19 @@ const NotificationManager: React.FC = () => {
       }
       
       // Subscribe to push notifications
-      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-        throw new Error('VAPID public key is not configured');
-      }
+      // Use a hardcoded VAPID key for development if environment variable is not set
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+        'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
       
       // Log platform information for debugging
-      console.log('Platform info:', { isIOS, isAndroid, userAgent: navigator.userAgent });
+      console.log('Platform info:', {
+        isIOS,
+        isAndroid,
+        userAgent: navigator.userAgent,
+        vapidKeyAvailable: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      });
       
-      const subscription = await subscribeToPushNotifications(
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      );
+      const subscription = await subscribeToPushNotifications(vapidPublicKey);
       
       if (!subscription) {
         // Handle platform-specific error messages
