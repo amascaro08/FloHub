@@ -15,6 +15,7 @@ const nav = [
   { name: "Notes", href: "/dashboard/notes", icon: NotebookPen }, // Add Notes link with icon
   { name: "Habits", href: "/dashboard/habits", icon: Book },
   { name: "Journal", href: "/dashboard/journal", icon: Calendar }, // Using Calendar icon for Journal for now
+  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
