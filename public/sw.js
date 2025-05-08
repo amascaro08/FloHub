@@ -17,6 +17,11 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(event.request));
 });
 
+// Log any errors that occur during service worker operation
+self.addEventListener('error', (event) => {
+  console.error('Service Worker error:', event.error);
+});
+
 // Handle push events (when a notification is received)
 self.addEventListener('push', (event) => {
   console.log('Push notification received', event);
@@ -30,6 +35,13 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     console.log('Push notification data:', data);
 
+    // Detect platform from user agent
+    const userAgent = self.navigator ? self.navigator.userAgent : '';
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    const isAndroid = /Android/.test(userAgent);
+    
+    console.log('Platform detection in service worker:', { isIOS, isAndroid, userAgent });
+
     const title = data.title || 'FlowHub';
     const options = {
       body: data.body || 'You have a new notification',
@@ -40,10 +52,20 @@ self.addEventListener('push', (event) => {
       tag: data.tag || 'default',
       vibrate: [100, 50, 100],
       timestamp: data.timestamp || Date.now(),
+      // Ensure silent option is set for iOS
+      silent: isIOS ? false : undefined,
+      // Ensure renotify is set for Android to make notifications more reliable
+      renotify: isAndroid ? true : undefined,
     };
 
     event.waitUntil(
       self.registration.showNotification(title, options)
+        .then(() => {
+          console.log('Notification shown successfully');
+        })
+        .catch(err => {
+          console.error('Error showing notification:', err);
+        })
     );
   } catch (error) {
     console.error('Error processing push notification:', error);

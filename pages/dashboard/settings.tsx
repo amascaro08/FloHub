@@ -102,48 +102,62 @@ export default function CalendarSettingsPage() {
 
   // Early returns
   if (loadingSession) {
-    return <main className="p-6">Loading session…</main>;
+    return <main className="p-4 md:p-6">Loading session…</main>;
   }
 
   if (!session) {
     return (
-      <main className="p-6">
-        <p>You must sign in to configure your calendars.</p>
-        <button
-          onClick={() => signIn()}
-          className="mt-4 px-4 py-2 bg-primary-500 text-white rounded"
-        >
-          Sign In
-        </button>
+      <main className="p-4 md:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+          <p>You must sign in to configure your calendars.</p>
+          <button
+            onClick={() => signIn()}
+            className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
       </main>
     );
   }
 
   if (calError) {
     return (
-      <main className="p-6">
-        <p className="text-red-500">
-          Failed to load calendars: {calError.message}
-        </p>
+      <main className="p-4 md:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+          <p className="text-red-500 dark:text-red-400">
+            Failed to load calendars: {calError.message}
+          </p>
+        </div>
       </main>
     );
   }
 
   if (!calendars) {
-    return <main className="p-6">Loading your calendars…</main>;
+    return (
+      <main className="p-4 md:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+          Loading your calendars…
+        </div>
+      </main>
+    );
   }
 
   // 7) Now calendars is a real array, safe to map
   return (
-    <main className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Calendar Settings</h1>
-      <Link href="/dashboard">
-        <a className="text-blue-500 hover:underline">&larr; Back to Dashboard</a>
-      </Link>
+    <main className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Settings</h1>
+          <Link href="/dashboard" className="text-blue-500 hover:underline text-sm">
+            &larr; Back to Dashboard
+          </Link>
+        </div>
+      </div>
 
       {/* PowerAutomate URL */}
-      <section>
-        <h2 className="text-lg font-medium mb-2">Work Calendar (O365 PowerAutomate URL)</h2>
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Work Calendar (O365 PowerAutomate URL)</h2>
         <input
           type="url"
           placeholder="Enter your PowerAutomate HTTP request URL"
@@ -155,24 +169,24 @@ export default function CalendarSettingsPage() {
             }));
             console.log("PowerAutomate URL changed to:", e.target.value);
           }}
-          className="border px-3 py-2 rounded w-full"
+          className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
         />
-        <p className="text-xs text-[var(--fg-muted)] mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
           Paste your PowerAutomate HTTP request URL here to enable O365 work calendar events.
         </p>
       </section>
 
       {/* Calendar selection */}
-      <section>
-        <h2 className="text-lg font-medium mb-2">Which calendars?</h2>
-        <div className="space-y-1">
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Calendar Selection</h2>
+        <div className="space-y-2">
           {calendars.map((cal) => (
-            <label key={cal.id} className="flex items-center gap-2">
+            <label key={cal.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
               <input
                 type="checkbox"
                 checked={settings.selectedCals.includes(cal.id)}
                 onChange={() => toggleCal(cal.id)}
-                className="h-4 w-4"
+                className="h-4 w-4 text-blue-500 rounded focus:ring-blue-500"
               />
               <span>{cal.summary}</span>
             </label>
@@ -181,8 +195,8 @@ export default function CalendarSettingsPage() {
       </section>
 
       {/* Default view filter */}
-      <section>
-        <h2 className="text-lg font-medium mb-2">Default date filter</h2>
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Default Date Filter</h2>
         <select
           value={settings.defaultView}
           onChange={(e) =>
@@ -191,7 +205,7 @@ export default function CalendarSettingsPage() {
               defaultView: e.target.value as any,
             }))
           }
-          className="border px-3 py-2 rounded"
+          className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full md:w-auto"
         >
           <option value="today">Today</option>
           <option value="tomorrow">Tomorrow</option>
@@ -201,9 +215,9 @@ export default function CalendarSettingsPage() {
         </select>
 
         {settings.defaultView === "custom" && (
-          <div className="mt-2 flex gap-4">
-            <div>
-              <label className="block text-sm">Start</label>
+          <div className="mt-4 flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
               <input
                 type="date"
                 value={settings.customRange.start}
@@ -213,11 +227,11 @@ export default function CalendarSettingsPage() {
                     customRange: { ...s.customRange, start: e.target.value },
                   }))
                 }
-                className="border px-2 py-1 rounded"
+                className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
-            <div>
-              <label className="block text-sm">End</label>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
               <input
                 type="date"
                 value={settings.customRange.end}
@@ -227,24 +241,22 @@ export default function CalendarSettingsPage() {
                     customRange: { ...s.customRange, end: e.target.value },
                   }))
                 }
-                className="border px-2 py-1 rounded"
+                className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
           </div>
         )}
-:start_line:238
--------
       </section>
 
       {/* Global Tags Section */}
-      <section>
-        <h2 className="text-lg font-medium mb-2">Global Tags</h2>
-        <div className="flex gap-2 mb-2">
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Global Tags</h2>
+        <div className="flex flex-col md:flex-row gap-2 mb-4">
           <input
             type="text"
             placeholder="Add a new tag"
             id="newTagInput"
-            className="border px-3 py-2 rounded flex-grow"
+            className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md flex-grow bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
                 const input = e.target as HTMLInputElement;
@@ -271,21 +283,22 @@ export default function CalendarSettingsPage() {
                 input.value = ''; // Clear input
               }
             }}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
           >
             Add Tag
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
           {settings.globalTags.map(tag => (
-            <span key={tag} className="bg-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
+            <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full flex items-center gap-1">
               {tag}
               <button
                 onClick={() => setSettings(s => ({
                   ...s,
                   globalTags: s.globalTags.filter(t => t !== tag)
                 }))}
-                className="text-red-500 hover:text-red-700"
+                className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-1"
+                aria-label={`Remove ${tag} tag`}
               >
                 &times;
               </button>
@@ -295,7 +308,8 @@ export default function CalendarSettingsPage() {
       </section>
 
       {/* Widget Manager Section */}
-      <section>
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Dashboard Widgets</h2>
         <WidgetManager
           settings={settings}
           onSettingsChange={setSettings}
@@ -303,17 +317,19 @@ export default function CalendarSettingsPage() {
       </section>
 
       {/* Notifications Section */}
-      <section>
-        <h2 className="text-lg font-medium mb-2">Notifications</h2>
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <h2 className="text-lg font-medium mb-4">Notifications</h2>
         <NotificationManager />
       </section>
 
-      <button
-        onClick={save}
-        className="bg-primary-500 text-white px-4 py-2 rounded"
-      >
-        Save Settings
-      </button>
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={save}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors"
+        >
+          Save Settings
+        </button>
+      </div>
     </main>
   );
 }
