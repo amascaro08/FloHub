@@ -140,13 +140,13 @@ const HabitForm: React.FC<HabitFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-900 bg-opacity-50 text-white p-3 rounded-lg text-sm">
+        <div className="bg-red-100 dark:bg-red-900 bg-opacity-100 dark:bg-opacity-50 text-red-700 dark:text-white p-3 rounded-lg text-sm transition-colors">
           {error}
         </div>
       )}
       
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
           Habit Name *
         </label>
         <input
@@ -154,28 +154,28 @@ const HabitForm: React.FC<HabitFormProps> = ({
           id="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
           placeholder="e.g., Drink water, Exercise, Read"
           required
         />
       </div>
       
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
           Description (Optional)
         </label>
         <textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
           placeholder="Add details about your habit"
           rows={2}
         />
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
           Frequency *
         </label>
         <div className="space-y-2">
@@ -187,9 +187,9 @@ const HabitForm: React.FC<HabitFormProps> = ({
               value="daily"
               checked={frequency === 'daily'}
               onChange={() => setFrequency('daily')}
-              className="mr-2 text-teal-500 focus:ring-teal-500"
+              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
             />
-            <label htmlFor="daily" className="text-white">Daily</label>
+            <label htmlFor="daily" className="text-gray-800 dark:text-white transition-colors">Daily</label>
           </div>
           
           <div className="flex items-center">
@@ -200,9 +200,9 @@ const HabitForm: React.FC<HabitFormProps> = ({
               value="weekly"
               checked={frequency === 'weekly'}
               onChange={() => setFrequency('weekly')}
-              className="mr-2 text-teal-500 focus:ring-teal-500"
+              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
             />
-            <label htmlFor="weekly" className="text-white">Weekly (Sundays)</label>
+            <label htmlFor="weekly" className="text-gray-800 dark:text-white transition-colors">Weekly (Sundays)</label>
           </div>
           
           <div className="flex items-center">
@@ -213,16 +213,16 @@ const HabitForm: React.FC<HabitFormProps> = ({
               value="custom"
               checked={frequency === 'custom'}
               onChange={() => setFrequency('custom')}
-              className="mr-2 text-teal-500 focus:ring-teal-500"
+              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
             />
-            <label htmlFor="custom" className="text-white">Custom Days</label>
+            <label htmlFor="custom" className="text-gray-800 dark:text-white transition-colors">Custom Days</label>
           </div>
         </div>
       </div>
       
       {frequency === 'custom' && (
         <div className="pl-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">
             Select Days
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -233,9 +233,9 @@ const HabitForm: React.FC<HabitFormProps> = ({
                   id={`day-${day.value}`}
                   checked={customDays.includes(day.value)}
                   onChange={() => handleCustomDayToggle(day.value)}
-                  className="mr-2 text-teal-500 focus:ring-teal-500"
+                  className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
                 />
-                <label htmlFor={`day-${day.value}`} className="text-white text-sm">
+                <label htmlFor={`day-${day.value}`} className="text-gray-800 dark:text-white text-sm transition-colors">
                   {day.label}
                 </label>
               </div>
@@ -245,7 +245,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
       )}
       
       <div>
-        <label htmlFor="color" className="block text-sm font-medium text-gray-300 mb-1">
+        <label htmlFor="color" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
           Color
         </label>
         <div className="flex items-center">
@@ -254,9 +254,9 @@ const HabitForm: React.FC<HabitFormProps> = ({
             id="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="h-10 w-10 rounded-lg border-0 p-0 mr-2"
+            className="h-10 w-10 rounded-lg border-0 p-0 mr-2 transition-colors"
           />
-          <span className="text-white text-sm">{color}</span>
+          <span className="text-gray-800 dark:text-white text-sm transition-colors">{color}</span>
         </div>
       </div>
       
@@ -265,7 +265,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="flex items-center px-3 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg"
+            className="flex items-center px-3 py-2 bg-red-600 dark:bg-red-700 hover:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors"
             disabled={isSubmitting}
           >
             <TrashIcon className="w-4 h-4 mr-1" />
@@ -279,7 +279,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
             disabled={isSubmitting}
           >
             Cancel
@@ -287,7 +287,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
           
           <button
             type="submit"
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg"
+            className="px-4 py-2 bg-teal-600 dark:bg-teal-600 hover:bg-teal-500 dark:hover:bg-teal-500 text-white rounded-lg transition-colors"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Saving...' : habit ? 'Update' : 'Create'}

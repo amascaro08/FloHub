@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 // UI components and context
 import { useAuth } from '@/components/ui/AuthContext';
-import { PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 // Habit tracker components
 import HabitForm from '@/components/habit-tracker/HabitForm';
@@ -29,6 +29,8 @@ const HabitCalendar = () => {
   const [loading, setLoading] = useState(true);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  // Separate state for viewing stats
+  const [viewStatsForHabit, setViewStatsForHabit] = useState<Habit | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
@@ -328,28 +330,28 @@ const HabitCalendar = () => {
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg p-4 transition-colors">
       {/* Header with navigation and controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <div className="flex items-center mb-4 sm:mb-0">
           <button 
             onClick={goToPreviousMonth}
-            className="p-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700"
+            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
           >
             &lt;
           </button>
-          <h2 className="text-xl font-semibold text-white mx-4">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mx-4">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <button 
             onClick={goToNextMonth}
-            className="p-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700"
+            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
           >
             &gt;
           </button>
           <button 
             onClick={goToToday}
-            className="ml-2 p-2 rounded-lg bg-teal-700 text-white hover:bg-teal-600 text-sm"
+            className="ml-2 p-2 rounded-lg bg-teal-600 dark:bg-teal-700 text-white hover:bg-teal-500 dark:hover:bg-teal-600 text-sm transition-colors"
           >
             Today
           </button>
@@ -358,14 +360,14 @@ const HabitCalendar = () => {
         <div className="flex items-center">
           <button 
             onClick={toggleViewMode}
-            className="p-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700 mr-2"
+            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 mr-2 transition-colors"
           >
             {viewMode === 'month' ? 'Week View' : 'Month View'}
           </button>
           
           <button 
             onClick={() => setShowAddHabit(true)}
-            className="p-2 rounded-lg bg-teal-600 text-white hover:bg-teal-500 flex items-center"
+            className="p-2 rounded-lg bg-teal-600 dark:bg-teal-600 text-white hover:bg-teal-500 dark:hover:bg-teal-500 flex items-center transition-colors"
           >
             <PlusIcon className="w-5 h-5 mr-1" />
             Add Habit
@@ -375,36 +377,46 @@ const HabitCalendar = () => {
       
       {/* Habit list */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-3">My Habits</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">My Habits</h3>
         
         {habits.length === 0 ? (
-          <div className="bg-gray-800 rounded-lg p-4 text-center">
-            <p className="text-gray-400">You don't have any habits yet. Click "Add Habit" to get started!</p>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center transition-colors">
+            <p className="text-gray-600 dark:text-gray-400">You don't have any habits yet. Click "Add Habit" to get started!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {habits.map(habit => (
-              <div 
+              <div
                 key={habit.id}
-                className="bg-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-700"
+                className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 relative transition-colors"
                 onClick={() => setSelectedHabit(habit)}
               >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering the parent onClick
+                    setViewStatsForHabit(habit);
+                  }}
+                  className="absolute top-2 right-2 text-gray-500 dark:text-gray-400 hover:text-teal-500 transition-colors"
+                  title="View Stats"
+                >
+                  <ChartBarIcon className="w-4 h-4" />
+                </button>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-medium text-white">{habit.name}</h4>
+                  <h4 className="font-medium text-gray-800 dark:text-white">{habit.name}</h4>
                   <div 
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: habit.color || '#4fd1c5' }}
                   ></div>
                 </div>
                 
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   {habit.frequency === 'daily' && 'Every day'}
                   {habit.frequency === 'weekly' && 'Every week (Sunday)'}
                   {habit.frequency === 'custom' && 'Custom days'}
                 </p>
                 
                 {habit.description && (
-                  <p className="text-sm text-gray-300 mt-2 truncate">{habit.description}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 truncate">{habit.description}</p>
                 )}
               </div>
             ))}
@@ -414,7 +426,7 @@ const HabitCalendar = () => {
       
       {/* Calendar view */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white mb-3">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
           {viewMode === 'month' ? 'Monthly View' : 'Weekly View'}
         </h3>
         
@@ -422,14 +434,14 @@ const HabitCalendar = () => {
           <div className="grid grid-cols-7 gap-2">
             {/* Days of the week headers */}
             {daysOfWeek.map(day => (
-              <div key={day} className="text-center text-gray-400 text-sm py-2">
+              <div key={day} className="text-center text-gray-600 dark:text-gray-400 text-sm py-2">
                 {day}
               </div>
             ))}
             
             {/* Blank spaces for days before the first day of the month */}
             {blanks.map(blank => (
-              <div key={`blank-${blank}`} className="p-2 rounded-lg bg-gray-900"></div>
+              <div key={`blank-${blank}`} className="p-2 rounded-lg bg-white dark:bg-gray-900"></div>
             ))}
             
             {/* Days of the month */}
@@ -443,9 +455,9 @@ const HabitCalendar = () => {
       {/* Add/Edit Habit Modal */}
       {(showAddHabit || selectedHabit) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md transition-colors">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
                 {selectedHabit ? 'Edit Habit' : 'Add New Habit'}
               </h3>
               <button 
@@ -453,7 +465,7 @@ const HabitCalendar = () => {
                   setShowAddHabit(false);
                   setSelectedHabit(null);
                 }}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
@@ -472,11 +484,11 @@ const HabitCalendar = () => {
         </div>
       )}
       
-      {/* Stats for selected habit */}
-      {selectedHabit && (
-        <HabitStats 
-          habit={selectedHabit}
-          onClose={() => setSelectedHabit(null)}
+      {/* Stats for selected habit - now using separate state */}
+      {viewStatsForHabit && (
+        <HabitStats
+          habit={viewStatsForHabit}
+          onClose={() => setViewStatsForHabit(null)}
         />
       )}
     </div>

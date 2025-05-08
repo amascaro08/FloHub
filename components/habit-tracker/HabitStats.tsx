@@ -58,26 +58,26 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md transition-colors">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-white">Habit Statistics</h3>
-          <button 
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-white transition-colors">Habit Statistics</h3>
+          <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
         
         <div className="mb-4">
-          <h4 className="text-lg font-medium text-white">{habit.name}</h4>
+          <h4 className="text-lg font-medium text-gray-800 dark:text-white transition-colors">{habit.name}</h4>
           {habit.description && (
-            <p className="text-gray-300 mt-1">{habit.description}</p>
+            <p className="text-gray-700 dark:text-gray-300 mt-1 transition-colors">{habit.description}</p>
           )}
-          <p className="text-gray-400 text-sm mt-2">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 transition-colors">
             <span className="font-medium">Frequency:</span> {getFrequencyText()}
           </p>
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-600 dark:text-gray-400 text-sm transition-colors">
             <span className="font-medium">Created:</span> {new Date(habit.createdAt).toLocaleDateString()}
           </p>
         </div>
@@ -87,49 +87,49 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-900 bg-opacity-50 text-white p-3 rounded-lg text-sm">
+          <div className="bg-red-100 dark:bg-red-900 bg-opacity-100 dark:bg-opacity-50 text-red-700 dark:text-white p-3 rounded-lg text-sm transition-colors">
             {error}
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-700 rounded-lg p-4 flex flex-col items-center">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
               <div className="flex items-center mb-2">
                 <FireIcon className="w-5 h-5 text-orange-500 mr-1" />
-                <span className="text-gray-300 text-sm">Current Streak</span>
+                <span className="text-gray-700 dark:text-gray-300 text-sm transition-colors">Current Streak</span>
               </div>
-              <span className="text-2xl font-bold text-white">{stats.currentStreak}</span>
-              <span className="text-gray-400 text-xs mt-1">days</span>
+              <span className="text-2xl font-bold text-gray-800 dark:text-white transition-colors">{stats.currentStreak}</span>
+              <span className="text-gray-600 dark:text-gray-400 text-xs mt-1 transition-colors">days</span>
             </div>
             
-            <div className="bg-gray-700 rounded-lg p-4 flex flex-col items-center">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
               <div className="flex items-center mb-2">
                 <TrophyIcon className="w-5 h-5 text-yellow-500 mr-1" />
-                <span className="text-gray-300 text-sm">Longest Streak</span>
+                <span className="text-gray-700 dark:text-gray-300 text-sm transition-colors">Longest Streak</span>
               </div>
-              <span className="text-2xl font-bold text-white">{stats.longestStreak}</span>
-              <span className="text-gray-400 text-xs mt-1">days</span>
+              <span className="text-2xl font-bold text-gray-800 dark:text-white transition-colors">{stats.longestStreak}</span>
+              <span className="text-gray-600 dark:text-gray-400 text-xs mt-1 transition-colors">days</span>
             </div>
             
-            <div className="bg-gray-700 rounded-lg p-4 flex flex-col items-center">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
               <div className="flex items-center mb-2">
                 <CheckCircleIcon className="w-5 h-5 text-green-500 mr-1" />
-                <span className="text-gray-300 text-sm">Total Completions</span>
+                <span className="text-gray-700 dark:text-gray-300 text-sm transition-colors">Total Completions</span>
               </div>
-              <span className="text-2xl font-bold text-white">{stats.totalCompletions}</span>
-              <span className="text-gray-400 text-xs mt-1">times</span>
+              <span className="text-2xl font-bold text-gray-800 dark:text-white transition-colors">{stats.totalCompletions}</span>
+              <span className="text-gray-600 dark:text-gray-400 text-xs mt-1 transition-colors">times</span>
             </div>
             
-            <div className="bg-gray-700 rounded-lg p-4 flex flex-col items-center">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
               <div className="flex items-center mb-2">
                 <ChartBarIcon className="w-5 h-5 text-blue-500 mr-1" />
-                <span className="text-gray-300 text-sm">Completion Rate</span>
+                <span className="text-gray-700 dark:text-gray-300 text-sm transition-colors">Completion Rate</span>
               </div>
-              <span className="text-2xl font-bold text-white">{stats.completionRate}%</span>
-              <span className="text-gray-400 text-xs mt-1">of days</span>
+              <span className="text-2xl font-bold text-gray-800 dark:text-white transition-colors">{stats.completionRate}%</span>
+              <span className="text-gray-600 dark:text-gray-400 text-xs mt-1 transition-colors">of days</span>
             </div>
           </div>
         ) : (
-          <div className="text-center text-gray-400 py-8">
+          <div className="text-center text-gray-600 dark:text-gray-400 py-8 transition-colors">
             No statistics available
           </div>
         )}
@@ -137,7 +137,7 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
         <div className="mt-6 text-center">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
           >
             Close
           </button>
