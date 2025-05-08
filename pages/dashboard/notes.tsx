@@ -275,9 +275,12 @@ export default function NotesPage() {
         <h1 className="text-2xl font-semibold mb-4">Notes</h1>
 
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 w-full" // Make button full width
+          className="btn-primary mb-4 w-full flex items-center justify-center" // Use btn-primary class and make button full width
           onClick={() => setShowModal(true)} // Open modal on button click
         >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
           Add Note
         </button>
 
@@ -292,24 +295,30 @@ export default function NotesPage() {
 
 
         <div className="flex gap-4 mb-4">
-          <input
-            type="text"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
-            placeholder="Search note content…"
-            value={searchContent}
-            onChange={(e) => setSearchContent(e.target.value)}
-          />
-           {/* Replace input with select dropdown for tags */}
-           <select
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="input-modern pl-10" // Use input-modern class with padding for the icon
+              placeholder="Search note content…"
+              value={searchContent}
+              onChange={(e) => setSearchContent(e.target.value)}
+            />
+          </div>
+          <select
+            className="input-modern"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-           >
-             <option value="">All Tags</option> {/* Option to show all notes */}
-             {allAvailableTags.map(tag => ( // Use allAvailableTags for filter
-               <option key={tag} value={tag}>{tag}</option>
-             ))}
-           </select>
+          >
+            <option value="">All Tags</option>
+            {allAvailableTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
         </div>
 
         {/* Render the NoteList component */}
@@ -323,9 +332,12 @@ export default function NotesPage() {
         />
         {selectedNotes.length > 0 && (
           <button
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 w-full" // Add margin top and make button full width
+            className="btn-secondary mt-4 w-full flex items-center justify-center" // Use btn-secondary class
             onClick={handleExportSelected} // Call the export handler
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+            </svg>
             Export Selected as PDF ({selectedNotes.length})
           </button>
         )}
