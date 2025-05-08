@@ -152,8 +152,8 @@ export const toggleHabitCompletion = async (
       });
       
       return {
-        id: completionDoc.id,
         ...currentCompletion,
+        id: completionDoc.id,
         completed: !currentCompletion.completed,
         notes: notes || currentCompletion.notes || '',
         timestamp: Date.now()

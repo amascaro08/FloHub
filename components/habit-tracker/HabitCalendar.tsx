@@ -1,17 +1,26 @@
+// Core React imports
 import React, { useState, useEffect } from 'react';
+
+// UI components and context
 import { useAuth } from '@/components/ui/AuthContext';
-import { 
-  getUserHabits, 
-  getHabitCompletionsForMonth, 
-  toggleHabitCompletion, 
+import { PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+
+// Habit tracker components
+import HabitForm from '@/components/habit-tracker/HabitForm';
+import HabitStats from '@/components/habit-tracker/HabitStats';
+
+// Habit service functions
+import {
+  getUserHabits,
+  getHabitCompletionsForMonth,
+  toggleHabitCompletion,
   formatDate,
   getTodayFormatted,
   shouldCompleteToday
 } from '@/lib/habitService';
+
+// Types
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
-import { PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import HabitForm from './HabitForm';
-import HabitStats from './HabitStats';
 
 const HabitCalendar = () => {
   const { user } = useAuth();
