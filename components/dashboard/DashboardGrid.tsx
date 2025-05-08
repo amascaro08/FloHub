@@ -28,15 +28,18 @@ import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "debug";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "debug" | "habit-tracker";
 
 // Define widget components
+import HabitTrackerWidget from "@/components/widgets/HabitTrackerWidget";
+
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
   debug: <DebugWidget />,
+  "habit-tracker": <HabitTrackerWidget />,
 };
 
 // Helper function to recursively remove undefined values from an object
@@ -74,6 +77,8 @@ const getWidgetIcon = (widgetKey: string) => {
       return <FileText className="w-5 h-5" />;
     case 'debug':
       return <Bug className="w-5 h-5" />;
+    case 'habit-tracker':
+      return <Clock className="w-5 h-5" />;
     default:
       return null;
   }
@@ -94,21 +99,21 @@ const DashboardGrid = () => {
       { i: "calendar", x: 3, y: 0, w: 3, h: 5 },
       { i: "ataglance", x: 0, y: 5, w: 3, h: 5 },
       { i: "quicknote", x: 3, y: 5, w: 3, h: 5 },
-      { i: "debug", x: 0, y: 10, w: 6, h: 5 },
+      { i: "habit-tracker", x: 0, y: 10, w: 6, h: 5 },
     ],
     md: [
       { i: "tasks", x: 0, y: 0, w: 4, h: 5 },
       { i: "calendar", x: 4, y: 0, w: 4, h: 5 },
       { i: "ataglance", x: 0, y: 5, w: 4, h: 5 },
       { i: "quicknote", x: 4, y: 5, w: 4, h: 5 },
-      { i: "debug", x: 0, y: 10, w: 8, h: 5 },
+      { i: "habit-tracker", x: 0, y: 10, w: 8, h: 5 },
     ],
     sm: [
       { i: "tasks", x: 0, y: 0, w: 6, h: 5 },
       { i: "calendar", x: 0, y: 5, w: 6, h: 5 },
       { i: "ataglance", x: 0, y: 10, w: 6, h: 5 },
       { i: "quicknote", x: 0, y: 15, w: 6, h: 5 },
-      { i: "debug", x: 0, y: 20, w: 6, h: 5 },
+      { i: "habit-tracker", x: 0, y: 20, w: 6, h: 5 },
     ],
   };
 
