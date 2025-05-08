@@ -5,9 +5,9 @@ import { getToken } from "next-auth/jwt";
 
 export type CalendarEvent = {
   id: string;
-  summary: string;
-  start: { dateTime: string | null; date: string | null; timeZone: string | null };
-  end: { dateTime: string | null; date: string | null; timeZone: string | null };
+  title: string; // Changed summary to title
+  start: Date;
+  end: Date;
   description?: string; // Add optional description field
 };
 
@@ -47,7 +47,7 @@ export default async function handler(
 
   try {
     // 3) Call Google Calendar API to list events for the specified calendar
-    const allEvents: CalendarEvent[] = [];
+    const allEvents: any[] = [];
 
     // Set time range for events (e.g., next 3 months)
     const now = new Date();
@@ -84,21 +84,13 @@ export default async function handler(
       allEvents.push(...events);
     }
 
-    // Ensure start and end are ISO strings
+    // Ensure start and end are Dates and has title
     const formattedEvents: CalendarEvent[] = allEvents.map(event => ({
       id: event.id,
-      summary: event.summary,
+      title: event.summary,
+      start: event.start.dateTime ? new Date(event.start.dateTime) : new Date(event.start.date),
+      end: event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : new Date(),
       description: event.description,
-      start: {
-        dateTime: event.start.dateTime ? new Date(event.start.dateTime).toISOString() : null,
-        date: event.start.date ? new Date(event.start.date).toISOString() : null,
-        timeZone: event.start.timeZone || null
-      },
-      end: {
-        dateTime: event.end?.dateTime ? new Date(event.end.dateTime).toISOString() : null,
-        date: event.end?.date ? new Date(event.end.date).toISOString() : null,
-        timeZone: event.end?.timeZone || null
-      }
     }));
 
     return res.status(200).json({ events: formattedEvents });
