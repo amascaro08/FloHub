@@ -13,7 +13,7 @@ const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
   { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
   { name: "Notes", href: "/dashboard/notes", icon: NotebookPen }, // Add Notes link with icon
-  { name: "Habits", href: "/dashboard/habits", icon: Book },
+  { name: "Habits", href: "/habit-tracker", icon: Book },
   { name: "Journal", href: "/dashboard/journal", icon: Calendar }, // Using Calendar icon for Journal for now
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },

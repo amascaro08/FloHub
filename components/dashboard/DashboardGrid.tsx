@@ -129,19 +129,19 @@ const DashboardGrid = () => {
           
           if (docSnap.exists()) {
             const userSettings = docSnap.data() as UserSettings;
-            if (userSettings.activeWidgets) {
-              setActiveWidgets(userSettings.activeWidgets);
-            } else {
-              // If activeWidgets doesn't exist, use all widgets
-              setActiveWidgets(Object.keys(widgetComponents) as string[]);
+            // Ensure habit-tracker is always included
+            let active = userSettings.activeWidgets || [];
+            if (!active.includes("habit-tracker")) {
+              active.push("habit-tracker");
             }
+            setActiveWidgets(active);
           } else {
-            // If no settings exist, use all widgets
+            // If no settings exist, use all widgets, including habit-tracker
             setActiveWidgets(Object.keys(widgetComponents) as string[]);
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching user settings:", e);
-          // Default to all widgets on error
+          // Default to all widgets on error, including habit-tracker
           setActiveWidgets(Object.keys(widgetComponents) as string[]);
         }
       }
