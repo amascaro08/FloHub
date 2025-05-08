@@ -35,12 +35,19 @@ export default async function handler(
   // 2) Get calendarId from query parameters
   const { calendarId } = req.query;
 
-  if (!calendarId || typeof calendarId !== 'string') {
+  if (!calendarId) {
+    return res.status(400).json({ error: "Calendar ID is required" });
+  }
+
+  const calendarIds = typeof calendarId === 'string' ? calendarId.split(',') : Array.isArray(calendarId) ? calendarId : [];
+
+  if (calendarIds.length === 0) {
     return res.status(400).json({ error: "Calendar ID is required" });
   }
 
   try {
     // 3) Call Google Calendar API to list events for the specified calendar
+    const allEvents: CalendarEvent[] = [];
 
     // Set time range for events (e.g., next 3 months)
     const now = new Date();
@@ -48,33 +55,36 @@ export default async function handler(
     const threeMonthsLater = new Date(now.setMonth(now.getMonth() + 3));
     const timeMax = threeMonthsLater.toISOString();
 
+    for (const calId of calendarIds) {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime`;
 
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime`;
+      const apiRes = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    const apiRes = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+      if (!apiRes.ok) {
+        const err = await apiRes.json();
+        console.error("Google Calendar API error fetching events:", apiRes.status, err);
+        return res.status(apiRes.status).json({ error: err.error?.message || "Google API error fetching events" });
+      }
 
-    if (!apiRes.ok) {
-      const err = await apiRes.json();
-      console.error("Google Calendar API error fetching events:", apiRes.status, err);
-      return res.status(apiRes.status).json({ error: err.error?.message || "Google API error fetching events" });
+      const body = await apiRes.json();
+      const events: CalendarEvent[] = Array.isArray(body.items)
+        ? body.items.map((event: any) => ({
+            id: event.id,
+            summary: event.summary || "No Title",
+            start: event.start,
+            end: event.end,
+            description: event.description, // Include the description
+          }))
+        : [];
+
+      allEvents.push(...events);
     }
 
-    const body = await apiRes.json();
-    const events: CalendarEvent[] = Array.isArray(body.items)
-      ? body.items.map((event: any) => ({
-          id: event.id,
-          summary: event.summary || "No Title",
-          start: event.start,
-          end: event.end,
-          description: event.description, // Include the description
-        }))
-      : [];
-
-    return res.status(200).json({ events: events });
+    return res.status(200).json({ events: allEvents });
 
   } catch (err: any) {
     console.error("Fetch calendar events error:", err);

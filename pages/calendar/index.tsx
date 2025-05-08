@@ -36,8 +36,8 @@ const CalendarPage = () => {
 
       try {
         const calendarIds = settings.selectedCals;
-        const calendarIdParams = calendarIds.map(id => `calendarId=${encodeURIComponent(id)}`).join('&');
-        const response = await fetch(`/api/calendar/events?${calendarIdParams}`);
+        const calendarIdParam = `calendarId=${calendarIds.map(encodeURIComponent).join(',')}`;
+        const response = await fetch(`/api/calendar/events?${calendarIdParam}`);
         const data = await response.json();
         setEvents(data);
       } catch (error) {
