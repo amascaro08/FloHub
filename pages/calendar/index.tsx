@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import useSWR from 'swr';
-
-const localizer = momentLocalizer(moment);
 
 // Define Settings type (can be moved to a shared types file)
 type Settings = {
@@ -56,29 +51,18 @@ const CalendarPage = () => {
     fetchEvents();
   }, [settings]);
 
-  // Function to determine the start date for the event
-  const getStartDate = (event: CalendarEvent) => {
-    return event.start.dateTime ? new Date(event.start.dateTime) : event.start.date ? new Date(event.start.date) : new Date();
-  };
-
-  // Function to determine the end date for the event
-  const getEndDate = (event: CalendarEvent) => {
-    return event.end.dateTime ? new Date(event.end.dateTime) : event.end.date ? new Date(event.end.date) : new Date();
-  };
-
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-bold mb-5">Calendar</h1>
-      <div style={{ height: 500 }}>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor={(event: CalendarEvent) => getStartDate(event)}
-          endAccessor={(event: CalendarEvent) => getEndDate(event)}
-          defaultView="month"
-          style={{ height: 500 }}
-        />
-      </div>
+      <ul>
+        {events.map(event => (
+          <li key={event.id}>
+            <h2 className="text-lg font-semibold">{event.summary}</h2>
+            <p>Start: {event.start.dateTime || event.start.date}</p>
+            <p>End: {event.end.dateTime || event.end.date}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
