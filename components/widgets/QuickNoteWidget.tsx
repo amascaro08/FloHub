@@ -91,47 +91,66 @@ function QuickNoteWidget() {
 
 
   return (
-    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)] flex flex-col h-full">
-      <form onSubmit={handleSaveNote} className="flex flex-col flex-1 gap-2">
+    <div className="flex flex-col h-full">
+      <form onSubmit={handleSaveNote} className="flex flex-col flex-1 gap-3">
         <textarea
-          className="
-            w-full border border-[var(--neutral-300)]
-            px-3 py-2 rounded focus:outline-none
-            focus:ring-2 focus:ring-[var(--primary)]
-            text-[var(--fg)] bg-transparent
-            flex-1 placeholder-[var(--fg-muted)]
-          "
+          className="input-modern flex-1 resize-none"
           placeholder="Write your note here..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={isSaving}
         />
-        <CreatableSelect // Use CreatableSelect for tags
+        <CreatableSelect
           isMulti
           options={tagOptions}
           onChange={handleTagChange}
           placeholder="Select or create tags..."
           isDisabled={isSaving}
           isSearchable
-          value={selectedTags.map(tag => ({ value: tag, label: tag }))} // Set value for CreatableSelect
+          value={selectedTags.map(tag => ({ value: tag, label: tag }))}
+          classNamePrefix="react-select"
+          theme={(theme) => ({
+            ...theme,
+            colors: {
+              ...theme.colors,
+              primary: '#14B8A6',
+              primary25: '#99F6E4',
+            },
+          })}
         />
-        <button
-          type="submit"
-          className={`
-            self-end bg-primary-500 text-white
-            px-4 py-2 rounded hover:bg-primary-600
-            ${isSaving ? "opacity-50 cursor-not-allowed" : ""}
-          `}
-          disabled={isSaving}
-        >
-          {isSaving ? "Saving..." : "Save Note"}
-        </button>
-        {saveStatus === "success" && (
-          <p className="text-soft-yellow text-sm mt-1">Note saved!</p>
-        )}
-        {saveStatus === "error" && (
-          <p className="text-red-500 text-sm mt-1">Failed to save note.</p>
-        )}
+        <div className="flex justify-between items-center mt-1">
+          {saveStatus === "success" && (
+            <p className="text-green-600 dark:text-green-400 text-sm flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Note saved!
+            </p>
+          )}
+          {saveStatus === "error" && (
+            <p className="text-red-600 dark:text-red-400 text-sm flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              Failed to save note
+            </p>
+          )}
+          <button
+            type="submit"
+            className={`btn-primary ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            ) : "Save Note"}
+          </button>
+        </div>
       </form>
     </div>
   );

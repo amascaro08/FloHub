@@ -4,6 +4,14 @@ import { useState, useEffect, useRef, memo, useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
+import {
+  CheckSquare,
+  Calendar,
+  MessageSquare,
+  Clock,
+  FileText,
+  Bug
+} from 'lucide-react';
 
 import TaskWidget from "@/components/widgets/TaskWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
@@ -52,6 +60,24 @@ function removeUndefined(obj: any): any {
  }
  return cleanedObj;
 }
+
+// Helper function to get the appropriate icon for each widget
+const getWidgetIcon = (widgetKey: string) => {
+  switch(widgetKey) {
+    case 'tasks':
+      return <CheckSquare className="w-5 h-5" />;
+    case 'calendar':
+      return <Calendar className="w-5 h-5" />;
+    case 'ataglance':
+      return <Clock className="w-5 h-5" />;
+    case 'quicknote':
+      return <FileText className="w-5 h-5" />;
+    case 'debug':
+      return <Bug className="w-5 h-5" />;
+    default:
+      return null;
+  }
+};
 
 const DashboardGrid = () => {
   const { data: session } = useSession();
@@ -216,27 +242,31 @@ const DashboardGrid = () => {
   };
 
   return (
-    <ResponsiveGridLayout
-      className="layout"
-      layouts={layouts}
-      breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-      cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
-      rowHeight={30}
-      onLayoutChange={onLayoutChange}
-      isDraggable={!isLocked}
-      isResizable={!isLocked}
-    >
-      {activeWidgets.map((key) => (
-        <div key={key} className="glass p-4 rounded-xl shadow-md flex flex-col">
-          <h2 className="font-semibold capitalize mb-2">
-            {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
-          </h2>
-          <div className="flex-1 overflow-auto">
-            {memoizedWidgetComponents[key as WidgetType]}
+    <div className="grid-bg">
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={layouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
+        rowHeight={30}
+        onLayoutChange={onLayoutChange}
+        isDraggable={!isLocked}
+        isResizable={!isLocked}
+        margin={[16, 16]}
+      >
+        {activeWidgets.map((key) => (
+          <div key={key} className="glass p-5 rounded-xl flex flex-col">
+            <h2 className="widget-header">
+              {getWidgetIcon(key)}
+              {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
+            </h2>
+            <div className="widget-content">
+              {memoizedWidgetComponents[key as WidgetType]}
+            </div>
           </div>
-        </div>
-      ))}
-    </ResponsiveGridLayout>
+        ))}
+      </ResponsiveGridLayout>
+    </div>
   );
 };
 

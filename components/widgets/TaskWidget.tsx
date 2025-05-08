@@ -182,23 +182,19 @@ function TaskWidget() {
   const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
 
   return (
-    <div className="glass p-4 rounded-xl shadow-elevate-sm text-[var(--fg)] relative"> {/* Added relative for absolute positioning */}
+    <div className="relative"> {/* Removed glass class as it's now in the parent */}
       {/* Celebration Message */}
       {celebrating && (
-        <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl">
+        <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl animate-fade-in">
           Task Complete! 🎉
         </div>
       )}
 
-      <form onSubmit={addOrUpdate} className="flex flex-col gap-2 mb-4">
+      <form onSubmit={addOrUpdate} className="flex flex-col gap-3 mb-5">
         <div className="flex gap-2">
           <input
             type="text"
-            className="
-              flex-1 border border-[var(--neutral-300)]
-              px-3 py-2 rounded focus:outline-none
-              focus:ring-2 focus:ring-[var(--primary)]
-            "
+            className="input-modern flex-1"
             placeholder="New task…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -207,14 +203,9 @@ function TaskWidget() {
           <select
             value={due}
             onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
-            className="
-              border border-[var(--neutral-300)]
-              px-3 py-2 rounded focus:outline-none
-              focus:ring-2 focus:ring-[var(--primary)]
-              text-[var(--fg)]
-            "
+            className="input-modern w-auto"
           >
-            <option value="today" className="text-[var(--fg)]">Today</option>
+            <option value="today">Today</option>
             <option value="tomorrow">Tomorrow</option>
             <option value="custom">Custom</option>
           </select>
@@ -222,11 +213,7 @@ function TaskWidget() {
           {due === "custom" && (
             <input
               type="date"
-              className="
-                border border-[var(--neutral-300)]
-                px-3 py-2 rounded focus:outline-none
-                focus:ring-2 focus:ring-[var(--primary)]
-              "
+              className="input-modern w-auto"
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
             />
@@ -234,108 +221,112 @@ function TaskWidget() {
         </div>
 
         {/* Source and Tags */}
-        {/* Source and Tags on the same line */}
-        <div className="flex flex-row gap-2 items-center w-full"> {/* Source label, Source select, and Tags input, added w-full */}
-           <label className="text-sm font-medium text-[var(--fg)]">Source:</label>
-           <select
-             value={taskSource}
-             onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
-             className="
-               border border-[var(--neutral-300)]
-               px-3 py-1 rounded focus:outline-none
-               focus:ring-2 focus:ring-[var(--primary)]
-               text-[var(--fg)]
-             "
-           >
-             <option value="personal">Personal</option>
-             <option value="work">Work</option>
-           </select>
+        <div className="flex flex-row gap-2 items-center w-full">
+           <div className="flex items-center">
+             <label className="text-sm font-medium mr-2">Source:</label>
+             <select
+               value={taskSource}
+               onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
+               className="input-modern w-auto py-1"
+             >
+               <option value="personal">Personal</option>
+               <option value="work">Work</option>
+             </select>
+           </div>
 
            {/* Tags Input */}
-           <div className="flex-1 flex-grow"> {/* This div is just for the CreatableSelect, added flex-grow */}
-             {/* The "Tags" label is not needed visually here, but keep it for accessibility with sr-only */}
+           <div className="flex-1 flex-grow">
              <label htmlFor="task-tags" className="sr-only">Tags</label>
-             <CreatableSelect // Use CreatableSelect for tags
+             <CreatableSelect
                isMulti
                options={tagOptions}
                onChange={handleTagChange}
                placeholder="Select or create tags..."
-               isDisabled={false} // Adjust as needed
+               isDisabled={false}
                isSearchable
-               value={selectedTags.map(tag => ({ value: tag, label: tag }))} // Set value for CreatableSelect
+               value={selectedTags.map(tag => ({ value: tag, label: tag }))}
+               classNamePrefix="react-select"
+               theme={(theme) => ({
+                 ...theme,
+                 colors: {
+                   ...theme.colors,
+                   primary: '#14B8A6',
+                   primary25: '#99F6E4',
+                 },
+               })}
              />
            </div>
         </div>
 
-
         <button
           type="submit"
-          className="
-            self-end bg-primary-500 text-white
-            px-4 py-2 rounded hover:bg-primary-600
-          "
+          className="btn-primary self-end"
         >
-          {editing ? "Save" : "Add"}
+          {editing ? "Save" : "Add Task"}
         </button>
       </form>
 
-      <ul className="space-y-2 text-sm">
+      <ul className="space-y-3">
         {incompleteTasks.length > 0 ? (
           incompleteTasks.map((t) => (
             <li
               key={t.id}
-              className="flex justify-between items-center py-1"
+              className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={() => toggleComplete(t)}
-                  className="mr-2"
-                />
-                <span>
-                  {t.text}
-                </span>
-                 {/* Display task source tag */}
-                {t.source && (
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-xs ml-2 ${
-                      t.source === "work"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {t.source === "work" ? "Work" : "Personal"}
+              <div className="flex items-center flex-wrap">
+                <div className="flex items-center min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={t.done}
+                    onChange={() => toggleComplete(t)}
+                    className="mr-3 h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="font-medium truncate">
+                    {t.text}
                   </span>
-                )}
-                {/* Display task tags */}
-                {t.tags && t.tags.map(tag => (
-                  <span key={tag} className="inline-block px-2 py-0.5 rounded text-xs ml-2 bg-off-white text-cool-grey">
-                    {tag}
+                </div>
+                
+                <div className="flex flex-wrap items-center ml-2 mt-1">
+                  {/* Display task source tag */}
+                  {t.source && (
+                    <span className={`tag ${t.source === "work" ? "tag-work" : "tag-personal"} mr-1`}>
+                      {t.source === "work" ? "Work" : "Personal"}
+                    </span>
+                  )}
+                  
+                  {/* Display task tags */}
+                  {t.tags && t.tags.map(tag => (
+                    <span key={tag} className="tag mr-1 mb-1">
+                      {tag}
+                    </span>
+                  ))}
+                  
+                  <span className="text-neutral-500 text-sm ml-1">
+                    ({fmt(t.dueDate)})
                   </span>
-                ))}
-                <span className="ml-2 text-[var(--neutral-500)]">
-                  ({fmt(t.dueDate)})
-                </span>
+                </div>
               </div>
-              <div className="flex gap-2">
+              
+              <div className="flex gap-2 ml-2 shrink-0">
                 <button
                   onClick={() => startEdit(t)}
-                  className="text-sm text-primary-500 hover:underline"
+                  className="text-sm text-primary-500 hover:text-primary-700 transition-colors"
+                  aria-label="Edit task"
                 >
-                  Edit
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                 </button>
                 <button
                   onClick={() => remove(t.id)}
-                  className="text-sm text-red-500 hover:underline"
+                  className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                  aria-label="Delete task"
                 >
-                  X
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
               </div>
             </li>
           ))
         ) : (
-          <li className="text-[var(--neutral-500)]">No tasks yet.</li>
+          <li className="text-neutral-500 text-center py-4">No tasks yet. Add one above!</li>
         )}
       </ul>
     </div>
