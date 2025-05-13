@@ -69,6 +69,71 @@ export default function SettingsPage() {
   const { data: loadedSettings, error: settingsError, mutate: mutateSettings } =
     useSWR<UserSettings>(session ? "/api/userSettings" : null, fetcher, { revalidateOnFocus: false }); // Use UserSettings type
 
+  // Check for mock authentication in URL parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const mockAuth = urlParams.get('mockAuth');
+      const state = urlParams.get('state');
+      
+      if (mockAuth && state) {
+        try {
+          // Parse the state parameter
+          const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+          
+          // Handle mock authentication based on provider
+          if (mockAuth === 'microsoft') {
+            // Create a mock Microsoft calendar source
+            const newSource: CalendarSource = {
+              id: stateData.calendarId || `microsoft-${Date.now()}`,
+              name: "Microsoft Calendar (Mock)",
+              type: "o365",
+              sourceId: `microsoft-mock-${Date.now()}`,
+              connectionData: "oauth:authenticated",
+              tags: ["work"],
+              isEnabled: true,
+            };
+            
+            // Add the new source to settings
+            setSettings(s => ({
+              ...s,
+              calendarSources: [...(s.calendarSources || []), newSource]
+            }));
+            
+            // Show success message
+            alert("Microsoft account connected successfully (mock)");
+          } else if (mockAuth === 'google') {
+            // Create a mock Google calendar source
+            const accountLabel = stateData.accountLabel || "Additional";
+            const newSource: CalendarSource = {
+              id: `google-additional-${Date.now()}`,
+              name: `Google Calendar (${accountLabel})`,
+              type: "google",
+              sourceId: `google-mock-${Date.now()}`,
+              connectionData: `oauth:${accountLabel}`,
+              tags: ["personal"],
+              isEnabled: true,
+            };
+            
+            // Add the new source to settings
+            setSettings(s => ({
+              ...s,
+              calendarSources: [...(s.calendarSources || []), newSource]
+            }));
+            
+            // Show success message
+            alert(`Google account "${accountLabel}" connected successfully (mock)`);
+          }
+          
+          // Remove the query parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error("Error handling mock authentication:", error);
+        }
+      }
+    }
+  }, []);
+
   // 5) Initialize local form state when loadedSettings changes
   useEffect(() => {
     if (loadedSettings) {
