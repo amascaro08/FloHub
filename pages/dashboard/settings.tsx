@@ -42,7 +42,7 @@ export default function SettingsPage() {
     },
     powerAutomateUrl: "",
     globalTags: [], // Initialize globalTags
-    activeWidgets: ["tasks", "calendar", "ataglance", "quicknote", "debug"], // Initialize active widgets
+    activeWidgets: ["tasks", "calendar", "ataglance", "quicknote"], // Initialize active widgets
     calendarSources: [], // Initialize calendar sources
   });
 

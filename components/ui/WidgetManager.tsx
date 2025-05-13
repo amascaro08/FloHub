@@ -35,12 +35,13 @@ const availableWidgets: WidgetConfig[] = [
     description: "Track and manage your daily habits",
     component: "HabitTrackerWidget",
   },
-  {
-    id: "debug",
-    name: "Debug",
-    description: "Debug information and tools",
-    component: "DebugWidget",
-  },
+  // Debug widget commented out
+  // {
+  //   id: "debug",
+  //   name: "Debug",
+  //   description: "Debug information and tools",
+  //   component: "DebugWidget",
+  // },
 ];
 
 interface WidgetManagerProps {
