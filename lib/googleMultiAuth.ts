@@ -20,12 +20,8 @@ export const GOOGLE_OAUTH_CONFIG = {
 export function getGoogleOAuthUrl(state: string): string {
   const { clientId, redirectUri } = GOOGLE_OAUTH_CONFIG;
   
-  // For development/demo purposes, use mock OAuth flow if environment variables are not set
   if (!clientId || !redirectUri) {
-    console.warn('Google OAuth configuration is missing required parameters, using mock flow');
-    // Return a URL that will redirect back to the settings page with a mock token
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : process.env.NEXTAUTH_URL || '';
-    return `${baseUrl}/dashboard/settings?mockAuth=google&state=${encodeURIComponent(state)}`;
+    throw new Error('Google OAuth configuration is missing required parameters. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL environment variables.');
   }
 
   const oauth2Client = new OAuth2Client(

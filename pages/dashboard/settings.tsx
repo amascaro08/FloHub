@@ -69,67 +69,30 @@ export default function SettingsPage() {
   const { data: loadedSettings, error: settingsError, mutate: mutateSettings } =
     useSWR<UserSettings>(session ? "/api/userSettings" : null, fetcher, { revalidateOnFocus: false }); // Use UserSettings type
 
-  // Check for mock authentication in URL parameters
+  // Check for authentication success or error in URL parameters
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const mockAuth = urlParams.get('mockAuth');
-      const state = urlParams.get('state');
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      const provider = urlParams.get('provider');
       
-      if (mockAuth && state) {
-        try {
-          // Parse the state parameter
-          const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-          
-          // Handle mock authentication based on provider
-          if (mockAuth === 'microsoft') {
-            // Create a mock Microsoft calendar source
-            const newSource: CalendarSource = {
-              id: stateData.calendarId || `microsoft-${Date.now()}`,
-              name: "Microsoft Calendar (Mock)",
-              type: "o365",
-              sourceId: `microsoft-mock-${Date.now()}`,
-              connectionData: "oauth:authenticated",
-              tags: ["work"],
-              isEnabled: true,
-            };
-            
-            // Add the new source to settings
-            setSettings(s => ({
-              ...s,
-              calendarSources: [...(s.calendarSources || []), newSource]
-            }));
-            
-            // Show success message
-            alert("Microsoft account connected successfully (mock)");
-          } else if (mockAuth === 'google') {
-            // Create a mock Google calendar source
-            const accountLabel = stateData.accountLabel || "Additional";
-            const newSource: CalendarSource = {
-              id: `google-additional-${Date.now()}`,
-              name: `Google Calendar (${accountLabel})`,
-              type: "google",
-              sourceId: `google-mock-${Date.now()}`,
-              connectionData: `oauth:${accountLabel}`,
-              tags: ["personal"],
-              isEnabled: true,
-            };
-            
-            // Add the new source to settings
-            setSettings(s => ({
-              ...s,
-              calendarSources: [...(s.calendarSources || []), newSource]
-            }));
-            
-            // Show success message
-            alert(`Google account "${accountLabel}" connected successfully (mock)`);
-          }
-          
-          // Remove the query parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (error) {
-          console.error("Error handling mock authentication:", error);
+      if (success === 'true' && provider) {
+        // Show success message
+        if (provider === 'microsoft') {
+          alert("Microsoft account connected successfully!");
+        } else if (provider === 'google') {
+          const accountLabel = urlParams.get('accountLabel') || 'Additional';
+          alert(`Google account "${accountLabel}" connected successfully!`);
         }
+      } else if (error) {
+        // Show error message
+        alert(`Authentication error: ${error}`);
+      }
+      
+      // Remove the query parameters if they exist
+      if (success || error) {
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
@@ -537,11 +500,13 @@ export default function SettingsPage() {
                           // Generate a unique ID for this calendar source
                           const tempId = `temp-${Date.now()}`;
                           
-                          // Save the current state of the form
-                          const currentSource = {...newCalendarSource};
-                          
-                          // Redirect to the Microsoft OAuth endpoint
-                          window.location.href = `/api/auth/microsoft?calendarId=${tempId}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
+                          try {
+                            // Redirect to the Microsoft OAuth endpoint
+                            window.location.href = `/api/auth/microsoft?calendarId=${tempId}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
+                          } catch (error) {
+                            console.error("Error initiating Microsoft OAuth:", error);
+                            alert(`Error initiating Microsoft OAuth: ${error instanceof Error ? error.message : String(error)}`);
+                          }
                         }}
                         className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
                       >
@@ -613,8 +578,13 @@ export default function SettingsPage() {
                           // Extract the account label
                           const accountLabel = newCalendarSource.connectionData?.replace("oauth:", "") || "Additional";
                           
-                          // Redirect to the Google OAuth endpoint for additional accounts
-                          window.location.href = `/api/auth/google-additional?accountLabel=${encodeURIComponent(accountLabel)}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
+                          try {
+                            // Redirect to the Google OAuth endpoint for additional accounts
+                            window.location.href = `/api/auth/google-additional?accountLabel=${encodeURIComponent(accountLabel)}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
+                          } catch (error) {
+                            console.error("Error initiating Google OAuth:", error);
+                            alert(`Error initiating Google OAuth: ${error instanceof Error ? error.message : String(error)}`);
+                          }
                         }}
                         className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
                       >
