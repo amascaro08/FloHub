@@ -401,17 +401,81 @@ export default function SettingsPage() {
               {/* Connection Data (for O365) */}
               {newCalendarSource.type === "o365" && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">PowerAutomate HTTP Request URL</label>
-                  <input
-                    type="url"
-                    value={newCalendarSource.connectionData || ""}
-                    onChange={(e) => setNewCalendarSource({...newCalendarSource, connectionData: e.target.value})}
-                    className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    placeholder="https://prod-xx.westus.logic.azure.com/..."
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Paste your PowerAutomate HTTP request URL here to enable O365 calendar events.
-                  </p>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">O365 Connection Method</label>
+                    <div className="flex flex-col space-y-2">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="o365ConnectionType"
+                          value="powerautomate"
+                          checked={!newCalendarSource.connectionData?.startsWith("oauth:")}
+                          onChange={() => {
+                            // If currently using OAuth, switch to empty PowerAutomate
+                            if (newCalendarSource.connectionData?.startsWith("oauth:")) {
+                              setNewCalendarSource({...newCalendarSource, connectionData: ""});
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-500"
+                        />
+                        <span className="ml-2">PowerAutomate HTTP Request URL</span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="o365ConnectionType"
+                          value="oauth"
+                          checked={newCalendarSource.connectionData?.startsWith("oauth:")}
+                          onChange={() => {
+                            // If not using OAuth, switch to OAuth
+                            if (!newCalendarSource.connectionData?.startsWith("oauth:")) {
+                              setNewCalendarSource({...newCalendarSource, connectionData: "oauth:default"});
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-500"
+                        />
+                        <span className="ml-2">Microsoft OAuth Authentication</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {/* Show PowerAutomate URL input if that option is selected */}
+                  {!newCalendarSource.connectionData?.startsWith("oauth:") && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">PowerAutomate HTTP Request URL</label>
+                      <input
+                        type="url"
+                        value={newCalendarSource.connectionData || ""}
+                        onChange={(e) => setNewCalendarSource({...newCalendarSource, connectionData: e.target.value})}
+                        className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="https://prod-xx.westus.logic.azure.com/..."
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Paste your PowerAutomate HTTP request URL here to enable O365 calendar events.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Show OAuth settings if that option is selected */}
+                  {newCalendarSource.connectionData?.startsWith("oauth:") && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Using Microsoft OAuth authentication. You'll need to sign in with your Microsoft account when prompted.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          alert("In a production environment, this would trigger the Microsoft OAuth flow.");
+                          // In a real implementation, this would trigger the OAuth flow
+                          // For now, we'll just set a placeholder value
+                          setNewCalendarSource({...newCalendarSource, connectionData: "oauth:authenticated"});
+                        }}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                      >
+                        Connect Microsoft Account
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               
