@@ -149,6 +149,45 @@ export default async function handler(
       }
     }
 
+    // Process Google Calendar sources from additional accounts
+    const additionalGoogleSources = calendarSources.filter(
+      source => source.type === "google" && source.connectionData?.startsWith("oauth:")
+    );
+    
+    if (additionalGoogleSources.length > 0) {
+      for (const source of additionalGoogleSources) {
+        if (!source.isEnabled) continue;
+        
+        const accountLabel = source.connectionData?.replace("oauth:", "") || "Additional";
+        const tags = source.tags || [];
+        const sourceName = source.name || `Google Calendar (${accountLabel})`;
+        
+        try {
+          // In a real implementation, we would fetch the tokens for this account and use them
+          // For now, we'll add a placeholder event
+          if (process.env.NODE_ENV === "development" || req.query.showPlaceholders === "true") {
+            const placeholderEvent = {
+              id: `google_additional_${source.id}_${Date.now()}`,
+              calendarId: source.sourceId,
+              summary: `Events from ${sourceName}`,
+              start: { dateTime: new Date().toISOString() },
+              end: { dateTime: new Date(Date.now() + 3600000).toISOString() }, // 1 hour later
+              source: tags.includes("work") ? "work" : "personal",
+              description: `This is a placeholder for events from your additional Google account (${accountLabel}).`,
+              calendarName: sourceName,
+              tags,
+            };
+            
+            allEvents.push(placeholderEvent);
+          }
+          
+          console.log(`Added placeholder for additional Google account: ${accountLabel}`);
+        } catch (e) {
+          console.error(`Error processing additional Google account ${accountLabel}:`, e);
+        }
+      }
+    }
+
     // Process O365 Calendar sources
     const o365Sources = calendarSources.filter(source => source.type === "o365");
     
@@ -226,18 +265,44 @@ export default async function handler(
     );
     
     if (o365OAuthSources.length > 0) {
-      try {
-        // In a real implementation, we would use the Microsoft Graph API with OAuth tokens
-        // This would require setting up proper OAuth authentication with Microsoft
-        // For now, we'll add placeholder events for OAuth sources
+      for (const source of o365OAuthSources) {
+        if (!source.isEnabled) continue;
         
-        for (const source of o365OAuthSources) {
-          if (!source.isEnabled) continue;
+        const tags = source.tags || ["work"]; // Default to work tag for O365
+        const sourceName = source.name || "Microsoft 365 (OAuth)";
+        const isWork = tags.includes("work") || tags.length === 0; // Default to work if no tags
+        
+        try {
+          // In a real implementation, we would fetch events from Microsoft Graph API
+          // For now, we'll try to use our Microsoft API endpoint
+          const msCalendarId = source.sourceId;
           
-          const tags = source.tags || ["work"]; // Default to work tag for O365
-          const sourceName = source.name || "Microsoft 365 (OAuth)";
-          const isWork = tags.includes("work") || tags.length === 0; // Default to work if no tags
+          if (msCalendarId) {
+            try {
+              // Try to fetch events from our Microsoft API endpoint
+              const msEventsUrl = `/api/calendar/microsoft/events?calendarId=${encodeURIComponent(msCalendarId)}&timeMin=${encodeURIComponent(safeTimeMin)}&timeMax=${encodeURIComponent(safeTimeMax)}`;
+              
+              const msEventsRes = await fetch(`${process.env.NEXTAUTH_URL}${msEventsUrl}`, {
+                headers: {
+                  Cookie: req.headers.cookie || "",
+                },
+              });
+              
+              if (msEventsRes.ok) {
+                const msEvents = await msEventsRes.json();
+                if (Array.isArray(msEvents)) {
+                  // Add the events to our list
+                  allEvents.push(...msEvents);
+                  console.log(`Added ${msEvents.length} events from Microsoft Calendar:`, sourceName);
+                  continue; // Skip the placeholder
+                }
+              }
+            } catch (msError) {
+              console.error("Error fetching Microsoft events:", msError);
+            }
+          }
           
+          // If we couldn't fetch real events, add a placeholder
           // Add a placeholder event to show the OAuth calendar in the UI
           const placeholderEvent = {
             id: `o365_oauth_${source.id}_${Date.now()}`,
@@ -257,9 +322,9 @@ export default async function handler(
           }
           
           console.log("Added placeholder for Microsoft OAuth Calendar:", sourceName);
+        } catch (e) {
+          console.error("Error processing Microsoft OAuth Calendar source:", e);
         }
-      } catch (e) {
-        console.error("Error processing Microsoft OAuth Calendar sources:", e);
       }
     }
     

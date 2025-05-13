@@ -469,14 +469,91 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          alert("In a production environment, this would trigger the Microsoft OAuth flow.");
-                          // In a real implementation, this would trigger the OAuth flow
-                          // For now, we'll just set a placeholder value
-                          setNewCalendarSource({...newCalendarSource, connectionData: "oauth:authenticated"});
+                          // Generate a unique ID for this calendar source
+                          const tempId = `temp-${Date.now()}`;
+                          
+                          // Save the current state of the form
+                          const currentSource = {...newCalendarSource};
+                          
+                          // Redirect to the Microsoft OAuth endpoint
+                          window.location.href = `/api/auth/microsoft?calendarId=${tempId}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
                         }}
                         className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
                       >
                         Connect Microsoft Account
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Connection Data for additional Google account */}
+              {newCalendarSource.type === "google" && (
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Google Account Connection</label>
+                    <div className="flex flex-col space-y-2">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="googleConnectionType"
+                          value="current"
+                          checked={!newCalendarSource.connectionData?.startsWith("oauth:")}
+                          onChange={() => {
+                            if (newCalendarSource.connectionData?.startsWith("oauth:")) {
+                              setNewCalendarSource({...newCalendarSource, connectionData: ""});
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-500"
+                        />
+                        <span className="ml-2">Use current Google account</span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="googleConnectionType"
+                          value="additional"
+                          checked={newCalendarSource.connectionData?.startsWith("oauth:")}
+                          onChange={() => {
+                            if (!newCalendarSource.connectionData?.startsWith("oauth:")) {
+                              setNewCalendarSource({...newCalendarSource, connectionData: "oauth:default"});
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-500"
+                        />
+                        <span className="ml-2">Connect different Google account</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {/* Show OAuth settings if connecting a different Google account */}
+                  {newCalendarSource.connectionData?.startsWith("oauth:") && (
+                    <div>
+                      <div className="mb-2">
+                        <label className="block text-sm font-medium mb-1">Account Label</label>
+                        <input
+                          type="text"
+                          value={newCalendarSource.connectionData.replace("oauth:", "")}
+                          onChange={(e) => setNewCalendarSource({...newCalendarSource, connectionData: `oauth:${e.target.value}`})}
+                          className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          placeholder="Work Gmail, Personal Gmail, etc."
+                        />
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Connect a different Google account to access its calendars.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Extract the account label
+                          const accountLabel = newCalendarSource.connectionData?.replace("oauth:", "") || "Additional";
+                          
+                          // Redirect to the Google OAuth endpoint for additional accounts
+                          window.location.href = `/api/auth/google-additional?accountLabel=${encodeURIComponent(accountLabel)}&redirectUrl=${encodeURIComponent(window.location.pathname)}`;
+                        }}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                      >
+                        Connect Google Account
                       </button>
                     </div>
                   )}
