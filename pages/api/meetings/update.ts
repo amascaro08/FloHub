@@ -135,83 +135,87 @@ export default async function handler(
         updateData.agenda = agenda;
     }
     
-    // Generate AI summary if agenda and content are provided
+    // Generate AI summary if agenda and content are provided - but do it asynchronously
     console.log("update.ts - Checking conditions for AI summary generation:");
     console.log("update.ts - agenda provided:", agenda !== undefined);
     console.log("update.ts - noteData.agenda exists:", !!noteData.agenda);
     console.log("update.ts - content provided:", content !== undefined);
     console.log("update.ts - noteData.content exists:", !!noteData.content);
     
+    // Start the AI summary generation in parallel with the main update
+    let aiSummaryPromise: Promise<string | undefined> = Promise.resolve(undefined);
+    
     if ((agenda !== undefined || noteData.agenda) && (content !== undefined || noteData.content)) {
       console.log("update.ts - Conditions met for AI summary generation");
-      try {
-        // Use the updated values or fall back to existing values
-        const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
-        const currentContent = content !== undefined ? content : noteData.content;
-        const currentActions = actions !== undefined ? actions : noteData.actions || [];
+      // Use the updated values or fall back to existing values
+      const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
+      const currentContent = content !== undefined ? content : noteData.content;
+      const currentActions = actions !== undefined ? actions : noteData.actions || [];
+      
+      console.log("update.ts - Current agenda:", currentAgenda);
+      console.log("update.ts - Current content length:", currentContent?.length);
+      console.log("update.ts - Current actions count:", currentActions?.length);
+      
+      if (currentAgenda && currentContent) {
+        console.log("update.ts - Both agenda and content are available, generating AI summary");
         
-        console.log("update.ts - Current agenda:", currentAgenda);
-        console.log("update.ts - Current content length:", currentContent?.length);
-        console.log("update.ts - Current actions count:", currentActions?.length);
-        
-        if (currentAgenda && currentContent) {
-          console.log("update.ts - Both agenda and content are available, generating AI summary");
-          // Create a prompt for the OpenAI API
-          const prompt = `
-            Please provide a concise summary of this meeting based on the following information:
+        // Create the AI summary generation promise
+        aiSummaryPromise = (async () => {
+          try {
+            // Create a prompt for the OpenAI API
+            const prompt = `
+              Please provide a concise summary of this meeting based on the following information:
+              
+              Agenda:
+              ${currentAgenda}
+              
+              Meeting Notes:
+              ${currentContent}
+              
+              ${currentActions.length > 0 ? `Action Items:
+              ${currentActions.map((action: Action) => `- ${action.description} (Assigned to: ${action.assignedTo})`).join('\n')}` : ''}
+              
+              Provide a 2-3 sentence summary that captures the key points and decisions.
+            `;
             
-            Agenda:
-            ${currentAgenda}
+            // Check if OpenAI API key is configured
+            if (!process.env.OPENAI_API_KEY) {
+              console.error("update.ts - OpenAI API key is not configured");
+              throw new Error("OpenAI API key is not configured");
+            }
             
-            Meeting Notes:
-            ${currentContent}
+            console.log("update.ts - OpenAI API key is configured, initializing client");
             
-            ${currentActions.length > 0 ? `Action Items:
-            ${currentActions.map((action: Action) => `- ${action.description} (Assigned to: ${action.assignedTo})`).join('\n')}` : ''}
+            // Initialize OpenAI client
+            const openai = new OpenAI({
+              apiKey: process.env.OPENAI_API_KEY,
+            });
             
-            Provide a 2-3 sentence summary that captures the key points and decisions.
-          `;
-          
-          // Check if OpenAI API key is configured
-          if (!process.env.OPENAI_API_KEY) {
-            console.error("update.ts - OpenAI API key is not configured");
-            throw new Error("OpenAI API key is not configured");
+            console.log("update.ts - Calling OpenAI API");
+            
+            // Call OpenAI API
+            const completion = await openai.chat.completions.create({
+              model: "gpt-3.5-turbo",
+              messages: [
+                {
+                  role: "system",
+                  content: "You are a helpful assistant that summarizes meeting notes concisely and professionally."
+                },
+                {
+                  role: "user",
+                  content: prompt
+                }
+              ],
+            });
+            
+            console.log("update.ts - OpenAI API call completed");
+            
+            return completion.choices[0]?.message?.content || undefined;
+          } catch (error) {
+            console.error("update.ts - Error generating AI summary:", error);
+            return undefined;
           }
-          
-          console.log("update.ts - OpenAI API key is configured, initializing client");
-          
-          // Initialize OpenAI client
-          const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-          });
-          
-          console.log("update.ts - Calling OpenAI API");
-          
-          // Call OpenAI API
-          const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-              {
-                role: "system",
-                content: "You are a helpful assistant that summarizes meeting notes concisely and professionally."
-              },
-              {
-                role: "user",
-                content: prompt
-              }
-            ],
-          });
-          
-          console.log("update.ts - OpenAI API call completed");
-          
-          updateData.aiSummary = completion.choices[0]?.message?.content || undefined;
-          console.log("update.ts - AI Summary updated:", updateData.aiSummary);
-        } else {
-          console.log("update.ts - Either agenda or content is missing, skipping AI summary generation");
-        }
-      } catch (error) {
-        console.error("update.ts - Error generating AI summary:", error);
-        // Continue without updating AI summary if there's an error
+        })();
       }
     } else {
       console.log("update.ts - Conditions not met for AI summary generation, skipping");
@@ -226,10 +230,17 @@ export default async function handler(
     // Add a timestamp to the update data to ensure the document is actually modified
     updateData.updatedAt = serverTimestamp();
     
-    // Log the final update data being sent to Firestore
-    console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateData, null, 2));
-    
     try {
+      // Wait for AI summary to complete and add it to updateData if available
+      const aiSummary = await aiSummaryPromise;
+      if (aiSummary) {
+        updateData.aiSummary = aiSummary;
+        console.log("update.ts - AI Summary added to update data:", aiSummary);
+      }
+      
+      // Log the final update data being sent to Firestore
+      console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateData, null, 2));
+      
       // Perform the update
       console.log(`update.ts - Updating document in collection 'notes' with ID '${id}'`);
       await updateDoc(noteRef, updateData);

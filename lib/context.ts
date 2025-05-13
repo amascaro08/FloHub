@@ -92,54 +92,68 @@ export async function findRelevantContextSemantic(
   meetings: Note[],
   conversations: Conversation[]
 ): Promise<string> {
-  const queryEmbedding = await generateEmbedding(query);
+  // Generate query embedding asynchronously while preparing contexts
+  const queryEmbeddingPromise = generateEmbedding(query);
 
   type ScoredContext = {
     text: string;
     score: number;
+    index: number; // To maintain original order for stable sorting
   };
 
+  // Prepare context texts
   const contexts: ScoredContext[] = [];
 
-  // Prepare context texts
-  notes.forEach((note) => {
+  notes.forEach((note, index) => {
     const text = `Note: ${note.title ?? "(no title)"} - ${note.content}`;
-    contexts.push({ text, score: 0 });
+    contexts.push({ text, score: 0, index });
   });
 
-  meetings.forEach((meeting) => {
+  meetings.forEach((meeting, index) => {
     // Include AI summary if available
     const summaryText = meeting.aiSummary ? `Summary: ${meeting.aiSummary}\n` : '';
     const agendaText = meeting.agenda ? `Agenda: ${meeting.agenda}\n` : '';
     
     const text = `Meeting Note: ${meeting.eventTitle ?? "(no title)"}\n${summaryText}${agendaText}Content: ${meeting.content}`;
-    contexts.push({ text, score: 0 });
+    contexts.push({ text, score: 0, index: notes.length + index });
     
     // Add actions as separate context if available
     if (meeting.actions && meeting.actions.length > 0) {
       const actionsText = `Meeting Actions for ${meeting.eventTitle ?? "(no title)"}: \n${meeting.actions.map(action =>
         `- ${action.description} (Assigned to: ${action.assignedTo}, Status: ${action.status})`
       ).join('\n')}`;
-      contexts.push({ text: actionsText, score: 0 });
+      contexts.push({ text: actionsText, score: 0, index: notes.length + meetings.length + index });
     }
   });
 
-  conversations.forEach((conv) => {
+  conversations.forEach((conv, index) => {
     let convText = "Past Conversation:\n";
     conv.messages.forEach((msg: { role: string; content: string }) => {
       convText += `${msg.role}: ${msg.content}\n`;
     });
-    contexts.push({ text: convText, score: 0 });
+    contexts.push({ text: convText, score: 0, index: notes.length + meetings.length * 2 + index });
   });
 
-  // Compute similarity scores
-  for (let i = 0; i < contexts.length; i++) {
-    const embedding = await generateEmbedding(contexts[i].text);
-    contexts[i].score = cosineSimilarity(queryEmbedding, embedding);
+  // Compute similarity scores in parallel
+  const queryEmbedding = await queryEmbeddingPromise;
+  
+  // Process in batches to avoid rate limits (5 at a time)
+  const batchSize = 5;
+  for (let i = 0; i < contexts.length; i += batchSize) {
+    const batch = contexts.slice(i, i + batchSize);
+    const embeddings = await Promise.all(
+      batch.map(context => generateEmbedding(context.text))
+    );
+    
+    embeddings.forEach((embedding, j) => {
+      if (i + j < contexts.length) {
+        contexts[i + j].score = cosineSimilarity(queryEmbedding, embedding);
+      }
+    });
   }
 
-  // Sort by descending similarity score
-  contexts.sort((a, b) => b.score - a.score);
+  // Sort by descending similarity score, with index as tiebreaker for stable sort
+  contexts.sort((a, b) => b.score !== a.score ? b.score - a.score : a.index - b.index);
 
   // Select top 5 relevant contexts
   const topContexts = contexts.slice(0, 5);

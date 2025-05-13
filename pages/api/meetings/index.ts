@@ -32,34 +32,34 @@ export default async function handler(
 
   try {
     // 2) Fetch meeting notes for the authenticated user from the database
-    // Filter for notes where eventId exists OR isAdhoc is true
-
-    // Fetch all notes for the user and filter meeting notes in application code
+    // We need to use a different approach since Firestore has limitations with OR queries
+    // First, get all notes for the user
     const meetingNotesSnapshot = await getDocs(query(
-      collection(db, "notes"), // Meeting notes are stored in the same 'notes' collection
-      where("userId", "==", userId), // Filter by userId
+      collection(db, "notes"),
+      where("userId", "==", userId),
       orderBy("createdAt", "desc")
     ));
 
-    // Filter meeting notes in application code
+    // Process the meeting notes efficiently
     const meetingNotes: Note[] = meetingNotesSnapshot.docs
       .map((doc: QueryDocumentSnapshot) => {
         const data = doc.data();
         return {
           id: doc.id,
-          title: data.title || "", // Include title
+          title: data.title || "",
           content: data.content,
           tags: data.tags || [],
           createdAt: data.createdAt.toDate().toISOString(),
-          eventId: data.eventId || undefined, // Include eventId
-          eventTitle: data.eventTitle || undefined, // Include eventTitle
-          isAdhoc: data.isAdhoc || undefined, // Include isAdhoc
-          actions: data.actions || [], // Include actions
-          agenda: data.agenda || undefined, // Include agenda
-          aiSummary: data.aiSummary || undefined, // Include AI summary
+          eventId: data.eventId || undefined,
+          eventTitle: data.eventTitle || undefined,
+          isAdhoc: data.isAdhoc || undefined,
+          actions: data.actions || [],
+          agenda: data.agenda || undefined,
+          aiSummary: data.aiSummary || undefined,
         };
       })
-      .filter(note => note.eventId !== undefined || note.isAdhoc === true); // Filter for meeting notes
+      // Filter for meeting notes in memory
+      .filter(note => note.eventId !== undefined || note.isAdhoc === true);
 
     return res.status(200).json({ meetingNotes: meetingNotes });
 

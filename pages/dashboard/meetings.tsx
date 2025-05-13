@@ -42,18 +42,6 @@ export default function MeetingsPage() {
 
   const shouldFetch = status === "authenticated";
 
-  // Fetch meeting notes (will use a new API endpoint later)
-  const { data: meetingNotesResponse, error: meetingNotesError, mutate } = useSWR<GetMeetingNotesResponse>(
-    shouldFetch ? "/api/meetings" : null, // Placeholder for new API endpoint
-    fetcher
-  );
-
-  // Fetch user settings to get global tags and Work Calendar URL
-  const { data: userSettings, error: settingsError } = useSWR<UserSettings>( // Use UserSettings type
-    shouldFetch ? "/api/userSettings" : null,
-    fetcher
-  );
-
   // Calculate time range for fetching events (e.g., next month)
   const timeRange = useMemo(() => {
     const now = new Date();
@@ -64,6 +52,16 @@ export default function MeetingsPage() {
     return { timeMin, timeMax };
   }, []);
 
+  // Fetch user settings to get global tags and Work Calendar URL
+  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
+    shouldFetch ? "/api/userSettings" : null,
+    fetcher,
+    {
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 60000 // Dedupe requests within 1 minute
+    }
+  );
+
   // Build API URL for calendar events, including o365Url from settings
   const apiUrl = useMemo(() => {
     if (!shouldFetch || !timeRange || !userSettings?.powerAutomateUrl) return null;
@@ -72,10 +70,24 @@ export default function MeetingsPage() {
     )}&o365Url=${encodeURIComponent(userSettings.powerAutomateUrl)}`;
   }, [shouldFetch, timeRange, userSettings?.powerAutomateUrl]);
 
+  // Fetch meeting notes and calendar events in parallel
+  const { data: meetingNotesResponse, error: meetingNotesError, mutate } = useSWR<GetMeetingNotesResponse>(
+    shouldFetch ? "/api/meetings" : null,
+    fetcher,
+    {
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 30000 // Dedupe requests within 30 seconds
+    }
+  );
+
   // Fetch calendar events using the combined API endpoint
   const { data: calendarEvents, error: calendarError } = useSWR<CalendarEvent[]>(
     apiUrl,
-    calendarEventsFetcher
+    calendarEventsFetcher,
+    {
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 60000 // Dedupe requests within 1 minute
+    }
   );
 
   // Filter fetched events to include only "work" events

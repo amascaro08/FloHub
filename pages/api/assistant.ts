@@ -152,16 +152,36 @@ export default async function handler(
 
   // ── Fetch Context & Fallback to OpenAI ─────────────
   try {
-    const notes = await fetchUserNotes(email);
-    const meetings = await fetchUserMeetingNotes(email);
-    const conversations = await fetchUserConversations(email);
-    const relevantContext = await findRelevantContext(userInput, notes, meetings, conversations);
+    // Fetch all data in parallel
+    const [notes, meetings, conversations] = await Promise.all([
+      fetchUserNotes(email),
+      fetchUserMeetingNotes(email),
+      fetchUserConversations(email)
+    ]);
+    
+    // Start context processing
+    const relevantContextPromise = findRelevantContext(userInput, notes, meetings, conversations);
 
-    const messages: ChatCompletionMessageParam[] = [
+    // Prepare base messages while context is being processed
+    const baseMessages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺.`,
-      },
+      }
+    ];
+    
+    // Map history messages (can be done while waiting for context)
+    const historyMessages = history.map((msg) => ({
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content || "", // Ensure content is never undefined
+    }));
+    
+    // Wait for context to complete
+    const relevantContext = await relevantContextPromise;
+    
+    // Combine all messages
+    const messages: ChatCompletionMessageParam[] = [
+      ...baseMessages,
       {
         role: "system",
         content: `Relevant context:\n${relevantContext}`,
