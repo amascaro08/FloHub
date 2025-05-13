@@ -10,6 +10,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Log environment variables for debugging
+  console.log("Environment variables in Microsoft OAuth endpoint:", {
+    MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID ? "Set" : "Not set",
+    MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID ? "Set" : "Not set",
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NODE_ENV: process.env.NODE_ENV
+  });
+
   try {
     // Get the current user session
     const session = await getSession({ req });

@@ -10,6 +10,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Log environment variables for debugging
+  console.log("Environment variables in Google OAuth endpoint:", {
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Not set",
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not set",
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NODE_ENV: process.env.NODE_ENV
+  });
+
   try {
     // Get the current user session
     const session = await getSession({ req });

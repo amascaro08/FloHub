@@ -9,9 +9,15 @@ export const MICROSOFT_SCOPES = [
 
 // Microsoft OAuth configuration
 export const MICROSOFT_OAUTH_CONFIG = {
-  clientId: process.env.MICROSOFT_CLIENT_ID || '',
-  authority: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID || 'common'}`,
-  redirectUri: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/microsoft` : '',
+  get clientId() {
+    return process.env.MICROSOFT_CLIENT_ID || '';
+  },
+  get authority() {
+    return `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID || 'common'}`;
+  },
+  get redirectUri() {
+    return process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/microsoft` : '';
+  }
 };
 
 // Custom authentication provider for Microsoft Graph API
@@ -34,7 +40,18 @@ export class MicrosoftAuthProvider implements AuthenticationProvider {
  * Generate Microsoft OAuth URL for authentication
  */
 export function getMicrosoftOAuthUrl(state: string): string {
-  const { clientId, authority, redirectUri } = MICROSOFT_OAUTH_CONFIG;
+  // Access environment variables directly to ensure we get the latest values
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+  const baseUrl = process.env.NEXTAUTH_URL;
+  const redirectUri = baseUrl ? `${baseUrl}/api/auth/callback/microsoft` : '';
+  const authority = `https://login.microsoftonline.com/${tenantId}`;
+  
+  console.log("Microsoft OAuth Config:", {
+    clientId: clientId ? "Set" : "Not set",
+    tenantId,
+    redirectUri
+  });
   
   if (!clientId || !redirectUri) {
     throw new Error('Microsoft OAuth configuration is missing required parameters. Please set MICROSOFT_CLIENT_ID, MICROSOFT_TENANT_ID, and NEXTAUTH_URL environment variables.');

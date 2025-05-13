@@ -9,24 +9,40 @@ export const GOOGLE_SCOPES = [
 
 // Google OAuth configuration
 export const GOOGLE_OAUTH_CONFIG = {
-  clientId: process.env.GOOGLE_CLIENT_ID || '',
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  redirectUri: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google-additional` : '',
+  get clientId() {
+    return process.env.GOOGLE_CLIENT_ID || '';
+  },
+  get clientSecret() {
+    return process.env.GOOGLE_CLIENT_SECRET || '';
+  },
+  get redirectUri() {
+    return process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google-additional` : '';
+  }
 };
 
 /**
  * Generate Google OAuth URL for authentication
  */
 export function getGoogleOAuthUrl(state: string): string {
-  const { clientId, redirectUri } = GOOGLE_OAUTH_CONFIG;
+  // Access environment variables directly to ensure we get the latest values
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const baseUrl = process.env.NEXTAUTH_URL;
+  const redirectUri = baseUrl ? `${baseUrl}/api/auth/callback/google-additional` : '';
   
-  if (!clientId || !redirectUri) {
+  console.log("Google OAuth Config:", {
+    clientId: clientId ? "Set" : "Not set",
+    clientSecret: clientSecret ? "Set" : "Not set",
+    redirectUri
+  });
+  
+  if (!clientId || !clientSecret || !redirectUri) {
     throw new Error('Google OAuth configuration is missing required parameters. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL environment variables.');
   }
 
   const oauth2Client = new OAuth2Client(
     clientId,
-    GOOGLE_OAUTH_CONFIG.clientSecret,
+    clientSecret,
     redirectUri
   );
 
