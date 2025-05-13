@@ -59,6 +59,9 @@ export default function SettingsPage() {
   // State for editing calendar source
   const [editingCalendarSourceIndex, setEditingCalendarSourceIndex] = useState<number | null>(null);
   
+  // State to control form visibility
+  const [showCalendarForm, setShowCalendarForm] = useState(false);
+  
   // State for new tag input in calendar source form
   const [newCalendarTag, setNewCalendarTag] = useState("");
 
@@ -240,6 +243,7 @@ export default function SettingsPage() {
                 isEnabled: true,
               });
               setEditingCalendarSourceIndex(null);
+              setShowCalendarForm(true); // Show the form when button is clicked
             }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
           >
@@ -334,7 +338,7 @@ export default function SettingsPage() {
         </div>
         
         {/* Add/Edit Calendar Source Form */}
-        {(editingCalendarSourceIndex !== null || newCalendarSource.name !== "") && (
+        {(editingCalendarSourceIndex !== null || showCalendarForm) && (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
             <h3 className="font-medium text-lg mb-4">
               {editingCalendarSourceIndex !== null ? "Edit Calendar Source" : "Add New Calendar Source"}
@@ -551,6 +555,7 @@ export default function SettingsPage() {
                       isEnabled: true,
                     });
                     setEditingCalendarSourceIndex(null);
+                    setShowCalendarForm(false); // Hide the form after saving
                   }}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
@@ -595,6 +600,7 @@ export default function SettingsPage() {
                       isEnabled: true,
                     });
                     setEditingCalendarSourceIndex(null);
+                    setShowCalendarForm(false); // Hide the form after saving
                   }}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
                 >
