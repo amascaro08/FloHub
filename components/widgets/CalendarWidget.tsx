@@ -17,12 +17,14 @@ type CustomRange = { start: string; end: string };
 
 export interface CalendarEvent {
   id: string;
-  calendarId: string; // Add calendarId field
+  calendarId: string; // Calendar ID field
   summary?: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   source?: "personal" | "work"; // "personal" = Google, "work" = O365
-  description?: string; // Add description field
+  description?: string; // Description field
+  calendarName?: string; // Calendar name field
+  tags?: string[]; // Tags field
 }
 
 // Generic fetcher for SWR
@@ -382,11 +384,27 @@ function CalendarWidget() {
                 <span>{formatEvent(viewingEvent)}</span>
               </div>
               <div>
+                <span className="font-medium text-neutral-600 dark:text-neutral-300">Calendar: </span>
+                <span>{viewingEvent.calendarName || (viewingEvent.source === "work" ? "Work Calendar" : "Personal Calendar")}</span>
+              </div>
+              <div>
                 <span className="font-medium text-neutral-600 dark:text-neutral-300">Type: </span>
                 <span className={`tag ${viewingEvent.source === "work" ? "tag-work" : "tag-personal"}`}>
                   {viewingEvent.source === "work" ? "Work" : "Personal"}
                 </span>
               </div>
+              {viewingEvent.tags && viewingEvent.tags.length > 0 && (
+                <div>
+                  <span className="font-medium text-neutral-600 dark:text-neutral-300">Tags: </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {viewingEvent.tags.map(tag => (
+                      <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {viewingEvent.description && (
                 <div>
                   <span className="font-medium text-neutral-600 dark:text-neutral-300">Description: </span>
@@ -603,9 +621,23 @@ function CalendarWidget() {
                 <div className="flex items-start">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{ev.summary || "(No title)"}</div>
-                    <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                      {formatEvent(ev)}
+                    <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5 flex items-center gap-1">
+                      <span>{formatEvent(ev)}</span>
+                      {ev.calendarName && (
+                        <span className="text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
+                          {ev.calendarName}
+                        </span>
+                      )}
                     </div>
+                    {ev.tags && ev.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {ev.tags.map(tag => (
+                          <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full text-xs">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="ml-2 shrink-0">
                     <span className={`tag ${ev.source === "work" ? "tag-work" : "tag-personal"}`}>

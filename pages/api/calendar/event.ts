@@ -16,10 +16,19 @@ export default async function handler(
 
   // POST = create, PUT = update
   if (req.method === "POST") {
-    const { calendarId, summary, start, end, timeZone } = req.body;
+    const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     if (!calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });
       return res.status(400).json({ error: "Missing required fields for create" });
+    }
+    
+    // Check if this is a Google Calendar or another type
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('other_');
+    
+    // If not a Google Calendar, we need to handle it differently
+    if (!isGoogleCalendar) {
+      console.log("Non-Google calendar event creation not yet implemented:", calendarId);
+      return res.status(501).json({ error: "Creating events in non-Google calendars is not yet implemented" });
     }
 
     // Build endpoint URL for create
@@ -30,7 +39,21 @@ export default async function handler(
     // Prepare payload for Google Calendar API
     const payload: any = {
       summary,
+      description: description || "",
     };
+    
+    // Add extended properties for tags and source if provided
+    if (tags && tags.length > 0) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.tags = JSON.stringify(tags);
+    }
+    
+    if (source) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.source = source;
+    }
 
     if (start) {
       payload.start = {
@@ -67,12 +90,21 @@ export default async function handler(
   }
 
   if (req.method === "PUT") {
-    const { calendarId, summary, start, end, timeZone } = req.body;
+    const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     const { id } = req.query; // Get eventId from query parameters
 
     if (!id || !calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for update:", { id, calendarId, summary, start, end });
       return res.status(400).json({ error: "Missing required fields for update" });
+    }
+    
+    // Check if this is a Google Calendar or another type
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('other_');
+    
+    // If not a Google Calendar, we need to handle it differently
+    if (!isGoogleCalendar) {
+      console.log("Non-Google calendar event update not yet implemented:", calendarId);
+      return res.status(501).json({ error: "Updating events in non-Google calendars is not yet implemented" });
     }
 
     // Build endpoint URL for update
@@ -83,7 +115,21 @@ export default async function handler(
     // Prepare payload for Google Calendar API
     const payload: any = {
       summary,
+      description: description || "",
     };
+    
+    // Add extended properties for tags and source if provided
+    if (tags && tags.length > 0) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.tags = JSON.stringify(tags);
+    }
+    
+    if (source) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.source = source;
+    }
 
     if (start) {
       payload.start = {
@@ -126,6 +172,16 @@ export default async function handler(
     if (!id || !calendarId) {
       console.error("[API] Missing required fields for delete:", { id, calendarId });
       return res.status(400).json({ error: "Missing required fields for delete" });
+    }
+    
+    // Check if this is a Google Calendar or another type
+    const calId = calendarId as string;
+    const isGoogleCalendar = !calId.startsWith('o365_') && !calId.startsWith('apple_') && !calId.startsWith('other_');
+    
+    // If not a Google Calendar, we need to handle it differently
+    if (!isGoogleCalendar) {
+      console.log("Non-Google calendar event deletion not yet implemented:", calendarId);
+      return res.status(501).json({ error: "Deleting events from non-Google calendars is not yet implemented" });
     }
 
     // Build endpoint URL for delete

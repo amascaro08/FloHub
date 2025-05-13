@@ -18,10 +18,14 @@ import type { Habit, HabitCompletion } from '../../types/habit-tracker'; // Impo
 
 interface CalendarEvent {
   id: string;
+  calendarId: string; // Calendar ID field
   summary: string;
   start: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
-  source?: "personal" | "work"; // Add source tag
+  source?: "personal" | "work"; // "personal" = Google, "work" = O365
+  description?: string; // Description field
+  calendarName?: string; // Calendar name field
+  tags?: string[]; // Tags field
 }
 
 interface Task {
@@ -54,13 +58,28 @@ const AtAGlanceWidget = () => {
   };
   const { data: loadedSettings, error: settingsError } = useSWR<UserSettings>(session ? "/api/userSettings" : null, fetcher);
 
-  // State for PowerAutomate URL, initialized from settings
+  // State for calendar sources, initialized from settings
+  const [calendarSources, setCalendarSources] = useState<any[]>([]);
+  const [selectedCals, setSelectedCals] = useState<string[]>([]);
   const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
 
-  // Update powerAutomateUrl when settings load
+  // Update calendar settings when settings load
   useEffect(() => {
-    if (loadedSettings?.powerAutomateUrl) {
-      setPowerAutomateUrl(loadedSettings.powerAutomateUrl);
+    if (loadedSettings) {
+      // Set PowerAutomate URL for backward compatibility
+      if (loadedSettings.powerAutomateUrl) {
+        setPowerAutomateUrl(loadedSettings.powerAutomateUrl);
+      }
+      
+      // Set selected calendars for backward compatibility
+      if (loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0) {
+        setSelectedCals(loadedSettings.selectedCals);
+      }
+      
+      // Set calendar sources if available
+      if (loadedSettings.calendarSources && loadedSettings.calendarSources.length > 0) {
+        setCalendarSources(loadedSettings.calendarSources.filter(source => source.isEnabled));
+      }
     }
   }, [loadedSettings]);
 
@@ -113,15 +132,30 @@ const AtAGlanceWidget = () => {
         const startOfTodayUTC = new Date(startOfTodayInTimezone).toISOString();
         const endOfTodayUTC = new Date(endOfTodayInTimezone).toISOString();
 
-        // Construct calendarId query parameter from selectedCals
-        const calendarIdQuery = loadedSettings?.selectedCals && loadedSettings.selectedCals.length > 0
-          ? `&calendarId=${loadedSettings.selectedCals.map((id: string) => encodeURIComponent(id)).join('&calendarId=')}`
-          : ''; // If no calendars selected, don't add calendarId param (API defaults to primary)
-
-       console.log("AtAGlanceWidget: Using powerAutomateUrl:", powerAutomateUrl);
-       const eventsApiUrl = `/api/calendar?timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}${calendarIdQuery}${
-         loadedSettings?.powerAutomateUrl ? `&o365Url=${encodeURIComponent(loadedSettings.powerAutomateUrl)}` : ''
-       }`;
+        // Determine whether to use new calendar sources or legacy settings
+        let apiUrlParams = `timeMin=${encodeURIComponent(startOfTodayUTC)}&timeMax=${encodeURIComponent(endOfTodayUTC)}&timezone=${encodeURIComponent(userTimezone)}`;
+        
+        // If we have calendar sources, use them
+        if (calendarSources && calendarSources.length > 0) {
+          console.log("AtAGlanceWidget: Using calendar sources:", calendarSources);
+          apiUrlParams += `&useCalendarSources=true`;
+        } else {
+          // Otherwise fall back to legacy settings
+          // Construct calendarId query parameter from selectedCals
+          const calendarIdQuery = loadedSettings?.selectedCals && loadedSettings.selectedCals.length > 0
+            ? `&calendarId=${loadedSettings.selectedCals.map((id: string) => encodeURIComponent(id)).join('&calendarId=')}`
+            : ''; // If no calendars selected, don't add calendarId param (API defaults to primary)
+          
+          apiUrlParams += calendarIdQuery;
+          
+          // Add PowerAutomate URL if available
+          if (loadedSettings?.powerAutomateUrl) {
+            console.log("AtAGlanceWidget: Using powerAutomateUrl:", loadedSettings.powerAutomateUrl);
+            apiUrlParams += `&o365Url=${encodeURIComponent(loadedSettings.powerAutomateUrl)}`;
+          }
+        }
+        
+        const eventsApiUrl = `/api/calendar?${apiUrlParams}`;
        console.log("AtAGlanceWidget: Fetching events from URL:", eventsApiUrl);
 
        const eventsRes = await fetch(eventsApiUrl);
@@ -300,7 +334,9 @@ EVENTS: ${limitedEvents.map(event => {
  const eventTime = event.start.dateTime
    ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
    : event.start.date;
- return `${event.summary} at ${eventTime}`;
+ const calendarType = event.source === "work" ? "work" : "personal";
+ const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
+ return `${event.summary} at ${eventTime} [${calendarType}${calendarTags}]`;
 }).join(', ') || 'None'}
 
 TASKS: ${limitedTasks.map(task => task.text).join(', ') || 'None'}
@@ -336,7 +372,9 @@ ${upcomingEventsForPrompt.slice(0, 3).map(event => {
   const eventTime = event.start.dateTime
     ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
     : event.start.date;
-  return `- ${event.summary} at ${eventTime}`;
+  const calendarName = event.calendarName || (event.source === "work" ? "Work Calendar" : "Personal Calendar");
+  const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
+  return `- ${event.summary} at ${eventTime} - ${calendarName}${calendarTags}`;
 }).join('\n')}
 ` : ''}
 

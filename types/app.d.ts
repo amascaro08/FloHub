@@ -4,12 +4,25 @@
 
 // Define a type for user settings
 export type UserSettings = {
-  selectedCals: string[];
+  selectedCals: string[]; // Legacy field for backward compatibility
   defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
   customRange: { start: string; end: string };
-  powerAutomateUrl?: string;
+  powerAutomateUrl?: string; // Legacy field for backward compatibility
   globalTags: string[]; // Field for global tags
   activeWidgets?: string[]; // Array of active widget IDs
+  calendarSources?: CalendarSource[]; // New field for multiple calendar sources
+};
+
+// Define a type for calendar sources
+export type CalendarSource = {
+  id: string; // Unique identifier for the calendar source
+  name: string; // Display name for the calendar
+  type: "google" | "o365" | "apple" | "other"; // Type of calendar
+  sourceId: string; // Original calendar ID from the provider
+  connectionData?: string; // Connection data (e.g., PowerAutomate URL for O365)
+  tags: string[]; // Tags for the calendar (e.g., "work", "personal")
+  color?: string; // Optional color for the calendar
+  isEnabled: boolean; // Whether the calendar is enabled
 };
 
 // Define a type for widget configuration
