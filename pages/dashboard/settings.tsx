@@ -16,7 +16,9 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
-export default function CalendarSettingsPage() {
+import DebugNavigation from "@/components/ui/DebugNavigation";
+
+export default function SettingsPage() {
   // 1) Next-Auth session
   const { data: session, status } = useSession();
   const loadingSession = status === "loading";
@@ -146,6 +148,7 @@ export default function CalendarSettingsPage() {
   // 7) Now calendars is a real array, safe to map
   return (
     <main className="p-4 md:p-6 space-y-6">
+      <DebugNavigation />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Settings</h1>
