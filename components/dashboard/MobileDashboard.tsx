@@ -6,25 +6,27 @@ import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import QuickNoteWidget from "@/components/widgets/QuickNoteWidget";
-import DebugWidget from "@/components/widgets/DebugWidget";
+// Debug widget import removed
+import HabitTrackerWidget from "@/components/widgets/HabitTrackerWidget";
 import { ReactElement } from "react";
 import { useSession } from "next-auth/react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { UserSettings } from "@/types/app";
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "debug";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
 
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <TaskWidget />,
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
-  debug: <DebugWidget />,
+  // debug entry removed
+  "habit-tracker": <HabitTrackerWidget />,
 };
 
 // Default widget order for mobile
-const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "quicknote", "debug"];
+const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
 
 export default function MobileDashboard() {
   const { data: session } = useSession();

@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Clock,
   FileText,
-  Bug
+  // Bug - removed for debug widget
 } from 'lucide-react';
 
 import TaskWidget from "@/components/widgets/TaskWidget";
@@ -18,7 +18,7 @@ import CalendarWidget from "@/components/widgets/CalendarWidget";
 import ChatWidget from "@/components/assistant/ChatWidget";
 import AtAGlanceWidget from "@/components/widgets/AtAGlanceWidget";
 import QuickNoteWidget from "@/components/widgets/QuickNoteWidget";
-import DebugWidget from "@/components/widgets/DebugWidget";
+// Debug widget import removed
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext";
 import { db } from "@/lib/firebase";
@@ -28,7 +28,7 @@ import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "debug" | "habit-tracker";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
 
 // Define widget components
 import HabitTrackerWidget from "@/components/widgets/HabitTrackerWidget";
@@ -38,7 +38,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   calendar: <CalendarWidget />,
   ataglance: <AtAGlanceWidget />,
   quicknote: <QuickNoteWidget />,
-  debug: <DebugWidget />,
+  // debug entry removed
   "habit-tracker": <HabitTrackerWidget />,
 };
 
@@ -75,8 +75,7 @@ const getWidgetIcon = (widgetKey: string) => {
       return <Clock className="w-5 h-5" />;
     case 'quicknote':
       return <FileText className="w-5 h-5" />;
-    case 'debug':
-      return <Bug className="w-5 h-5" />;
+    // debug case removed
     case 'habit-tracker':
       return <Clock className="w-5 h-5" />;
     default:
@@ -129,20 +128,16 @@ const DashboardGrid = () => {
           
           if (docSnap.exists()) {
             const userSettings = docSnap.data() as UserSettings;
-            // Ensure habit-tracker is always included
-            let active = userSettings.activeWidgets || [];
-            if (!active.includes("habit-tracker")) {
-              active.push("habit-tracker");
-            }
-            setActiveWidgets(active);
+            // Use the user's selected widgets without forcing habit-tracker
+            setActiveWidgets(userSettings.activeWidgets || []);
           } else {
             // If no settings exist, use all widgets, including habit-tracker
             setActiveWidgets(Object.keys(widgetComponents) as string[]);
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching user settings:", e);
-          // Default to all widgets on error, including habit-tracker
-          setActiveWidgets(Object.keys(widgetComponents) as string[]);
+          // Default to standard widgets on error (excluding debug)
+          setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
         }
       }
     };

@@ -30,7 +30,7 @@ const availableWidgets: WidgetConfig[] = [
     component: "QuickNoteWidget",
   },
   {
-    id: "habittracker",
+    id: "habit-tracker",
     name: "Habit Tracker",
     description: "Track and manage your daily habits",
     component: "HabitTrackerWidget",
