@@ -110,7 +110,12 @@ const Layout = ({ children }: { children: ReactNode }) => {
               className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group`}
-              onClick={() => setMobileSidebarOpen(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileSidebarOpen(false);
+                // Use Next.js router for client-side navigation
+                window.location.href = x.href;
+              }}
             >
               <x.icon className={`w-5 h-5 text-primary-500 group-hover:text-primary-600 transition-colors ${
                 !desktopSidebarCollapsed && 'mr-3'

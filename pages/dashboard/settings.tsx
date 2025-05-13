@@ -152,9 +152,16 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Settings</h1>
-          <Link href="/dashboard" className="text-blue-500 hover:underline text-sm">
+          <a
+            href="/dashboard"
+            className="text-blue-500 hover:underline text-sm cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/dashboard";
+            }}
+          >
             &larr; Back to Dashboard
-          </Link>
+          </a>
         </div>
       </div>
 
