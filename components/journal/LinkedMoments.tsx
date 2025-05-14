@@ -16,8 +16,8 @@ interface Task {
 interface CalendarEvent {
   id: string;
   title: string;
-  start: Date;
-  end: Date;
+  start: Date | string; // Can be Date or string when serialized from API
+  end: Date | string;
   description?: string;
 }
 
@@ -59,7 +59,8 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
       // Filter events for the target date
       const filteredEvents = eventsData.events.filter((event: CalendarEvent) => {
         if (!event.start) return false;
-        const eventDate = new Date(event.start).toISOString().split('T')[0];
+        // Ensure we're working with a Date object
+        const eventDate = (typeof event.start === 'string' ? new Date(event.start) : event.start).toISOString().split('T')[0];
         return eventDate === targetDate;
       });
       setEvents(filteredEvents);
@@ -93,7 +94,7 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
             {events.map(event => (
               <li key={event.id} className="flex items-start p-2 rounded-lg bg-slate-50 dark:bg-slate-700">
                 <div className="flex-shrink-0 w-10 text-center text-teal-600 dark:text-teal-400 font-medium">
-                  {formatTime(event.start.toISOString())}
+                  {formatTime(typeof event.start === 'string' ? event.start : event.start.toISOString())}
                 </div>
                 <div className="ml-3">
                   <p className="text-slate-800 dark:text-slate-200">{event.title}</p>
