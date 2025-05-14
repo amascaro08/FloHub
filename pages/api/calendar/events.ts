@@ -29,6 +29,7 @@ export default async function handler(
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.accessToken) {
     return res.status(401).json({ error: "Not signed in" });
+  }
 
   const accessToken = token.accessToken as string;
 
@@ -94,7 +95,6 @@ export default async function handler(
     }));
 
     return res.status(200).json({ events: formattedEvents || [] });
-
   } catch (err: any) {
     console.error("Fetch calendar events error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
