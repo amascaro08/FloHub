@@ -29,7 +29,7 @@ export default async function handler(
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.accessToken) {
     return res.status(401).json({ error: "Not signed in" });
-  }
+
   const accessToken = token.accessToken as string;
 
   // 2) Get calendarId from query parameters
@@ -74,7 +74,7 @@ export default async function handler(
       const events: any[] = Array.isArray(body.items)
         ? body.items.map((event: any) => ({
             id: event.id,
-            summary: event.summary || "No Title",
+            title: event.summary || "No Title",
             start: event.start,
             end: event.end,
             description: event.description, // Include the description
@@ -87,13 +87,13 @@ export default async function handler(
     // Ensure start and end are Dates and has title
     const formattedEvents: CalendarEvent[] = allEvents.map(event => ({
       id: event.id,
-      title: event.summary,
+      title: event.title,
       start: event.start.dateTime ? new Date(event.start.dateTime) : new Date(event.start.date),
       end: event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : new Date(),
       description: event.description,
     }));
 
-    return res.status(200).json({ events: formattedEvents });
+    return res.status(200).json({ events: formattedEvents || [] });
 
   } catch (err: any) {
     console.error("Fetch calendar events error:", err);

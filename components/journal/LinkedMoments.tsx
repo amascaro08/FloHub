@@ -15,15 +15,10 @@ interface Task {
 
 interface CalendarEvent {
   id: string;
-  summary: string;
-  start: {
-    dateTime: string;
-    timeZone: string;
-  };
-  end: {
-    dateTime: string;
-    timeZone: string;
-  };
+  title: string;
+  start: Date;
+  end: Date;
+  description?: string;
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -44,7 +39,7 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
 
   // Fetch calendar events
   const { data: eventsData } = useSWR(
-    status === 'authenticated' ? '/api/calendar/events' : null,
+    status === 'authenticated' ? '/api/calendar/events?calendarId=primary' : null,
     fetcher
   );
 
@@ -60,13 +55,17 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
   }, [tasksData, targetDate]);
 
   useEffect(() => {
-    if (eventsData) {
+    if (eventsData && eventsData.events && Array.isArray(eventsData.events)) {
       // Filter events for the target date
-      const filteredEvents = eventsData.filter((event: CalendarEvent) => {
-        if (!event.start?.dateTime) return false;
-        return event.start.dateTime.split('T')[0] === targetDate;
+      const filteredEvents = eventsData.events.filter((event: CalendarEvent) => {
+        if (!event.start) return false;
+        const eventDate = new Date(event.start).toISOString().split('T')[0];
+        return eventDate === targetDate;
       });
       setEvents(filteredEvents);
+    } else {
+      // Handle case when events data is not available or is not an array
+      setEvents([]);
     }
   }, [eventsData, targetDate]);
 
@@ -94,10 +93,10 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
             {events.map(event => (
               <li key={event.id} className="flex items-start p-2 rounded-lg bg-slate-50 dark:bg-slate-700">
                 <div className="flex-shrink-0 w-10 text-center text-teal-600 dark:text-teal-400 font-medium">
-                  {formatTime(event.start.dateTime)}
+                  {formatTime(event.start.toISOString())}
                 </div>
                 <div className="ml-3">
-                  <p className="text-slate-800 dark:text-slate-200">{event.summary}</p>
+                  <p className="text-slate-800 dark:text-slate-200">{event.title}</p>
                 </div>
               </li>
             ))}
