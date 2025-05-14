@@ -14,7 +14,7 @@ interface MoodData {
 const JournalSummary: React.FC<JournalSummaryProps> = () => {
   const [moodData, setMoodData] = useState<MoodData[]>([]);
   const [topThemes, setTopThemes] = useState<{theme: string, count: number}[]>([]);
-  const [aiSummary, setAiSummary] = useState<string>('');
+  const [floCatsSummary, setFloCatsSummary] = useState<string>('');
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -63,8 +63,59 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
       
       setTopThemes(themes);
       
-      // Set a placeholder AI summary
-      setAiSummary("You've been journaling consistently this month. Your mood has varied between good and okay, with some great days. You often mention feeling focused and creative in the mornings.");
+      // Generate a more specific FloCats summary based on mood data and themes
+      const generateFloCatsSummary = () => {
+        // If no mood data, return a default message
+        if (moodData.length === 0) return "Start journaling to get FloCats insights about your entries.";
+        
+        // Count mood frequencies
+        const moodCounts: Record<string, number> = {};
+        moodData.forEach(mood => {
+          moodCounts[mood.label] = (moodCounts[mood.label] || 0) + 1;
+        });
+        
+        // Find most common mood
+        let mostCommonMood = "neutral";
+        let maxCount = 0;
+        Object.entries(moodCounts).forEach(([mood, count]) => {
+          if (count > maxCount) {
+            mostCommonMood = mood;
+            maxCount = count;
+          }
+        });
+        
+        // Get recent trend
+        const trend = getMoodTrend();
+        
+        // Build personalized summary using mood data and themes
+        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month`;
+        
+        if (trend !== "Not enough data") {
+          summary += ` and is currently ${trend.toLowerCase()}.`;
+        } else {
+          summary += ".";
+        }
+        
+        // Add theme insights if available
+        if (topThemes.length > 0) {
+          summary += ` Your entries frequently mention ${topThemes[0].theme}`;
+          if (topThemes.length > 1) {
+            summary += ` and ${topThemes[1].theme}`;
+          }
+          summary += ", which seem to be important in your life right now.";
+        }
+        
+        // Add personalized advice based on mood
+        if (mostCommonMood === "Sad" || mostCommonMood === "Down") {
+          summary += " Consider activities that have previously improved your mood, like connecting with friends or spending time outdoors.";
+        } else if (mostCommonMood === "Great" || mostCommonMood === "Good") {
+          summary += " Keep up with the positive activities and relationships that are contributing to your wellbeing.";
+        }
+        
+        return summary;
+      };
+      
+      setFloCatsSummary(generateFloCatsSummary());
     }
   }, [session]);
 
@@ -88,9 +139,9 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
       <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Journal Summary</h2>
       
       <div className="mb-6">
-        <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">AI Summary</h3>
+        <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">FloCats Summary</h3>
         <p className="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-          {aiSummary || "Start journaling to get AI-generated insights about your entries."}
+          {floCatsSummary || "Start journaling to get FloCats insights about your entries."}
         </p>
       </div>
       

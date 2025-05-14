@@ -10,6 +10,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
   const [selectedLabel, setSelectedLabel] = useState<string>('Okay');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState<string>('');
+  const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const { data: session } = useSession();
 
   const emojis = ['😞', '😕', '😐', '🙂', '😄'];
@@ -46,6 +47,14 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
         `journal_mood_${session.user.email}_${new Date().toISOString().split('T')[0]}`,
         JSON.stringify(mood)
       );
+      
+      // Show save confirmation
+      setSaveConfirmation(true);
+      
+      // Hide confirmation after 3 seconds
+      setTimeout(() => {
+        setSaveConfirmation(false);
+      }, 3000);
     }
     
     onSave(mood);
@@ -150,12 +159,20 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
         </div>
       </div>
       
-      <button
-        onClick={handleSave}
-        className="w-full py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
-      >
-        Save Mood
-      </button>
+      <div className="relative">
+        <button
+          onClick={handleSave}
+          className="w-full py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+        >
+          Save Mood
+        </button>
+        
+        {saveConfirmation && (
+          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
+            Mood saved successfully! ✅
+          </div>
+        )}
+      </div>
     </div>
   );
 };

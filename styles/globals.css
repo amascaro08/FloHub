@@ -170,3 +170,15 @@
 .react-resizable-handle:hover {
   opacity: 1 !important;
 }
+
+/* Animation for fade in and out */
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 3s ease-in-out;
+}
