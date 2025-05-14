@@ -10,10 +10,10 @@ export const GOOGLE_SCOPES = [
 // Google OAuth configuration
 export const GOOGLE_OAUTH_CONFIG = {
   get clientId() {
-    return process.env.GOOGLE_CLIENT_ID || '';
+    return process.env.GOOGLE_OAUTH_ID || process.env.GOOGLE_CLIENT_ID || '';
   },
   get clientSecret() {
-    return process.env.GOOGLE_CLIENT_SECRET || '';
+    return process.env.GOOGLE_OAUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET || '';
   },
   get redirectUri() {
     return process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google-additional` : '';
@@ -25,8 +25,8 @@ export const GOOGLE_OAUTH_CONFIG = {
  */
 export function getGoogleOAuthUrl(state: string): string {
   // Access environment variables directly to ensure we get the latest values
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_OAUTH_ID || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_OAUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET;
   const baseUrl = process.env.NEXTAUTH_URL;
   const redirectUri = baseUrl ? `${baseUrl}/api/auth/callback/google-additional` : '';
   
@@ -37,7 +37,7 @@ export function getGoogleOAuthUrl(state: string): string {
   });
   
   if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error('Google OAuth configuration is missing required parameters. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL environment variables.');
+    throw new Error('Google OAuth configuration is missing required parameters. Please set GOOGLE_OAUTH_ID/GOOGLE_CLIENT_ID, GOOGLE_OAUTH_SECRET/GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL environment variables.');
   }
 
   const oauth2Client = new OAuth2Client(
@@ -98,7 +98,7 @@ export async function refreshGoogleToken(refreshToken: string): Promise<any> {
   const { clientId, clientSecret } = GOOGLE_OAUTH_CONFIG;
   
   if (!clientId || !clientSecret) {
-    throw new Error('Google OAuth configuration is missing required parameters');
+    throw new Error('Google OAuth configuration is missing required parameters. Please check GOOGLE_OAUTH_ID and GOOGLE_OAUTH_SECRET environment variables.');
   }
 
   const oauth2Client = new OAuth2Client(

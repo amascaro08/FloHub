@@ -12,6 +12,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Log environment variables for debugging
   console.log("Environment variables in Google OAuth endpoint:", {
+    GOOGLE_OAUTH_ID: process.env.GOOGLE_OAUTH_ID ? "Set" : "Not set",
+    GOOGLE_OAUTH_SECRET: process.env.GOOGLE_OAUTH_SECRET ? "Set" : "Not set",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Not set",
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not set",
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
