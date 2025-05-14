@@ -31,7 +31,7 @@ export default async function handler(
           customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
           powerAutomateUrl: "",
           globalTags: [], // Default empty array for globalTags
-          activeWidgets: ["tasks", "calendar", "ataglance", "quicknote", "debug"], // Default active widgets
+          activeWidgets: ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"], // Default active widgets
         };
         console.log("User settings not found for", userEmail, "- returning default settings");
         return res.status(200).json(defaultSettings);

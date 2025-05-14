@@ -136,7 +136,7 @@ const DashboardGrid = () => {
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching user settings:", e);
-          // Default to standard widgets on error (excluding debug)
+          // Default to standard widgets on error
           setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
         }
       }
