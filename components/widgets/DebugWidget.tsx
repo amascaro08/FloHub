@@ -58,7 +58,7 @@ const DebugWidget = () => {
       <div>
         <h4 className="font-semibold">API Endpoints Status:</h4>
         <div className="space-y-2 mt-2">
-          <button 
+          <button
             onClick={async () => {
               try {
                 const res = await fetch('/api/tasks');
@@ -73,7 +73,7 @@ const DebugWidget = () => {
             Test Tasks API
           </button>
           
-          <button 
+          <button
             onClick={async () => {
               try {
                 const res = await fetch('/api/userSettings');
@@ -87,6 +87,92 @@ const DebugWidget = () => {
           >
             Test Settings API
           </button>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h4 className="font-semibold">Notifications:</h4>
+        <div className="space-y-2 mt-2">
+          <div className="flex flex-col space-y-2">
+            <div className="text-sm text-gray-600">
+              Service Worker Status: {
+                'serviceWorker' in navigator
+                  ? <span className="text-green-500">Supported</span>
+                  : <span className="text-red-500">Not Supported</span>
+              }
+            </div>
+            <div className="text-sm text-gray-600">
+              Push API Status: {
+                'PushManager' in window
+                  ? <span className="text-green-500">Supported</span>
+                  : <span className="text-red-500">Not Supported</span>
+              }
+            </div>
+            <div className="text-sm text-gray-600">
+              Notification Permission: {
+                Notification.permission === 'granted'
+                  ? <span className="text-green-500">Granted</span>
+                  : Notification.permission === 'denied'
+                    ? <span className="text-red-500">Denied</span>
+                    : <span className="text-yellow-500">Not requested</span>
+              }
+            </div>
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={async () => {
+                try {
+                  // Request permission if not granted
+                  if (Notification.permission !== 'granted') {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                      alert('Notification permission denied');
+                      return;
+                    }
+                  }
+                  
+                  // Send test notification via API
+                  const res = await fetch('/api/notifications/test', {
+                    method: 'POST',
+                  });
+                  
+                  if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.message || 'Failed to send test notification');
+                  }
+                  
+                  const data = await res.json();
+                  alert(`Notification sent: ${data.message}`);
+                } catch (err: any) {
+                  console.error('Error sending test notification:', err);
+                  alert(`Error: ${err.message}`);
+                }
+              }}
+              className="px-2 py-1 bg-purple-500 text-white rounded text-sm"
+              disabled={Notification.permission === 'denied'}
+            >
+              Test Push Notification
+            </button>
+            
+            <button
+              onClick={() => {
+                // Show a local notification (not a push notification)
+                if (Notification.permission === 'granted') {
+                  new Notification('FlowHub Test', {
+                    body: 'This is a local notification (not a push notification)',
+                    icon: '/icons/icon-192x192.png'
+                  });
+                } else {
+                  alert('Notification permission not granted');
+                }
+              }}
+              className="px-2 py-1 bg-indigo-500 text-white rounded text-sm"
+              disabled={Notification.permission === 'denied'}
+            >
+              Test Local Notification
+            </button>
+          </div>
         </div>
       </div>
     </div>

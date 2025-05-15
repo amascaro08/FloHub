@@ -42,6 +42,17 @@ self.addEventListener('install', event => {
   );
 });
 
+// Message event listener for handling messages from the client
+self.addEventListener('message', event => {
+  console.log('[ServiceWorker] Message received:', event.data);
+  
+  // Handle skip waiting message
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[ServiceWorker] Skipping waiting and activating new service worker');
+    self.skipWaiting();
+  }
+});
+
 // Activate event - clean up old caches
 self.addEventListener('activate', event => {
   console.log('[ServiceWorker] Activate');
@@ -283,3 +294,84 @@ function openIndexedDB() {
     };
   });
 }
+
+// Push event listener for handling push notifications
+self.addEventListener('push', event => {
+  console.log('[ServiceWorker] Push received');
+  
+  let notificationData = {};
+  
+  // Try to extract the notification data from the push event
+  if (event.data) {
+    try {
+      notificationData = event.data.json();
+    } catch (error) {
+      console.error('[ServiceWorker] Error parsing push data:', error);
+      notificationData = {
+        title: 'FlowHub Notification',
+        body: 'You have a new notification',
+        icon: '/icons/icon-192x192.png'
+      };
+    }
+  } else {
+    // Default notification if no data is provided
+    notificationData = {
+      title: 'FlowHub Notification',
+      body: 'You have a new notification',
+      icon: '/icons/icon-192x192.png'
+    };
+  }
+  
+  // Ensure we have the minimum required properties
+  const title = notificationData.title || 'FlowHub Notification';
+  const options = {
+    body: notificationData.body || 'You have a new notification',
+    icon: notificationData.icon || '/icons/icon-192x192.png',
+    badge: notificationData.badge || '/icons/icon-72x72.png',
+    data: notificationData.data || {},
+    actions: notificationData.actions || [],
+    // Add vibration pattern for mobile devices
+    vibrate: [100, 50, 100],
+    // Ensure notification is shown even if the app is in the foreground
+    requireInteraction: true
+  };
+  
+  // Show the notification
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click event listener
+self.addEventListener('notificationclick', event => {
+  console.log('[ServiceWorker] Notification click received');
+  
+  // Close the notification
+  event.notification.close();
+  
+  // Handle notification click - navigate to the URL if provided
+  if (event.notification.data && event.notification.data.url) {
+    const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
+    
+    // Open the URL in a new window/tab or focus an existing one
+    event.waitUntil(
+      clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+      }).then(windowClients => {
+        // Check if there is already a window/tab open with the target URL
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          // If so, focus it
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If not, open a new window/tab
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+    );
+  }
+});
