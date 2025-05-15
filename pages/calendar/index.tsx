@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -24,21 +24,57 @@ export type CalendarEvent = {
   tags?: string[];
 };
 
-// Generic fetcher for SWR
+// Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
+  // Check if we have a cached response that's less than 5 minutes old
+  const cachedData = sessionStorage.getItem(url);
+  if (cachedData) {
+    try {
+      const { data, timestamp } = JSON.parse(cachedData);
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      if (timestamp > fiveMinutesAgo) {
+        console.log('Using cached data for:', url);
+        return data;
+      }
+    } catch (e) {
+      console.error('Error parsing cached data:', e);
+    }
+  }
+  
+  // If no valid cache, fetch from API
+  console.log('Fetching fresh data for:', url);
   const res = await fetch(url);
   if (!res.ok) {
     const errorInfo = await res.text();
     throw new Error(`HTTP ${res.status}: ${errorInfo}`);
   }
-  return res.json();
+  
+  const data = await res.json();
+  
+  // Cache the response
+  try {
+    sessionStorage.setItem(url, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('Error caching data:', e);
+  }
+  
+  return data;
 };
 
+// Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
   const { data: session, status } = useSession();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const { data: settings, error: settingsError } = useSWR<Settings>(session ? '/api/userSettings' : null, fetcher);
+  const { data: settings, error: settingsError } = useSWR<Settings>(
+    session ? '/api/userSettings' : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
+  );
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<any[]>(
@@ -53,97 +89,75 @@ const CalendarPage = () => {
     }
   }, [calendarList]);
 
+  // Memoize the API URL to prevent unnecessary re-fetching
+  const calendarApiUrl = useMemo(() => {
+    if (!session || !settings?.selectedCals) return null;
+    
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    
+    return `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true`;
+  }, [session, settings?.selectedCals]);
+  
+  // Use SWR for calendar data with optimized settings
+  const { data: calendarData, error: calendarError } = useSWR(
+    calendarApiUrl,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300000, // 5 minutes
+      onSuccess: () => setFetchError(null)
+    }
+  );
+  
+  // Process events when calendar data changes
   useEffect(() => {
-    const fetchEvents = async () => {
-      setIsLoading(true);
+    setIsLoading(true);
+    
+    if (calendarError) {
+      console.error('Error fetching events:', calendarError);
+      setFetchError('Failed to load calendar events. Please try again later.');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!calendarData) {
+      // Still loading or no data
+      return;
+    }
+    
+    try {
+      // Check if data is an array or has an events property
+      const eventsArray = Array.isArray(calendarData) ? calendarData : calendarData.events || [];
       
-      if (!session) {
-        setIsLoading(false);
-        return; // Don't fetch if not authenticated
-      }
-      
-      if (!settings?.selectedCals) {
-        setIsLoading(false);
-        return; // Don't fetch if settings or selectedCals is missing
-      }
-
-      try {
-        // First try to use the main calendar API which should include all sources
-        const now = new Date();
-        const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      // Normalize the events to ensure consistent structure - use a more efficient approach
+      const normalizedEvents = eventsArray.reduce((acc: CalendarEvent[], event: any) => {
+        if (!event) return acc;
         
-        // Use the main calendar API which should include all sources
-        const response = await fetch(`/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Calendar data fetched:', data);
-        
-        // Check if data is an array or has an events property
-        const eventsArray = Array.isArray(data) ? data : data.events || [];
-        
-        // Normalize the events to ensure consistent structure
-        const normalizedEvents = eventsArray.map((event: any) => ({
-          id: event.id,
+        acc.push({
+          id: event.id || `event-${Math.random().toString(36).substr(2, 9)}`,
           summary: event.summary || event.title || "No Title",
           start: event.start,
           end: event.end || event.start,
           description: event.description || "",
           calendarId: event.calendarId,
-          source: event.source,
-          calendarName: event.calendarName,
-          tags: event.tags
-        }));
+          source: event.source || "personal",
+          calendarName: event.calendarName || "Calendar",
+          tags: event.tags || []
+        });
         
-        setEvents(normalizedEvents);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        
-        // Fallback to the events API if the main API fails
-        try {
-          const calendarIds = settings.selectedCals;
-          const calendarIdParam = calendarIds.map(id => `calendarId=${encodeURIComponent(id)}`).join('&');
-          const fallbackResponse = await fetch(`/api/calendar/events?${calendarIdParam}`);
-          
-          if (!fallbackResponse.ok) {
-            throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
-          }
-          
-          const fallbackData = await fallbackResponse.json();
-          console.log('Fallback calendar data fetched:', fallbackData);
-          
-          // Check if data is an array or has an events property
-          const eventsArray = Array.isArray(fallbackData) ? fallbackData : fallbackData.events || [];
-          
-          // Normalize the events to ensure consistent structure
-          const normalizedEvents = eventsArray.map((event: any) => ({
-            id: event.id,
-            summary: event.summary || event.title || "No Title",
-            start: event.start,
-            end: event.end || event.start,
-            description: event.description || "",
-            calendarId: event.calendarId,
-            source: event.source,
-            calendarName: event.calendarName,
-            tags: event.tags
-          }));
-          
-          setEvents(normalizedEvents);
-          setIsLoading(false);
-        } catch (fallbackError) {
-          console.error('Error fetching events (fallback):', fallbackError);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchEvents();
-  }, [settings, session]);
+        return acc;
+      }, []);
+      
+      setEvents(normalizedEvents);
+    } catch (error) {
+      console.error('Error processing calendar data:', error);
+      setFetchError('Error processing calendar data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [calendarData, calendarError]);
 
   // Helper functions for date handling
   const getEventDate = (event: CalendarEvent): Date => {
@@ -259,13 +273,63 @@ const CalendarPage = () => {
     return [];
   };
 
-  // Handle authentication and loading states
+  // Memoize the event handlers to prevent unnecessary re-renders
+  const handleSelectDate = useCallback((date: string) => {
+    setSelectedDate(date);
+  }, []);
+  
+  const handleViewEvent = useCallback((event: CalendarEvent) => {
+    setSelectedEvent(event);
+  }, []);
+  
+  // Handle authentication and loading states with better UI
   if (status === "loading" || isLoading) {
     return (
-      <div className="container mx-auto py-10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600">Loading calendar...</p>
+      <div className="container mx-auto py-10">
+        <h1 className="text-2xl font-bold mb-5">Calendar</h1>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-pulse">
+          {/* Loading skeleton for calendar controls */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-10 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              ))}
+            </div>
+            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div className="flex space-x-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Loading skeleton for calendar grid */}
+          <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
+            {/* Day headers */}
+            {[1, 2, 3, 4, 5, 6, 7].map(i => (
+              <div key={i} className="p-2 text-center bg-gray-100 dark:bg-gray-800">
+                <div className="h-5 w-10 mx-auto bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            ))}
+            
+            {/* Calendar cells */}
+            {Array.from({ length: 35 }).map((_, i) => (
+              <div key={i} className="min-h-[100px] bg-white dark:bg-gray-800 p-2">
+                <div className="flex justify-between items-center">
+                  <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {Math.random() > 0.7 && (
+                    <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  )}
+                  {Math.random() > 0.8 && (
+                    <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -282,12 +346,19 @@ const CalendarPage = () => {
     );
   }
 
-  if (settingsError) {
+  if (settingsError || fetchError) {
     return (
-      <div className="container mx-auto py-10 text-center">
+      <div className="container mx-auto py-10">
         <h1 className="text-2xl font-bold mb-5">Calendar</h1>
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
-          <p>Error loading settings: {settingsError.message}</p>
+        <div className="bg-red-100 dark:bg-red-900 dark:bg-opacity-20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded">
+          <h3 className="font-bold">Error</h3>
+          <p>{settingsError?.message || fetchError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
