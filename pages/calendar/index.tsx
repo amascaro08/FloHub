@@ -228,7 +228,35 @@ const CalendarPage = () => {
     return events.filter(event => {
       const eventDate = getEventDate(event);
       return isSameDay(eventDate, day);
+    }).sort((a, b) => {
+      // Sort by start time
+      const dateA = getEventDate(a);
+      const dateB = getEventDate(b);
+      return dateA.getTime() - dateB.getTime();
     });
+  };
+
+  // Get all events for the current view (used for day view)
+  const getEventsForCurrentView = () => {
+    if (!events) return [];
+    
+    if (currentView === 'day') {
+      return getEventsForDay(currentDate);
+    } else if (currentView === 'week') {
+      const weekStart = startOfWeek(currentDate);
+      const weekEnd = endOfWeek(currentDate);
+      return events.filter(event => {
+        const eventDate = getEventDate(event);
+        return eventDate >= weekStart && eventDate <= weekEnd;
+      }).sort((a, b) => {
+        // Sort by date then time
+        const dateA = getEventDate(a);
+        const dateB = getEventDate(b);
+        return dateA.getTime() - dateB.getTime();
+      });
+    }
+    
+    return [];
   };
 
   // Handle authentication and loading states
@@ -349,64 +377,118 @@ const CalendarPage = () => {
           ))}
         </div>
         
-        {/* Calendar cells */}
-        <div className={`grid grid-cols-7 ${currentView === 'month' ? 'grid-rows-6' : ''}`}>
-          {calendarDays.map(day => {
-            const dayEvents = getEventsForDay(day);
-            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-            const isToday = isSameDay(day, new Date());
+        {/* Calendar content based on view */}
+        {currentView === 'day' ? (
+          // Day view (agenda style)
+          <div className="bg-[var(--surface)] p-4 rounded-b-xl">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium text-[var(--on-surface)]">
+                {format(currentDate, 'EEEE, MMMM d, yyyy')}
+              </h3>
+            </div>
             
-            return (
-              <div
-                key={day.toISOString()}
-                className={`min-h-[120px] p-2 border-b border-r border-[var(--outline-variant)] transition-colors
-                  ${!isCurrentMonth ? 'text-[var(--on-surface-variant)] bg-[var(--surface-variant)] bg-opacity-20' : 'bg-[var(--surface)]'}
-                  ${isToday ? 'bg-[var(--primary-container)] bg-opacity-30' : ''}`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm font-semibold ${isToday
-                    ? 'bg-[var(--primary)] text-white rounded-full w-7 h-7 flex items-center justify-center'
-                    : 'text-[var(--on-surface)]'}`}>
-                    {format(day, 'd')}
-                  </span>
-                  {isCurrentMonth && dayEvents.length > 0 && (
-                    <span className="text-xs text-[var(--on-surface-variant)] bg-[var(--surface-variant)] px-1.5 py-0.5 rounded-full">
-                      {dayEvents.length}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px]">
-                  {dayEvents.slice(0, 3).map(event => (
+            <div className="space-y-2">
+              {getEventsForCurrentView().length > 0 ? (
+                getEventsForCurrentView().map(event => {
+                  const startTime = formatDateTime(event.start);
+                  const endTime = formatDateTime(event.end);
+                  
+                  return (
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`text-xs p-1.5 rounded-lg truncate cursor-pointer transition-transform hover:scale-[1.02] ${
-                        event.source === 'work'
-                          ? 'bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
-                          : 'bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
-                      }`}
+                      className={`p-3 rounded-lg cursor-pointer transition-all hover:shadow-md
+                        ${event.source === 'work'
+                          ? 'border-l-4 border-[var(--tertiary)] bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
+                          : 'border-l-4 border-[var(--secondary)] bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
+                        }`}
                     >
-                      {event.summary || event.title || "No Title"}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{event.summary || event.title || "No Title"}</h4>
+                          <p className="text-sm mt-1 opacity-90">{startTime} - {endTime}</p>
+                        </div>
+                        <div className="text-xs px-2 py-1 rounded-full bg-[var(--surface)] text-[var(--on-surface-variant)]">
+                          {event.source === 'work' ? 'Work' : 'Personal'}
+                        </div>
+                      </div>
+                      
+                      {event.calendarName && (
+                        <p className="text-xs mt-2 opacity-75">{event.calendarName}</p>
+                      )}
                     </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div
-                      className="text-xs text-[var(--on-surface-variant)] text-center py-1 cursor-pointer hover:underline"
-                      onClick={() => {
-                        // Find all events for this day and show them in a modal
-                        setCurrentDate(day);
-                        setCurrentView('day');
-                      }}
-                    >
-                      +{dayEvents.length - 3} more
-                    </div>
-                  )}
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-[var(--on-surface-variant)]">
+                  <p>No events scheduled for this day</p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          // Month view (calendar grid)
+          <div className={`grid grid-cols-7 ${currentView === 'month' ? 'grid-rows-6' : ''}`}>
+            {calendarDays.map(day => {
+              const dayEvents = getEventsForDay(day);
+              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+              const isToday = isSameDay(day, new Date());
+              
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`min-h-[120px] p-2 border-b border-r border-[var(--outline-variant)] transition-colors
+                    ${!isCurrentMonth ? 'text-[var(--on-surface-variant)] bg-[var(--surface-variant)] bg-opacity-20' : 'bg-[var(--surface)]'}
+                    ${isToday ? 'bg-[var(--primary-container)] bg-opacity-30' : ''}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className={`text-sm font-semibold ${isToday
+                      ? 'bg-[var(--primary)] text-white rounded-full w-7 h-7 flex items-center justify-center'
+                      : 'text-[var(--on-surface)]'}`}>
+                      {format(day, 'd')}
+                    </span>
+                    {isCurrentMonth && dayEvents.length > 0 && (
+                      <span className="text-xs text-[var(--on-surface-variant)] bg-[var(--surface-variant)] px-1.5 py-0.5 rounded-full">
+                        {dayEvents.length}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px]">
+                    {dayEvents.slice(0, 3).map(event => {
+                      // Determine color based on source (work/personal) and add a left border
+                      const colorClass = event.source === 'work'
+                        ? 'border-l-2 border-[var(--tertiary)] bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
+                        : 'border-l-2 border-[var(--secondary)] bg-[var(--secondary-container)] text-[var(--on-secondary-container)]';
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={() => setSelectedEvent(event)}
+                          className={`text-xs p-1.5 rounded-lg truncate cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                        >
+                          {event.summary || event.title || "No Title"}
+                        </div>
+                      );
+                    })}
+                    {dayEvents.length > 3 && (
+                      <div
+                        className="text-xs text-[var(--on-surface-variant)] text-center py-1 cursor-pointer hover:underline"
+                        onClick={() => {
+                          // Find all events for this day and show them in a modal
+                          setCurrentDate(day);
+                          setCurrentView('day');
+                        }}
+                      >
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       {/* Event detail modal */}
@@ -428,59 +510,91 @@ const CalendarPage = () => {
               </button>
             </div>
             
+            {/* Event details in a more structured format */}
             <div className="mt-6 space-y-4 text-[var(--on-surface)]">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+              {/* Color-coded event type indicator */}
+              <div className={`w-full h-2 rounded-full mb-4 ${
+                selectedEvent.source === 'work'
+                  ? 'bg-[var(--tertiary)]'
+                  : 'bg-[var(--secondary)]'
+              }`}></div>
+              
+              {/* Start time */}
+              <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
-                <span className="font-medium">Start:</span>
-                <span className="ml-2">{formatDateTime(selectedEvent.start)}</span>
+                <div>
+                  <span className="font-medium text-[var(--on-surface-variant)]">Start:</span>
+                  <span className="ml-2 text-[var(--on-surface)]">{formatDateTime(selectedEvent.start)}</span>
+                </div>
               </div>
               
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+              {/* End time */}
+              <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
-                <span className="font-medium">End:</span>
-                <span className="ml-2">{formatDateTime(selectedEvent.end)}</span>
+                <div>
+                  <span className="font-medium text-[var(--on-surface-variant)]">End:</span>
+                  <span className="ml-2 text-[var(--on-surface)]">{formatDateTime(selectedEvent.end)}</span>
+                </div>
               </div>
               
+              {/* Calendar */}
               {selectedEvent.calendarName && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
-                  <span className="font-medium">Calendar:</span>
-                  <span className="ml-2">{selectedEvent.calendarName}</span>
+                  <div>
+                    <span className="font-medium text-[var(--on-surface-variant)]">Calendar:</span>
+                    <span className="ml-2 text-[var(--on-surface)]">{selectedEvent.calendarName}</span>
+                  </div>
                 </div>
               )}
               
+              {/* Source */}
               {selectedEvent.source && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
                   </svg>
-                  <span className="font-medium">Source:</span>
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-sm ${
-                    selectedEvent.source === 'work'
-                      ? 'bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
-                      : 'bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
-                  }`}>
-                    {selectedEvent.source === 'work' ? 'Work' : 'Personal'}
-                  </span>
+                  <div>
+                    <span className="font-medium text-[var(--on-surface-variant)]">Source:</span>
+                    <span className={`ml-2 px-2 py-0.5 rounded-full text-sm ${
+                      selectedEvent.source === 'work'
+                        ? 'bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
+                        : 'bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
+                    }`}>
+                      {selectedEvent.source === 'work' ? 'Work' : 'Personal'}
+                    </span>
+                  </div>
                 </div>
               )}
               
+              {/* Description */}
               {selectedEvent.description && (
-                <div>
+                <div className="mt-6">
                   <div className="flex items-center mb-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">Description:</span>
                   </div>
-                  <div className="mt-1 p-4 bg-[var(--surface-variant)] rounded-lg whitespace-pre-wrap text-[var(--on-surface-variant)]">
-                    {selectedEvent.description}
+                  <div className="mt-1 p-4 bg-[var(--surface-variant)] rounded-lg text-[var(--on-surface-variant)]">
+                    {/* Check if description contains HTML */}
+                    {selectedEvent.description.includes('<html>') ||
+                     selectedEvent.description.includes('<body>') ||
+                     selectedEvent.description.includes('<div>') ||
+                     selectedEvent.description.includes('<meta') ? (
+                      <div
+                        className="prose prose-sm max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{ __html: selectedEvent.description }}
+                      />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{selectedEvent.description}</div>
+                    )}
                   </div>
                 </div>
               )}
