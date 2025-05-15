@@ -1,127 +1,285 @@
-// Enhanced service worker that handles caching and push notifications
-// It's designed to work alongside Workbox (used by next-pwa)
+// Service Worker for FlowHub
+const CACHE_NAME = 'flohub-cache-v1';
 
-self.addEventListener('install', (event) => {
+// Assets to cache on install
+const PRECACHE_ASSETS = [
+  '/',
+  '/offline.html',
+  '/manifest.json',
+  '/flohub_logo.png',
+  '/flohub_bubble.png',
+  '/flohub_flocat.png',
+  '/FloHub_Logo_Transparent.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/maskable-icon-192x192.png',
+  '/icons/maskable-icon-512x512.png'
+];
+
+// API routes to cache with network-first strategy
+const API_ROUTES = [
+  '/api/userSettings',
+  '/api/tasks',
+  '/api/notes',
+  '/api/meetings',
+  '/api/habits'
+];
+
+// Install event - precache static assets
+self.addEventListener('install', event => {
+  console.log('[ServiceWorker] Install');
+  
+  // Skip waiting to ensure the new service worker activates immediately
   self.skipWaiting();
-  console.log('Service Worker installed');
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('[ServiceWorker] Pre-caching assets');
+        return cache.addAll(PRECACHE_ASSETS);
+      })
+      .catch(err => console.error('[ServiceWorker] Pre-cache error:', err))
+  );
 });
 
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker activated');
-  return self.clients.claim();
+// Activate event - clean up old caches
+self.addEventListener('activate', event => {
+  console.log('[ServiceWorker] Activate');
+  
+  // Claim clients to ensure the service worker controls all clients immediately
+  event.waitUntil(self.clients.claim());
+  
+  // Clean up old caches
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.filter(cacheName => {
+          return cacheName !== CACHE_NAME;
+        }).map(cacheName => {
+          console.log('[ServiceWorker] Removing old cache:', cacheName);
+          return caches.delete(cacheName);
+        })
+      );
+    })
+  );
 });
 
-self.addEventListener('fetch', (event) => {
-  // Let the browser handle most requests normally
-  // This is a fallback service worker that doesn't interfere with Workbox
-  event.respondWith(fetch(event.request));
-});
-
-// Log any errors that occur during service worker operation
-self.addEventListener('error', (event) => {
-  console.error('Service Worker error:', event.error);
-});
-
-// Handle push events (when a notification is received)
-self.addEventListener('push', (event) => {
-  console.log('Push notification received', event);
-
-  if (!event.data) {
-    console.log('No payload in push notification');
+// Fetch event - handle different caching strategies
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // Skip non-GET requests and browser extensions
+  if (event.request.method !== 'GET' || url.protocol === 'chrome-extension:') {
     return;
   }
+  
+  // Handle API requests with network-first strategy
+  if (API_ROUTES.some(route => url.pathname.startsWith(route))) {
+    event.respondWith(networkFirstStrategy(event.request));
+    return;
+  }
+  
+  // Handle static assets with cache-first strategy
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2|ttf|eot)$/)) {
+    event.respondWith(cacheFirstStrategy(event.request));
+    return;
+  }
+  
+  // Handle HTML pages with network-first strategy
+  if (url.pathname === '/' || url.pathname.endsWith('.html') || !url.pathname.includes('.')) {
+    event.respondWith(networkFirstWithOfflineFallback(event.request));
+    return;
+  }
+  
+  // Default to network-first for everything else
+  event.respondWith(networkFirstStrategy(event.request));
+});
 
+// Cache-first strategy for static assets
+async function cacheFirstStrategy(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
   try {
-    const data = event.data.json();
-    console.log('Push notification data:', data);
-
-    // Detect platform from user agent
-    const userAgent = self.navigator ? self.navigator.userAgent : '';
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-    const isAndroid = /Android/.test(userAgent);
+    const networkResponse = await fetch(request);
     
-    console.log('Platform detection in service worker:', { isIOS, isAndroid, userAgent });
-
-    const title = data.title || 'FlowHub';
-    const options = {
-      body: data.body || 'You have a new notification',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-      data: data.data || {},
-      actions: data.actions || [],
-      tag: data.tag || 'default',
-      vibrate: [100, 50, 100],
-      timestamp: data.timestamp || Date.now(),
-      // Ensure silent option is set for iOS
-      silent: isIOS ? false : undefined,
-      // Ensure renotify is set for Android to make notifications more reliable
-      renotify: isAndroid ? true : undefined,
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-        .then(() => {
-          console.log('Notification shown successfully');
-        })
-        .catch(err => {
-          console.error('Error showing notification:', err);
-        })
-    );
+    // Cache successful responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
   } catch (error) {
-    console.error('Error processing push notification:', error);
+    console.error('[ServiceWorker] Cache-first fetch failed:', error);
+    return new Response('Network error', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+  }
+}
+
+// Network-first strategy for API requests
+async function networkFirstStrategy(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+    
+    // Cache successful responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    // Fall back to cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    console.error('[ServiceWorker] Network-first fetch failed:', error);
+    return new Response('Network error', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+  }
+}
+
+// Network-first with offline fallback for HTML pages
+async function networkFirstWithOfflineFallback(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+    
+    // Cache successful responses
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    // Fall back to cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // If no cached response, return offline page
+    console.log('[ServiceWorker] Serving offline page');
+    return caches.match('/offline.html');
+  }
+}
+
+// Background sync for offline operations
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-notes') {
+    event.waitUntil(syncNotes());
+  } else if (event.tag === 'sync-tasks') {
+    event.waitUntil(syncTasks());
   }
 });
 
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked', event);
+// Function to sync notes when back online
+async function syncNotes() {
+  try {
+    const db = await openIndexedDB();
+    const pendingNotes = await db.getAll('pendingNotes');
+    
+    for (const note of pendingNotes) {
+      try {
+        const response = await fetch('/api/notes/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(note)
+        });
+        
+        if (response.ok) {
+          await db.delete('pendingNotes', note.id);
+        }
+      } catch (error) {
+        console.error('[ServiceWorker] Failed to sync note:', error);
+      }
+    }
+  } catch (error) {
+    console.error('[ServiceWorker] Error in syncNotes:', error);
+  }
+}
 
-  const notification = event.notification;
-  const action = event.action;
-  const data = notification.data || {};
+// Function to sync tasks when back online
+async function syncTasks() {
+  try {
+    const db = await openIndexedDB();
+    const pendingTasks = await db.getAll('pendingTasks');
+    
+    for (const task of pendingTasks) {
+      try {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(task)
+        });
+        
+        if (response.ok) {
+          await db.delete('pendingTasks', task.id);
+        }
+      } catch (error) {
+        console.error('[ServiceWorker] Failed to sync task:', error);
+      }
+    }
+  } catch (error) {
+    console.error('[ServiceWorker] Error in syncTasks:', error);
+  }
+}
 
-  notification.close();
-
-  // Handle different actions
-  if (action === 'view_meeting') {
-    event.waitUntil(
-      clients.openWindow(`/dashboard/meetings?id=${data.meetingId}`)
-    );
-  } else if (action === 'view_task') {
-    event.waitUntil(
-      clients.openWindow(`/dashboard/tasks?id=${data.taskId}`)
-    );
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then((clientList) => {
-          // If a window is already open, focus it
-          if (clientList.length > 0) {
-            let client = clientList[0];
-            for (let i = 0; i < clientList.length; i++) {
-              if (clientList[i].focused) {
-                client = clientList[i];
-                break;
-              }
-            }
+// Helper function to open IndexedDB
+function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('flohub-offline', 1);
+    
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      
+      // Create object stores if they don't exist
+      if (!db.objectStoreNames.contains('pendingNotes')) {
+        db.createObjectStore('pendingNotes', { keyPath: 'id' });
+      }
+      
+      if (!db.objectStoreNames.contains('pendingTasks')) {
+        db.createObjectStore('pendingTasks', { keyPath: 'id' });
+      }
+    };
+    
+    request.onsuccess = event => {
+      const db = event.target.result;
+      
+      // Wrap IndexedDB with a simpler API
+      const wrappedDB = {
+        getAll: (storeName) => {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.getAll();
             
-            // Navigate to the appropriate URL based on notification data
-            if (data.url) {
-              return client.navigate(data.url).then(client => client.focus());
-            } else {
-              return client.focus();
-            }
-          } else {
-            // If no window is open, open a new one
-            return clients.openWindow(data.url || '/dashboard');
-          }
-        })
-    );
-  }
-});
-
-// Handle notification close events
-self.addEventListener('notificationclose', (event) => {
-  console.log('Notification closed', event);
-});
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+        },
+        delete: (storeName, id) => {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.delete(id);
+            
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      };
+      
+      resolve(wrappedDB);
+    };
+    
+    request.onerror = event => {
+      reject(event.target.error);
+    };
+  });
+}

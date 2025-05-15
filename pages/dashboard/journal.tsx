@@ -11,6 +11,7 @@ import JournalTimeline from "@/components/journal/JournalTimeline";
 import OnThisDay from "@/components/journal/OnThisDay";
 import JournalSummary from "@/components/journal/JournalSummary";
 import LinkedMoments from "@/components/journal/LinkedMoments";
+import JournalEntryViewer from "@/components/journal/JournalEntryViewer";
 
 export default function JournalPage() {
   const { data: session, status } = useSession();
@@ -18,6 +19,9 @@ export default function JournalPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isMobile, setIsMobile] = useState(false);
   const [showNewEntryButton, setShowNewEntryButton] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
+  const today = new Date().toISOString().split('T')[0];
+  const isSelectedToday = selectedDate === today;
 
   // Check if user is authenticated
   useEffect(() => {
@@ -79,13 +83,26 @@ export default function JournalPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left column */}
         <div className="space-y-6">
-          {/* Today's Entry */}
+          {/* Journal Entry (Today's Entry or Selected Date Entry) */}
           <div className="h-[400px]">
-            <TodayEntry onSave={handleSaveEntry} />
+            {isSelectedToday || isEditing ? (
+              <TodayEntry
+                onSave={handleSaveEntry}
+                date={selectedDate}
+              />
+            ) : (
+              <JournalEntryViewer
+                date={selectedDate}
+                onEdit={() => setIsEditing(true)}
+              />
+            )}
           </div>
           
           {/* Journal Timeline */}
-          <JournalTimeline onSelectDate={handleSelectDate} />
+          <JournalTimeline onSelectDate={(date) => {
+            handleSelectDate(date);
+            setIsEditing(date === today);
+          }} />
           
           {/* Journal Summary */}
           <JournalSummary />
@@ -110,6 +127,9 @@ export default function JournalPage() {
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-teal-500 text-white shadow-lg flex items-center justify-center z-10 hover:bg-teal-600 transition-colors"
           aria-label="New Journal Entry"
           onClick={() => {
+            // Set to today's date and editing mode
+            setSelectedDate(today);
+            setIsEditing(true);
             // Scroll to the top where the entry component is
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -117,6 +137,26 @@ export default function JournalPage() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
+        </button>
+      )}
+      
+      {/* Edit/View toggle button (when not viewing today) */}
+      {!isSelectedToday && (
+        <button
+          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-lg flex items-center justify-center z-10 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+          aria-label={isEditing ? "View Entry" : "Edit Entry"}
+          onClick={() => setIsEditing(!isEditing)}
+        >
+          {isEditing ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          )}
         </button>
       )}
       
