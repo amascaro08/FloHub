@@ -75,6 +75,7 @@ const CalendarPage = () => {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<any[]>(
@@ -276,6 +277,10 @@ const CalendarPage = () => {
   // Memoize the event handlers to prevent unnecessary re-renders
   const handleSelectDate = useCallback((date: string) => {
     setSelectedDate(date);
+    // Also update the currentDate for the calendar view
+    if (date) {
+      setCurrentDate(new Date(date));
+    }
   }, []);
   
   const handleViewEvent = useCallback((event: CalendarEvent) => {
