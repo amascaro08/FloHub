@@ -5,10 +5,15 @@ import { getToken } from "next-auth/jwt";
 
 export type CalendarEvent = {
   id: string;
-  title: string; // Changed summary to title
-  start: Date;
-  end: Date;
-  description?: string; // Add optional description field
+  title: string;
+  summary?: string; // Include both title and summary for compatibility
+  start: { dateTime?: string; date?: string } | Date;
+  end: { dateTime?: string; date?: string } | Date;
+  description?: string;
+  calendarId?: string;
+  source?: "personal" | "work";
+  calendarName?: string;
+  tags?: string[];
 };
 
 export type GetCalendarEventsResponse = {
@@ -76,22 +81,38 @@ export default async function handler(
         ? body.items.map((event: any) => ({
             id: event.id,
             title: event.summary || "No Title",
+            summary: event.summary || "No Title", // Include both for compatibility
             start: event.start,
             end: event.end,
-            description: event.description, // Include the description
+            description: event.description || "",
+            calendarId: calId,
+            source: "personal", // Default to personal for Google Calendar
+            calendarName: "Google Calendar", // Default name
+            tags: [], // Default empty tags
           }))
         : [];
 
       allEvents.push(...events);
     }
 
-    // Ensure start and end are Dates and has title
+    // Keep the original format to maintain compatibility with both old and new code
     const formattedEvents: CalendarEvent[] = allEvents.map(event => ({
       id: event.id,
-      title: event.title,
-      start: event.start.dateTime ? new Date(event.start.dateTime) : new Date(event.start.date),
-      end: event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : new Date(),
-      description: event.description,
+      title: event.title || event.summary || "No Title",
+      summary: event.summary || event.title || "No Title",
+      start: {
+        dateTime: event.start.dateTime || (event.start instanceof Date ? event.start.toISOString() : null),
+        date: event.start.date || null
+      },
+      end: {
+        dateTime: event.end?.dateTime || (event.end instanceof Date ? event.end.toISOString() : null),
+        date: event.end?.date || null
+      },
+      description: event.description || "",
+      calendarId: event.calendarId || "primary",
+      source: event.source || "personal",
+      calendarName: event.calendarName || "Calendar",
+      tags: event.tags || []
     }));
 
     return res.status(200).json({ events: formattedEvents || [] });
