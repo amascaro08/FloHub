@@ -22,7 +22,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   // Load saved mood from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
-      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone);
+      const today = getCurrentDate(timezone);
+      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone, today);
       const savedMood = localStorage.getItem(storageKey);
       if (savedMood) {
         try {
@@ -46,7 +47,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
     
     // Save to localStorage with today's date in user's timezone
     if (session?.user?.email) {
-      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone);
+      const today = getCurrentDate(timezone);
+      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone, today);
       localStorage.setItem(storageKey, JSON.stringify(mood));
       
       // Show save confirmation

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { formatDate } from '@/lib/dateUtils';
+import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface JournalEntryViewerProps {
   date: string;
@@ -23,7 +23,8 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
       setLoading(true);
       
       // Load entry from localStorage
-      const savedEntry = localStorage.getItem(`journal_entry_${session.user.email}_${date}`);
+      const storageKey = getDateStorageKey('journal_entry', session.user.email, timezone, date);
+      const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {
         try {
@@ -42,7 +43,7 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
       
       setLoading(false);
     }
-  }, [date, session]);
+  }, [date, session, timezone]);
 
   if (loading) {
     return (

@@ -25,7 +25,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
       // If a specific date is provided, load that entry, otherwise load today's entry
       const storageKey = isTodayDate
         ? `journal_today_${session.user.email}`
-        : `journal_entry_${session.user.email}_${entryDate}`;
+        : getDateStorageKey('journal_entry', session.user.email, timezone, entryDate);
         
       const savedEntry = localStorage.getItem(storageKey);
       
@@ -51,7 +51,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
     // Save to localStorage
     if (session?.user?.email) {
       // Save to both the specific date key and today's entry if it's today
-      const dateKey = `journal_entry_${session.user.email}_${entryDate}`;
+      const dateKey = getDateStorageKey('journal_entry', session.user.email, timezone, entryDate);
       localStorage.setItem(dateKey, JSON.stringify(entry));
       
       if (isTodayDate) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { getCurrentDate, formatDate, isToday } from '@/lib/dateUtils';
+import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 
 interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
@@ -45,13 +45,23 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezon
         // Show the last 14 days if we're in the current month
         const recentDates = [];
         for (let i = 13; i >= 0; i--) {
-          const date = new Date(today);
+          // Create date object for the current timezone
+          const date = new Date();
           date.setDate(date.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
+          
+          // Format the date in YYYY-MM-DD format for the user's timezone
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
           // Try to load mood and entry for this date
-          const savedMood = localStorage.getItem(`journal_mood_${session.user.email}_${dateStr}`);
-          const savedEntry = localStorage.getItem(`journal_entry_${session.user.email}_${dateStr}`);
+          const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
+          const entryKey = getDateStorageKey('journal_entry', session.user.email, timezone, dateStr);
+          
+          const savedMood = localStorage.getItem(moodKey);
+          const savedEntry = localStorage.getItem(entryKey);
           
           const entry: JournalEntry = { date: dateStr };
           
@@ -80,12 +90,22 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezon
       } else {
         // For past months, scan the entire month for entries
         for (let day = 1; day <= lastDay.getDate(); day++) {
+          // Create date object for the current timezone
           const date = new Date(year, month, day);
-          const dateStr = date.toISOString().split('T')[0];
+          
+          // Format the date in YYYY-MM-DD format for the user's timezone
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
           // Try to load mood and entry for this date
-          const savedMood = localStorage.getItem(`journal_mood_${session.user.email}_${dateStr}`);
-          const savedEntry = localStorage.getItem(`journal_entry_${session.user.email}_${dateStr}`);
+          const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
+          const entryKey = getDateStorageKey('journal_entry', session.user.email, timezone, dateStr);
+          
+          const savedMood = localStorage.getItem(moodKey);
+          const savedEntry = localStorage.getItem(entryKey);
           
           const entry: JournalEntry = { date: dateStr };
           

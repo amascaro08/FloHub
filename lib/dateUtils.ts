@@ -13,24 +13,28 @@ export function getCurrentDate(timezone?: string): string {
     timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
   
+  // Get current date in the specified timezone
   const now = new Date();
   
-  // Format the date in the user's timezone
-  const dateInTimezone = new Intl.DateTimeFormat('en-CA', {
+  // Create a formatter that will give us date parts in the user's timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    timeZone: timezone
-  }).format(now);
+    timeZone: timezone,
+    hour12: false
+  });
   
-  // Convert from MM/DD/YYYY to YYYY-MM-DD
-  const parts = dateInTimezone.split('/');
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[0]}-${parts[1]}`;
-  }
+  // Get the parts
+  const parts = formatter.formatToParts(now);
   
-  // Fallback to ISO string split (UTC)
-  return now.toISOString().split('T')[0];
+  // Extract year, month, and day from the parts
+  const year = parts.find(part => part.type === 'year')?.value || '';
+  const month = parts.find(part => part.type === 'month')?.value || '';
+  const day = parts.find(part => part.type === 'day')?.value || '';
+  
+  // Format as YYYY-MM-DD
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -76,9 +80,15 @@ export function isToday(dateStr: string, timezone?: string): boolean {
  * @param prefix The prefix for the storage key
  * @param email The user's email
  * @param timezone The user's timezone
- * @returns The storage key with the current date
+ * @param date Optional specific date to use (defaults to today)
+ * @returns The storage key with the date
  */
-export function getDateStorageKey(prefix: string, email: string, timezone?: string): string {
-  const today = getCurrentDate(timezone);
-  return `${prefix}_${email}_${today}`;
+export function getDateStorageKey(
+  prefix: string,
+  email: string,
+  timezone?: string,
+  date?: string
+): string {
+  const dateToUse = date || getCurrentDate(timezone);
+  return `${prefix}_${email}_${dateToUse}`;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { formatDate } from '@/lib/dateUtils';
+import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface OnThisDayProps {
   onViewEntry?: (date: string) => void;
@@ -28,7 +28,8 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
       const lastYearDate = `${lastYear.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
       
       // Try to load entry from this day last year
-      const savedEntry = localStorage.getItem(`journal_entry_${session.user.email}_${lastYearDate}`);
+      const storageKey = getDateStorageKey('journal_entry', session.user.email, timezone, lastYearDate);
+      const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {
         try {
