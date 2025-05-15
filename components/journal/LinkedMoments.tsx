@@ -18,8 +18,8 @@ interface Task {
 interface CalendarEvent {
   id: string;
   title: string;
-  start: Date | string; // Can be Date or string when serialized from API
-  end: Date | string;
+  start: Date | string | { dateTime?: string; date?: string }; // Can be Date, string, or object with dateTime/date
+  end: Date | string | { dateTime?: string; date?: string };
   description?: string;
 }
 
@@ -61,9 +61,33 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
       // Filter events for the target date
       const filteredEvents = eventsData.events.filter((event: CalendarEvent) => {
         if (!event.start) return false;
-        // Ensure we're working with a Date object
-        const eventDate = (typeof event.start === 'string' ? new Date(event.start) : event.start).toISOString().split('T')[0];
-        return eventDate === targetDate;
+        
+        try {
+          // Safely convert to a Date object first
+          let eventDate;
+          if (typeof event.start === 'string') {
+            eventDate = new Date(event.start);
+          } else if (event.start instanceof Date) {
+            eventDate = event.start;
+          } else if (typeof event.start === 'object' && event.start !== null) {
+            // Handle case where start might be an object with dateTime or date property
+            const dateStr = event.start.dateTime || event.start.date;
+            if (dateStr) {
+              eventDate = new Date(dateStr);
+            } else {
+              return false; // Skip if we can't get a valid date
+            }
+          } else {
+            return false; // Skip if we can't get a valid date
+          }
+          
+          // Now we have a proper Date object, extract the date part
+          const dateStr = eventDate.toISOString().split('T')[0];
+          return dateStr === targetDate;
+        } catch (error) {
+          console.error("Error processing event date:", error, event);
+          return false; // Skip this event if there's an error
+        }
       });
       setEvents(filteredEvents);
     } else {
@@ -97,7 +121,24 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
             {events.map(event => (
               <li key={event.id} className="flex items-start p-2 rounded-lg bg-slate-50 dark:bg-slate-700">
                 <div className="flex-shrink-0 w-10 text-center text-teal-600 dark:text-teal-400 font-medium">
-                  {formatTime(typeof event.start === 'string' ? event.start : event.start.toISOString())}
+                  {(() => {
+                    try {
+                      let dateStr;
+                      if (typeof event.start === 'string') {
+                        dateStr = event.start;
+                      } else if (event.start instanceof Date) {
+                        dateStr = event.start.toISOString();
+                      } else if (typeof event.start === 'object' && event.start !== null) {
+                        dateStr = event.start.dateTime || event.start.date || '';
+                      } else {
+                        return 'N/A';
+                      }
+                      return formatTime(dateStr);
+                    } catch (error) {
+                      console.error("Error formatting event time:", error);
+                      return 'N/A';
+                    }
+                  })()}
                 </div>
                 <div className="ml-3">
                   <p className="text-slate-800 dark:text-slate-200">{event.title}</p>
