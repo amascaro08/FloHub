@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import RichTextEditor from './RichTextEditor';
+import { getCurrentDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 
 interface TodayEntryProps {
   onSave: (entry: { content: string; timestamp: string }) => void;
   date?: string; // Optional date parameter, defaults to today
+  timezone?: string; // User's timezone
 }
 
-const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date }) => {
+const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const { data: session } = useSession();
   
   // Get the current date in YYYY-MM-DD format or use provided date
-  const entryDate = date || new Date().toISOString().split('T')[0];
-  const isToday = !date || date === new Date().toISOString().split('T')[0];
+  const entryDate = date || getCurrentDate(timezone);
+  const isTodayDate = !date || isToday(date, timezone);
 
   // Load saved entry from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
       // If a specific date is provided, load that entry, otherwise load today's entry
-      const storageKey = isToday
+      const storageKey = isTodayDate
         ? `journal_today_${session.user.email}`
         : `journal_entry_${session.user.email}_${entryDate}`;
         
@@ -38,7 +40,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date }) => {
         }
       }
     }
-  }, [session, entryDate, isToday]);
+  }, [session, entryDate, isTodayDate, timezone]);
 
   const handleSave = () => {
     if (!content.trim()) return;
@@ -52,7 +54,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date }) => {
       const dateKey = `journal_entry_${session.user.email}_${entryDate}`;
       localStorage.setItem(dateKey, JSON.stringify(entry));
       
-      if (isToday) {
+      if (isTodayDate) {
         localStorage.setItem(
           `journal_today_${session.user.email}`,
           JSON.stringify(entry)
@@ -73,10 +75,11 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date }) => {
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          {isToday ? "Today's Entry" : new Date(entryDate).toLocaleDateString('en-US', {
+          {isTodayDate ? "Today's Entry" : new Date(entryDate).toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: timezone
           })}
         </h2>
         <button

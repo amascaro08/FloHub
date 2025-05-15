@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
+import { getCurrentDate } from '@/lib/dateUtils';
 
 interface LinkedMomentsProps {
   date?: string; // Optional date to show moments for a specific day
+  timezone?: string; // User's timezone
 }
 
 interface Task {
@@ -23,13 +25,13 @@ interface CalendarEvent {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
+const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const { data: session, status } = useSession();
   
-  // Use the provided date or default to today
-  const targetDate = date || new Date().toISOString().split('T')[0];
+  // Use the provided date or default to today in user's timezone
+  const targetDate = date || getCurrentDate(timezone);
 
   // Fetch tasks
   const { data: tasksData } = useSWR(
@@ -71,9 +73,10 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date }) => {
   }, [eventsData, targetDate]);
 
   const formatTime = (dateTimeStr: string) => {
-    return new Date(dateTimeStr).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(dateTimeStr).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: timezone
     });
   };
 

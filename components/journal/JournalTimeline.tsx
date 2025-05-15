@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { getCurrentDate, formatDate, isToday } from '@/lib/dateUtils';
 
 interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
+  timezone?: string;
+  refreshTrigger?: number; // A value that changes to trigger a refresh
 }
 
 interface JournalEntry {
@@ -15,9 +18,9 @@ interface JournalEntry {
   content?: string;
 }
 
-const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate }) => {
+const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezone, refreshTrigger = 0 }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
   const { data: session } = useSession();
@@ -112,21 +115,21 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate }) => {
       
       setHasEntries(entriesMap);
     }
-  }, [session, currentMonth]);
+  }, [session, currentMonth, timezone, refreshTrigger]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     onSelectDate(date);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Use our utility function for formatting dates
+  const formatDateDisplay = (dateStr: string) => {
+    return formatDate(dateStr, timezone);
   };
 
-  const isToday = (dateStr: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr === today;
+  // Use our utility function to check if a date is today
+  const isTodayDate = (dateStr: string) => {
+    return isToday(dateStr, timezone);
   };
 
   // Navigate to previous month
@@ -226,14 +229,14 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate }) => {
                 {entry.mood?.emoji || (hasEntry(entry.date) ? '📝' : '·')}
               </span>
               <span className={`text-xs font-medium ${
-                isToday(entry.date)
+                isTodayDate(entry.date)
                   ? 'text-teal-600 dark:text-teal-400'
                   : hasEntry(entry.date)
                     ? 'text-slate-700 dark:text-slate-300'
                     : 'text-slate-500 dark:text-slate-500'
               }`}>
-                {formatDate(entry.date)}
-                {isToday(entry.date) && ' (Today)'}
+                {formatDateDisplay(entry.date)}
+                {isTodayDate(entry.date) && ' (Today)'}
               </span>
             </button>
           ))}
@@ -243,7 +246,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate }) => {
       <div className="mt-4 text-sm text-slate-600 dark:text-slate-400">
         {selectedDate && (
           <p>
-            Selected: <span className="font-medium">{new Date(selectedDate).toLocaleDateString('en-US', {
+            Selected: <span className="font-medium">{formatDate(selectedDate, timezone, {
               weekday: 'long',
               year: 'numeric',
               month: 'long',

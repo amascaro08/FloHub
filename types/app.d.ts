@@ -11,6 +11,7 @@ export type UserSettings = {
   globalTags: string[]; // Field for global tags
   activeWidgets?: string[]; // Array of active widget IDs
   calendarSources?: CalendarSource[]; // New field for multiple calendar sources
+  timezone?: string; // User's preferred timezone (e.g., "America/New_York")
 };
 
 // Define a type for calendar sources

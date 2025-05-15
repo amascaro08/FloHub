@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { formatDate } from '@/lib/dateUtils';
 
 interface JournalEntryViewerProps {
   date: string;
   onEdit?: () => void;
+  timezone?: string;
 }
 
 interface JournalEntry {
@@ -11,7 +13,7 @@ interface JournalEntry {
   timestamp: string;
 }
 
-const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit }) => {
+const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, timezone }) => {
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
@@ -58,11 +60,11 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit })
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 flex flex-col h-full">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-            {new Date(date).toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            {formatDate(date, timezone, {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}
           </h2>
         </div>
@@ -80,11 +82,11 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit })
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          {new Date(date).toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          {formatDate(date, timezone, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           })}
         </h2>
         
@@ -105,7 +107,9 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit })
       
       {entry.timestamp && (
         <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Last updated: {new Date(entry.timestamp).toLocaleString()}
+          Last updated: {new Date(entry.timestamp).toLocaleString(undefined, {
+            timeZone: timezone
+          })}
         </div>
       )}
     </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { formatDate } from '@/lib/dateUtils';
 
 interface OnThisDayProps {
   onViewEntry?: (date: string) => void;
+  timezone?: string;
 }
 
 interface HistoricalEntry {
@@ -11,12 +13,13 @@ interface HistoricalEntry {
   timestamp: string;
 }
 
-const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry }) => {
+const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   const [historicalEntry, setHistoricalEntry] = useState<HistoricalEntry | null>(null);
   const { data: session } = useSession();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
+      // Create date objects with the user's timezone
       const today = new Date();
       const lastYear = new Date(today);
       lastYear.setFullYear(today.getFullYear() - 1);
@@ -40,13 +43,13 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry }) => {
         }
       }
     }
-  }, [session]);
+  }, [session, timezone]);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  const formatDateDisplay = (dateStr: string) => {
+    return formatDate(dateStr, timezone, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -79,7 +82,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry }) => {
       
       <div className="mb-3">
         <span className="text-teal-600 dark:text-teal-400 font-medium">
-          {formatDate(historicalEntry.date)}
+          {formatDateDisplay(historicalEntry.date)}
         </span>
       </div>
       
@@ -91,7 +94,9 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry }) => {
       
       <div className="flex justify-between items-center">
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {new Date(historicalEntry.timestamp).toLocaleTimeString()}
+          {new Date(historicalEntry.timestamp).toLocaleTimeString(undefined, {
+            timeZone: timezone
+          })}
         </span>
         
         {onViewEntry && (

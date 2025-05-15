@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
+import { getCurrentDate } from "@/lib/dateUtils";
 
 // Import journal components
 import TodayEntry from "@/components/journal/TodayEntry";
@@ -16,12 +18,33 @@ import JournalEntryViewer from "@/components/journal/JournalEntryViewer";
 export default function JournalPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
   const [showNewEntryButton, setShowNewEntryButton] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
-  const today = new Date().toISOString().split('T')[0];
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Fetch user settings to get timezone
+  const { data: userSettings } = useSWR(
+    session ? "/api/userSettings" : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    { revalidateOnFocus: false }
+  );
+  
+  const timezone = userSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const today = getCurrentDate(timezone);
   const isSelectedToday = selectedDate === today;
+  
+  // Initialize selectedDate once we have the timezone
+  useEffect(() => {
+    if (timezone && !selectedDate) {
+      setSelectedDate(getCurrentDate(timezone));
+    }
+  }, [timezone, selectedDate]);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -57,6 +80,9 @@ export default function JournalPage() {
     console.log("Saving mood:", mood);
     // In a real app, this would save to Firebase or another backend
     // For now, we're using localStorage in the component itself
+    
+    // Trigger a refresh of the timeline to show the new mood immediately
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle selecting a date from the timeline
@@ -89,20 +115,26 @@ export default function JournalPage() {
               <TodayEntry
                 onSave={handleSaveEntry}
                 date={selectedDate}
+                timezone={timezone}
               />
             ) : (
               <JournalEntryViewer
                 date={selectedDate}
                 onEdit={() => setIsEditing(true)}
+                timezone={timezone}
               />
             )}
           </div>
           
           {/* Journal Timeline */}
-          <JournalTimeline onSelectDate={(date) => {
-            handleSelectDate(date);
-            setIsEditing(date === today);
-          }} />
+          <JournalTimeline
+            onSelectDate={(date) => {
+              handleSelectDate(date);
+              setIsEditing(date === today);
+            }}
+            timezone={timezone}
+            refreshTrigger={refreshTrigger}
+          />
           
           {/* Journal Summary */}
           <JournalSummary />
@@ -111,13 +143,13 @@ export default function JournalPage() {
         {/* Right column */}
         <div className="space-y-6">
           {/* Mood Tracker */}
-          <MoodTracker onSave={handleSaveMood} />
+          <MoodTracker onSave={handleSaveMood} timezone={timezone} />
           
           {/* On This Day */}
-          <OnThisDay onViewEntry={handleSelectDate} />
+          <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
           
           {/* Linked Moments */}
-          <LinkedMoments date={selectedDate} />
+          <LinkedMoments date={selectedDate} timezone={timezone} />
         </div>
       </div>
       

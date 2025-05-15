@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface MoodTrackerProps {
   onSave: (mood: { emoji: string; label: string; tags: string[] }) => void;
+  timezone?: string;
 }
 
-const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
+const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [selectedEmoji, setSelectedEmoji] = useState<string>('😐');
   const [selectedLabel, setSelectedLabel] = useState<string>('Okay');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -20,7 +22,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
   // Load saved mood from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
-      const savedMood = localStorage.getItem(`journal_mood_${session.user.email}_${new Date().toISOString().split('T')[0]}`);
+      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone);
+      const savedMood = localStorage.getItem(storageKey);
       if (savedMood) {
         try {
           const parsed = JSON.parse(savedMood);
@@ -32,7 +35,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
         }
       }
     }
-  }, [session]);
+  }, [session, timezone]);
 
   const handleSave = () => {
     const mood = {
@@ -41,12 +44,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave }) => {
       tags: selectedTags,
     };
     
-    // Save to localStorage with today's date
+    // Save to localStorage with today's date in user's timezone
     if (session?.user?.email) {
-      localStorage.setItem(
-        `journal_mood_${session.user.email}_${new Date().toISOString().split('T')[0]}`,
-        JSON.stringify(mood)
-      );
+      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone);
+      localStorage.setItem(storageKey, JSON.stringify(mood));
       
       // Show save confirmation
       setSaveConfirmation(true);
