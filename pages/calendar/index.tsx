@@ -399,8 +399,8 @@ const CalendarPage = () => {
                       onClick={() => setSelectedEvent(event)}
                       className={`p-3 rounded-lg cursor-pointer transition-all hover:shadow-md
                         ${event.source === 'work'
-                          ? 'border-l-4 border-[var(--tertiary)] bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
-                          : 'border-l-4 border-[var(--secondary)] bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
+                          ? 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-blue-900 dark:text-blue-100'
+                          : 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-900 dark:text-green-100'
                         }`}
                     >
                       <div className="flex justify-between items-start">
@@ -458,8 +458,8 @@ const CalendarPage = () => {
                     {dayEvents.slice(0, 3).map(event => {
                       // Determine color based on source (work/personal) and add a left border
                       const colorClass = event.source === 'work'
-                        ? 'border-l-2 border-[var(--tertiary)] bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
-                        : 'border-l-2 border-[var(--secondary)] bg-[var(--secondary-container)] text-[var(--on-secondary-container)]';
+                        ? 'border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-blue-900 dark:text-blue-100'
+                        : 'border-l-2 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-900 dark:text-green-100';
                       
                       return (
                         <div
@@ -515,8 +515,8 @@ const CalendarPage = () => {
               {/* Color-coded event type indicator */}
               <div className={`w-full h-2 rounded-full mb-4 ${
                 selectedEvent.source === 'work'
-                  ? 'bg-[var(--tertiary)]'
-                  : 'bg-[var(--secondary)]'
+                  ? 'bg-blue-500'
+                  : 'bg-green-500'
               }`}></div>
               
               {/* Start time */}
@@ -564,8 +564,8 @@ const CalendarPage = () => {
                     <span className="font-medium text-[var(--on-surface-variant)]">Source:</span>
                     <span className={`ml-2 px-2 py-0.5 rounded-full text-sm ${
                       selectedEvent.source === 'work'
-                        ? 'bg-[var(--tertiary-container)] text-[var(--on-tertiary-container)]'
-                        : 'bg-[var(--secondary-container)] text-[var(--on-secondary-container)]'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
                     }`}>
                       {selectedEvent.source === 'work' ? 'Work' : 'Personal'}
                     </span>
