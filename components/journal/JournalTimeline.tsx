@@ -201,9 +201,9 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Journal Timeline</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6 max-w-full">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">Journal Timeline</h2>
         
         <div className="flex items-center space-x-2">
           <button
@@ -216,7 +216,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
             </svg>
           </button>
           
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium whitespace-nowrap">
             {formatMonthName(currentMonth)}
           </span>
           
@@ -247,8 +247,8 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
         </div>
       </div>
       
-      <div className="overflow-x-auto pb-2">
-        <div className="flex space-x-3 min-w-max" id="timeline-entries">
+      <div className="overflow-x-auto pb-2 w-full">
+        <div className="flex space-x-3 min-w-max max-w-full" id="timeline-entries">
           {entries.map((entry) => (
             <button
               key={entry.date}
@@ -279,7 +279,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
         </div>
       </div>
       
-      <div className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+      <div className="mt-4 text-sm text-slate-600 dark:text-slate-400 break-words">
         {selectedDate && (
           <p>
             Selected: <span className="font-medium">{formatDate(selectedDate, timezone, {

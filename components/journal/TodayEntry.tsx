@@ -106,9 +106,9 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
 
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 flex flex-col h-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6 flex flex-col h-full overflow-hidden max-w-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">
           {isTodayDate ? "Today's Entry" : new Date(entryDate).toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
@@ -129,16 +129,16 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Journal Prompts
           </h3>
-          <div className="grid grid-cols-1 gap-4 mb-4 overflow-y-auto max-w-full">
+          <div className="flex flex-col gap-4 mb-4 overflow-y-auto w-full">
             {journalingPrompts.map((prompt) => (
-              <div key={prompt.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div key={prompt.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 break-words">
                   {prompt.question}
                 </label>
                 <textarea
                   value={promptAnswers[prompt.id] || ''}
                   onChange={(e) => handlePromptChange(prompt.id, e.target.value)}
-                  className="w-full p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-full"
                   rows={2}
                   placeholder="Your answer..."
                 />
@@ -146,20 +146,22 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             ))}
             
             {/* Additional free-form thoughts section */}
-            <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+            <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Any other thoughts or reflections?
               </label>
-              <RichTextEditor
-                content={content}
-                onChange={handleContentChange}
-                placeholder="Write freely about anything else on your mind..."
-              />
+              <div className="max-w-full">
+                <RichTextEditor
+                  content={content}
+                  onChange={handleContentChange}
+                  placeholder="Write freely about anything else on your mind..."
+                />
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex-grow overflow-auto">
+        <div className="flex-grow overflow-auto max-w-full">
           <RichTextEditor
             content={content}
             onChange={handleContentChange}
