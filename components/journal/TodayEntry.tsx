@@ -129,7 +129,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Journal Prompts
           </h3>
-          <div className="grid grid-cols-1 gap-4 mb-4 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-4 mb-4 overflow-y-auto max-w-full">
             {journalingPrompts.map((prompt) => (
               <div key={prompt.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -144,6 +144,18 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
                 />
               </div>
             ))}
+            
+            {/* Additional free-form thoughts section */}
+            <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Any other thoughts or reflections?
+              </label>
+              <RichTextEditor
+                content={content}
+                onChange={handleContentChange}
+                placeholder="Write freely about anything else on your mind..."
+              />
+            </div>
           </div>
         </div>
       ) : (

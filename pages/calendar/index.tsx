@@ -370,12 +370,12 @@ const CalendarPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container mx-auto py-6 px-4 max-w-full overflow-hidden">
       <h1 className="text-2xl font-bold mb-5">Calendar</h1>
       
       {/* Calendar controls */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex space-x-2 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-start">
           <button
             onClick={() => setCurrentView('day')}
             className={`px-4 py-2 rounded-lg transition-all ${currentView === 'day'
@@ -443,7 +443,8 @@ const CalendarPage = () => {
       </div>
       
       {/* Calendar grid */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-elevate-md overflow-hidden border border-neutral-200 dark:border-neutral-700">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-elevate-md overflow-x-auto border border-neutral-200 dark:border-neutral-700">
+        <div className="min-w-[768px]"> {/* Set minimum width for horizontal scrolling on mobile */}
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -565,6 +566,7 @@ const CalendarPage = () => {
             })}
           </div>
         )}
+        </div>
       </div>
       
       {/* Event detail modal */}

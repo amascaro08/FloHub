@@ -106,7 +106,7 @@ export default function JournalPage() {
       <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Journal</h1>
       
       {/* Timeline at the top */}
-      <div className="mb-6">
+      <div className="mb-6 overflow-hidden">
         <JournalTimeline
           onSelectDate={(date) => {
             handleSelectDate(date);
@@ -118,11 +118,11 @@ export default function JournalPage() {
         />
       </div>
       
-      {/* Main content grid */}
+      {/* Main content - Responsive layout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left column (2/3 width on desktop) - Journal Entry */}
-        <div className="md:col-span-2">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md h-full">
+        <div className="md:col-span-2 w-full">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full">
             {isSelectedToday || isEditing ? (
               <TodayEntry
                 onSave={handleSaveEntry}
@@ -141,7 +141,7 @@ export default function JournalPage() {
         </div>
         
         {/* Right column (1/3 width on desktop) - Widgets */}
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           {/* FloCat Summary */}
           <JournalSummary />
           
