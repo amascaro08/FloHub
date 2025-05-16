@@ -248,12 +248,12 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
       </div>
       
       <div className="overflow-x-auto pb-2 w-full">
-        <div className="flex space-x-3 min-w-max max-w-full" id="timeline-entries">
+        <div className="flex space-x-2 md:space-x-3 w-full" id="timeline-entries">
           {entries.map((entry) => (
             <button
               key={entry.date}
               onClick={() => handleDateSelect(entry.date)}
-              className={`flex flex-col items-center p-3 rounded-lg transition-all ${
+              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all min-w-[60px] ${
                 selectedDate === entry.date
                   ? 'bg-teal-100 dark:bg-teal-900 shadow-md'
                   : hasEntry(entry.date)
@@ -261,10 +261,10 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
                     : 'hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
-              <span className="text-2xl mb-1">
+              <span className="text-xl sm:text-2xl mb-1">
                 {entry.mood?.emoji || (hasEntry(entry.date) ? '📝' : '·')}
               </span>
-              <span className={`text-xs font-medium ${
+              <span className={`text-xs font-medium truncate w-full text-center ${
                 isTodayDate(entry.date)
                   ? 'text-teal-600 dark:text-teal-400'
                   : hasEntry(entry.date)
