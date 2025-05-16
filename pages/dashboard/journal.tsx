@@ -118,18 +118,11 @@ export default function JournalPage() {
         />
       </div>
       
-      {/* FloCat Summary and Mood Trend section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <JournalSummary />
-        <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-      </div>
-      
       {/* Main content grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left column */}
-        <div className="space-y-6">
-          {/* Journal Entry (Today's Entry or Selected Date Entry) */}
-          <div className="h-[500px]">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left column (2/3 width on desktop) - Journal Entry */}
+        <div className="md:col-span-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md h-full">
             {isSelectedToday || isEditing ? (
               <TodayEntry
                 onSave={handleSaveEntry}
@@ -147,8 +140,14 @@ export default function JournalPage() {
           </div>
         </div>
         
-        {/* Right column */}
+        {/* Right column (1/3 width on desktop) - Widgets */}
         <div className="space-y-6">
+          {/* FloCat Summary */}
+          <JournalSummary />
+          
+          {/* Mood Tracker */}
+          <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+          
           {/* On This Day */}
           <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
           

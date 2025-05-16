@@ -84,17 +84,8 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
           }
         });
         
-        // Get recent trend
-        const trend = getMoodTrend();
-        
         // Build personalized summary using mood data and themes
-        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month`;
-        
-        if (trend !== "Not enough data") {
-          summary += ` and is currently ${trend.toLowerCase()}.`;
-        } else {
-          summary += ".";
-        }
+        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month.`;
         
         // Add theme insights if available
         if (topThemes.length > 0) {
@@ -119,20 +110,6 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
     }
   }, [session]);
 
-  // Helper function to get mood trend description
-  const getMoodTrend = () => {
-    if (moodData.length < 3) return "Not enough data";
-    
-    const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
-    const recentMoods = moodData.slice(-7).map(m => labels.indexOf(m.label));
-    
-    const avgMood = recentMoods.reduce((sum, val) => sum + val, 0) / recentMoods.length;
-    
-    if (avgMood < 1.5) return "Trending downward";
-    if (avgMood < 2.5) return "Stable";
-    if (avgMood < 3.5) return "Slightly improving";
-    return "Trending upward";
-  };
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
@@ -143,42 +120,6 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
         <p className="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
           {floCatsSummary || "Start journaling to get FloCats insights about your entries."}
         </p>
-      </div>
-      
-      <div className="mb-6">
-        <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Mood Trend</h3>
-        <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Last 7 days</span>
-            <span className="text-sm font-medium text-teal-600 dark:text-teal-400">{getMoodTrend()}</span>
-          </div>
-          
-          {/* Simple mood line graph */}
-          <div className="h-16 flex items-end">
-            {moodData.slice(-7).map((mood, index) => {
-              const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
-              const height = ((labels.indexOf(mood.label) + 1) / 5) * 100;
-              
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div 
-                    className="w-2 bg-teal-500 rounded-t-sm transition-all"
-                    style={{ height: `${height}%` }}
-                  ></div>
-                  <span className="text-xs mt-1">{mood.emoji}</span>
-                </div>
-              );
-            })}
-            
-            {/* Fill empty spaces if less than 7 days of data */}
-            {Array.from({ length: Math.max(0, 7 - moodData.slice(-7).length) }).map((_, index) => (
-              <div key={`empty-${index}`} className="flex-1 flex flex-col items-center">
-                <div className="w-2 bg-slate-200 dark:bg-slate-600 rounded-t-sm h-0"></div>
-                <span className="text-xs mt-1">·</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
       
       <div>

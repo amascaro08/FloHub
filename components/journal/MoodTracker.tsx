@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 
 interface MoodTrackerProps {
   onSave: (mood: { emoji: string; label: string; tags: string[] }) => void;
@@ -13,6 +13,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
+  const [moodData, setMoodData] = useState<{date: string, emoji: string, label: string}[]>([]);
   const { data: session } = useSession();
 
   const emojis = ['😞', '😕', '😐', '🙂', '😄'];
@@ -35,6 +36,46 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
           console.error('Error parsing saved mood:', e);
         }
       }
+      
+      // Load mood data from the last 7 days for the trend
+      const moodEntries: {date: string, emoji: string, label: string}[] = [];
+      const currentDate = new Date();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(currentDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = formatDate(date.toISOString(), timezone, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+        
+        // Try to load mood for this date
+        const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
+        const savedMoodData = localStorage.getItem(moodKey);
+        
+        if (savedMoodData) {
+          try {
+            const parsed = JSON.parse(savedMoodData);
+            moodEntries.push({
+              date: dateStr,
+              emoji: parsed.emoji,
+              label: parsed.label
+            });
+          } catch (e) {
+            console.error('Error parsing saved mood:', e);
+          }
+        } else {
+          // Add placeholder for days without mood data
+          moodEntries.push({
+            date: dateStr,
+            emoji: '·',
+            label: ''
+          });
+        }
+      }
+      
+      setMoodData(moodEntries);
     }
   }, [session, timezone]);
 
@@ -82,12 +123,29 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       setCustomTag('');
     }
   };
+  
+  // Helper function to get mood trend description
+  const getMoodTrend = () => {
+    if (moodData.filter(m => m.label).length < 3) return "Not enough data";
+    
+    const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
+    const recentMoods = moodData.filter(m => m.label).map(m => labels.indexOf(m.label));
+    
+    if (recentMoods.length === 0) return "Not enough data";
+    
+    const avgMood = recentMoods.reduce((sum, val) => sum + val, 0) / recentMoods.length;
+    
+    if (avgMood < 1.5) return "Trending downward";
+    if (avgMood < 2.5) return "Stable";
+    if (avgMood < 3.5) return "Slightly improving";
+    return "Trending upward";
+  };
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
       <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Mood Tracker</h2>
       
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         {emojis.map((emoji, index) => (
           <button
             key={emoji}
@@ -159,6 +217,38 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
           >
             Add
           </button>
+        </div>
+      </div>
+      
+      {/* Mood Trend Section */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Mood Trend</h3>
+          <span className="text-sm font-medium text-teal-600 dark:text-teal-400">{getMoodTrend()}</span>
+        </div>
+        
+        {/* Simple mood line graph */}
+        <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Last 7 days</span>
+          </div>
+          
+          <div className="h-16 flex items-end">
+            {moodData.map((mood, index) => {
+              const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
+              const height = mood.label ? ((labels.indexOf(mood.label) + 1) / 5) * 100 : 0;
+              
+              return (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div
+                    className={`w-2 rounded-t-sm transition-all ${mood.label ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-600'}`}
+                    style={{ height: `${height}%` }}
+                  ></div>
+                  <span className="text-xs mt-1">{mood.emoji}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
       
