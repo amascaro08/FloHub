@@ -106,7 +106,7 @@ export default function JournalPage() {
       <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Journal</h1>
       
       {/* Timeline at the top */}
-      <div className="mb-6 overflow-hidden">
+      <div className="mb-6 overflow-hidden max-w-full">
         <JournalTimeline
           onSelectDate={(date) => {
             handleSelectDate(date);
@@ -118,8 +118,51 @@ export default function JournalPage() {
         />
       </div>
       
-      {/* Main content - Responsive layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Mobile layout - single column */}
+      <div className="block md:hidden">
+        {/* Journal Entry */}
+        <div className="mb-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full">
+            {isSelectedToday || isEditing ? (
+              <TodayEntry
+                onSave={handleSaveEntry}
+                date={selectedDate}
+                timezone={timezone}
+                showPrompts={true}
+              />
+            ) : (
+              <JournalEntryViewer
+                date={selectedDate}
+                onEdit={() => setIsEditing(true)}
+                timezone={timezone}
+              />
+            )}
+          </div>
+        </div>
+        
+        {/* Mood Tracker */}
+        <div className="mb-6">
+          <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+        </div>
+        
+        {/* FloCat Summary */}
+        <div className="mb-6">
+          <JournalSummary />
+        </div>
+        
+        {/* On This Day */}
+        <div className="mb-6">
+          <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
+        </div>
+        
+        {/* Linked Moments */}
+        <div className="mb-6">
+          <LinkedMoments date={selectedDate} timezone={timezone} />
+        </div>
+      </div>
+      
+      {/* Desktop layout - multi-column */}
+      <div className="hidden md:grid md:grid-cols-3 gap-6">
         {/* Left column (2/3 width on desktop) - Journal Entry */}
         <div className="md:col-span-2 w-full">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full">

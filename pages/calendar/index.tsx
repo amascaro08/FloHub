@@ -370,51 +370,13 @@ const CalendarPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-full overflow-hidden">
-      <h1 className="text-2xl font-bold mb-5">Calendar</h1>
+    <div className="max-w-full overflow-hidden px-2 sm:px-4 py-4 sm:py-6">
+      <h1 className="text-2xl font-bold mb-4">Calendar</h1>
       
-      {/* Calendar controls */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-start">
-          <button
-            onClick={() => setCurrentView('day')}
-            className={`px-4 py-2 rounded-lg transition-all ${currentView === 'day'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Day
-          </button>
-          <button
-            onClick={() => setCurrentView('week')}
-            className={`px-4 py-2 rounded-lg transition-all ${currentView === 'week'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Week
-          </button>
-          <button
-            onClick={() => setCurrentView('month')}
-            className={`px-4 py-2 rounded-lg transition-all ${currentView === 'month'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => setCurrentView('year')}
-            className={`px-4 py-2 rounded-lg transition-all ${currentView === 'year'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Year
-          </button>
-        </div>
-        
-        <div className="text-xl font-semibold text-neutral-800 dark:text-neutral-100">
-          {format(currentDate, 'MMMM yyyy')}
-        </div>
-        
-        <div className="flex space-x-2 w-full md:w-auto justify-end">
+      {/* Calendar controls - Mobile optimized */}
+      <div className="mb-6">
+        {/* Month and navigation */}
+        <div className="flex justify-between items-center mb-4">
           <button
             onClick={goToPreviousMonth}
             className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
@@ -424,12 +386,11 @@ const CalendarPage = () => {
               <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           </button>
-          <button
-            onClick={goToToday}
-            className="btn-primary px-4 py-2"
-          >
-            Today
-          </button>
+          
+          <div className="text-lg sm:text-xl font-semibold text-neutral-800 dark:text-neutral-100">
+            {format(currentDate, 'MMMM yyyy')}
+          </div>
+          
           <button
             onClick={goToNextMonth}
             className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
@@ -440,11 +401,53 @@ const CalendarPage = () => {
             </svg>
           </button>
         </div>
+        
+        {/* View selection and Today button */}
+        <div className="flex flex-wrap gap-2 justify-center mb-4">
+          <button
+            onClick={() => setCurrentView('day')}
+            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'day'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
+          >
+            Day
+          </button>
+          <button
+            onClick={() => setCurrentView('week')}
+            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'week'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setCurrentView('month')}
+            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'month'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
+          >
+            Month
+          </button>
+          <button
+            onClick={() => setCurrentView('year')}
+            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'year'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
+          >
+            Year
+          </button>
+          <button
+            onClick={goToToday}
+            className="px-3 py-1 rounded-lg text-sm bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+          >
+            Today
+          </button>
+        </div>
       </div>
       
       {/* Calendar grid */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-elevate-md overflow-x-auto border border-neutral-200 dark:border-neutral-700">
-        <div className="min-w-[768px]"> {/* Set minimum width for horizontal scrolling on mobile */}
+        <div className="min-w-[600px]"> {/* Reduced minimum width for better mobile experience */}
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
