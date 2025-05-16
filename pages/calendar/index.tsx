@@ -379,45 +379,45 @@ const CalendarPage = () => {
           <button
             onClick={() => setCurrentView('day')}
             className={`px-4 py-2 rounded-lg transition-all ${currentView === 'day'
-              ? 'bg-[var(--primary)] text-white shadow-md'
-              : 'bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)]'}`}
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
           >
             Day
           </button>
           <button
             onClick={() => setCurrentView('week')}
             className={`px-4 py-2 rounded-lg transition-all ${currentView === 'week'
-              ? 'bg-[var(--primary)] text-white shadow-md'
-              : 'bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)]'}`}
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
           >
             Week
           </button>
           <button
             onClick={() => setCurrentView('month')}
             className={`px-4 py-2 rounded-lg transition-all ${currentView === 'month'
-              ? 'bg-[var(--primary)] text-white shadow-md'
-              : 'bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)]'}`}
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
           >
             Month
           </button>
           <button
             onClick={() => setCurrentView('year')}
             className={`px-4 py-2 rounded-lg transition-all ${currentView === 'year'
-              ? 'bg-[var(--primary)] text-white shadow-md'
-              : 'bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)]'}`}
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
           >
             Year
           </button>
         </div>
         
-        <div className="text-xl font-semibold text-[var(--on-surface)]">
+        <div className="text-xl font-semibold text-neutral-800 dark:text-neutral-100">
           {format(currentDate, 'MMMM yyyy')}
         </div>
         
         <div className="flex space-x-2 w-full md:w-auto justify-end">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-full bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)] transition-all"
+            className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
             aria-label="Previous month"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -426,13 +426,13 @@ const CalendarPage = () => {
           </button>
           <button
             onClick={goToToday}
-            className="px-4 py-2 rounded-lg bg-[var(--primary-container)] text-[var(--on-primary-container)] hover:bg-opacity-90 transition-all"
+            className="btn-primary px-4 py-2"
           >
             Today
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-2 rounded-full bg-[var(--surface-variant)] hover:bg-opacity-80 text-[var(--on-surface-variant)] transition-all"
+            className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
             aria-label="Next month"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -443,11 +443,11 @@ const CalendarPage = () => {
       </div>
       
       {/* Calendar grid */}
-      <div className="bg-[var(--surface)] rounded-xl shadow-md overflow-hidden border border-[var(--outline-variant)]">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-elevate-md overflow-hidden border border-neutral-200 dark:border-neutral-700">
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-[var(--outline-variant)]">
+        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-3 text-center font-medium text-[var(--on-surface-variant)]">
+            <div key={day} className="p-3 text-center font-medium text-neutral-600 dark:text-neutral-400">
               {day}
             </div>
           ))}
@@ -456,9 +456,9 @@ const CalendarPage = () => {
         {/* Calendar content based on view */}
         {currentView === 'day' ? (
           // Day view (agenda style)
-          <div className="bg-[var(--surface)] p-4 rounded-b-xl">
+          <div className="bg-white dark:bg-neutral-800 p-4 rounded-b-xl">
             <div className="text-center mb-4">
-              <h3 className="text-lg font-medium text-[var(--on-surface)]">
+              <h3 className="text-lg font-medium text-neutral-800 dark:text-neutral-100">
                 {format(currentDate, 'EEEE, MMMM d, yyyy')}
               </h3>
             </div>
@@ -473,7 +473,7 @@ const CalendarPage = () => {
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all hover:shadow-md
+                      className={`p-3 rounded-lg cursor-pointer transition-all hover:shadow-elevate-sm
                         ${event.source === 'work'
                           ? 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-blue-900 dark:text-blue-100'
                           : 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-900 dark:text-green-100'
@@ -484,7 +484,7 @@ const CalendarPage = () => {
                           <h4 className="font-medium">{event.summary || event.title || "No Title"}</h4>
                           <p className="text-sm mt-1 opacity-90">{startTime} - {endTime}</p>
                         </div>
-                        <div className="text-xs px-2 py-1 rounded-full bg-[var(--surface)] text-[var(--on-surface-variant)]">
+                        <div className={`tag ${event.source === 'work' ? 'tag-work' : 'tag-personal'}`}>
                           {event.source === 'work' ? 'Work' : 'Personal'}
                         </div>
                       </div>
@@ -496,7 +496,7 @@ const CalendarPage = () => {
                   );
                 })
               ) : (
-                <div className="text-center py-8 text-[var(--on-surface-variant)]">
+                <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
                   <p>No events scheduled for this day</p>
                 </div>
               )}
@@ -513,18 +513,18 @@ const CalendarPage = () => {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[120px] p-2 border-b border-r border-[var(--outline-variant)] transition-colors
-                    ${!isCurrentMonth ? 'text-[var(--on-surface-variant)] bg-[var(--surface-variant)] bg-opacity-20' : 'bg-[var(--surface)]'}
-                    ${isToday ? 'bg-[var(--primary-container)] bg-opacity-30' : ''}`}
+                  className={`min-h-[120px] p-2 border-b border-r border-neutral-200 dark:border-neutral-700 transition-colors
+                    ${!isCurrentMonth ? 'text-neutral-500 bg-neutral-100 dark:text-neutral-400 dark:bg-neutral-800/50' : 'bg-white dark:bg-neutral-800'}
+                    ${isToday ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}
                 >
                   <div className="flex justify-between items-center">
                     <span className={`text-sm font-semibold ${isToday
-                      ? 'bg-[var(--primary)] text-white rounded-full w-7 h-7 flex items-center justify-center'
-                      : 'text-[var(--on-surface)]'}`}>
+                      ? 'bg-primary-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
+                      : 'text-neutral-800 dark:text-neutral-200'}`}>
                       {format(day, 'd')}
                     </span>
                     {isCurrentMonth && dayEvents.length > 0 && (
-                      <span className="text-xs text-[var(--on-surface-variant)] bg-[var(--surface-variant)] px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded-full">
                         {dayEvents.length}
                       </span>
                     )}
@@ -549,7 +549,7 @@ const CalendarPage = () => {
                     })}
                     {dayEvents.length > 3 && (
                       <div
-                        className="text-xs text-[var(--on-surface-variant)] text-center py-1 cursor-pointer hover:underline"
+                        className="text-xs text-neutral-500 dark:text-neutral-400 text-center py-1 cursor-pointer hover:underline"
                         onClick={() => {
                           // Find all events for this day and show them in a modal
                           setCurrentDate(day);
@@ -570,14 +570,14 @@ const CalendarPage = () => {
       {/* Event detail modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-[var(--surface)] rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl border border-[var(--outline-variant)]">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-elevate-lg border border-neutral-200 dark:border-neutral-700">
             <div className="flex justify-between items-start">
-              <h2 className="text-xl font-bold text-[var(--on-surface)]">
+              <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
                 {selectedEvent.summary || selectedEvent.title || "No Title"}
               </h2>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] p-2 rounded-full hover:bg-[var(--surface-variant)]"
+                className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700"
                 aria-label="Close"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -587,7 +587,7 @@ const CalendarPage = () => {
             </div>
             
             {/* Event details in a more structured format */}
-            <div className="mt-6 space-y-4 text-[var(--on-surface)]">
+            <div className="mt-6 space-y-4 text-neutral-800 dark:text-neutral-100">
               {/* Color-coded event type indicator */}
               <div className={`w-full h-2 rounded-full mb-4 ${
                 selectedEvent.source === 'work'
@@ -596,53 +596,49 @@ const CalendarPage = () => {
               }`}></div>
               
               {/* Start time */}
-              <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+              <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <span className="font-medium text-[var(--on-surface-variant)]">Start:</span>
-                  <span className="ml-2 text-[var(--on-surface)]">{formatDateTime(selectedEvent.start)}</span>
+                  <span className="font-medium text-neutral-600 dark:text-neutral-300">Start:</span>
+                  <span className="ml-2 text-neutral-800 dark:text-neutral-100">{formatDateTime(selectedEvent.start)}</span>
                 </div>
               </div>
               
               {/* End time */}
-              <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+              <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <span className="font-medium text-[var(--on-surface-variant)]">End:</span>
-                  <span className="ml-2 text-[var(--on-surface)]">{formatDateTime(selectedEvent.end)}</span>
+                  <span className="font-medium text-neutral-600 dark:text-neutral-300">End:</span>
+                  <span className="ml-2 text-neutral-800 dark:text-neutral-100">{formatDateTime(selectedEvent.end)}</span>
                 </div>
               </div>
               
               {/* Calendar */}
               {selectedEvent.calendarName && (
-                <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                   <div>
-                    <span className="font-medium text-[var(--on-surface-variant)]">Calendar:</span>
-                    <span className="ml-2 text-[var(--on-surface)]">{selectedEvent.calendarName}</span>
+                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Calendar:</span>
+                    <span className="ml-2 text-neutral-800 dark:text-neutral-100">{selectedEvent.calendarName}</span>
                   </div>
                 </div>
               )}
               
               {/* Source */}
               {selectedEvent.source && (
-                <div className="flex items-center p-3 bg-[var(--surface-variant)] bg-opacity-30 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
                   </svg>
                   <div>
-                    <span className="font-medium text-[var(--on-surface-variant)]">Source:</span>
-                    <span className={`ml-2 px-2 py-0.5 rounded-full text-sm ${
-                      selectedEvent.source === 'work'
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
-                        : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                    }`}>
+                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Source:</span>
+                    <span className={`tag ${selectedEvent.source === 'work' ? 'tag-work' : 'tag-personal'}`}>
                       {selectedEvent.source === 'work' ? 'Work' : 'Personal'}
                     </span>
                   </div>
@@ -653,12 +649,12 @@ const CalendarPage = () => {
               {selectedEvent.description && (
                 <div className="mt-6">
                   <div className="flex items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">Description:</span>
                   </div>
-                  <div className="mt-1 p-4 bg-[var(--surface-variant)] rounded-lg text-[var(--on-surface-variant)]">
+                  <div className="mt-1 p-4 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg text-neutral-700 dark:text-neutral-300">
                     {/* Check if description contains HTML */}
                     {selectedEvent.description.includes('<html>') ||
                      selectedEvent.description.includes('<body>') ||
@@ -678,14 +674,14 @@ const CalendarPage = () => {
               {selectedEvent.tags && selectedEvent.tags.length > 0 && (
                 <div>
                   <div className="flex items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary)]" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">Tags:</span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {selectedEvent.tags.map(tag => (
-                      <span key={tag} className="bg-[var(--surface-variant)] text-[var(--on-surface-variant)] px-3 py-1 rounded-full text-sm">
+                      <span key={tag} className="bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 px-3 py-1 rounded-full text-sm">
                         {tag}
                       </span>
                     ))}
