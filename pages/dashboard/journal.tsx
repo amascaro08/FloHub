@@ -105,17 +105,37 @@ export default function JournalPage() {
     <div className="relative">
       <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Journal</h1>
       
+      {/* Timeline at the top */}
+      <div className="mb-6">
+        <JournalTimeline
+          onSelectDate={(date) => {
+            handleSelectDate(date);
+            setIsEditing(date === today);
+          }}
+          timezone={timezone}
+          refreshTrigger={refreshTrigger}
+          autoScrollToLatest={true}
+        />
+      </div>
+      
+      {/* FloCat Summary and Mood Trend section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <JournalSummary />
+        <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+      </div>
+      
       {/* Main content grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left column */}
         <div className="space-y-6">
           {/* Journal Entry (Today's Entry or Selected Date Entry) */}
-          <div className="h-[400px]">
+          <div className="h-[500px]">
             {isSelectedToday || isEditing ? (
               <TodayEntry
                 onSave={handleSaveEntry}
                 date={selectedDate}
                 timezone={timezone}
+                showPrompts={true}
               />
             ) : (
               <JournalEntryViewer
@@ -125,26 +145,10 @@ export default function JournalPage() {
               />
             )}
           </div>
-          
-          {/* Journal Timeline */}
-          <JournalTimeline
-            onSelectDate={(date) => {
-              handleSelectDate(date);
-              setIsEditing(date === today);
-            }}
-            timezone={timezone}
-            refreshTrigger={refreshTrigger}
-          />
-          
-          {/* Journal Summary */}
-          <JournalSummary />
         </div>
         
         {/* Right column */}
         <div className="space-y-6">
-          {/* Mood Tracker */}
-          <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-          
           {/* On This Day */}
           <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
           

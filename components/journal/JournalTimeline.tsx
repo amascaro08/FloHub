@@ -6,6 +6,7 @@ interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
   timezone?: string;
   refreshTrigger?: number; // A value that changes to trigger a refresh
+  autoScrollToLatest?: boolean; // Whether to auto-scroll to the latest date
 }
 
 interface JournalEntry {
@@ -18,7 +19,12 @@ interface JournalEntry {
   content?: string;
 }
 
-const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezone, refreshTrigger = 0 }) => {
+const JournalTimeline: React.FC<JournalTimelineProps> = ({
+  onSelectDate,
+  timezone,
+  refreshTrigger = 0,
+  autoScrollToLatest = false
+}) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -134,8 +140,18 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezon
       }
       
       setHasEntries(entriesMap);
+      
+      // Auto-scroll to the latest date if enabled
+      if (autoScrollToLatest && showRecent) {
+        setTimeout(() => {
+          const timelineContainer = document.getElementById('timeline-entries');
+          if (timelineContainer) {
+            timelineContainer.scrollLeft = timelineContainer.scrollWidth;
+          }
+        }, 100);
+      }
     }
-  }, [session, currentMonth, timezone, refreshTrigger]);
+  }, [session, currentMonth, timezone, refreshTrigger, autoScrollToLatest]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -232,7 +248,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({ onSelectDate, timezon
       </div>
       
       <div className="overflow-x-auto pb-2">
-        <div className="flex space-x-3 min-w-max">
+        <div className="flex space-x-3 min-w-max" id="timeline-entries">
           {entries.map((entry) => (
             <button
               key={entry.date}

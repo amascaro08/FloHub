@@ -7,9 +7,10 @@ interface TodayEntryProps {
   onSave: (entry: { content: string; timestamp: string }) => void;
   date?: string; // Optional date parameter, defaults to today
   timezone?: string; // User's timezone
+  showPrompts?: boolean; // Whether to show journaling prompts
 }
 
-const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
+const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPrompts = false }) => {
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -71,6 +72,16 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
     setContent(html);
   };
 
+  // Journaling prompts to guide the user
+  const journalingPrompts = [
+    "What am I grateful for today?",
+    "What's one thing I can do today to move closer to my goals?",
+    "What was the most meaningful part of my day?",
+    "What challenged me today and what did I learn from it?",
+    "How am I feeling right now and why?",
+    "What's one small win I can celebrate today?"
+  ];
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
@@ -90,11 +101,28 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone }) => {
         </button>
       </div>
 
+      {showPrompts && isTodayDate && (
+        <div className="mb-4 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Journal Prompts
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {journalingPrompts.map((prompt, index) => (
+              <div key={index} className="text-xs text-slate-600 dark:text-slate-400 p-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600">
+                {prompt}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex-grow">
         <RichTextEditor
           content={content}
           onChange={handleContentChange}
-          placeholder="Write your thoughts..."
+          placeholder={showPrompts && isTodayDate ?
+            "Reflect on the prompts above or write freely about your day..." :
+            "Write your thoughts..."}
         />
       </div>
 
