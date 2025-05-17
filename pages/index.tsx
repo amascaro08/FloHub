@@ -13,8 +13,8 @@ export default function Index() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-primary-50 to-white dark:from-primary-950 dark:to-neutral-900 p-4">
       <Head>
-        <title>FlowHub - Streamline Your Day</title>
-        <meta name="description" content="FlowHub is your personal productivity assistant. Organize tasks, take notes, and manage your time effectively." />
+        <title>FloHub - Streamline Your Day</title>
+        <meta name="description" content="FloHub is your personal productivity assistant. Organize tasks, take notes, and manage your time effectively." />
       </Head>
 
       <main className="flex flex-col items-center justify-center w-full max-w-5xl px-4">
@@ -29,7 +29,7 @@ export default function Index() {
               Streamline Your Day
             </h1>
             <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-8">
-              FlowHub combines tasks, notes, and calendar in one seamless interface.
+              FloHub combines tasks, notes, and calendar in one seamless interface.
               Your personal productivity assistant is here.
             </p>
             <button
