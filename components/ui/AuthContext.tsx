@@ -4,7 +4,7 @@ import type { Session } from "next-auth";
 
 type AuthContextType = {
   user: Session["user"] | null;
-  login: () => void;
+  login: (provider?: string) => void;
   logout: () => void;
   isLocked: boolean;
   toggleLock: () => void;
@@ -49,7 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isLocked]);
 
 
-  const login = () => signIn("google");
+  const login = (provider?: string) => {
+    if (provider === "google") {
+      signIn("google");
+    } else if (provider === "credentials") {
+      signIn("credentials");
+    } else {
+      // If no provider is specified, redirect to the login page
+      window.location.href = "/login";
+    }
+  };
   const logout = () => signOut();
   const toggleLock = () => {
     setIsLocked(!isLocked);

@@ -69,6 +69,9 @@ export default function App({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   
+  // Determine if we should show the layout based on the current route
+  const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
+  
   // Handle route change loading states
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
@@ -179,18 +182,22 @@ export default function App({
         {/* Wrap Layout with AuthProvider and ChatProvider */}
         <AuthProvider>
           <ChatProvider>
-            <Layout>
-              {isLoading ? (
-                <div className="flex items-center justify-center min-h-screen">
-                  <div className="animate-pulse flex flex-col items-center">
-                    <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+            {showLayout ? (
+              <Layout>
+                {isLoading ? (
+                  <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Component {...pageProps}/>
-              )}
-            </Layout>
+                ) : (
+                  <Component {...pageProps}/>
+                )}
+              </Layout>
+            ) : (
+              <Component {...pageProps}/>
+            )}
           </ChatProvider>
         </AuthProvider>
       </SessionProvider>

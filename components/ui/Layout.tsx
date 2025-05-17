@@ -2,6 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { signOut } from "next-auth/react";
+import { useRouter } from 'next/router';
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react' // Import icons
 import Link from 'next/link'
 import ChatWidget from '../assistant/ChatWidget';
@@ -21,6 +22,7 @@ const nav = [
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {
+  const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
   const { isLocked, toggleLock } = useAuth();
@@ -134,7 +136,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             } group mt-4`}
             onClick={() => {
               setMobileSidebarOpen(false);
-              signOut();
+              signOut({ callbackUrl: '/' });
             }}
           >
             <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${

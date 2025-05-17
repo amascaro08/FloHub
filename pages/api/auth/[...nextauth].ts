@@ -6,6 +6,10 @@
 
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { compare } from "bcryptjs";
 
 // Function to refresh the Google access token
 async function refreshAccessToken(token) {
@@ -60,6 +64,49 @@ export const authOptions = {
           prompt:      "consent",
         },
       },
+    }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        try {
+          // Query Firestore for the user
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("email", "==", credentials.email));
+          const querySnapshot = await getDocs(q);
+          
+          if (querySnapshot.empty) {
+            return null;
+          }
+
+          const userDoc = querySnapshot.docs[0];
+          const user = userDoc.data();
+          
+          // Verify password
+          const isValid = await compare(credentials.password, user.password);
+          
+          if (!isValid) {
+            return null;
+          }
+          
+          return {
+            id: userDoc.id,
+            email: user.email,
+            name: user.name || user.email.split('@')[0],
+            image: user.image || null
+          };
+        } catch (error) {
+          console.error("Error authenticating user:", error);
+          return null;
+        }
+      }
     }),
   ],
 
