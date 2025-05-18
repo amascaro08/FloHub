@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface SleepTrackerProps {
   onSave: (sleep: { quality: string; hours: number }) => void;
@@ -19,40 +20,53 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   
   const today = date || getCurrentDate(timezone);
   
-  // Load saved sleep data
+  // Load saved sleep data from API
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      const key = getDateStorageKey('journal_sleep', session.user.email, timezone, today);
-      const savedSleep = localStorage.getItem(key);
-      
-      if (savedSleep) {
+    const fetchSleepData = async () => {
+      if (session?.user?.email) {
         try {
-          const parsed = JSON.parse(savedSleep);
-          setSleepQuality(parsed.quality || '');
-          setSleepHours(parsed.hours || 7);
-        } catch (e) {
-          console.error('Error parsing saved sleep data:', e);
+          const response = await axios.get(`/api/journal/sleep?date=${today}`);
+          if (response.data) {
+            setSleepQuality(response.data.quality || '');
+            setSleepHours(response.data.hours || 7);
+          }
+        } catch (error) {
+          // If sleep data doesn't exist yet, that's okay
+          if (error instanceof Error && !(error.toString().includes('404'))) {
+            console.error('Error fetching sleep data:', error);
+          }
         }
       }
+    };
+    
+    if (session?.user?.email) {
+      fetchSleepData();
     }
   }, [session, today, timezone]);
   
-  // Save sleep data
-  const handleSaveSleep = (quality: string, hours: number) => {
+  // Save sleep data to API
+  const handleSaveSleep = async (quality: string, hours: number) => {
     if (!session?.user?.email) return;
     
     const sleepData = { quality, hours };
     
-    // Save to localStorage
-    const key = getDateStorageKey('journal_sleep', session.user.email, timezone, today);
-    localStorage.setItem(key, JSON.stringify(sleepData));
-    
-    // Call the onSave callback
-    onSave(sleepData);
-    
-    // Update state
-    setSleepQuality(quality);
-    setSleepHours(hours);
+    try {
+      // Save to API
+      await axios.post('/api/journal/sleep', {
+        date: today,
+        quality,
+        hours
+      });
+      
+      // Call the onSave callback
+      onSave(sleepData);
+      
+      // Update state
+      setSleepQuality(quality);
+      setSleepHours(hours);
+    } catch (error) {
+      console.error('Error saving sleep data:', error);
+    }
   };
   
   const sleepOptions = [
@@ -78,6 +92,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
                   ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500'
                   : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
+              title={option.description}
             >
               <span className="text-2xl mb-1">{option.emoji}</span>
               <span className="text-xs font-medium">{option.quality}</span>
@@ -99,6 +114,18 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
           onChange={(e) => {
             const hours = parseFloat(e.target.value);
             setSleepHours(hours);
+            if (sleepQuality) {
+              handleSaveSleep(sleepQuality, hours);
+            }
+          }}
+          onMouseUp={(e) => {
+            const hours = parseFloat((e.target as HTMLInputElement).value);
+            if (sleepQuality) {
+              handleSaveSleep(sleepQuality, hours);
+            }
+          }}
+          onTouchEnd={(e) => {
+            const hours = parseFloat((e.target as HTMLInputElement).value);
             if (sleepQuality) {
               handleSaveSleep(sleepQuality, hours);
             }

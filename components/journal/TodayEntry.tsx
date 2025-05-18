@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import RichTextEditor from './RichTextEditor';
 import { getCurrentDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface TodayEntryProps {
   onSave: (entry: { content: string; timestamp: string }) => void;
@@ -22,28 +23,30 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const entryDate = date || getCurrentDate(timezone);
   const isTodayDate = !date || isToday(date, timezone);
 
-  // Load saved entry from localStorage on component mount
+  // Load saved entry from API on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      // If a specific date is provided, load that entry, otherwise load today's entry
-      const storageKey = isTodayDate
-        ? `journal_today_${session.user.email}`
-        : getDateStorageKey('journal_entry', session.user.email, timezone, entryDate);
-        
-      const savedEntry = localStorage.getItem(storageKey);
-      
-      if (savedEntry) {
+    const fetchEntry = async () => {
+      if (session?.user?.email) {
         try {
-          const parsed = JSON.parse(savedEntry);
-          setContent(parsed.content || '');
-          setSavedContent(parsed.content || '');
-          setLastSaved(parsed.timestamp || null);
-        } catch (e) {
-          console.error('Error parsing saved journal entry:', e);
+          const response = await axios.get(`/api/journal/entry?date=${entryDate}`);
+          if (response.data) {
+            setContent(response.data.content || '');
+            setSavedContent(response.data.content || '');
+            setLastSaved(response.data.timestamp || null);
+          }
+        } catch (error) {
+          // If entry doesn't exist yet, that's okay
+          if (error instanceof Error) {
+            console.error('Error fetching journal entry:', error);
+          }
         }
       }
+    };
+    
+    if (session?.user?.email) {
+      fetchEntry();
     }
-  }, [session, entryDate, isTodayDate, timezone]);
+  }, [session, entryDate, timezone]);
   
   // Journaling prompts
   const journalingPrompts = [
@@ -58,8 +61,31 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   // Insert prompt into editor
   const insertPrompt = (question: string) => {
     const promptText = `\n\n**${question}**\n`;
-    setContent(prevContent => prevContent + promptText);
-    setEditorContent(prevContent => prevContent + promptText);
+    const newContent = content + promptText;
+    setContent(newContent);
+    setEditorContent(newContent);
+    
+    // Auto-save when prompt is inserted
+    setTimeout(async () => {
+      if (session?.user?.email) {
+        const timestamp = new Date().toISOString();
+        const entry = { content: newContent, timestamp };
+        
+        try {
+          await axios.post('/api/journal/entry', {
+            date: entryDate,
+            content: newContent,
+            timestamp
+          });
+          
+          setSavedContent(newContent);
+          setLastSaved(timestamp);
+          onSave(entry);
+        } catch (error) {
+          console.error('Error saving journal entry:', error);
+        }
+      }
+    }, 100);
   };
 
   const handleSave = () => {
@@ -93,6 +119,30 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const handleContentChange = (html: string) => {
     setContent(html);
     setEditorContent(html);
+    
+    // Auto-save when content changes (debounced)
+    const debounceTimeout = setTimeout(async () => {
+      if (session?.user?.email && html.trim() !== savedContent.trim()) {
+        const timestamp = new Date().toISOString();
+        const entry = { content: html, timestamp };
+        
+        try {
+          await axios.post('/api/journal/entry', {
+            date: entryDate,
+            content: html,
+            timestamp
+          });
+          
+          setSavedContent(html);
+          setLastSaved(timestamp);
+          onSave(entry);
+        } catch (error) {
+          console.error('Error saving journal entry:', error);
+        }
+      }
+    }, 1000); // 1 second debounce
+    
+    return () => clearTimeout(debounceTimeout);
   };
 
 
@@ -107,12 +157,11 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             timeZone: timezone
           })}
         </h2>
-        <button
-          onClick={handleSave}
-          className="text-sm px-3 py-1 rounded-md bg-teal-500 text-white hover:bg-teal-600 transition-colors"
-        >
-          Save
-        </button>
+        {lastSaved && (
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Auto-saved {new Date(lastSaved).toLocaleTimeString()}
+          </div>
+        )}
       </div>
       
       {/* Display activities if available */}
@@ -160,11 +209,6 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
         </div>
       </div>
 
-      {lastSaved && (
-        <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Last saved: {new Date(lastSaved).toLocaleString()}
-        </div>
-      )}
     </div>
   );
 };

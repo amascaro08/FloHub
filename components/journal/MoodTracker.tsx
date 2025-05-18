@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface MoodTrackerProps {
   onSave: (mood: { emoji: string; label: string; tags: string[] }) => void;
@@ -20,62 +21,72 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
   const commonTags = ['focused', 'drained', 'creative', 'anxious', 'calm', 'energetic', 'tired', 'motivated'];
 
-  // Load saved mood from localStorage on component mount
+  // Load saved mood from API on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      const today = getCurrentDate(timezone);
-      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone, today);
-      const savedMood = localStorage.getItem(storageKey);
-      if (savedMood) {
+    const fetchMoodData = async () => {
+      if (session?.user?.email) {
+        const today = getCurrentDate(timezone);
+        
+        // Fetch today's mood
         try {
-          const parsed = JSON.parse(savedMood);
-          setSelectedEmoji(parsed.emoji || '😐');
-          setSelectedLabel(parsed.label || 'Okay');
-          setSelectedTags(parsed.tags || []);
-        } catch (e) {
-          console.error('Error parsing saved mood:', e);
+          const response = await axios.get(`/api/journal/mood?date=${today}`);
+          if (response.data) {
+            setSelectedEmoji(response.data.emoji || '😐');
+            setSelectedLabel(response.data.label || 'Meh');
+            setSelectedTags(response.data.tags || []);
+          }
+        } catch (error) {
+          // If mood doesn't exist yet, that's okay
+          if (error instanceof Error && !(error.toString().includes('404'))) {
+            console.error('Error fetching mood data:', error);
+          }
         }
-      }
-      
-      // Load mood data from the last 7 days for the trend
-      const moodEntries: {date: string, emoji: string, label: string}[] = [];
-      const currentDate = new Date();
-      
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(currentDate);
-        date.setDate(date.getDate() - i);
-        const dateStr = formatDate(date.toISOString(), timezone, {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
         
-        // Try to load mood for this date
-        const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
-        const savedMoodData = localStorage.getItem(moodKey);
+        // Load mood data from the last 7 days for the trend
+        const moodEntries: {date: string, emoji: string, label: string}[] = [];
+        const currentDate = new Date();
         
-        if (savedMoodData) {
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(currentDate);
+          date.setDate(date.getDate() - i);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
           try {
-            const parsed = JSON.parse(savedMoodData);
+            const response = await axios.get(`/api/journal/mood?date=${dateStr}`);
+            if (response.data) {
+              moodEntries.push({
+                date: dateStr,
+                emoji: response.data.emoji,
+                label: response.data.label
+              });
+            } else {
+              // Add placeholder for days without mood data
+              moodEntries.push({
+                date: dateStr,
+                emoji: '·',
+                label: ''
+              });
+            }
+          } catch (error) {
+            // Add placeholder for days without mood data
             moodEntries.push({
               date: dateStr,
-              emoji: parsed.emoji,
-              label: parsed.label
+              emoji: '·',
+              label: ''
             });
-          } catch (e) {
-            console.error('Error parsing saved mood:', e);
           }
-        } else {
-          // Add placeholder for days without mood data
-          moodEntries.push({
-            date: dateStr,
-            emoji: '·',
-            label: ''
-          });
         }
+        
+        setMoodData(moodEntries);
       }
-      
-      setMoodData(moodEntries);
+    };
+    
+    if (session?.user?.email) {
+      fetchMoodData();
     }
   }, [session, timezone]);
 
@@ -107,20 +118,129 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const handleEmojiSelect = (emoji: string, index: number) => {
     setSelectedEmoji(emoji);
     setSelectedLabel(labels[index]);
+    
+    // Auto-save when mood is selected
+    setTimeout(async () => {
+      const mood = {
+        emoji: emoji,
+        label: labels[index],
+        tags: selectedTags,
+      };
+      
+      // Save to API with today's date in user's timezone
+      if (session?.user?.email) {
+        const today = getCurrentDate(timezone);
+        
+        try {
+          await axios.post('/api/journal/mood', {
+            date: today,
+            emoji: emoji,
+            label: labels[index],
+            tags: selectedTags
+          });
+          
+          // Show save confirmation
+          setSaveConfirmation(true);
+          
+          // Hide confirmation after 3 seconds
+          setTimeout(() => {
+            setSaveConfirmation(false);
+          }, 3000);
+          
+          onSave(mood);
+        } catch (error) {
+          console.error('Error saving mood data:', error);
+        }
+      }
+    }, 100);
   };
 
   const toggleTag = (tag: string) => {
+    let newTags;
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+      newTags = selectedTags.filter(t => t !== tag);
     } else {
-      setSelectedTags([...selectedTags, tag]);
+      newTags = [...selectedTags, tag];
     }
+    
+    setSelectedTags(newTags);
+    
+    // Auto-save when tags are updated
+    setTimeout(async () => {
+      const mood = {
+        emoji: selectedEmoji,
+        label: selectedLabel,
+        tags: newTags,
+      };
+      
+      // Save to API with today's date in user's timezone
+      if (session?.user?.email) {
+        const today = getCurrentDate(timezone);
+        
+        try {
+          await axios.post('/api/journal/mood', {
+            date: today,
+            emoji: selectedEmoji,
+            label: selectedLabel,
+            tags: newTags
+          });
+          
+          // Show save confirmation
+          setSaveConfirmation(true);
+          
+          // Hide confirmation after 3 seconds
+          setTimeout(() => {
+            setSaveConfirmation(false);
+          }, 3000);
+          
+          onSave(mood);
+        } catch (error) {
+          console.error('Error saving mood data:', error);
+        }
+      }
+    }, 100);
   };
 
   const addCustomTag = () => {
     if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
-      setSelectedTags([...selectedTags, customTag.trim()]);
+      const newTags = [...selectedTags, customTag.trim()];
+      setSelectedTags(newTags);
       setCustomTag('');
+      
+      // Auto-save when custom tag is added
+      setTimeout(async () => {
+        const mood = {
+          emoji: selectedEmoji,
+          label: selectedLabel,
+          tags: newTags,
+        };
+        
+        // Save to API with today's date in user's timezone
+        if (session?.user?.email) {
+          const today = getCurrentDate(timezone);
+          
+          try {
+            await axios.post('/api/journal/mood', {
+              date: today,
+              emoji: selectedEmoji,
+              label: selectedLabel,
+              tags: newTags
+            });
+            
+            // Show save confirmation
+            setSaveConfirmation(true);
+            
+            // Hide confirmation after 3 seconds
+            setTimeout(() => {
+              setSaveConfirmation(false);
+            }, 3000);
+            
+            onSave(mood);
+          } catch (error) {
+            console.error('Error saving mood data:', error);
+          }
+        }
+      }, 100);
     }
   };
   
@@ -255,20 +375,11 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
         </div>
       </div>
       
-      <div className="relative">
-        <button
-          onClick={handleSave}
-          className="w-full py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
-        >
-          Save Mood
-        </button>
-        
-        {saveConfirmation && (
-          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
-            Mood saved successfully! ✅
-          </div>
-        )}
-      </div>
+      {saveConfirmation && (
+        <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
+          Mood saved automatically ✅
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, formatDate, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface JournalCalendarProps {
   onSelectDate: (date: string) => void;
@@ -16,6 +17,7 @@ interface DayData {
     score: number;
   };
   hasEntry: boolean;
+  activities?: string[];
 }
 
 const JournalCalendar: React.FC<JournalCalendarProps> = ({
@@ -28,105 +30,123 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const { data: session } = useSession();
 
-  // Generate calendar days for the current month
+  // Generate calendar days for the current month using API data
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      const days: DayData[] = [];
-      
-      // Get all dates in the current month
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-      
-      // Get the first day of the month and the last day
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      
-      // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
-      const firstDayOfWeek = firstDay.getDay();
-      
-      // Add padding days from previous month
-      const prevMonth = new Date(year, month, 0);
-      const prevMonthDays = prevMonth.getDate();
-      
-      for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-        const date = new Date(year, month - 1, prevMonthDays - i);
-        const dateStr = formatDate(date.toISOString(), timezone, {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+    const fetchCalendarData = async () => {
+      if (session?.user?.email) {
+        const days: DayData[] = [];
         
-        days.push({
-          date: dateStr,
-          hasEntry: false,
-          mood: undefined
-        });
-      }
-      
-      // Add days for current month
-      for (let day = 1; day <= lastDay.getDate(); day++) {
-        const date = new Date(year, month, day);
-        const dateStr = formatDate(date.toISOString(), timezone, {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+        // Get all dates in the current month
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
         
-        // Try to load mood and entry for this date
-        const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
-        const entryKey = getDateStorageKey('journal_entry', session.user.email, timezone, dateStr);
+        // Get the first day of the month and the last day
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
         
-        const savedMood = localStorage.getItem(moodKey);
-        const savedEntry = localStorage.getItem(entryKey);
+        // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
+        const firstDayOfWeek = firstDay.getDay();
         
-        const dayData: DayData = {
-          date: dateStr,
-          hasEntry: !!savedEntry
-        };
+        // Add padding days from previous month
+        const prevMonth = new Date(year, month, 0);
+        const prevMonthDays = prevMonth.getDate();
         
-        if (savedMood) {
-          try {
-            const parsed = JSON.parse(savedMood);
-            // Map mood labels to scores for color coding
-            const moodScores: {[key: string]: number} = {
-              'Rad': 5,
-              'Good': 4,
-              'Meh': 3,
-              'Bad': 2,
-              'Awful': 1
-            };
-            
-            dayData.mood = {
-              emoji: parsed.emoji,
-              label: parsed.label,
-              score: moodScores[parsed.label] || 3
-            };
-          } catch (e) {
-            console.error('Error parsing saved mood:', e);
-          }
+        for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+          const date = new Date(year, month - 1, prevMonthDays - i);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
+          days.push({
+            date: dateStr,
+            hasEntry: false,
+            mood: undefined
+          });
         }
         
-        days.push(dayData);
-      }
-      
-      // Add padding days for next month to complete the grid
-      const remainingDays = 42 - days.length; // 6 rows of 7 days
-      for (let day = 1; day <= remainingDays; day++) {
-        const date = new Date(year, month + 1, day);
-        const dateStr = formatDate(date.toISOString(), timezone, {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+        // Add days for current month
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+          const date = new Date(year, month, day);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
+          const dayData: DayData = {
+            date: dateStr,
+            hasEntry: false
+          };
+          
+          // Try to load entry data
+          try {
+            await axios.get(`/api/journal/entry?date=${dateStr}`);
+            dayData.hasEntry = true;
+          } catch (error) {
+            // If entry doesn't exist, that's okay
+          }
+          
+          // Try to load mood data
+          try {
+            const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
+            if (moodResponse.data) {
+              // Map mood labels to scores for color coding
+              const moodScores: {[key: string]: number} = {
+                'Rad': 5,
+                'Good': 4,
+                'Meh': 3,
+                'Bad': 2,
+                'Awful': 1
+              };
+              
+              dayData.mood = {
+                emoji: moodResponse.data.emoji,
+                label: moodResponse.data.label,
+                score: moodScores[moodResponse.data.label] || 3
+              };
+            }
+          } catch (error) {
+            // If mood doesn't exist, that's okay
+          }
+          
+          // Try to load activities data
+          try {
+            const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
+            if (activitiesResponse.data && activitiesResponse.data.activities) {
+              dayData.activities = activitiesResponse.data.activities;
+            }
+          } catch (error) {
+            // If activities don't exist, that's okay
+          }
+          
+          days.push(dayData);
+        }
         
-        days.push({
-          date: dateStr,
-          hasEntry: false,
-          mood: undefined
-        });
+        // Add padding days for next month to complete the grid
+        const remainingDays = 42 - days.length; // 6 rows of 7 days
+        for (let day = 1; day <= remainingDays; day++) {
+          const date = new Date(year, month + 1, day);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
+          days.push({
+            date: dateStr,
+            hasEntry: false,
+            mood: undefined
+          });
+        }
+        
+        setCalendarDays(days);
       }
-      
-      setCalendarDays(days);
+    };
+    
+    if (session?.user?.email) {
+      fetchCalendarData();
     }
   }, [session, currentMonth, timezone, refreshTrigger]);
 
@@ -260,13 +280,38 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
               {new Date(day.date).getDate()}
             </span>
             
-            {day.mood && (
-              <span className="text-sm mt-1">{day.mood.emoji}</span>
-            )}
-            
-            {day.hasEntry && !day.mood && (
-              <span className="text-sm mt-1">📝</span>
-            )}
+            <div className="flex flex-col items-center">
+              {day.mood && (
+                <span className="text-sm">{day.mood.emoji}</span>
+              )}
+              
+              {day.hasEntry && !day.mood && (
+                <span className="text-sm">📝</span>
+              )}
+              
+              {day.activities && day.activities.length > 0 && (
+                <div className="flex flex-wrap justify-center mt-1">
+                  {day.activities.slice(0, 1).map((activity, idx) => {
+                    // Get icon for activity
+                    const activityIcons: {[key: string]: string} = {
+                      'Work': '💼', 'Exercise': '🏋️', 'Social': '👥', 'Reading': '📚',
+                      'Gaming': '🎮', 'Family': '👨‍👩‍👧‍👦', 'Shopping': '🛒', 'Cooking': '🍳',
+                      'Cleaning': '🧹', 'TV': '📺', 'Movies': '🎬', 'Music': '🎵',
+                      'Outdoors': '🌳', 'Travel': '✈️', 'Relaxing': '🛌', 'Hobbies': '🎨',
+                      'Study': '📝', 'Meditation': '🧘', 'Art': '🖼️', 'Writing': '✍️'
+                    };
+                    return (
+                      <span key={idx} className="text-xs">
+                        {activityIcons[activity] || '📌'}
+                      </span>
+                    );
+                  })}
+                  {day.activities.length > 1 && (
+                    <span className="text-xs">+{day.activities.length - 1}</span>
+                  )}
+                </div>
+              )}
+            </div>
           </button>
         ))}
       </div>

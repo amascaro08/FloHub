@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface MoodStatisticsProps {
   timezone?: string;
@@ -26,97 +27,96 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days'>('30days');
   const { data: session } = useSession();
 
-  // Load mood data and calculate statistics
+  // Load mood data and calculate statistics from API
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      // Determine how many days to look back based on timeRange
-      const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
-      
-      // Load mood data from the specified time range
-      const moodEntries: MoodData[] = [];
-      const today = new Date();
-      const activityMoodMap: {[key: string]: {count: number, totalScore: number}} = {};
-      
-      for (let i = daysToLookBack - 1; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = formatDate(date);
+    const fetchMoodData = async () => {
+      if (session?.user?.email) {
+        // Determine how many days to look back based on timeRange
+        const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
         
-        // Try to load mood for this date
-        const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
-        const savedMood = localStorage.getItem(moodKey);
+        // Load mood data from the specified time range
+        const moodEntries: MoodData[] = [];
+        const today = new Date();
+        const activityMoodMap: {[key: string]: {count: number, totalScore: number}} = {};
         
-        // Try to load activities for this date
-        const activitiesKey = getDateStorageKey('journal_activities', session.user.email, timezone, dateStr);
-        const savedActivities = localStorage.getItem(activitiesKey);
-        
-        if (savedMood) {
+        for (let i = daysToLookBack - 1; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = formatDate(date);
+          
           try {
-            const parsed = JSON.parse(savedMood);
-            const entry: MoodData = {
-              date: dateStr,
-              emoji: parsed.emoji,
-              label: parsed.label
-            };
+            // Try to load mood for this date
+            const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
             
-            // Add activities if available
-            if (savedActivities) {
+            if (moodResponse.data) {
+              const entry: MoodData = {
+                date: dateStr,
+                emoji: moodResponse.data.emoji,
+                label: moodResponse.data.label
+              };
+              
+              // Try to load activities for this date
               try {
-                const activities = JSON.parse(savedActivities);
-                entry.activities = activities;
+                const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
                 
-                // Calculate mood score (1-5)
-                const moodScores: {[key: string]: number} = {
-                  'Rad': 5,
-                  'Good': 4,
-                  'Meh': 3,
-                  'Bad': 2,
-                  'Awful': 1
-                };
-                
-                const moodScore = moodScores[parsed.label] || 3;
-                
-                // Update activity correlations
-                activities.forEach((activity: string) => {
-                  if (!activityMoodMap[activity]) {
-                    activityMoodMap[activity] = { count: 0, totalScore: 0 };
-                  }
+                if (activitiesResponse.data && activitiesResponse.data.activities) {
+                  entry.activities = activitiesResponse.data.activities;
                   
-                  activityMoodMap[activity].count += 1;
-                  activityMoodMap[activity].totalScore += moodScore;
-                });
-              } catch (e) {
-                console.error('Error parsing saved activities:', e);
+                  // Calculate mood score (1-5)
+                  const moodScores: {[key: string]: number} = {
+                    'Rad': 5,
+                    'Good': 4,
+                    'Meh': 3,
+                    'Bad': 2,
+                    'Awful': 1
+                  };
+                  
+                  const moodScore = moodScores[moodResponse.data.label] || 3;
+                  
+                  // Update activity correlations
+                  activitiesResponse.data.activities.forEach((activity: string) => {
+                    if (!activityMoodMap[activity]) {
+                      activityMoodMap[activity] = { count: 0, totalScore: 0 };
+                    }
+                    
+                    activityMoodMap[activity].count += 1;
+                    activityMoodMap[activity].totalScore += moodScore;
+                  });
+                }
+              } catch (error) {
+                // If activities don't exist, that's okay
               }
+              
+              moodEntries.push(entry);
             }
-            
-            moodEntries.push(entry);
-          } catch (e) {
-            console.error('Error parsing saved mood:', e);
+          } catch (error) {
+            // Add placeholder for days without mood data
+            moodEntries.push({
+              date: dateStr,
+              emoji: '',
+              label: ''
+            });
           }
-        } else {
-          // Add placeholder for days without mood data
-          moodEntries.push({
-            date: dateStr,
-            emoji: '',
-            label: ''
-          });
         }
+        
+        setMoodData(moodEntries);
+        
+        // Calculate average mood score for each activity
+        const correlations: {[key: string]: ActivityCorrelation} = {};
+        Object.entries(activityMoodMap).forEach(([activity, data]) => {
+          correlations[activity] = {
+            activity,
+            count: data.count,
+            moodScore: data.count > 0 ? data.totalScore / data.count : 0
+          };
+        });
+        
+        setActivityCorrelations(correlations);
       }
-      
-      setMoodData(moodEntries);
-      
-      // Calculate average mood score for each activity
-      const correlations: {[key: string]: ActivityCorrelation} = {};
-      Object.entries(activityMoodMap).forEach(([activity, data]) => {
-        correlations[activity] = {
-          activity,
-          count: data.count,
-          moodScore: data.count > 0 ? data.totalScore / data.count : 0
-        };
-      });
-      
-      setActivityCorrelations(correlations);
+    };
+    
+    if (session?.user?.email) {
+      fetchMoodData();
     }
   }, [session, timezone, timeRange, refreshTrigger]);
 
@@ -293,7 +293,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
               
               const height = mood.label ? ((moodScores[mood.label] || 3) / 5) * 100 : 0;
               const displayCount = timeRange === '7days' ? 7 : timeRange === '30days' ? 15 : 30;
-              const startIdx = moodData.length - displayCount;
+              const startIdx = Math.max(0, moodData.length - displayCount);
               
               // Only display a subset of data points based on the time range
               if (index < startIdx && index !== 0) return null;
@@ -302,12 +302,15 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div
                     className={`w-2 rounded-t-sm transition-all ${
-                      mood.label 
-                        ? getMoodColor(mood.label) 
+                      mood.label
+                        ? getMoodColor(mood.label)
                         : 'bg-slate-200 dark:bg-slate-600'
                     }`}
                     style={{ height: `${height}%` }}
                   ></div>
+                  {mood.emoji && (
+                    <span className="text-xs mt-1">{mood.emoji}</span>
+                  )}
                   {(index === 0 || index === moodData.length - 1 || (index - startIdx) % 5 === 0) && (
                     <span className="text-xs mt-1 transform -rotate-45 origin-top-left">
                       {new Date(mood.date).getDate()}

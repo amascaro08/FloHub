@@ -121,6 +121,8 @@ export default function JournalPage() {
   // Handle selecting a date from the timeline
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
+    // Always allow editing regardless of date
+    setIsEditing(true);
     console.log("Selected date:", date);
   };
 
@@ -182,7 +184,8 @@ export default function JournalPage() {
           <JournalTimeline
             onSelectDate={(date) => {
               handleSelectDate(date);
-              setIsEditing(date === today);
+              // Always allow editing regardless of date
+              setIsEditing(true);
             }}
             timezone={timezone}
             refreshTrigger={refreshTrigger}
@@ -192,7 +195,8 @@ export default function JournalPage() {
           <JournalCalendar
             onSelectDate={(date) => {
               handleSelectDate(date);
-              setIsEditing(date === today);
+              // Always allow editing regardless of date
+              setIsEditing(true);
             }}
             timezone={timezone}
             refreshTrigger={refreshTrigger}
@@ -228,29 +232,29 @@ export default function JournalPage() {
         <div className="mb-6 w-full">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Wellbeing Tracking</h3>
-          </div>
-          
-          {/* Mood Tracker */}
-          <div className="mb-4 w-full">
-            <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-          </div>
-          
-          {/* Sleep Tracker */}
-          <div className="mb-4 w-full">
-            <SleepTracker
-              onSave={handleSaveSleep}
-              timezone={timezone}
-              date={selectedDate}
-            />
-          </div>
-          
-          {/* Activity Tracker */}
-          <div className="mb-4 w-full">
-            <ActivityTracker
-              onSave={handleSaveActivities}
-              date={selectedDate}
-              timezone={timezone}
-            />
+            
+            {/* Mood Tracker */}
+            <div className="mb-6 w-full">
+              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+            </div>
+            
+            {/* Sleep Tracker */}
+            <div className="mb-6 w-full">
+              <SleepTracker
+                onSave={handleSaveSleep}
+                timezone={timezone}
+                date={selectedDate}
+              />
+            </div>
+            
+            {/* Activity Tracker */}
+            <div className="mb-6 w-full">
+              <ActivityTracker
+                onSave={handleSaveActivities}
+                date={selectedDate}
+                timezone={timezone}
+              />
+            </div>
           </div>
           
           {/* Mood Statistics */}
@@ -311,24 +315,30 @@ export default function JournalPage() {
         <div className="space-y-4 w-full">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Wellbeing Tracking</h3>
+            
+            {/* Mood Tracker */}
+            <div className="mb-6">
+              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+            </div>
+            
+            {/* Sleep Tracker */}
+            <div className="mb-6">
+              <SleepTracker
+                onSave={handleSaveSleep}
+                timezone={timezone}
+                date={selectedDate}
+              />
+            </div>
+            
+            {/* Activity Tracker */}
+            <div className="mb-6">
+              <ActivityTracker
+                onSave={handleSaveActivities}
+                date={selectedDate}
+                timezone={timezone}
+              />
+            </div>
           </div>
-          
-          {/* Mood Tracker */}
-          <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-          
-          {/* Sleep Tracker */}
-          <SleepTracker
-            onSave={handleSaveSleep}
-            timezone={timezone}
-            date={selectedDate}
-          />
-          
-          {/* Activity Tracker */}
-          <ActivityTracker
-            onSave={handleSaveActivities}
-            date={selectedDate}
-            timezone={timezone}
-          />
           
           {/* Mood Statistics */}
           <MoodStatistics timezone={timezone} refreshTrigger={refreshTrigger} />

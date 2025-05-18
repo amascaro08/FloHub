@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface ActivityTrackerProps {
   onSave: (activities: string[]) => void;
@@ -45,72 +46,75 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Get the current date in YYYY-MM-DD format or use provided date
   const entryDate = date || getCurrentDate(timezone);
 
-  // Load saved activities and user's custom activities from localStorage
+  // Load saved activities and user's custom activities from API
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      // Load user's custom activities
-      const customActivitiesKey = `journal_custom_activities_${session.user.email}`;
-      const savedCustomActivities = localStorage.getItem(customActivitiesKey);
-      
-      if (savedCustomActivities) {
+    const fetchActivitiesData = async () => {
+      if (session?.user?.email) {
+        // Load user's custom activities
         try {
-          const parsed = JSON.parse(savedCustomActivities);
-          setUserActivities(parsed);
+          const customActivitiesKey = `journal_custom_activities_${session.user.email}`;
+          const savedCustomActivities = localStorage.getItem(customActivitiesKey);
+          
+          if (savedCustomActivities) {
+            const parsed = JSON.parse(savedCustomActivities);
+            setUserActivities(parsed);
+          }
         } catch (e) {
           console.error('Error parsing saved custom activities:', e);
         }
-      }
-      
-      // Load activities for the specific date
-      const activitiesKey = getDateStorageKey('journal_activities', session.user.email, timezone, entryDate);
-      const savedActivities = localStorage.getItem(activitiesKey);
-      
-      if (savedActivities) {
+        
+        // Load activities for the specific date
         try {
-          const parsed = JSON.parse(savedActivities);
-          setSelectedActivities(parsed);
-        } catch (e) {
-          console.error('Error parsing saved activities:', e);
-        }
-      }
-    }
-    // Calculate activity statistics
-    const calculateActivityStats = () => {
-      if (session?.user?.email) {
-        const stats: {[key: string]: number} = {};
-        const last30Days = [];
-        
-        // Get dates for the last 30 days
-        const today = new Date();
-        for (let i = 0; i < 30; i++) {
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-          last30Days.push(dateStr);
+          const response = await axios.get(`/api/journal/activities?date=${entryDate}`);
+          if (response.data && response.data.activities) {
+            setSelectedActivities(response.data.activities);
+          }
+        } catch (error) {
+          // If activities don't exist yet, that's okay
+          if (error instanceof Error && !(error.toString().includes('404'))) {
+            console.error('Error fetching activities data:', error);
+          }
         }
         
-        // Count activities for each day
-        last30Days.forEach(dateStr => {
-          const key = getDateStorageKey('journal_activities', session.user.email || '', timezone || '', dateStr);
-          const savedActivities = localStorage.getItem(key);
+        // Calculate activity statistics
+        const calculateActivityStats = async () => {
+          const stats: {[key: string]: number} = {};
+          const last30Days = [];
           
-          if (savedActivities) {
+          // Get dates for the last 30 days
+          const today = new Date();
+          for (let i = 0; i < 30; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            last30Days.push(dateStr);
+          }
+          
+          // Count activities for each day
+          for (const dateStr of last30Days) {
             try {
-              const activities = JSON.parse(savedActivities);
-              activities.forEach((activity: string) => {
-                stats[activity] = (stats[activity] || 0) + 1;
-              });
-            } catch (e) {
-              console.error('Error parsing saved activities:', e);
+              const response = await axios.get(`/api/journal/activities?date=${dateStr}`);
+              if (response.data && response.data.activities) {
+                response.data.activities.forEach((activity: string) => {
+                  stats[activity] = (stats[activity] || 0) + 1;
+                });
+              }
+            } catch (error) {
+              // If activities don't exist for this date, continue to the next date
+              continue;
             }
           }
-        });
+          
+          setActivityStats(stats);
+        };
         
-        setActivityStats(stats);
+        calculateActivityStats();
       }
     };
     
-    calculateActivityStats();
+    if (session?.user?.email) {
+      fetchActivitiesData();
+    }
   }, [session, entryDate, timezone]);
 
   const handleSave = () => {
@@ -171,11 +175,39 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   };
 
   const toggleActivity = (activity: string) => {
+    let newActivities;
     if (selectedActivities.includes(activity)) {
-      setSelectedActivities(selectedActivities.filter(a => a !== activity));
+      newActivities = selectedActivities.filter(a => a !== activity);
     } else {
-      setSelectedActivities([...selectedActivities, activity]);
+      newActivities = [...selectedActivities, activity];
     }
+    
+    setSelectedActivities(newActivities);
+    
+    // Auto-save when activities are updated
+    setTimeout(async () => {
+      if (session?.user?.email) {
+        try {
+          // Save selected activities for this date
+          await axios.post('/api/journal/activities', {
+            date: entryDate,
+            activities: newActivities
+          });
+          
+          // Show save confirmation
+          setSaveConfirmation(true);
+          
+          // Hide confirmation after 3 seconds
+          setTimeout(() => {
+            setSaveConfirmation(false);
+          }, 3000);
+          
+          onSave(newActivities);
+        } catch (error) {
+          console.error('Error saving activities data:', error);
+        }
+      }
+    }, 100);
   };
   
   // Get icon for an activity
@@ -197,15 +229,68 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       }
       
       // Add to selected activities
+      let newActivities = selectedActivities;
       if (!selectedActivities.includes(customActivity.trim())) {
-        setSelectedActivities([...selectedActivities, customActivity.trim()]);
+        newActivities = [...selectedActivities, customActivity.trim()];
+        setSelectedActivities(newActivities);
       }
       
       setCustomActivity('');
+      
+      // Auto-save when custom activity is added
+      setTimeout(async () => {
+        if (session?.user?.email) {
+          try {
+            // Save selected activities for this date
+            await axios.post('/api/journal/activities', {
+              date: entryDate,
+              activities: newActivities
+            });
+            
+            // Show save confirmation
+            setSaveConfirmation(true);
+            
+            // Hide confirmation after 3 seconds
+            setTimeout(() => {
+              setSaveConfirmation(false);
+            }, 3000);
+            
+            onSave(newActivities);
+          } catch (error) {
+            console.error('Error saving activities data:', error);
+          }
+        }
+      }, 100);
     } else if (customActivity.trim() && !selectedActivities.includes(customActivity.trim())) {
       // If activity already exists but isn't selected, select it
-      setSelectedActivities([...selectedActivities, customActivity.trim()]);
+      const newActivities = [...selectedActivities, customActivity.trim()];
+      setSelectedActivities(newActivities);
       setCustomActivity('');
+      
+      // Auto-save when existing activity is selected
+      setTimeout(async () => {
+        if (session?.user?.email) {
+          try {
+            // Save selected activities for this date
+            await axios.post('/api/journal/activities', {
+              date: entryDate,
+              activities: newActivities
+            });
+            
+            // Show save confirmation
+            setSaveConfirmation(true);
+            
+            // Hide confirmation after 3 seconds
+            setTimeout(() => {
+              setSaveConfirmation(false);
+            }, 3000);
+            
+            onSave(newActivities);
+          } catch (error) {
+            console.error('Error saving activities data:', error);
+          }
+        }
+      }, 100);
     }
   };
 
@@ -355,20 +440,11 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         </div>
       )}
       
-      <div className="relative">
-        <button
-          onClick={handleSave}
-          className="w-full py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
-        >
-          Save Activities
-        </button>
-        
-        {saveConfirmation && (
-          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
-            Activities saved successfully! ✅
-          </div>
-        )}
-      </div>
+      {saveConfirmation && (
+        <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
+          Activities saved automatically ✅
+        </div>
+      )}
     </div>
   );
 };

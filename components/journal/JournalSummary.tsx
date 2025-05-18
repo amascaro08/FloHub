@@ -72,7 +72,9 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
         // Count mood frequencies
         const moodCounts: Record<string, number> = {};
         moodData.forEach(mood => {
-          moodCounts[mood.label] = (moodCounts[mood.label] || 0) + 1;
+          if (mood.label) {
+            moodCounts[mood.label] = (moodCounts[mood.label] || 0) + 1;
+          }
         });
         
         // Find most common mood
@@ -99,6 +101,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
           .map(m => moodScores[m.label] || 3);
         
         let trendDescription = "";
+        let trendAdvice = "";
         if (recentMoods.length >= 3) {
           // Calculate if trend is improving or declining
           const firstHalf = recentMoods.slice(0, Math.floor(recentMoods.length / 2));
@@ -109,13 +112,33 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
           
           if (secondAvg - firstAvg > 0.5) {
             trendDescription = "Your mood has been improving recently. ";
+            trendAdvice = "Take note of what positive changes you've made and continue building on them. ";
           } else if (firstAvg - secondAvg > 0.5) {
             trendDescription = "Your mood has been declining recently. ";
+            trendAdvice = "Consider what factors might be affecting your wellbeing and what small changes could help. ";
+          } else {
+            trendDescription = "Your mood has been relatively stable. ";
+            trendAdvice = "Consider introducing small positive changes to enhance your wellbeing. ";
+          }
+        }
+        
+        // Calculate mood variability
+        let variabilityAdvice = "";
+        if (recentMoods.length >= 5) {
+          const moodVariations = [];
+          for (let i = 1; i < recentMoods.length; i++) {
+            moodVariations.push(Math.abs(recentMoods[i] - recentMoods[i-1]));
+          }
+          
+          const avgVariation = moodVariations.reduce((sum, val) => sum + val, 0) / moodVariations.length;
+          
+          if (avgVariation > 1.5) {
+            variabilityAdvice = "Your mood shows significant day-to-day variations. Establishing consistent routines might help stabilize your emotional wellbeing. ";
           }
         }
         
         // Build personalized summary using mood data and themes
-        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month. ${trendDescription}`;
+        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month. ${trendDescription}${variabilityAdvice}`;
         
         // Add theme insights if available
         if (topThemes.length > 0) {
@@ -123,16 +146,16 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
           if (topThemes.length > 1) {
             summary += ` and ${topThemes[1].theme}`;
           }
-          summary += ", which seem to be important in your life right now.";
+          summary += ", which seem to be important in your life right now. ";
         }
         
         // Add personalized advice based on mood
         if (mostCommonMood === "Awful" || mostCommonMood === "Bad") {
-          summary += " Consider activities that have previously improved your mood, like connecting with friends or spending time outdoors.";
+          summary += `${trendAdvice}Consider activities that have previously improved your mood, like connecting with friends or spending time outdoors. Small acts of self-care can make a significant difference in how you feel day-to-day.`;
         } else if (mostCommonMood === "Rad" || mostCommonMood === "Good") {
-          summary += " Keep up with the positive activities and relationships that are contributing to your wellbeing.";
+          summary += `${trendAdvice}Keep up with the positive activities and relationships that are contributing to your wellbeing. Consider sharing your positive experiences with others to amplify their effect.`;
         } else {
-          summary += " Try to identify patterns in your activities and how they affect your mood to find what brings you joy.";
+          summary += `${trendAdvice}Try to identify patterns in your activities and how they affect your mood to find what brings you joy. Even small positive changes to your daily routine can have a cumulative positive effect on your wellbeing.`;
         }
         
         return summary;
