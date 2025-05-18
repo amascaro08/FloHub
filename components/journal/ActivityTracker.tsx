@@ -70,10 +70,9 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             setSelectedActivities(response.data.activities);
           }
         } catch (error) {
-          // If activities don't exist yet, that's okay
-          if (error instanceof Error && !(error.toString().includes('404'))) {
-            console.error('Error fetching activities data:', error);
-          }
+          console.error('Error fetching activities data:', error);
+          // Set default empty state
+          setSelectedActivities([]);
         }
         
         // Calculate activity statistics
@@ -94,7 +93,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           for (const dateStr of last30Days) {
             try {
               const response = await axios.get(`/api/journal/activities?date=${dateStr}`);
-              if (response.data && response.data.activities) {
+              if (response.data && response.data.activities && response.data.activities.length > 0) {
                 response.data.activities.forEach((activity: string) => {
                   stats[activity] = (stats[activity] || 0) + 1;
                 });

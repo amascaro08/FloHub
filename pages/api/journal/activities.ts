@@ -32,7 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
-        return res.status(404).json({ error: 'Activities data not found' });
+        // Return empty data instead of 404
+        return res.status(200).json({ activities: [] });
       }
       
       const activitiesData = snapshot.docs[0].data();

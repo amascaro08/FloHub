@@ -27,14 +27,15 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
         try {
           const response = await axios.get(`/api/journal/sleep?date=${today}`);
           if (response.data) {
-            setSleepQuality(response.data.quality || '');
+            // Only set quality if it's not empty
+            if (response.data.quality) {
+              setSleepQuality(response.data.quality);
+            }
             setSleepHours(response.data.hours || 7);
           }
         } catch (error) {
-          // If sleep data doesn't exist yet, that's okay
-          if (error instanceof Error && !(error.toString().includes('404'))) {
-            console.error('Error fetching sleep data:', error);
-          }
+          console.error('Error fetching sleep data:', error);
+          // Default state is already set in useState
         }
       }
     };

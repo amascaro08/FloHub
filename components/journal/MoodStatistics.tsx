@@ -48,7 +48,8 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
             // Try to load mood for this date
             const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
             
-            if (moodResponse.data) {
+            // Check if we have actual mood data (not empty defaults)
+            if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
               const entry: MoodData = {
                 date: dateStr,
                 emoji: moodResponse.data.emoji,
@@ -59,7 +60,10 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
               try {
                 const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
                 
-                if (activitiesResponse.data && activitiesResponse.data.activities) {
+                if (activitiesResponse.data &&
+                    activitiesResponse.data.activities &&
+                    Array.isArray(activitiesResponse.data.activities) &&
+                    activitiesResponse.data.activities.length > 0) {
                   entry.activities = activitiesResponse.data.activities;
                   
                   // Calculate mood score (1-5)
@@ -84,12 +88,20 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
                   });
                 }
               } catch (error) {
-                // If activities don't exist, that's okay
+                console.error(`Error fetching activities for ${dateStr}:`, error);
               }
               
               moodEntries.push(entry);
+            } else {
+              // Add placeholder for days without mood data
+              moodEntries.push({
+                date: dateStr,
+                emoji: '',
+                label: ''
+              });
             }
           } catch (error) {
+            console.error(`Error fetching mood for ${dateStr}:`, error);
             // Add placeholder for days without mood data
             moodEntries.push({
               date: dateStr,

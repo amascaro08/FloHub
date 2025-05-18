@@ -35,10 +35,11 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             setLastSaved(response.data.timestamp || null);
           }
         } catch (error) {
-          // If entry doesn't exist yet, that's okay
-          if (error instanceof Error) {
-            console.error('Error fetching journal entry:', error);
-          }
+          console.error('Error fetching journal entry:', error);
+          // Set default empty state
+          setContent('');
+          setSavedContent('');
+          setLastSaved(null);
         }
       }
     };

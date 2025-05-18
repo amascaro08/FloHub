@@ -207,6 +207,11 @@ export default function JournalPage() {
       
       {/* Mobile layout - single column */}
       <div className="block md:hidden w-full">
+        {/* FloCat Summary - Moved above text entry */}
+        <div className="mb-6 w-full">
+          <JournalSummary refreshTrigger={refreshTrigger} />
+        </div>
+        
         {/* Journal Entry */}
         <div className="mb-6 w-full">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full overflow-hidden">
@@ -255,34 +260,29 @@ export default function JournalPage() {
                 timezone={timezone}
               />
             </div>
+            
+            {/* On This Day */}
+            <div className="mb-6 w-full">
+              <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
+            </div>
+            
+            {/* Linked Moments */}
+            <div className="mb-6 w-full">
+              <LinkedMoments date={selectedDate} timezone={timezone} />
+            </div>
           </div>
           
-          {/* Mood Statistics */}
-          <div className="mb-4 w-full">
-            <MoodStatistics timezone={timezone} refreshTrigger={refreshTrigger} />
-          </div>
         </div>
         
-        {/* FloCat Summary */}
-        <div className="mb-6 w-full">
-          <JournalSummary refreshTrigger={refreshTrigger} />
-        </div>
-        
-        {/* On This Day */}
-        <div className="mb-6 w-full">
-          <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-        </div>
-        
-        {/* Linked Moments */}
-        <div className="mb-6 w-full">
-          <LinkedMoments date={selectedDate} timezone={timezone} />
-        </div>
       </div>
       
       {/* Desktop layout - multi-column */}
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         {/* Left column (2/3 width on desktop) - Journal Entry */}
         <div className="md:col-span-2 w-full space-y-6">
+          {/* FloCat Summary - Moved above text entry */}
+          <JournalSummary refreshTrigger={refreshTrigger} />
+          
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full">
             {isSelectedToday || isEditing ? (
               <TodayEntry
@@ -300,9 +300,6 @@ export default function JournalPage() {
               />
             )}
           </div>
-          
-          {/* FloCat Summary */}
-          <JournalSummary refreshTrigger={refreshTrigger} />
           
           {/* On This Day */}
           <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
@@ -339,9 +336,6 @@ export default function JournalPage() {
               />
             </div>
           </div>
-          
-          {/* Mood Statistics */}
-          <MoodStatistics timezone={timezone} refreshTrigger={refreshTrigger} />
         </div>
       </div>
       

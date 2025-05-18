@@ -33,38 +33,39 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   // Generate calendar days for the current month using API data
   useEffect(() => {
     const fetchCalendarData = async () => {
-      if (session?.user?.email) {
-        const days: DayData[] = [];
-        
-        // Get all dates in the current month
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
-        
-        // Get the first day of the month and the last day
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        
-        // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
-        const firstDayOfWeek = firstDay.getDay();
-        
-        // Add padding days from previous month
-        const prevMonth = new Date(year, month, 0);
-        const prevMonthDays = prevMonth.getDate();
-        
-        for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-          const date = new Date(year, month - 1, prevMonthDays - i);
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+      try {
+        if (session?.user?.email) {
+          const days: DayData[] = [];
           
-          days.push({
-            date: dateStr,
-            hasEntry: false,
-            mood: undefined
-          });
-        }
+          // Get all dates in the current month
+          const year = currentMonth.getFullYear();
+          const month = currentMonth.getMonth();
+          
+          // Get the first day of the month and the last day
+          const firstDay = new Date(year, month, 1);
+          const lastDay = new Date(year, month + 1, 0);
+          
+          // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
+          const firstDayOfWeek = firstDay.getDay();
+          
+          // Add padding days from previous month
+          const prevMonth = new Date(year, month, 0);
+          const prevMonthDays = prevMonth.getDate();
+          
+          for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+            const date = new Date(year, month - 1, prevMonthDays - i);
+            const dateStr = formatDate(date.toISOString(), timezone, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+            
+            days.push({
+              date: dateStr,
+              hasEntry: false,
+              mood: undefined
+            });
+          }
         
         // Add days for current month
         for (let day = 1; day <= lastDay.getDate(); day++) {
@@ -82,16 +83,20 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
           
           // Try to load entry data
           try {
-            await axios.get(`/api/journal/entry?date=${dateStr}`);
-            dayData.hasEntry = true;
+            const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`);
+            // Check if we have actual content
+            if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
+              dayData.hasEntry = true;
+            }
           } catch (error) {
-            // If entry doesn't exist, that's okay
+            console.error(`Error fetching entry for ${dateStr}:`, error);
           }
           
           // Try to load mood data
           try {
             const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
-            if (moodResponse.data) {
+            // Check if we have actual mood data (not empty defaults)
+            if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
               // Map mood labels to scores for color coding
               const moodScores: {[key: string]: number} = {
                 'Rad': 5,
@@ -108,17 +113,20 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
               };
             }
           } catch (error) {
-            // If mood doesn't exist, that's okay
+            console.error(`Error fetching mood for ${dateStr}:`, error);
           }
           
           // Try to load activities data
           try {
             const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
-            if (activitiesResponse.data && activitiesResponse.data.activities) {
+            if (activitiesResponse.data &&
+                activitiesResponse.data.activities &&
+                Array.isArray(activitiesResponse.data.activities) &&
+                activitiesResponse.data.activities.length > 0) {
               dayData.activities = activitiesResponse.data.activities;
             }
           } catch (error) {
-            // If activities don't exist, that's okay
+            console.error(`Error fetching activities for ${dateStr}:`, error);
           }
           
           days.push(dayData);
@@ -134,6 +142,26 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
             day: '2-digit'
           }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
+          days.push({
+            date: dateStr,
+            hasEntry: false,
+            mood: undefined
+          });
+        }
+        
+        setCalendarDays(days);
+      }
+      } catch (error) {
+        console.error("Error generating calendar:", error);
+        // Set a minimal calendar with just the current month's days
+        const days: DayData[] = [];
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const lastDay = new Date(year, month + 1, 0);
+        
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+          const date = new Date(year, month, day);
+          const dateStr = date.toISOString().split('T')[0];
           days.push({
             date: dateStr,
             hasEntry: false,
