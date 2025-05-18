@@ -13,13 +13,33 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const [customActivity, setCustomActivity] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [userActivities, setUserActivities] = useState<string[]>([]);
+  const [showInsights, setShowInsights] = useState<boolean>(false);
+  const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
   const { data: session } = useSession();
   
   // Default activities
+  // Default activities with icons
   const defaultActivities = [
-    'Work', 'Exercise', 'Social', 'Reading', 'Gaming', 'Family', 'Shopping',
-    'Cooking', 'Cleaning', 'TV', 'Movies', 'Music', 'Outdoors', 'Travel',
-    'Relaxing', 'Hobbies', 'Study', 'Meditation', 'Art', 'Writing'
+    { name: 'Work', icon: '💼' },
+    { name: 'Exercise', icon: '🏋️' },
+    { name: 'Social', icon: '👥' },
+    { name: 'Reading', icon: '📚' },
+    { name: 'Gaming', icon: '🎮' },
+    { name: 'Family', icon: '👨‍👩‍👧‍👦' },
+    { name: 'Shopping', icon: '🛒' },
+    { name: 'Cooking', icon: '🍳' },
+    { name: 'Cleaning', icon: '🧹' },
+    { name: 'TV', icon: '📺' },
+    { name: 'Movies', icon: '🎬' },
+    { name: 'Music', icon: '🎵' },
+    { name: 'Outdoors', icon: '🌳' },
+    { name: 'Travel', icon: '✈️' },
+    { name: 'Relaxing', icon: '🛌' },
+    { name: 'Hobbies', icon: '🎨' },
+    { name: 'Study', icon: '📝' },
+    { name: 'Meditation', icon: '🧘' },
+    { name: 'Art', icon: '🖼️' },
+    { name: 'Writing', icon: '✍️' }
   ];
   
   // Get the current date in YYYY-MM-DD format or use provided date
@@ -54,6 +74,43 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         }
       }
     }
+    // Calculate activity statistics
+    const calculateActivityStats = () => {
+      if (session?.user?.email) {
+        const stats: {[key: string]: number} = {};
+        const last30Days = [];
+        
+        // Get dates for the last 30 days
+        const today = new Date();
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          last30Days.push(dateStr);
+        }
+        
+        // Count activities for each day
+        last30Days.forEach(dateStr => {
+          const key = getDateStorageKey('journal_activities', session.user.email || '', timezone || '', dateStr);
+          const savedActivities = localStorage.getItem(key);
+          
+          if (savedActivities) {
+            try {
+              const activities = JSON.parse(savedActivities);
+              activities.forEach((activity: string) => {
+                stats[activity] = (stats[activity] || 0) + 1;
+              });
+            } catch (e) {
+              console.error('Error parsing saved activities:', e);
+            }
+          }
+        });
+        
+        setActivityStats(stats);
+      }
+    };
+    
+    calculateActivityStats();
   }, [session, entryDate, timezone]);
 
   const handleSave = () => {
@@ -72,6 +129,45 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       onSave(selectedActivities);
     }
+    // Recalculate activity stats after saving
+    setTimeout(() => {
+      const calculateActivityStats = () => {
+        if (session?.user?.email) {
+          const stats: {[key: string]: number} = {};
+          const last30Days = [];
+          
+          // Get dates for the last 30 days
+          const today = new Date();
+          for (let i = 0; i < 30; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            last30Days.push(dateStr);
+          }
+          
+          // Count activities for each day
+          last30Days.forEach(dateStr => {
+            const key = getDateStorageKey('journal_activities', session.user.email || '', timezone || '', dateStr);
+            const savedActivities = localStorage.getItem(key);
+            
+            if (savedActivities) {
+              try {
+                const activities = JSON.parse(savedActivities);
+                activities.forEach((activity: string) => {
+                  stats[activity] = (stats[activity] || 0) + 1;
+                });
+              } catch (e) {
+                console.error('Error parsing saved activities:', e);
+              }
+            }
+          });
+          
+          setActivityStats(stats);
+        }
+      };
+      
+      calculateActivityStats();
+    }, 500);
   };
 
   const toggleActivity = (activity: string) => {
@@ -81,9 +177,15 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       setSelectedActivities([...selectedActivities, activity]);
     }
   };
+  
+  // Get icon for an activity
+  const getActivityIcon = (activity: string) => {
+    const defaultActivity = defaultActivities.find(a => a.name === activity);
+    return defaultActivity ? defaultActivity.icon : '📌';
+  };
 
   const addCustomActivity = () => {
-    if (customActivity.trim() && !defaultActivities.includes(customActivity.trim()) && !userActivities.includes(customActivity.trim())) {
+    if (customActivity.trim() && !defaultActivities.map(a => a.name).includes(customActivity.trim()) && !userActivities.includes(customActivity.trim())) {
       // Add to user's custom activities
       const newUserActivities = [...userActivities, customActivity.trim()];
       setUserActivities(newUserActivities);
@@ -107,9 +209,25 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     }
   };
 
+  // Get top activities based on frequency
+  const getTopActivities = () => {
+    return Object.entries(activityStats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([activity, count]) => ({ activity, count }));
+  };
+  
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Activities</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Activities</h2>
+        <button
+          onClick={() => setShowInsights(!showInsights)}
+          className="text-sm px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+        >
+          {showInsights ? 'Hide Insights' : 'Show Insights'}
+        </button>
+      </div>
       
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -119,15 +237,16 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         <div className="flex flex-wrap gap-2 mb-4">
           {defaultActivities.map(activity => (
             <button
-              key={activity}
-              onClick={() => toggleActivity(activity)}
-              className={`px-3 py-1 rounded-full text-sm transition-all ${
-                selectedActivities.includes(activity)
+              key={activity.name}
+              onClick={() => toggleActivity(activity.name)}
+              className={`px-3 py-1 rounded-full text-sm transition-all flex items-center ${
+                selectedActivities.includes(activity.name)
                   ? 'bg-teal-500 text-white scale-105 shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
             >
-              {activity}
+              <span className="mr-1">{activity.icon}</span>
+              {activity.name}
             </button>
           ))}
           
@@ -135,12 +254,13 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             <button
               key={`custom-${activity}`}
               onClick={() => toggleActivity(activity)}
-              className={`px-3 py-1 rounded-full text-sm transition-all ${
+              className={`px-3 py-1 rounded-full text-sm transition-all flex items-center ${
                 selectedActivities.includes(activity)
                   ? 'bg-purple-500 text-white scale-105 shadow-sm'
                   : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800'
               }`}
             >
+              <span className="mr-1">📌</span>
               {activity}
             </button>
           ))}
@@ -177,10 +297,11 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
             <div className="flex flex-wrap gap-2">
               {selectedActivities.map(activity => (
-                <div 
+                <div
                   key={`selected-${activity}`}
                   className="px-3 py-1 rounded-full text-sm bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 flex items-center"
                 >
+                  <span className="mr-1">{getActivityIcon(activity)}</span>
                   <span>{activity}</span>
                   <button 
                     onClick={() => toggleActivity(activity)}
@@ -193,6 +314,43 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Activity Insights */}
+      {showInsights && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Activity Insights (Last 30 Days)
+          </h3>
+          <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+            {getTopActivities().length > 0 ? (
+              <div className="space-y-2">
+                {getTopActivities().map(({ activity, count }) => (
+                  <div key={`stat-${activity}`} className="flex items-center">
+                    <span className="mr-2">{getActivityIcon(activity)}</span>
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{activity}</span>
+                    <div className="ml-2 flex-grow">
+                      <div className="h-2 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full"
+                          style={{ width: `${Math.min(100, (count / 30) * 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{count} days</span>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  These are your most frequent activities. Consider how they affect your mood and wellbeing.
+                </p>
+              </div>
+            ) : (
+              <p className="text-slate-500 dark:text-slate-400 text-sm italic">
+                Track your activities for a few days to see insights
+              </p>
+            )}
           </div>
         </div>
       )}

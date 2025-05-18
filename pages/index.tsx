@@ -36,7 +36,7 @@ export default function Index() {
               onClick={handleLogin}
               className="px-8 py-3 text-lg font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              Login to FlowHub
+              Login to FloHub
             </button>
           </div>
           <div className="md:w-1/2">

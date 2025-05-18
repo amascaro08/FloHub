@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
 interface JournalSummaryProps {
-  // Optional props for future integration
+  refreshTrigger?: number; // Trigger to refresh the summary
 }
 
 interface MoodData {
@@ -11,10 +11,11 @@ interface MoodData {
   label: string;
 }
 
-const JournalSummary: React.FC<JournalSummaryProps> = () => {
+const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) => {
   const [moodData, setMoodData] = useState<MoodData[]>([]);
   const [topThemes, setTopThemes] = useState<{theme: string, count: number}[]>([]);
   const [floCatsSummary, setFloCatsSummary] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -139,12 +140,20 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
       
       setFloCatsSummary(generateFloCatsSummary());
     }
-  }, [session]);
+  }, [session, refreshTrigger]);
 
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Journal Summary</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Journal Summary</h2>
+        {isGenerating && (
+          <div className="flex items-center">
+            <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Updating...</span>
+          </div>
+        )}
+      </div>
       
       <div className="mb-6">
         <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">FloCats Summary</h3>

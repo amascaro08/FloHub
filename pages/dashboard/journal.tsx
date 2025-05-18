@@ -261,7 +261,7 @@ export default function JournalPage() {
         
         {/* FloCat Summary */}
         <div className="mb-6 w-full">
-          <JournalSummary />
+          <JournalSummary refreshTrigger={refreshTrigger} />
         </div>
         
         {/* On This Day */}
@@ -298,7 +298,7 @@ export default function JournalPage() {
           </div>
           
           {/* FloCat Summary */}
-          <JournalSummary />
+          <JournalSummary refreshTrigger={refreshTrigger} />
           
           {/* On This Day */}
           <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />

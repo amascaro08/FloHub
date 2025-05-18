@@ -15,7 +15,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [promptAnswers, setPromptAnswers] = useState<{[key: string]: string}>({});
+  const [editorContent, setEditorContent] = useState('');
   const { data: session } = useSession();
   
   // Get the current date in YYYY-MM-DD format or use provided date
@@ -55,27 +55,16 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     { id: 'win', question: "What's one small win I can celebrate today?" }
   ];
   
-  // Handle prompt answer changes
-  const handlePromptChange = (promptId: string, value: string) => {
-    setPromptAnswers({
-      ...promptAnswers,
-      [promptId]: value
-    });
+  // Insert prompt into editor
+  const insertPrompt = (question: string) => {
+    const promptText = `\n\n**${question}**\n`;
+    setContent(prevContent => prevContent + promptText);
+    setEditorContent(prevContent => prevContent + promptText);
   };
 
   const handleSave = () => {
-    // Combine prompt answers with the main content
+    // Use the content directly
     let finalContent = content;
-    
-    if (showPrompts && isTodayDate && Object.keys(promptAnswers).length > 0) {
-      finalContent = journalingPrompts.map(prompt => {
-        const answer = promptAnswers[prompt.id] || '';
-        if (answer.trim()) {
-          return `<h4>${prompt.question}</h4><p>${answer}</p>`;
-        }
-        return '';
-      }).filter(Boolean).join('') + (content ? '<hr/>' + content : '');
-    }
     
     if (!finalContent.trim()) return;
     
@@ -103,6 +92,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
 
   const handleContentChange = (html: string) => {
     setContent(html);
+    setEditorContent(html);
   };
 
 
@@ -141,43 +131,26 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
         </div>
       )}
 
-      {showPrompts && isTodayDate ? (
-        <div className="flex flex-col h-full overflow-auto">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Journal Prompts
-          </h3>
-          <div className="flex flex-col gap-4 mb-4 overflow-y-auto w-full">
-            {journalingPrompts.map((prompt) => (
-              <div key={prompt.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 break-words">
+      <div className="flex flex-col h-full overflow-auto">
+        {showPrompts && isTodayDate && (
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Journal Prompts (click to add)
+            </h3>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {journalingPrompts.map((prompt) => (
+                <button
+                  key={prompt.id}
+                  onClick={() => insertPrompt(prompt.question)}
+                  className="px-3 py-1 rounded-full text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
                   {prompt.question}
-                </label>
-                <textarea
-                  value={promptAnswers[prompt.id] || ''}
-                  onChange={(e) => handlePromptChange(prompt.id, e.target.value)}
-                  className="w-full p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-full"
-                  rows={2}
-                  placeholder="Your answer..."
-                />
-              </div>
-            ))}
-            
-            {/* Additional free-form thoughts section */}
-            <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Any other thoughts or reflections?
-              </label>
-              <div className="max-w-full">
-                <RichTextEditor
-                  content={content}
-                  onChange={handleContentChange}
-                  placeholder="Write freely about anything else on your mind..."
-                />
-              </div>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      ) : (
+        )}
+        
         <div className="flex-grow overflow-auto max-w-full">
           <RichTextEditor
             content={content}
@@ -185,7 +158,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             placeholder="Write your thoughts..."
           />
         </div>
-      )}
+      </div>
 
       {lastSaved && (
         <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
