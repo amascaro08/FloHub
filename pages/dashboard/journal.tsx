@@ -14,6 +14,10 @@ import OnThisDay from "@/components/journal/OnThisDay";
 import JournalSummary from "@/components/journal/JournalSummary";
 import LinkedMoments from "@/components/journal/LinkedMoments";
 import JournalEntryViewer from "@/components/journal/JournalEntryViewer";
+import JournalCalendar from "@/components/journal/JournalCalendar";
+import ActivityTracker from "@/components/journal/ActivityTracker";
+import MoodStatistics from "@/components/journal/MoodStatistics";
+import JournalSettings from "@/components/journal/JournalSettings";
 
 export default function JournalPage() {
   const { data: session, status } = useSession();
@@ -23,6 +27,9 @@ export default function JournalPage() {
   const [showNewEntryButton, setShowNewEntryButton] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Fetch user settings to get timezone
   const { data: userSettings } = useSWR(
@@ -73,6 +80,9 @@ export default function JournalPage() {
     console.log("Saving entry:", entry);
     // In a real app, this would save to Firebase or another backend
     // For now, we're using localStorage in the component itself
+    
+    // Trigger a refresh of the timeline to show the new entry immediately
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle saving mood
@@ -82,6 +92,18 @@ export default function JournalPage() {
     // For now, we're using localStorage in the component itself
     
     // Trigger a refresh of the timeline to show the new mood immediately
+    setRefreshTrigger(prev => prev + 1);
+  };
+  
+  // Handle saving activities
+  const handleSaveActivities = (activities: string[]) => {
+    console.log("Saving activities:", activities);
+    // In a real app, this would save to Firebase or another backend
+    // For now, we're using localStorage in the component itself
+    
+    setSelectedActivities(activities);
+    
+    // Trigger a refresh of the timeline to show the new activities immediately
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -103,19 +125,67 @@ export default function JournalPage() {
 
   return (
     <div className="relative">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Journal</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Journal</h1>
+        
+        <div className="flex items-center space-x-2">
+          <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+            <button
+              onClick={() => setViewMode("timeline")}
+              className={`px-3 py-1 text-sm ${
+                viewMode === "timeline"
+                  ? 'bg-teal-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`px-3 py-1 text-sm ${
+                viewMode === "calendar"
+                  ? 'bg-teal-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              Calendar
+            </button>
+          </div>
+          
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+            aria-label="Journal Settings"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
       
-      {/* Timeline at the top */}
+      {/* Timeline or Calendar view */}
       <div className="mb-6 overflow-hidden max-w-full">
-        <JournalTimeline
-          onSelectDate={(date) => {
-            handleSelectDate(date);
-            setIsEditing(date === today);
-          }}
-          timezone={timezone}
-          refreshTrigger={refreshTrigger}
-          autoScrollToLatest={true}
-        />
+        {viewMode === "timeline" ? (
+          <JournalTimeline
+            onSelectDate={(date) => {
+              handleSelectDate(date);
+              setIsEditing(date === today);
+            }}
+            timezone={timezone}
+            refreshTrigger={refreshTrigger}
+            autoScrollToLatest={true}
+          />
+        ) : (
+          <JournalCalendar
+            onSelectDate={(date) => {
+              handleSelectDate(date);
+              setIsEditing(date === today);
+            }}
+            timezone={timezone}
+            refreshTrigger={refreshTrigger}
+          />
+        )}
       </div>
       
       {/* Mobile layout - single column */}
@@ -129,6 +199,7 @@ export default function JournalPage() {
                 date={selectedDate}
                 timezone={timezone}
                 showPrompts={true}
+                activities={selectedActivities}
               />
             ) : (
               <JournalEntryViewer
@@ -143,6 +214,20 @@ export default function JournalPage() {
         {/* Mood Tracker */}
         <div className="mb-6">
           <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+        </div>
+        
+        {/* Activity Tracker */}
+        <div className="mb-6">
+          <ActivityTracker
+            onSave={handleSaveActivities}
+            date={selectedDate}
+            timezone={timezone}
+          />
+        </div>
+        
+        {/* Mood Statistics */}
+        <div className="mb-6">
+          <MoodStatistics timezone={timezone} refreshTrigger={refreshTrigger} />
         </div>
         
         {/* FloCat Summary */}
@@ -164,7 +249,7 @@ export default function JournalPage() {
       {/* Desktop layout - multi-column */}
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         {/* Left column (2/3 width on desktop) - Journal Entry */}
-        <div className="md:col-span-2 w-full">
+        <div className="md:col-span-2 w-full space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md w-full">
             {isSelectedToday || isEditing ? (
               <TodayEntry
@@ -172,6 +257,7 @@ export default function JournalPage() {
                 date={selectedDate}
                 timezone={timezone}
                 showPrompts={true}
+                activities={selectedActivities}
               />
             ) : (
               <JournalEntryViewer
@@ -181,6 +267,16 @@ export default function JournalPage() {
               />
             )}
           </div>
+          
+          {/* Activity Tracker */}
+          <ActivityTracker
+            onSave={handleSaveActivities}
+            date={selectedDate}
+            timezone={timezone}
+          />
+          
+          {/* Mood Statistics */}
+          <MoodStatistics timezone={timezone} refreshTrigger={refreshTrigger} />
         </div>
         
         {/* Right column (1/3 width on desktop) - Widgets */}
@@ -250,6 +346,11 @@ export default function JournalPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
         </svg>
       </button>
+      
+      {/* Journal Settings Modal */}
+      {showSettings && (
+        <JournalSettings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }

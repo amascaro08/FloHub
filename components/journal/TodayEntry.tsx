@@ -8,9 +8,10 @@ interface TodayEntryProps {
   date?: string; // Optional date parameter, defaults to today
   timezone?: string; // User's timezone
   showPrompts?: boolean; // Whether to show journaling prompts
+  activities?: string[]; // Optional activities for the entry
 }
 
-const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPrompts = false }) => {
+const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPrompts = false, activities = [] }) => {
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -123,6 +124,22 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
           Save
         </button>
       </div>
+      
+      {/* Display activities if available */}
+      {activities.length > 0 && (
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2">
+            {activities.map(activity => (
+              <div
+                key={activity}
+                className="px-3 py-1 rounded-full text-xs bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200"
+              >
+                {activity}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showPrompts && isTodayDate ? (
         <div className="flex flex-col h-full overflow-auto">

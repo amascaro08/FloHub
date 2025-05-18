@@ -84,12 +84,41 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
           }
         });
         
+        // Calculate mood trend
+        const moodScores: {[key: string]: number} = {
+          'Rad': 5,
+          'Good': 4,
+          'Meh': 3,
+          'Bad': 2,
+          'Awful': 1
+        };
+        
+        const recentMoods = moodData
+          .filter(m => m.label)
+          .map(m => moodScores[m.label] || 3);
+        
+        let trendDescription = "";
+        if (recentMoods.length >= 3) {
+          // Calculate if trend is improving or declining
+          const firstHalf = recentMoods.slice(0, Math.floor(recentMoods.length / 2));
+          const secondHalf = recentMoods.slice(Math.floor(recentMoods.length / 2));
+          
+          const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length;
+          const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length;
+          
+          if (secondAvg - firstAvg > 0.5) {
+            trendDescription = "Your mood has been improving recently. ";
+          } else if (firstAvg - secondAvg > 0.5) {
+            trendDescription = "Your mood has been declining recently. ";
+          }
+        }
+        
         // Build personalized summary using mood data and themes
-        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month.`;
+        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month. ${trendDescription}`;
         
         // Add theme insights if available
         if (topThemes.length > 0) {
-          summary += ` Your entries frequently mention ${topThemes[0].theme}`;
+          summary += `Your entries frequently mention ${topThemes[0].theme}`;
           if (topThemes.length > 1) {
             summary += ` and ${topThemes[1].theme}`;
           }
@@ -97,10 +126,12 @@ const JournalSummary: React.FC<JournalSummaryProps> = () => {
         }
         
         // Add personalized advice based on mood
-        if (mostCommonMood === "Sad" || mostCommonMood === "Down") {
+        if (mostCommonMood === "Awful" || mostCommonMood === "Bad") {
           summary += " Consider activities that have previously improved your mood, like connecting with friends or spending time outdoors.";
-        } else if (mostCommonMood === "Great" || mostCommonMood === "Good") {
+        } else if (mostCommonMood === "Rad" || mostCommonMood === "Good") {
           summary += " Keep up with the positive activities and relationships that are contributing to your wellbeing.";
+        } else {
+          summary += " Try to identify patterns in your activities and how they affect your mood to find what brings you joy.";
         }
         
         return summary;

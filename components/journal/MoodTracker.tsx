@@ -9,7 +9,7 @@ interface MoodTrackerProps {
 
 const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [selectedEmoji, setSelectedEmoji] = useState<string>('😐');
-  const [selectedLabel, setSelectedLabel] = useState<string>('Okay');
+  const [selectedLabel, setSelectedLabel] = useState<string>('Meh');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
@@ -17,7 +17,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const { data: session } = useSession();
 
   const emojis = ['😞', '😕', '😐', '🙂', '😄'];
-  const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
+  const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
   const commonTags = ['focused', 'drained', 'creative', 'anxious', 'calm', 'energetic', 'tired', 'motivated'];
 
   // Load saved mood from localStorage on component mount
@@ -128,7 +128,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const getMoodTrend = () => {
     if (moodData.filter(m => m.label).length < 3) return "Not enough data";
     
-    const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
+    const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
     const recentMoods = moodData.filter(m => m.label).map(m => labels.indexOf(m.label));
     
     if (recentMoods.length === 0) return "Not enough data";
@@ -146,36 +146,39 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Mood Tracker</h2>
       
       <div className="flex justify-between items-center mb-4">
-        {emojis.map((emoji, index) => (
-          <button
-            key={emoji}
-            onClick={() => handleEmojiSelect(emoji, index)}
-            className={`text-3xl p-2 rounded-full transition-all ${
-              selectedEmoji === emoji 
-                ? 'bg-teal-100 dark:bg-teal-900 scale-110 shadow-md' 
-                : 'hover:bg-slate-100 dark:hover:bg-slate-700'
-            }`}
-            aria-label={`Select mood: ${labels[index]}`}
-          >
-            {emoji}
-          </button>
-        ))}
+        {emojis.map((emoji, index) => {
+          // Get color based on mood
+          const moodColors = [
+            'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200', // Awful
+            'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200', // Bad
+            'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200', // Meh
+            'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200', // Good
+            'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200', // Rad
+          ];
+          
+          const selectedColor = moodColors[index];
+          const isSelected = selectedEmoji === emoji;
+          
+          return (
+            <button
+              key={emoji}
+              onClick={() => handleEmojiSelect(emoji, index)}
+              className={`flex flex-col items-center justify-center p-3 rounded-full transition-all ${
+                isSelected
+                  ? `${selectedColor} scale-110 shadow-md`
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+              aria-label={`Select mood: ${labels[index]}`}
+            >
+              <span className="text-3xl mb-1">{emoji}</span>
+              <span className={`text-xs font-medium ${isSelected ? '' : 'text-slate-600 dark:text-slate-400'}`}>
+                {labels[index]}
+              </span>
+            </button>
+          );
+        })}
       </div>
       
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          How are you feeling?
-        </label>
-        <select
-          value={selectedLabel}
-          onChange={(e) => setSelectedLabel(e.target.value)}
-          className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
-        >
-          {labels.map(label => (
-            <option key={label} value={label}>{label}</option>
-          ))}
-        </select>
-      </div>
       
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
