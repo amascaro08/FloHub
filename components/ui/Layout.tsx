@@ -70,7 +70,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--bg)] text-[var(--fg)]">
+    <div className="flex h-screen bg-[var(--bg)] text-[var(--fg)]">
       {/* backdrop */}
       <div
         className={`
