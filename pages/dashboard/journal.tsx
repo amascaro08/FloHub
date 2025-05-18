@@ -170,7 +170,7 @@ export default function JournalPage() {
       
       // Save sleep data if available
       const sleepQuality = document.querySelector('.ring-blue-500')?.querySelector('.text-xs')?.textContent;
-      const sleepHoursEl = document.querySelector('input[type="range"]');
+      const sleepHoursEl = document.querySelector('input[type="range"]') as HTMLInputElement;
       const sleepHours = sleepHoursEl ? parseFloat(sleepHoursEl.value) : 7;
       
       if (sleepQuality) {
