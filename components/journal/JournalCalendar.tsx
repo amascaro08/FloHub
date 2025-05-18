@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { getCurrentDate, formatDate, getDateStorageKey } from '@/lib/dateUtils';
+import { getCurrentDate, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
 interface JournalCalendarProps {
@@ -20,160 +20,157 @@ interface DayData {
   activities?: string[];
 }
 
-function JournalCalendar({
-  onSelectDate,
-  timezone,
-  refreshTrigger = 0
-}: JournalCalendarProps): React.ReactElement {
+const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
+  const { onSelectDate, timezone, refreshTrigger = 0 } = props;
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [calendarDays, setCalendarDays] = useState<DayData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { data: session } = useSession();
 
   // Generate calendar days for the current month using API data
   useEffect(() => {
     const fetchCalendarData = async () => {
+      if (!session?.user?.email) return;
+      
+      setIsLoading(true);
+      setCalendarDays([]);
+      
       try {
-        if (session?.user?.email) {
-          // Set a loading state
-          setCalendarDays([]);
+        const days: DayData[] = [];
+        
+        // Get all dates in the current month
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        
+        // Get the first day of the month and the last day
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
+        const firstDayOfWeek = firstDay.getDay();
+        
+        // Add padding days from previous month
+        const prevMonth = new Date(year, month, 0);
+        const prevMonthDays = prevMonth.getDate();
+        
+        for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+          const date = new Date(year, month - 1, prevMonthDays - i);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
-          const days: DayData[] = [];
-          
-          // Get all dates in the current month
-          const year = currentMonth.getFullYear();
-          const month = currentMonth.getMonth();
-          
-          // Get the first day of the month and the last day
-          const firstDay = new Date(year, month, 1);
-          const lastDay = new Date(year, month + 1, 0);
-          
-          // Get the day of the week for the first day (0 = Sunday, 1 = Monday, etc.)
-          const firstDayOfWeek = firstDay.getDay();
-          
-          // Add padding days from previous month
-          const prevMonth = new Date(year, month, 0);
-          const prevMonthDays = prevMonth.getDate();
-          
-          for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-            const date = new Date(year, month - 1, prevMonthDays - i);
-            const dateStr = formatDate(date.toISOString(), timezone, {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit'
-            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-            
-            days.push({
-              date: dateStr,
-              hasEntry: false,
-              mood: undefined
-            });
-          }
-          
-          // Create basic calendar structure first
-          const currentMonthDays: DayData[] = [];
-          for (let day = 1; day <= lastDay.getDate(); day++) {
-            const date = new Date(year, month, day);
-            const dateStr = formatDate(date.toISOString(), timezone, {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit'
-            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-            
-            currentMonthDays.push({
-              date: dateStr,
-              hasEntry: false
-            });
-          }
-          
-          // Add current month days to the calendar
-          days.push(...currentMonthDays);
-          
-          // Add padding days for next month to complete the grid
-          const remainingDays = 42 - days.length; // 6 rows of 7 days
-          for (let day = 1; day <= remainingDays; day++) {
-            const date = new Date(year, month + 1, day);
-            const dateStr = formatDate(date.toISOString(), timezone, {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit'
-            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-            
-            days.push({
-              date: dateStr,
-              hasEntry: false,
-              mood: undefined
-            });
-          }
-          
-          // Set the basic calendar structure first so it renders quickly
-          setCalendarDays(days);
-          
-          // Then fetch data for the current month days only
-          const updatedDays = [...days];
-          const startIdx = firstDayOfWeek;
-          const endIdx = startIdx + lastDay.getDate();
-          
-          // Batch the API calls for better performance
-          const promises = [];
-          
-          for (let i = startIdx; i < endIdx; i++) {
-            const dateStr = updatedDays[i].date;
-            
-            // Create promises for all API calls
-            promises.push(
-              axios.get(`/api/journal/entry?date=${dateStr}`)
-                .then(response => {
-                  if (response.data && response.data.content && response.data.content.trim() !== '') {
-                    updatedDays[i].hasEntry = true;
-                  }
-                })
-                .catch(() => {})
-            );
-            
-            promises.push(
-              axios.get(`/api/journal/mood?date=${dateStr}`)
-                .then(response => {
-                  if (response.data && response.data.emoji && response.data.label) {
-                    const moodScores: {[key: string]: number} = {
-                      'Rad': 5,
-                      'Good': 4,
-                      'Meh': 3,
-                      'Bad': 2,
-                      'Awful': 1
-                    };
-                    
-                    updatedDays[i].mood = {
-                      emoji: response.data.emoji,
-                      label: response.data.label,
-                      score: moodScores[response.data.label] || 3
-                    };
-                  }
-                })
-                .catch(() => {})
-            );
-            
-            promises.push(
-              axios.get(`/api/journal/activities?date=${dateStr}`)
-                .then(response => {
-                  if (response.data &&
-                      response.data.activities &&
-                      Array.isArray(response.data.activities) &&
-                      response.data.activities.length > 0) {
-                    updatedDays[i].activities = response.data.activities;
-                  }
-                })
-                .catch(() => {})
-            );
-          }
-          
-          // Wait for all promises to resolve
-          await Promise.allSettled(promises);
-          
-          // Update the calendar with the fetched data
-          setCalendarDays(updatedDays);
+          days.push({
+            date: dateStr,
+            hasEntry: false,
+            mood: undefined
+          });
         }
-      }
+        
+        // Create basic calendar structure first
+        const currentMonthDays: DayData[] = [];
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+          const date = new Date(year, month, day);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
+          currentMonthDays.push({
+            date: dateStr,
+            hasEntry: false
+          });
+        }
+        
+        // Add current month days to the calendar
+        days.push(...currentMonthDays);
+        
+        // Add padding days for next month to complete the grid
+        const remainingDays = 42 - days.length; // 6 rows of 7 days
+        for (let day = 1; day <= remainingDays; day++) {
+          const date = new Date(year, month + 1, day);
+          const dateStr = formatDate(date.toISOString(), timezone, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+          
+          days.push({
+            date: dateStr,
+            hasEntry: false,
+            mood: undefined
+          });
+        }
+        
+        // Set the basic calendar structure first so it renders quickly
+        setCalendarDays(days);
+        
+        // Then fetch data for the current month days only
+        const updatedDays = [...days];
+        const startIdx = firstDayOfWeek;
+        const endIdx = startIdx + lastDay.getDate();
+        
+        // Batch the API calls for better performance
+        const promises = [];
+        
+        for (let i = startIdx; i < endIdx; i++) {
+          const dateStr = updatedDays[i].date;
+          
+          // Create promises for all API calls
+          promises.push(
+            axios.get(`/api/journal/entry?date=${dateStr}`)
+              .then(response => {
+                if (response.data && response.data.content && response.data.content.trim() !== '') {
+                  updatedDays[i].hasEntry = true;
+                }
+              })
+              .catch(() => {/* Ignore 404 errors */})
+          );
+          
+          promises.push(
+            axios.get(`/api/journal/mood?date=${dateStr}`)
+              .then(response => {
+                if (response.data && response.data.emoji && response.data.label) {
+                  const moodScores: {[key: string]: number} = {
+                    'Rad': 5,
+                    'Good': 4,
+                    'Meh': 3,
+                    'Bad': 2,
+                    'Awful': 1
+                  };
+                  
+                  updatedDays[i].mood = {
+                    emoji: response.data.emoji,
+                    label: response.data.label,
+                    score: moodScores[response.data.label] || 3
+                  };
+                }
+              })
+              .catch(() => {/* Ignore 404 errors */})
+          );
+          
+          promises.push(
+            axios.get(`/api/journal/activities?date=${dateStr}`)
+              .then(response => {
+                if (response.data &&
+                    response.data.activities &&
+                    Array.isArray(response.data.activities) &&
+                    response.data.activities.length > 0) {
+                  updatedDays[i].activities = response.data.activities;
+                }
+              })
+              .catch(() => {/* Ignore 404 errors */})
+          );
+        }
+        
+        // Wait for all promises to resolve
+        await Promise.allSettled(promises);
+        
+        // Update the calendar with the fetched data
+        setCalendarDays(updatedDays);
       } catch (error) {
         console.error("Error generating calendar:", error);
         // Set a minimal calendar with just the current month's days
@@ -193,6 +190,8 @@ function JournalCalendar({
         }
         
         setCalendarDays(days);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -265,7 +264,7 @@ function JournalCalendar({
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6 w-full overflow-hidden">
       <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Calendar View</h2>
-        {calendarDays.length === 0 && (
+        {isLoading && (
           <div className="flex items-center">
             <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
             <span className="text-xs text-slate-500 dark:text-slate-400">Loading calendar...</span>
