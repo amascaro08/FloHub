@@ -173,25 +173,6 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
           // Update the calendar with the fetched data
           setCalendarDays(updatedDays);
         }
-        
-        // Add padding days for next month to complete the grid
-        const remainingDays = 42 - days.length; // 6 rows of 7 days
-        for (let day = 1; day <= remainingDays; day++) {
-          const date = new Date(year, month + 1, day);
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-          
-          days.push({
-            date: dateStr,
-            hasEntry: false,
-            mood: undefined
-          });
-        }
-        
-        setCalendarDays(days);
       }
       } catch (error) {
         console.error("Error generating calendar:", error);
