@@ -18,7 +18,7 @@ const nav = [
   { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon }, // Using Calendar icon for Journal for now
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Settings", href: "/dashboard/settings-modular", icon: Settings },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {

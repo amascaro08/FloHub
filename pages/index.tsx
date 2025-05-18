@@ -42,7 +42,7 @@ export default function Index() {
           <div className="md:w-1/2">
             <img
               src="/flohub_flocat.png"
-              alt="FlowHub Interface"
+              alt="FloHub Interface"
               className="rounded-lg shadow-2xl"
             />
           </div>

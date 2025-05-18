@@ -37,7 +37,7 @@ npm run dev
 ```
 
 ## Troubleshooting
-
+test
 ### "VAPID public key is not configured" Error
 
 If you see this error when trying to enable notifications, it means the VAPID public key is not properly configured. Check that:

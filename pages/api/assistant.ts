@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import OpenAI from "openai";
+import { firestore } from "../../lib/firebaseAdmin";
 import {
   fetchUserNotes,
   fetchUserMeetingNotes,
@@ -159,14 +160,47 @@ export default async function handler(
       fetchUserConversations(email)
     ]);
     
+    // Fetch user settings to get FloCat style preference
+    const userSettingsDoc = await firestore.collection("users").doc(email).collection("settings").doc("userSettings").get();
+    const userSettings = userSettingsDoc.exists ? userSettingsDoc.data() : { floCatStyle: "default", floCatPersonality: [], preferredName: "" };
+    const floCatStyle = userSettings?.floCatStyle || "default";
+    const floCatPersonality = userSettings?.floCatPersonality || [];
+    const preferredName = userSettings?.preferredName || "";
+    
     // Start context processing
     const relevantContextPromise = findRelevantContext(userInput, notes, meetings, conversations);
 
-    // Prepare base messages while context is being processed
+    // Prepare base messages while context is being processed with the appropriate style
+    let styleInstruction = "";
+    
+    // Build personality traits string from keywords
+    const personalityTraits = floCatPersonality.length > 0
+      ? `Your personality traits include: ${floCatPersonality.join(", ")}.`
+      : "";
+    
+    // Use preferred name if available
+    const nameInstruction = preferredName
+      ? `Address the user as "${preferredName}".`
+      : "";
+    
+    switch(floCatStyle) {
+      case "more_catty":
+        styleInstruction = `You are FloCat, an extremely playful and cat-like AI assistant. Use LOTS of cat puns, cat emojis (😺 😻 🐱), and cat-like expressions (like "purr-fect", "meow", "paw-some"). Occasionally mention cat behaviors like purring, pawing at things, or chasing laser pointers. Be enthusiastic and playful in all your responses. ${personalityTraits} ${nameInstruction}`;
+        break;
+      case "less_catty":
+        styleInstruction = `You are FloCat, a helpful and friendly AI assistant. While you have a cat mascot, you should minimize cat puns and references. Focus on being helpful and friendly while only occasionally using a cat emoji (😺) or making a subtle reference to your cat nature. ${personalityTraits} ${nameInstruction}`;
+        break;
+      case "professional":
+        styleInstruction = `You are FloCat, a professional and efficient AI assistant. Provide concise, business-like responses with no cat puns, emojis, or playful language. Focus on delivering information clearly and efficiently. Use formal language and avoid any cat-related personality traits. ${personalityTraits} ${nameInstruction}`;
+        break;
+      default: // default style
+        styleInstruction = `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺, so occasionally use cat puns and references. ${personalityTraits} ${nameInstruction}`;
+    }
+    
     const baseMessages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺.`,
+        content: styleInstruction,
       }
     ];
     

@@ -345,9 +345,36 @@ const AtAGlanceWidget = () => {
             const limitedEvents = upcomingEventsForPrompt.slice(0, 3);
             const limitedTasks = incompleteTasks.slice(0, 3);
             
+            // Get the user's FloCat style and personality preferences from settings
+            const floCatStyle = loadedSettings?.floCatStyle || "default";
+            const floCatPersonality = loadedSettings?.floCatPersonality || [];
+            const preferredName = loadedSettings?.preferredName || userName;
+            
+            // Build personality traits string from keywords
+            const personalityTraits = floCatPersonality.length > 0
+              ? `Your personality traits include: ${floCatPersonality.join(", ")}.`
+              : "";
+            
+            // Generate the appropriate prompt based on the FloCat style
+            let styleInstruction = "";
+            
+            switch(floCatStyle) {
+              case "more_catty":
+                styleInstruction = `You are FloCat, an extremely playful and cat-like AI assistant. Use LOTS of cat puns, cat emojis (😺 😻 🐱), and cat-like expressions (like 'purr-fect', 'meow', 'paw-some'). Be enthusiastic and playful in your summary. ${personalityTraits}`;
+                break;
+              case "less_catty":
+                styleInstruction = `You are FloCat, a helpful and friendly AI assistant. While you have a cat mascot, you should minimize cat puns and references. Focus on being helpful and friendly while only occasionally using a cat emoji (😺). ${personalityTraits}`;
+                break;
+              case "professional":
+                styleInstruction = `You are FloCat, a professional and efficient AI assistant. Provide a concise, business-like summary with no cat puns, emojis, or playful language. Focus on delivering information clearly and efficiently. Use formal language. ${personalityTraits}`;
+                break;
+              default: // default style
+                styleInstruction = `You are FloCat, an AI assistant with a friendly, sarcastic cat personality 🐾. ${personalityTraits}`;
+            }
+            
             // Generate AI message with a more compact prompt
-            const prompt = `You are FloCat, an AI assistant with a friendly, sarcastic cat personality 🐾.
-Generate a short "At A Glance" message for ${userName} with:
+            const prompt = `${styleInstruction}
+Generate a short "At A Glance" message for ${preferredName} with:
 
 EVENTS: ${limitedEvents.map((event: CalendarEvent) => {
   const eventTime = event.start.dateTime
