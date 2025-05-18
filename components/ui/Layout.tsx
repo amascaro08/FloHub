@@ -70,7 +70,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+    <div className="flex flex-col h-screen bg-[var(--bg)] text-[var(--fg)]">
       {/* backdrop */}
       <div
         className={`
@@ -155,7 +155,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       </aside>
 
       {/* main */}
-      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out">
+      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
         {/* header */}
         <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center">
@@ -215,8 +215,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4">
-          {children}
+        <main className="flex-1 overflow-auto p-4 max-w-full">
+          <div className="w-full max-w-[100vw]">
+            {children}
+          </div>
         </main>
       </div>
     </div>

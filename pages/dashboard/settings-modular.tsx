@@ -222,7 +222,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="p-4 md:p-6 space-y-6">
+    <main className="p-4 md:p-6 space-y-6 max-w-full">
       <DebugNavigation />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
@@ -241,8 +241,8 @@ export default function SettingsPage() {
       </div>
       
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <nav className="flex flex-nowrap -mb-px">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto pb-1 w-full">
+        <nav className="flex flex-nowrap -mb-px min-w-max">
           <button
             className={`py-2 px-4 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === "calendar"
@@ -307,6 +307,7 @@ export default function SettingsPage() {
       </div>
       
       {/* Tab Content */}
+      <div className="w-full overflow-x-hidden">
       {activeTab === "calendar" && (
         <CalendarSettings
           settings={settings}
@@ -360,6 +361,8 @@ export default function SettingsPage() {
         />
       )}
 
+      </div>
+      
       <div className="flex justify-end mt-6">
         <button
           onClick={save}

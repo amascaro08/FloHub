@@ -34,8 +34,8 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
   return (
     <div className="space-y-6">
       {/* Calendar Sources */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-        <div className="flex justify-between items-center mb-4">
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-hidden">
+        <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
           <h2 className="text-lg font-medium">Calendar Sources</h2>
           <button
             onClick={() => {
@@ -60,8 +60,8 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         <div className="space-y-4 mb-6">
           {settings.calendarSources && settings.calendarSources.length > 0 ? (
             settings.calendarSources.map((source, index) => (
-              <div key={source.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
+              <div key={source.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-hidden">
+                <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
                   <div>
                     <h3 className="font-medium text-lg">{source.name}</h3>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -70,7 +70,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                        source.type === "apple" ? "Apple Calendar" : "Other Calendar"}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                     <label className="inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -121,7 +121,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 {/* Tags */}
                 <div className="mt-2">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tags:</div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
                     {source.tags && source.tags.length > 0 ? (
                       source.tags.map(tag => (
                         <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full text-xs">
@@ -144,7 +144,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       </section>
       
       {/* Default view filter */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-hidden">
         <h2 className="text-lg font-medium mb-4">Default Date Filter</h2>
         <select
           value={settings.defaultView}

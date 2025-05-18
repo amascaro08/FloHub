@@ -179,10 +179,10 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <div className="p-4 sm:p-6">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Journal Settings</h2>
             <button
               onClick={onClose}
@@ -307,7 +307,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
               <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
                 Export format
               </label>
-              <div className="flex space-x-4">
+              <div className="flex flex-wrap gap-4">
                 <div className="flex items-center">
                   <input
                     type="radio"
@@ -360,7 +360,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
             </p>
           </div>
           
-          <div className="flex justify-end space-x-3 relative">
+          <div className="flex flex-wrap justify-end gap-3 relative">
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"

@@ -191,11 +191,11 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6 w-full overflow-hidden">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Calendar View</h2>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <button
             onClick={goToPreviousMonth}
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -234,7 +234,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
       </div>
       
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 mb-4">
+      <div className="grid grid-cols-7 gap-1 mb-4 w-full min-w-[280px] max-w-full overflow-x-auto">
         {/* Weekday headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div key={day} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 p-1">
@@ -249,6 +249,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
             onClick={() => handleDateSelect(day.date)}
             className={`
               relative aspect-square flex flex-col items-center justify-center rounded-lg transition-all p-1
+              min-w-[30px] w-full
               ${isCurrentMonth(day.date) ? 'opacity-100' : 'opacity-40'}
               ${selectedDate === day.date ? 'ring-2 ring-teal-500 dark:ring-teal-400' : ''}
               ${getMoodColor(day.mood?.score)}
