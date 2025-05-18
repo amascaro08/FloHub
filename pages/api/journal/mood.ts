@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from 'firebase/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use getToken instead of getSession for better compatibility with API routes
+  // Use getToken instead of getSession for better compatibility with API routes 
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,

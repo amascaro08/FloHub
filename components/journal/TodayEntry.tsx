@@ -19,7 +19,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [editorContent, setEditorContent] = useState('');
   const { data: session } = useSession();
   
-  // Get the current date in YYYY-MM-DD format or use provided date
+  // Get the current date in YYYY-MM-DD format or use provided date 
   const entryDate = date || getCurrentDate(timezone);
   const isTodayDate = !date || isToday(date, timezone);
 

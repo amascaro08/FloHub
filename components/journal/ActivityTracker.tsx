@@ -19,7 +19,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const { data: session } = useSession();
   
   // Default activities
-  // Default activities with icons
+  // Default activities with icons 
   const defaultActivities = [
     { name: 'Work', icon: '💼' },
     { name: 'Exercise', icon: '🏋️' },

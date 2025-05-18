@@ -22,7 +22,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
   const commonTags = ['focused', 'drained', 'creative', 'anxious', 'calm', 'energetic', 'tired', 'motivated'];
 
-  // Load saved mood from API on component mount
+  // Load saved mood from API on component mount 
   useEffect(() => {
     const fetchMoodData = async () => {
       if (session?.user?.email) {

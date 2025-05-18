@@ -7,7 +7,7 @@ import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";
 import axios from "axios";
 
-// Import journal components
+// Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
 import JournalTimeline from "@/components/journal/JournalTimeline";

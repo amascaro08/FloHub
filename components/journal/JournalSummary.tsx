@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
 interface JournalSummaryProps {
-  refreshTrigger?: number; // Trigger to refresh the summary
+  refreshTrigger?: number; // Trigger to refresh the summary 
 }
 
 interface MoodData {

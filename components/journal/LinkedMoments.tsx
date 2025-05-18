@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import { getCurrentDate } from '@/lib/dateUtils';
 
 interface LinkedMomentsProps {
-  date?: string; // Optional date to show moments for a specific day
+  date?: string; // Optional date to show moments for a specific day 
   timezone?: string; // User's timezone
 }
 

@@ -5,7 +5,7 @@ import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/da
 interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
   timezone?: string;
-  refreshTrigger?: number; // A value that changes to trigger a refresh
+  refreshTrigger?: number; // A value that changes to trigger a refresh 
   autoScrollToLatest?: boolean; // Whether to auto-scroll to the latest date
 }
 

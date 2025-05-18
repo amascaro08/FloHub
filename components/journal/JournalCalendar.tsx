@@ -28,7 +28,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { data: session } = useSession();
 
-  // Generate calendar days for the current month using API data
+  // Generate calendar days for the current month using API data 
   useEffect(() => {
     const fetchCalendarData = async () => {
       if (!session?.user?.email) return;
