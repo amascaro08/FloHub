@@ -80,7 +80,14 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 w-full">
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Sleep Quality</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Sleep Quality</h3>
+        {sleepQuality && (
+          <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
+            {sleepQuality} - {sleepHours} hours
+          </span>
+        )}
+      </div>
       
       <div className="mb-4">
         <div className="flex flex-wrap gap-2 justify-between">
@@ -90,7 +97,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
               onClick={() => handleSaveSleep(option.quality, sleepHours)}
               className={`flex flex-col items-center p-2 rounded-lg transition-all ${
                 sleepQuality === option.quality
-                  ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500'
+                  ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500 scale-110 shadow-md'
                   : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
               title={option.description}
@@ -140,7 +147,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
         </div>
       </div>
       
-      {sleepQuality && (
+      {sleepQuality ? (
         <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
           <p>
             {sleepQuality === 'Excellent' && 'You had an excellent night of sleep!'}
@@ -150,6 +157,10 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
             {sleepQuality === 'Terrible' && 'You had a terrible night of sleep.'}
             {` (${sleepHours} hours)`}
           </p>
+        </div>
+      ) : (
+        <div className="mt-3 text-sm text-slate-500 dark:text-slate-400 italic">
+          <p>Select your sleep quality above</p>
         </div>
       )}
     </div>

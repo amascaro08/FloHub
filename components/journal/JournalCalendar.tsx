@@ -35,6 +35,9 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
     const fetchCalendarData = async () => {
       try {
         if (session?.user?.email) {
+          // Set a loading state
+          setCalendarDays([]);
+          
           const days: DayData[] = [];
           
           // Get all dates in the current month
@@ -66,70 +69,109 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
               mood: undefined
             });
           }
-        
-        // Add days for current month
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-          const date = new Date(year, month, day);
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
-          const dayData: DayData = {
-            date: dateStr,
-            hasEntry: false
-          };
-          
-          // Try to load entry data
-          try {
-            const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`);
-            // Check if we have actual content
-            if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
-              dayData.hasEntry = true;
-            }
-          } catch (error) {
-            console.error(`Error fetching entry for ${dateStr}:`, error);
+          // Create basic calendar structure first
+          const currentMonthDays: DayData[] = [];
+          for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(year, month, day);
+            const dateStr = formatDate(date.toISOString(), timezone, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+            
+            currentMonthDays.push({
+              date: dateStr,
+              hasEntry: false
+            });
           }
           
-          // Try to load mood data
-          try {
-            const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
-            // Check if we have actual mood data (not empty defaults)
-            if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
-              // Map mood labels to scores for color coding
-              const moodScores: {[key: string]: number} = {
-                'Rad': 5,
-                'Good': 4,
-                'Meh': 3,
-                'Bad': 2,
-                'Awful': 1
-              };
-              
-              dayData.mood = {
-                emoji: moodResponse.data.emoji,
-                label: moodResponse.data.label,
-                score: moodScores[moodResponse.data.label] || 3
-              };
-            }
-          } catch (error) {
-            console.error(`Error fetching mood for ${dateStr}:`, error);
+          // Add current month days to the calendar
+          days.push(...currentMonthDays);
+          
+          // Add padding days for next month to complete the grid
+          const remainingDays = 42 - days.length; // 6 rows of 7 days
+          for (let day = 1; day <= remainingDays; day++) {
+            const date = new Date(year, month + 1, day);
+            const dateStr = formatDate(date.toISOString(), timezone, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+            
+            days.push({
+              date: dateStr,
+              hasEntry: false,
+              mood: undefined
+            });
           }
           
-          // Try to load activities data
-          try {
-            const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
-            if (activitiesResponse.data &&
-                activitiesResponse.data.activities &&
-                Array.isArray(activitiesResponse.data.activities) &&
-                activitiesResponse.data.activities.length > 0) {
-              dayData.activities = activitiesResponse.data.activities;
-            }
-          } catch (error) {
-            console.error(`Error fetching activities for ${dateStr}:`, error);
+          // Set the basic calendar structure first so it renders quickly
+          setCalendarDays(days);
+          
+          // Then fetch data for the current month days only
+          const updatedDays = [...days];
+          const startIdx = firstDayOfWeek;
+          const endIdx = startIdx + lastDay.getDate();
+          
+          // Batch the API calls for better performance
+          const promises = [];
+          
+          for (let i = startIdx; i < endIdx; i++) {
+            const dateStr = updatedDays[i].date;
+            
+            // Create promises for all API calls
+            promises.push(
+              axios.get(`/api/journal/entry?date=${dateStr}`)
+                .then(response => {
+                  if (response.data && response.data.content && response.data.content.trim() !== '') {
+                    updatedDays[i].hasEntry = true;
+                  }
+                })
+                .catch(() => {})
+            );
+            
+            promises.push(
+              axios.get(`/api/journal/mood?date=${dateStr}`)
+                .then(response => {
+                  if (response.data && response.data.emoji && response.data.label) {
+                    const moodScores: {[key: string]: number} = {
+                      'Rad': 5,
+                      'Good': 4,
+                      'Meh': 3,
+                      'Bad': 2,
+                      'Awful': 1
+                    };
+                    
+                    updatedDays[i].mood = {
+                      emoji: response.data.emoji,
+                      label: response.data.label,
+                      score: moodScores[response.data.label] || 3
+                    };
+                  }
+                })
+                .catch(() => {})
+            );
+            
+            promises.push(
+              axios.get(`/api/journal/activities?date=${dateStr}`)
+                .then(response => {
+                  if (response.data &&
+                      response.data.activities &&
+                      Array.isArray(response.data.activities) &&
+                      response.data.activities.length > 0) {
+                    updatedDays[i].activities = response.data.activities;
+                  }
+                })
+                .catch(() => {})
+            );
           }
           
-          days.push(dayData);
+          // Wait for all promises to resolve
+          await Promise.allSettled(promises);
+          
+          // Update the calendar with the fetched data
+          setCalendarDays(updatedDays);
         }
         
         // Add padding days for next month to complete the grid
@@ -242,6 +284,12 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 sm:p-6 w-full overflow-hidden">
       <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Calendar View</h2>
+        {calendarDays.length === 0 && (
+          <div className="flex items-center">
+            <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Loading calendar...</span>
+          </div>
+        )}
         
         <div className="flex items-center space-x-2 flex-shrink-0">
           <button

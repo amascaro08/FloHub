@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";
+import axios from "axios";
 
 // Import journal components
 import TodayEntry from "@/components/journal/TodayEntry";
@@ -31,6 +32,8 @@ export default function JournalPage() {
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   
   // Fetch user settings to get timezone
   const { data: userSettings } = useSWR(
@@ -126,6 +129,82 @@ export default function JournalPage() {
     console.log("Selected date:", date);
   };
 
+  // Function to save all journal data for the selected date
+  const saveAllJournalData = async () => {
+    if (!session?.user?.email) return;
+    
+    setIsSaving(true);
+    
+    try {
+      // Get the current journal entry content
+      const entryElement = document.querySelector('.ProseMirror');
+      let entryContent = '';
+      if (entryElement) {
+        entryContent = entryElement.innerHTML;
+      }
+      
+      // Save journal entry
+      if (entryContent) {
+        const timestamp = new Date().toISOString();
+        await axios.post('/api/journal/entry', {
+          date: selectedDate,
+          content: entryContent,
+          timestamp
+        });
+      }
+      
+      // Save mood data if available
+      const moodEmoji = document.querySelector('.scale-110 .text-3xl')?.textContent;
+      const moodLabel = document.querySelector('.scale-110 .text-xs')?.textContent;
+      const moodTags = Array.from(document.querySelectorAll('.bg-teal-500.text-white:not(.rounded-lg)'))
+        .map(el => el.textContent);
+      
+      if (moodEmoji && moodLabel) {
+        await axios.post('/api/journal/mood', {
+          date: selectedDate,
+          emoji: moodEmoji,
+          label: moodLabel,
+          tags: moodTags
+        });
+      }
+      
+      // Save sleep data if available
+      const sleepQuality = document.querySelector('.ring-blue-500')?.querySelector('.text-xs')?.textContent;
+      const sleepHoursEl = document.querySelector('input[type="range"]');
+      const sleepHours = sleepHoursEl ? parseFloat(sleepHoursEl.value) : 7;
+      
+      if (sleepQuality) {
+        await axios.post('/api/journal/sleep', {
+          date: selectedDate,
+          quality: sleepQuality,
+          hours: sleepHours
+        });
+      }
+      
+      // Save activities if available
+      const activities = Array.from(document.querySelectorAll('.bg-teal-100 span:not(.mr-1)'))
+        .map(el => el.textContent);
+      
+      if (activities.length > 0) {
+        await axios.post('/api/journal/activities', {
+          date: selectedDate,
+          activities
+        });
+      }
+      
+      // Show success message
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      
+      // Trigger refresh
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error saving journal data:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Show loading state
   if (status === "loading") {
     return <p className="text-center p-8">Loading journal...</p>;
@@ -142,6 +221,30 @@ export default function JournalPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Journal</h1>
         
         <div className="flex items-center space-x-2">
+          {/* Save All Button */}
+          <button
+            onClick={saveAllJournalData}
+            disabled={isSaving}
+            className={`px-3 py-1 rounded-md text-sm flex items-center ${
+              isSaving
+                ? 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                : 'bg-teal-500 text-white hover:bg-teal-600 transition-colors'
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Save All
+              </>
+            )}
+          </button>
           <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
             <button
               onClick={() => setViewMode("timeline")}
@@ -394,6 +497,13 @@ export default function JournalPage() {
       {/* Journal Settings Modal */}
       {showSettings && (
         <JournalSettings onClose={() => setShowSettings(false)} />
+      )}
+      
+      {/* Save success message */}
+      {saveSuccess && (
+        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm shadow-lg animate-fade-in-out">
+          All journal data saved successfully! ✅
+        </div>
       )}
     </div>
   );
