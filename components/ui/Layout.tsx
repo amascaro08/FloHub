@@ -91,7 +91,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           border-r border-neutral-200 dark:border-neutral-700
         `}
       >
-        <div className={`py-[17px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!desktopSidebarCollapsed && (
             <img src="/FloHub_Logo_Transparent.png" alt="FloHub" className="h-10 animate-pulse-subtle"/>
           )}
