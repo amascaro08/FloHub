@@ -20,11 +20,11 @@ interface DayData {
   activities?: string[];
 }
 
-const JournalCalendar: React.FC<JournalCalendarProps> = ({
+function JournalCalendar({
   onSelectDate,
   timezone,
   refreshTrigger = 0
-}): React.ReactNode => {
+}: JournalCalendarProps): React.ReactElement {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [calendarDays, setCalendarDays] = useState<DayData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
