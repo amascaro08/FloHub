@@ -1,16 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { getToken } from 'next-auth/jwt';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from 'firebase/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
+  // Use getToken instead of getSession for better compatibility with API routes
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
   
-  if (!session || !session.user?.email) {
+  if (!token?.email) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = session.user.email;
+  const userEmail = token.email as string;
   
   // Handle GET request - retrieve journal entry
   if (req.method === 'GET') {
