@@ -25,7 +25,9 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
     const fetchSleepData = async () => {
       if (session?.user?.email) {
         try {
-          const response = await axios.get(`/api/journal/sleep?date=${today}`);
+          const response = await axios.get(`/api/journal/sleep?date=${today}`, {
+            withCredentials: true
+          });
           if (response.data) {
             // Only set quality if it's not empty
             if (response.data.quality) {
@@ -57,6 +59,8 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
         date: today,
         quality,
         hours
+      }, {
+        withCredentials: true
       });
       
       // Call the onSave callback

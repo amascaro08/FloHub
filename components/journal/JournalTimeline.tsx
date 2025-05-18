@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
+import axios from 'axios';
 
 interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
@@ -33,123 +34,136 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
 
   // Generate dates for the timeline for the current month
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      const dates: JournalEntry[] = [];
-      const entriesMap: {[key: string]: boolean} = {};
-      
-      // Get all dates in the current month
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      
-      // Get the last 7 days of the previous month (if we're not in the first week)
-      const today = new Date();
-      const showRecent = month === today.getMonth() && year === today.getFullYear();
-      
-      if (showRecent) {
-        // Show the last 14 days if we're in the current month
-        const recentDates = [];
-        for (let i = 13; i >= 0; i--) {
-          // Create date object for the current timezone
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          
-          // Format the date in YYYY-MM-DD format for the user's timezone
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-          
-          // Try to load mood and entry for this date
-          const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
-          const entryKey = getDateStorageKey('journal_entry', session.user.email, timezone, dateStr);
-          
-          const savedMood = localStorage.getItem(moodKey);
-          const savedEntry = localStorage.getItem(entryKey);
-          
-          const entry: JournalEntry = { date: dateStr };
-          
-          if (savedMood) {
+    if (session?.user?.email) {
+      const fetchTimelineData = async () => {
+        const dates: JournalEntry[] = [];
+        const entriesMap: {[key: string]: boolean} = {};
+        
+        // Get all dates in the current month
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        // Get the last 7 days of the previous month (if we're not in the first week)
+        const today = new Date();
+        const showRecent = month === today.getMonth() && year === today.getFullYear();
+        
+        if (showRecent) {
+          // Show the last 14 days if we're in the current month
+          const recentDates = [];
+          for (let i = 13; i >= 0; i--) {
+            // Create date object for the current timezone
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            
+            // Format the date in YYYY-MM-DD format for the user's timezone
+            const dateStr = formatDate(date.toISOString(), timezone, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+            
+            const entry: JournalEntry = { date: dateStr };
+            
+            // Fetch mood data from API
             try {
-              entry.mood = JSON.parse(savedMood);
-            } catch (e) {
-              console.error('Error parsing saved mood:', e);
+              const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`, {
+                withCredentials: true
+              });
+              if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
+                entry.mood = {
+                  emoji: moodResponse.data.emoji,
+                  label: moodResponse.data.label,
+                  tags: moodResponse.data.tags || []
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching mood for ${dateStr}:`, error);
             }
+            
+            // Fetch entry data from API
+            try {
+              const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
+                withCredentials: true
+              });
+              if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
+                entry.content = entryResponse.data.content;
+                entriesMap[dateStr] = true;
+              }
+            } catch (error) {
+              console.error(`Error fetching entry for ${dateStr}:`, error);
+            }
+            
+            recentDates.push(entry);
           }
           
-          if (savedEntry) {
+          setEntries(recentDates);
+        } else {
+          // For past months, scan the entire month for entries
+          for (let day = 1; day <= lastDay.getDate(); day++) {
+            // Create date object for the current timezone
+            const date = new Date(year, month, day);
+            
+            // Format the date in YYYY-MM-DD format for the user's timezone
+            const dateStr = formatDate(date.toISOString(), timezone, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+            
+            const entry: JournalEntry = { date: dateStr };
+            
+            // Fetch mood data from API
             try {
-              const parsed = JSON.parse(savedEntry);
-              entry.content = parsed.content;
-              entriesMap[dateStr] = true;
-            } catch (e) {
-              console.error('Error parsing saved entry:', e);
+              const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`, {
+                withCredentials: true
+              });
+              if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
+                entry.mood = {
+                  emoji: moodResponse.data.emoji,
+                  label: moodResponse.data.label,
+                  tags: moodResponse.data.tags || []
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching mood for ${dateStr}:`, error);
             }
+            
+            // Fetch entry data from API
+            try {
+              const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
+                withCredentials: true
+              });
+              if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
+                entry.content = entryResponse.data.content;
+                entriesMap[dateStr] = true;
+              }
+            } catch (error) {
+              console.error(`Error fetching entry for ${dateStr}:`, error);
+            }
+            
+            dates.push(entry);
           }
           
-          recentDates.push(entry);
+          setEntries(dates);
         }
         
-        setEntries(recentDates);
-      } else {
-        // For past months, scan the entire month for entries
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-          // Create date object for the current timezone
-          const date = new Date(year, month, day);
-          
-          // Format the date in YYYY-MM-DD format for the user's timezone
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-          
-          // Try to load mood and entry for this date
-          const moodKey = getDateStorageKey('journal_mood', session.user.email, timezone, dateStr);
-          const entryKey = getDateStorageKey('journal_entry', session.user.email, timezone, dateStr);
-          
-          const savedMood = localStorage.getItem(moodKey);
-          const savedEntry = localStorage.getItem(entryKey);
-          
-          const entry: JournalEntry = { date: dateStr };
-          
-          if (savedMood) {
-            try {
-              entry.mood = JSON.parse(savedMood);
-            } catch (e) {
-              console.error('Error parsing saved mood:', e);
-            }
-          }
-          
-          if (savedEntry) {
-            try {
-              const parsed = JSON.parse(savedEntry);
-              entry.content = parsed.content;
-              entriesMap[dateStr] = true;
-            } catch (e) {
-              console.error('Error parsing saved entry:', e);
-            }
-          }
-          
-          dates.push(entry);
-        }
+        setHasEntries(entriesMap);
         
-        setEntries(dates);
-      }
+        // Auto-scroll to the latest date if enabled
+        if (autoScrollToLatest && showRecent) {
+          setTimeout(() => {
+            const timelineContainer = document.getElementById('timeline-entries');
+            if (timelineContainer) {
+              timelineContainer.scrollLeft = timelineContainer.scrollWidth;
+            }
+          }, 100);
+        }
+      };
       
-      setHasEntries(entriesMap);
+      fetchTimelineData();
       
-      // Auto-scroll to the latest date if enabled
-      if (autoScrollToLatest && showRecent) {
-        setTimeout(() => {
-          const timelineContainer = document.getElementById('timeline-entries');
-          if (timelineContainer) {
-            timelineContainer.scrollLeft = timelineContainer.scrollWidth;
-          }
-        }, 100);
-      }
     }
   }, [session, currentMonth, timezone, refreshTrigger, autoScrollToLatest]);
 
