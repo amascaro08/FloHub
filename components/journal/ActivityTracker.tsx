@@ -65,7 +65,9 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         
         // Load activities for the specific date
         try {
-          const response = await axios.get(`/api/journal/activities?date=${entryDate}`);
+          const response = await axios.get(`/api/journal/activities?date=${entryDate}`, {
+            withCredentials: true
+          });
           if (response.data && response.data.activities) {
             setSelectedActivities(response.data.activities);
           }
@@ -92,7 +94,9 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           // Count activities for each day
           for (const dateStr of last30Days) {
             try {
-              const response = await axios.get(`/api/journal/activities?date=${dateStr}`);
+              const response = await axios.get(`/api/journal/activities?date=${dateStr}`, {
+                withCredentials: true
+              });
               if (response.data && response.data.activities && response.data.activities.length > 0) {
                 response.data.activities.forEach((activity: string) => {
                   stats[activity] = (stats[activity] || 0) + 1;
@@ -191,6 +195,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           await axios.post('/api/journal/activities', {
             date: entryDate,
             activities: newActivities
+          }, {
+            withCredentials: true
           });
           
           // Show save confirmation
@@ -244,6 +250,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             await axios.post('/api/journal/activities', {
               date: entryDate,
               activities: newActivities
+            }, {
+              withCredentials: true
             });
             
             // Show save confirmation
@@ -274,6 +282,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             await axios.post('/api/journal/activities', {
               date: entryDate,
               activities: newActivities
+            }, {
+              withCredentials: true
             });
             
             // Show save confirmation

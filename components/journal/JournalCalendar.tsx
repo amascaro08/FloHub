@@ -121,17 +121,23 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
           
           // Create promises for all API calls
           promises.push(
-            axios.get(`/api/journal/entry?date=${dateStr}`)
+            axios.get(`/api/journal/entry?date=${dateStr}`, {
+              withCredentials: true
+            })
               .then(response => {
                 if (response.data && response.data.content && response.data.content.trim() !== '') {
                   updatedDays[i].hasEntry = true;
                 }
               })
-              .catch(() => {/* Ignore 404 errors */})
+              .catch((error) => {
+                console.error(`Error fetching entry for ${dateStr}:`, error);
+              })
           );
           
           promises.push(
-            axios.get(`/api/journal/mood?date=${dateStr}`)
+            axios.get(`/api/journal/mood?date=${dateStr}`, {
+              withCredentials: true
+            })
               .then(response => {
                 if (response.data && response.data.emoji && response.data.label) {
                   const moodScores: {[key: string]: number} = {
@@ -149,11 +155,15 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                   };
                 }
               })
-              .catch(() => {/* Ignore 404 errors */})
+              .catch((error) => {
+                console.error(`Error fetching mood for ${dateStr}:`, error);
+              })
           );
           
           promises.push(
-            axios.get(`/api/journal/activities?date=${dateStr}`)
+            axios.get(`/api/journal/activities?date=${dateStr}`, {
+              withCredentials: true
+            })
               .then(response => {
                 if (response.data &&
                     response.data.activities &&
@@ -162,7 +172,9 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                   updatedDays[i].activities = response.data.activities;
                 }
               })
-              .catch(() => {/* Ignore 404 errors */})
+              .catch((error) => {
+                console.error(`Error fetching activities for ${dateStr}:`, error);
+              })
           );
         }
         

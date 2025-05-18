@@ -77,6 +77,8 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             date: entryDate,
             content: newContent,
             timestamp
+          }, {
+            withCredentials: true
           });
           
           setSavedContent(newContent);
@@ -132,6 +134,8 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             date: entryDate,
             content: html,
             timestamp
+          }, {
+            withCredentials: true
           });
           
           setSavedContent(html);

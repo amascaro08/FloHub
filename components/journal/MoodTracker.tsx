@@ -30,7 +30,9 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
         
         // Fetch today's mood
         try {
-          const response = await axios.get(`/api/journal/mood?date=${today}`);
+          const response = await axios.get(`/api/journal/mood?date=${today}`, {
+            withCredentials: true
+          });
           if (response.data) {
             setSelectedEmoji(response.data.emoji || '😐');
             setSelectedLabel(response.data.label || 'Meh');
@@ -58,7 +60,9 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
           }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
           
           try {
-            const response = await axios.get(`/api/journal/mood?date=${dateStr}`);
+            const response = await axios.get(`/api/journal/mood?date=${dateStr}`, {
+              withCredentials: true
+            });
             // Check if we have actual mood data (not empty defaults)
             if (response.data && response.data.emoji && response.data.label) {
               moodEntries.push({
@@ -140,6 +144,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
             emoji: emoji,
             label: labels[index],
             tags: selectedTags
+          }, {
+            withCredentials: true
           });
           
           // Show save confirmation
@@ -186,6 +192,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
             emoji: selectedEmoji,
             label: selectedLabel,
             tags: newTags
+          }, {
+            withCredentials: true
           });
           
           // Show save confirmation
@@ -228,6 +236,8 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
               emoji: selectedEmoji,
               label: selectedLabel,
               tags: newTags
+            }, {
+              withCredentials: true
             });
             
             // Show save confirmation
