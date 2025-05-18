@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getCurrentDate, formatDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
@@ -24,7 +24,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   onSelectDate,
   timezone,
   refreshTrigger = 0
-}) => {
+}): React.ReactNode => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [calendarDays, setCalendarDays] = useState<DayData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
