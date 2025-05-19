@@ -3,9 +3,10 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
+import { useAuth } from "../ui/AuthContext";
 
 // Widget skeleton for loading state
 const WidgetSkeleton = () => (
@@ -33,14 +34,16 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   "habit-tracker": <Suspense fallback={<WidgetSkeleton />}><HabitTrackerWidget /></Suspense>,
 };
 
-// Default widget order for mobile
-const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
+// Default widget order for mobile - putting quicknote later in the order to improve initial load time
+const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
 export default function MobileDashboard() {
   const { data: session } = useSession();
+  const { isLocked } = useAuth();
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleWidgets, setVisibleWidgets] = useState<WidgetType[]>([]);
+  const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
   
   // Fetch user settings to get active widgets
   useEffect(() => {
@@ -74,15 +77,56 @@ export default function MobileDashboard() {
     
     fetchUserSettings();
   }, [session]);
+  
+  // Save widget order when it changes
+  const saveWidgetOrder = async () => {
+    if (session?.user?.email) {
+      try {
+        const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
+        const docSnap = await getDoc(settingsDocRef);
+        
+        if (docSnap.exists()) {
+          const userSettings = docSnap.data() as UserSettings;
+          await setDoc(settingsDocRef, {
+            ...userSettings,
+            activeWidgets: activeWidgets
+          });
+        }
+      } catch (e) {
+        console.error("[MobileDashboard] Error saving widget order:", e);
+      }
+    }
+  };
+  
+  // Handle widget reordering
+  const moveWidgetUp = (widgetId: WidgetType) => {
+    const index = activeWidgets.indexOf(widgetId);
+    if (index > 0) {
+      const newActiveWidgets = [...activeWidgets];
+      [newActiveWidgets[index - 1], newActiveWidgets[index]] = [newActiveWidgets[index], newActiveWidgets[index - 1]];
+      setActiveWidgets(newActiveWidgets);
+      saveWidgetOrder();
+    }
+  };
+  
+  const moveWidgetDown = (widgetId: WidgetType) => {
+    const index = activeWidgets.indexOf(widgetId);
+    if (index < activeWidgets.length - 1) {
+      const newActiveWidgets = [...activeWidgets];
+      [newActiveWidgets[index], newActiveWidgets[index + 1]] = [newActiveWidgets[index + 1], newActiveWidgets[index]];
+      setActiveWidgets(newActiveWidgets);
+      saveWidgetOrder();
+    }
+  };
 
-  // Progressive loading of widgets
+  // Progressive loading of widgets with prioritization
   useEffect(() => {
     if (isLoading || activeWidgets.length === 0) return;
 
     // First, immediately show the first widget (usually "at a glance")
     setVisibleWidgets([activeWidgets[0]]);
     
-    // Then progressively show the rest of the widgets
+    // Then progressively show the rest of the widgets, with priority
     const loadNextWidgets = () => {
       setVisibleWidgets(prev => {
         if (prev.length >= activeWidgets.length) return prev;
@@ -95,6 +139,32 @@ export default function MobileDashboard() {
     
     // Load the next widget after a short delay
     const timer = setTimeout(loadNextWidgets, 100);
+    
+    // Load the second and third widgets quickly
+    const timer2 = setTimeout(loadNextWidgets, 200);
+    const timer3 = setTimeout(loadNextWidgets, 300);
+    
+    // Delay loading the QuickNoteWidget (if it exists in the active widgets)
+    const quicknoteIndex = activeWidgets.indexOf("quicknote");
+    let quicknoteTimer: NodeJS.Timeout | null = null;
+    
+    if (quicknoteIndex > 0) {
+      quicknoteTimer = setTimeout(() => {
+        setVisibleWidgets(prev => {
+          if (prev.includes("quicknote")) return prev;
+          if (prev.length < quicknoteIndex) {
+            // Make sure all widgets before quicknote are loaded
+            const widgetsBeforeQuicknote = activeWidgets.slice(0, quicknoteIndex);
+            // Create a unique array without using Set
+            const combinedWidgets = [...prev, ...widgetsBeforeQuicknote, "quicknote"] as WidgetType[];
+            return combinedWidgets.filter((value, index, self) =>
+              self.indexOf(value) === index
+            ) as WidgetType[];
+          }
+          return [...prev, "quicknote" as WidgetType];
+        });
+      }, 500); // Delay loading QuickNoteWidget
+    }
     
     // Set up intersection observer for lazy loading remaining widgets
     const observer = new IntersectionObserver((entries) => {
@@ -113,6 +183,9 @@ export default function MobileDashboard() {
     
     return () => {
       clearTimeout(timer);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      if (quicknoteTimer) clearTimeout(quicknoteTimer);
       observer.disconnect();
     };
   }, [isLoading, activeWidgets]);
@@ -145,10 +218,30 @@ export default function MobileDashboard() {
               <span>
                 {widgetId === "ataglance" ? "Your Day at a Glance" : widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {/* Optional: Add a small indicator for drag-to-reorder in settings */}
-                Reorder in settings
-              </span>
+              {!isLocked && (
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => moveWidgetUp(widgetId)}
+                    disabled={index === 0}
+                    className={`p-1 rounded ${index === 0 ? 'opacity-50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                    aria-label="Move widget up"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m18 15-6-6-6 6"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => moveWidgetDown(widgetId)}
+                    disabled={index === activeWidgets.length - 1}
+                    className={`p-1 rounded ${index === activeWidgets.length - 1 ? 'opacity-50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                    aria-label="Move widget down"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
             </h2>
             <div className="flex-1 overflow-auto">
               {widgetComponents[widgetId]}

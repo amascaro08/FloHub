@@ -1,42 +1,64 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
-import useSWR from "swr"; // Import useSWR
-import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
-import type { UserSettings, Note } from "@/types/app"; // Import UserSettings and Note types
-import type { GetNotesResponse } from "@/pages/api/notes"; // Import GetNotesResponse
+import { useState, FormEvent, useMemo, memo, useEffect } from "react"; // Added useEffect
+import useSWR from "swr";
+import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
+import type { UserSettings, Note } from "@/types/app";
+import type { GetNotesResponse } from "@/pages/api/notes";
+
+// Lazy load CreatableSelect to improve initial load time
+const CreatableSelect = dynamic(() => import('react-select/creatable'), {
+  ssr: false,
+  loading: () => <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+});
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
   const { data: session, status } = useSession();
   const [content, setContent] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Use state for selected tags
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isComponentMounted, setIsComponentMounted] = useState(false);
+  const [isTagsLoaded, setIsTagsLoaded] = useState(false);
 
-  const shouldFetch = status === "authenticated";
+  // Set component as mounted after initial render
+  useEffect(() => {
+    setIsComponentMounted(true);
+  }, []);
 
-  // Fetch user settings to get global tags
+  const shouldFetch = status === "authenticated" && isComponentMounted;
+
+  // Fetch user settings to get global tags with reduced priority
   const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
     shouldFetch ? "/api/userSettings" : null,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Cache for 1 minute
+      errorRetryCount: 2
+    }
   );
 
-  // Fetch existing quick notes to get their tags (assuming quick notes are just notes with a source)
-  const { data: notesResponse, error: notesError } = useSWR<GetNotesResponse>(
-    shouldFetch ? "/api/notes?source=quicknote" : null, // Filter by source if possible, otherwise fetch all notes
-    fetcher
-  );
-
-  // Combine global tags and quick note tags
+  // Memoize tags to prevent unnecessary re-renders
   const allAvailableTags = useMemo(() => {
     const globalTags = userSettings?.globalTags || [];
     return Array.from(new Set(globalTags)).sort();
   }, [userSettings]);
 
-  const tagOptions = allAvailableTags.map(tag => ({ value: tag, label: tag }));
+  const tagOptions = useMemo(() =>
+    allAvailableTags.map(tag => ({ value: tag, label: tag })),
+    [allAvailableTags]
+  );
+
+  // Set tags as loaded when available
+  useEffect(() => {
+    if (userSettings || settingsError) {
+      setIsTagsLoaded(true);
+    }
+  }, [userSettings, settingsError]);
 
   const handleTagChange = (selectedOptions: any) => {
     setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
@@ -77,7 +99,8 @@ function QuickNoteWidget() {
     }
   };
 
-  if (status === "loading" || (!userSettings && !settingsError && shouldFetch) || (!notesResponse && !notesError && shouldFetch)) { // Add loading checks for settings and notes
+  // Simplified loading state
+  if (status === "loading") {
     return <p>Loading...</p>;
   }
 
@@ -85,8 +108,9 @@ function QuickNoteWidget() {
     return <p>Please sign in to add notes.</p>;
   }
 
-  if (settingsError || notesError) { // Add error checks for settings and notes
-    return <p>Error loading data.</p>;
+  if (settingsError) {
+    console.error("Error loading settings:", settingsError);
+    // Continue rendering even with error, just without tags
   }
 
 
@@ -100,24 +124,28 @@ function QuickNoteWidget() {
           onChange={(e) => setContent(e.target.value)}
           disabled={isSaving}
         />
-        <CreatableSelect
-          isMulti
-          options={tagOptions}
-          onChange={handleTagChange}
-          placeholder="Select or create tags..."
-          isDisabled={isSaving}
-          isSearchable
-          value={selectedTags.map(tag => ({ value: tag, label: tag }))}
-          classNamePrefix="react-select"
-          theme={(theme) => ({
-            ...theme,
-            colors: {
-              ...theme.colors,
-              primary: '#14B8A6',
-              primary25: '#99F6E4',
-            },
-          })}
-        />
+        {isTagsLoaded && (
+          <CreatableSelect
+            isMulti
+            options={tagOptions}
+            onChange={handleTagChange}
+            placeholder="Select or create tags..."
+            isDisabled={isSaving}
+            isSearchable
+            value={selectedTags.map(tag => ({ value: tag, label: tag }))}
+            classNamePrefix="react-select"
+            theme={(theme) => ({
+              ...theme,
+              colors: {
+                ...theme.colors,
+                primary: '#14B8A6',
+                primary25: '#99F6E4',
+              },
+            })}
+            // Add performance optimization
+            isLoading={!isTagsLoaded}
+          />
+        )}
         <div className="flex justify-between items-center mt-1">
           {saveStatus === "success" && (
             <p className="text-green-600 dark:text-green-400 text-sm flex items-center">
