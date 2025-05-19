@@ -29,29 +29,7 @@ export default async function handler(
   const userId = token?.email as string;
 
   // Handle different HTTP methods
-  if (req.method === "POST") {
-    // Create new feedback
-    const { feedbackType, feedbackText } = req.body;
-    if (!feedbackText || typeof feedbackText !== "string" || feedbackText.trim() === "") {
-      return res.status(400).json({ error: "Feedback text is required" });
-    }
-
-    try {
-      const newFeedbackRef = await addDoc(collection(db, "feedback"), {
-        userId: userId,
-        feedbackType: feedbackType || "general",
-        feedbackText: feedbackText,
-        status: "open", // Default status
-        createdAt: serverTimestamp(),
-      });
-      const feedbackId = newFeedbackRef.id;
-
-      return res.status(201).json({ success: true, feedbackId });
-    } catch (err: any) {
-      console.error("Create feedback error:", err);
-      return res.status(500).json({ error: err.message || "Internal server error" });
-    }
-  } else if (req.method === "GET") {
+  if (req.method === "GET") {
     // Get feedback or backlog items
     const { type } = req.query;
     
@@ -87,6 +65,51 @@ export default async function handler(
       }
     } catch (err: any) {
       console.error("Get feedback error:", err);
+      return res.status(500).json({ error: err.message || "Internal server error" });
+    }
+  } else if (req.method === "POST" && req.query.type === "backlog") {
+    // Add item directly to backlog
+    const { text } = req.body;
+    
+    if (!text || typeof text !== "string" || text.trim() === "") {
+      return res.status(400).json({ error: "Backlog text is required" });
+    }
+    
+    try {
+      const newBacklogRef = await addDoc(collection(db, "backlog"), {
+        text,
+        userId: userId,
+        createdAt: serverTimestamp(),
+      });
+      
+      return res.status(201).json({ 
+        success: true, 
+        backlogId: newBacklogRef.id 
+      });
+    } catch (err: any) {
+      console.error("Create backlog error:", err);
+      return res.status(500).json({ error: err.message || "Internal server error" });
+    }
+  } else if (req.method === "POST") {
+    // Create new feedback
+    const { feedbackType, feedbackText } = req.body;
+    if (!feedbackText || typeof feedbackText !== "string" || feedbackText.trim() === "") {
+      return res.status(400).json({ error: "Feedback text is required" });
+    }
+
+    try {
+      const newFeedbackRef = await addDoc(collection(db, "feedback"), {
+        userId: userId,
+        feedbackType: feedbackType || "general",
+        feedbackText: feedbackText,
+        status: "open", // Default status
+        createdAt: serverTimestamp(),
+      });
+      const feedbackId = newFeedbackRef.id;
+
+      return res.status(201).json({ success: true, feedbackId });
+    } catch (err: any) {
+      console.error("Create feedback error:", err);
       return res.status(500).json({ error: err.message || "Internal server error" });
     }
   } else if (req.method === "PUT" || req.method === "PATCH") {
@@ -130,29 +153,6 @@ export default async function handler(
       return res.status(200).json({ success: true });
     } catch (err: any) {
       console.error("Update feedback error:", err);
-      return res.status(500).json({ error: err.message || "Internal server error" });
-    }
-  } else if (req.method === "POST" && req.query.type === "backlog") {
-    // Add item directly to backlog
-    const { text } = req.body;
-    
-    if (!text || typeof text !== "string" || text.trim() === "") {
-      return res.status(400).json({ error: "Backlog text is required" });
-    }
-    
-    try {
-      const newBacklogRef = await addDoc(collection(db, "backlog"), {
-        text,
-        userId: userId,
-        createdAt: serverTimestamp(),
-      });
-      
-      return res.status(201).json({ 
-        success: true, 
-        backlogId: newBacklogRef.id 
-      });
-    } catch (err: any) {
-      console.error("Create backlog error:", err);
       return res.status(500).json({ error: err.message || "Internal server error" });
     }
   } else {
