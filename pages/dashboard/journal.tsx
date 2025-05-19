@@ -61,18 +61,11 @@ export default function JournalPage() {
     }
   }, [timezone, selectedDate]);
 
-  // Check if user is authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+  
+    // Show loading state
+    if (status === "loading") {
+      return <p className="text-center p-8">Loading journal...</p>;
     }
-  }, [status, router]);
-
-  // Show loading state
-  if (status === "loading") {
-    return <p className="text-center p-8">Loading journal...</p>;
-  }
-
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
@@ -214,11 +207,13 @@ export default function JournalPage() {
     }
   };
 
-  // Show message if not authenticated or loading
-  if (!session || status === "loading") {
-    return <p className="text-center p-8">
-      {status === "loading" ? "Loading journal..." : "Please sign in to access your journal."}
-    </p>;
+  // Show message if not authenticated
+  if (status === "loading") {
+    return <p className="text-center p-8">Loading journal...</p>;
+  }
+  if (!session) {
+    return <p className="text-center p-8">Please sign in to access your journal.</p>;
+  }
   }
 
   return (

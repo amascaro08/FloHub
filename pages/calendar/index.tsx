@@ -66,12 +66,16 @@ const fetcher = async (url: string) => {
 
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
-const { data: session, status } = useSession();
-const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const { data: session, status } = useSession();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-if (!session) {
-  return <div>Loading...</div>; // Or any other fallback UI
-}
+  if (status === "loading") {
+    return <p>Loading calendar...</p>;
+  }
+
+  if (!session) {
+    return <p>Please sign in to see your calendar.</p>;
+  }
   const { data: settings, error: settingsError } = useSWR<Settings>(
     session ? '/api/userSettings' : null,
     fetcher,
@@ -286,10 +290,12 @@ if (!session) {
       setCurrentDate(new Date(date));
     }
   }, []);
-  
+
   const handleViewEvent = useCallback((event: CalendarEvent) => {
-    setSelectedEvent(event);
-  }, []);
+    if (status !== "loading") {
+      setSelectedEvent(event);
+    }
+  }, [status]);
   
   // Handle authentication and loading states with better UI
   if (status === "loading" || isLoading) {
@@ -344,9 +350,9 @@ if (!session) {
     );
   }
 
-  if (status === "unauthenticated") {
-    return (
-      <div className="container mx-auto py-10 text-center">
+
+
+
         <h1 className="text-2xl font-bold mb-5">Calendar</h1>
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
           <p>Please sign in to view your calendar.</p>

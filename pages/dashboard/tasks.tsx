@@ -28,10 +28,6 @@ export default function TasksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-
   const shouldFetch = status === "authenticated";
   const { data: tasks, mutate } = useSWR<Task[]>(
     shouldFetch ? "/api/tasks" : null,
@@ -121,8 +117,12 @@ export default function TasksPage() {
     );
   }, [tasks, search]);
 
-  if (!session || !userSettings) {
-    return <p>{!session ? "Please sign in to see your tasks." : "Loading tasks..."}</p>;
+  if (status === "loading") {
+    return <p>Loading tasks…</p>;
+  }
+
+  if (!session) {
+    return <p>Please sign in to see your tasks.</p>;
   }
   return (
     <div className="p-4 max-w-4xl mx-auto"> {/* Added max-width and auto margin for better centering on larger screens */}

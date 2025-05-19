@@ -16,7 +16,7 @@ export default function AdminPage() {
 
   // Check if user is authorized to access admin page
   useEffect(() => {
-    if (isClient && status !== 'loading' && (!session || session.user?.email !== 'amascaro08@gmail.com')) {
+    if (isClient && status !== "loading" && (!session || session.data?.user?.email !== 'amascaro08@gmail.com')) {
       router.push('/dashboard');
     }
   }, [session, status, router, isClient]);
@@ -24,9 +24,9 @@ export default function AdminPage() {
   // Only check authorization on the client side
   // For SSR, we'll show a loading state and let the client-side effect handle redirection
   const isAuthorized = !isClient || (session?.user?.email === 'amascaro08@gmail.com');
-  
+
   // Show loading state while checking authentication
-  if (status === 'loading' || !isClient) {
+  if (status === "loading" || !isClient) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">

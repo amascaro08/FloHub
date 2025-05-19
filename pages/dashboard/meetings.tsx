@@ -38,11 +38,11 @@ export default function MeetingsPage() {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-  }, [status, router]);
+
+
+
+
+
 
   const shouldFetch = status === "authenticated";
 
@@ -282,8 +282,7 @@ export default function MeetingsPage() {
   };
 
 
-  // Show loading state if notes, calendar events, or settings are loading
-  if (status === "loading" || (!meetingNotesResponse && !meetingNotesError) || (!calendarEvents && !calendarError && shouldFetch && userSettings?.powerAutomateUrl) || (!userSettings && !settingsError && shouldFetch)) { // Use userSettings and settingsError, check for powerAutomateUrl
+  if (status === "loading") {
     return <p>Loading meeting notes, calendar events, and settings…</p>;
   }
 

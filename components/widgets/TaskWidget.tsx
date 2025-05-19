@@ -170,7 +170,7 @@ function TaskWidget() {
     setSelectedTags(t.tags || []); // Set tags when editing
   };
 
-  if (status === "loading" || (!tasks && !settingsError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) { // Add loading checks for settings and tasks
+  if (status === "loading") {
     return <p>Loading tasks…</p>;
   }
   if (!session) {
