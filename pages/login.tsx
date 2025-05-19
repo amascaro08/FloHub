@@ -7,6 +7,10 @@ export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [email, setEmail] = useState('');
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

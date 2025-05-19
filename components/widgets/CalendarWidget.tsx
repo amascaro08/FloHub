@@ -58,6 +58,10 @@ function CalendarWidget() {
   const { data: session } = useSession();
   const { mutate } = useSWRConfig();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   // Fetch persistent user settings via SWR
   const { data: loadedSettings, error: settingsError } =
     useSWR<Settings>(session ? "/api/userSettings" : null, fetcher);

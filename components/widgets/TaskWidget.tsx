@@ -11,6 +11,10 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function TaskWidget() {
   const { data: session, status } = useSession();
+  
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const shouldFetch               = status === "authenticated";
   const { data: tasks, mutate }   = useSWR<Task[]>(
     shouldFetch ? "/api/tasks" : null,

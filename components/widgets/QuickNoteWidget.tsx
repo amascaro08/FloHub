@@ -17,6 +17,10 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
   const { data: session, status } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);

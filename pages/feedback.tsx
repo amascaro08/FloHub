@@ -23,6 +23,10 @@ interface BacklogItem {
 const FeedbackPage: NextPage = () => {
   const { data: session } = useSession();
   const router = useRouter();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [feedbackType, setFeedbackType] = useState('bug');
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);

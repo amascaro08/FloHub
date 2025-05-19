@@ -28,6 +28,10 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   // Load saved settings from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {

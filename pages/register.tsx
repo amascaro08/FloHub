@@ -10,6 +10,10 @@ export default function RegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [name, setName] = useState('');
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

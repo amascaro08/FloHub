@@ -17,6 +17,10 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   const [historicalEntry, setHistoricalEntry] = useState<HistoricalEntry | null>(null);
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
       // Create date objects with the user's timezone

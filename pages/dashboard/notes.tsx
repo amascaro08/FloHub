@@ -23,6 +23,10 @@ export default function NotesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");

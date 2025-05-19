@@ -66,6 +66,10 @@ const fetcher = async (url: string) => {
 
 const AtAGlanceWidget = () => {
   const { data: session } = useSession({ required: false });
+  
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const userName = session?.user?.name || "User";
   
   // Check if we're on the client side

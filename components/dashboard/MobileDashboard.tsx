@@ -43,7 +43,13 @@ export default function MobileDashboard() {
   
   // Use useSession with required: false to handle SSR
   const { data: session } = useSession({ required: false });
-  
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   // Safely use useAuth only on client side
   const auth = isClient ? useAuth() : null;
   const isLocked = auth?.isLocked || false;

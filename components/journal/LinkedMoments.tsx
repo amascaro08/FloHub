@@ -29,6 +29,10 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const { data: session, status } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   
   // Use the provided date or default to today in user's timezone
   const targetDate = date || getCurrentDate(timezone);

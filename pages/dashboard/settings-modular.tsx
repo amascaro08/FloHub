@@ -29,6 +29,10 @@ export default function SettingsPage() {
   const { data: session, status } = useSession();
   const loadingSession = status === "loading";
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   // Fetch calendars
   const { data: calendars, error: calError } = useSWR<CalItem[]>(
     session ? "/api/calendar/list" : null,

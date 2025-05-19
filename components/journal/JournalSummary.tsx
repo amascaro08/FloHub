@@ -18,6 +18,10 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
       // Load mood data from the last 30 days

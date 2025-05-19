@@ -34,6 +34,10 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
   const { data: session } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
 const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Generate dates for the timeline for the current month

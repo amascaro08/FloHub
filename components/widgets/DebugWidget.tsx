@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
 const DebugWidget = () => {
-  const { data: session, status } = useSession();
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+const { data: session, status } = useSession();
+const [debugInfo, setDebugInfo] = useState<any>(null);
+
+if (!session) {
+  return <div>Loading...</div>; // Or any other fallback UI
+}
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

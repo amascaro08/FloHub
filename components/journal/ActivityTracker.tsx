@@ -17,6 +17,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
   const { data: session } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   
   // Default activities
   // Default activities with icons 

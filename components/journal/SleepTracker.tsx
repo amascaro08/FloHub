@@ -19,6 +19,10 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   const [sleepData, setSleepData] = useState<{date: string, quality: string, hours: number}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const { data: session } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   
   const today = date || getCurrentDate(timezone);
   

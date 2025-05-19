@@ -41,6 +41,10 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 const AdminAnalytics: React.FC = () => {
   const { data: session } = useSession();
   const router = useRouter();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [loading, setLoading] = useState(true);
   const [pageVisits, setPageVisits] = useState<PageVisit[]>([]);
   const [floCatStyles, setFloCatStyles] = useState<FloCatStyleData[]>([]);

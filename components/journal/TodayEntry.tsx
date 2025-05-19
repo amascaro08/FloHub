@@ -18,6 +18,10 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
   const { data: session } = useSession();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   
   // Get the current date in YYYY-MM-DD format or use provided date 
   const entryDate = date || getCurrentDate(timezone);

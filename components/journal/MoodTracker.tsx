@@ -18,6 +18,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   const emojis = ['😞', '😕', '😐', '🙂', '😄'];
   const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
   const commonTags = ['focused', 'drained', 'creative', 'anxious', 'calm', 'energetic', 'tired', 'motivated'];

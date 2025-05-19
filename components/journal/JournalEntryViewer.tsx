@@ -18,6 +18,10 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined' && session?.user?.email) {
       setLoading(true);

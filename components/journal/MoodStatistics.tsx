@@ -27,6 +27,10 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days'>('30days');
   const { data: session } = useSession();
 
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
+
   // Load mood data and calculate statistics from API
   useEffect(() => {
     const fetchMoodData = async () => {

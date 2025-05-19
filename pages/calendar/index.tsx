@@ -66,8 +66,12 @@ const fetcher = async (url: string) => {
 
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
-  const { data: session, status } = useSession();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+const { data: session, status } = useSession();
+const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+if (!session) {
+  return <div>Loading...</div>; // Or any other fallback UI
+}
   const { data: settings, error: settingsError } = useSWR<Settings>(
     session ? '/api/userSettings' : null,
     fetcher,

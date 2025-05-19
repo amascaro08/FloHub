@@ -24,6 +24,10 @@ import SleepTracker from "@/components/journal/SleepTracker";
 export default function JournalPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  if (!session) {
+    return <div>Loading...</div>; // Or any other fallback UI
+  }
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
   const [showNewEntryButton, setShowNewEntryButton] = useState(false);
@@ -63,6 +67,11 @@ export default function JournalPage() {
       router.push("/");
     }
   }, [status, router]);
+
+  // Show loading state
+  if (status === "loading") {
+    return <p className="text-center p-8">Loading journal...</p>;
+  }
 
   // Check if device is mobile
   useEffect(() => {
@@ -205,14 +214,11 @@ export default function JournalPage() {
     }
   };
 
-  // Show loading state
-  if (status === "loading") {
-    return <p className="text-center p-8">Loading journal...</p>;
-  }
-
-  // Show message if not authenticated
-  if (!session) {
-    return <p className="text-center p-8">Please sign in to access your journal.</p>;
+  // Show message if not authenticated or loading
+  if (!session || status === "loading") {
+    return <p className="text-center p-8">
+      {status === "loading" ? "Loading journal..." : "Please sign in to access your journal."}
+    </p>;
   }
 
   return (
