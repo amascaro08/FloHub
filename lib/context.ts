@@ -1,7 +1,7 @@
 import { db } from "./firebase";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import type { Note } from "@/types/app";
-import type { CalendarEvent } from "@/pages/api/calendar/events";
+import type { CalendarEvent } from "@/types/calendar";
 type ConversationMessage = {
   role: "system" | "user" | "assistant";
   content: string;
