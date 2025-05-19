@@ -62,10 +62,6 @@ export default function JournalPage() {
   }, [timezone, selectedDate]);
 
   
-    // Show loading state
-    if (status === "loading") {
-      return <p className="text-center p-8">Loading journal...</p>;
-    }
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
@@ -208,12 +204,8 @@ export default function JournalPage() {
   };
 
   // Show message if not authenticated
-  if (status === "loading") {
-    return <p className="text-center p-8">Loading journal...</p>;
-  }
   if (!session) {
     return <p className="text-center p-8">Please sign in to access your journal.</p>;
-  }
   }
 
   return (
