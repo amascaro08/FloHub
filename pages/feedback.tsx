@@ -74,22 +74,58 @@ const FeedbackPage: NextPage = () => {
         <main className={styles.main}>
           <h1 className={styles.title}>Admin Feedback</h1>
           {feedbackData.length > 0 ? (
-            <table>
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Feedback</th>
-                </tr>
-              </thead>
-              <tbody>
-                {feedbackData.map((feedback) => (
-                  <tr key={feedback.id}>
-                    <td>{feedback.feedbackType}</td>
-                    <td>{feedback.feedbackText}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="flex flex-col gap-4">
+              {/* Bug Reports */}
+              <section className="border rounded p-4">
+                <h2 className="text-lg font-medium">Bug Reports</h2>
+                {feedbackData
+                  .filter((feedback) => feedback.feedbackType === 'bug')
+                  .map((feedback) => (
+                    <div key={feedback.id} className="mb-4 p-4 border rounded">
+                      <p className="font-medium">Feedback: {feedback.feedbackText}</p>
+                      {/* Add notes for tracking purposes */}
+                      <textarea
+                        className="w-full p-2 border rounded"
+                        placeholder="Add notes here..."
+                      />
+                    </div>
+                  ))}
+              </section>
+
+              {/* Feature Requests */}
+              <section className="border rounded p-4">
+                <h2 className="text-lg font-medium">Feature Requests</h2>
+                {feedbackData
+                  .filter((feedback) => feedback.feedbackType === 'feature')
+                  .map((feedback) => (
+                    <div key={feedback.id} className="mb-4 p-4 border rounded">
+                      <p className="font-medium">Feedback: {feedback.feedbackText}</p>
+                      {/* Add notes for tracking purposes */}
+                      <textarea
+                        className="w-full p-2 border rounded"
+                        placeholder="Add notes here..."
+                      />
+                    </div>
+                  ))}
+              </section>
+
+              {/* General Feedback */}
+              <section className="border rounded p-4">
+                <h2 className="text-lg font-medium">General Feedback</h2>
+                {feedbackData
+                  .filter((feedback) => feedback.feedbackType === 'general')
+                  .map((feedback) => (
+                    <div key={feedback.id} className="mb-4 p-4 border rounded">
+                      <p className="font-medium">Feedback: {feedback.feedbackText}</p>
+                      {/* Add notes for tracking purposes */}
+                      <textarea
+                        className="w-full p-2 border rounded"
+                        placeholder="Add notes here..."
+                      />
+                    </div>
+                  ))}
+              </section>
+            </div>
           ) : (
             <p>No feedback yet.</p>
           )}
