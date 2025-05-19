@@ -65,11 +65,15 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-  const { data: session } = useSession();
+  const { data: session } = useSession({ required: false });
   const userName = session?.user?.name || "User";
   
-  // Track widget usage
-  const { trackInteraction } = useWidgetTracking('AtAGlanceWidget');
+  // Check if we're on the client side
+  const isClient = typeof window !== 'undefined';
+  
+  // Track widget usage (client-side only)
+  const trackingHook = isClient ? useWidgetTracking('AtAGlanceWidget') : { trackInteraction: () => {} };
+  const { trackInteraction } = trackingHook;
 
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);

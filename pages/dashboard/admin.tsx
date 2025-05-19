@@ -6,19 +6,24 @@ import AdminAnalytics from '@/components/admin/AdminAnalytics';
 import Head from 'next/head';
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({ required: false });
   const router = useRouter();
   const loading = status === 'loading';
+  const isClient = typeof window !== 'undefined';
 
   // Check if user is authorized to access admin page
   useEffect(() => {
-    if (!loading && (!session || session.user?.email !== 'amascaro08@gmail.com')) {
+    if (isClient && !loading && (!session || session.user?.email !== 'amascaro08@gmail.com')) {
       router.push('/dashboard');
     }
-  }, [session, loading, router]);
+  }, [session, loading, router, isClient]);
 
+  // Only check authorization on the client side
+  // For SSR, we'll show a loading state and let the client-side effect handle redirection
+  const isAuthorized = !isClient || (session?.user?.email === 'amascaro08@gmail.com');
+  
   // Show loading state while checking authentication
-  if (loading) {
+  if (loading || !isClient) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
@@ -28,9 +33,19 @@ export default function AdminPage() {
     );
   }
 
-  // If not authorized, don't render anything (will redirect)
-  if (!session || session.user?.email !== 'amascaro08@gmail.com') {
-    return null;
+  // If not authorized, show a message (will redirect via useEffect)
+  if (!isAuthorized) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-xl font-bold mb-2">Unauthorized Access</h1>
+            <p>You don't have permission to view this page.</p>
+            <p>Redirecting to dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (

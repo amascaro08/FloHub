@@ -51,14 +51,16 @@ const AdminAnalytics: React.FC = () => {
   const [widgetUsage, setWidgetUsage] = useState<{widget: string, count: number}[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState('7days');
 
-  // Check if user is authorized
+  // Check if user is authorized (client-side only)
+  const isClient = typeof window !== 'undefined';
+  
   useEffect(() => {
-    if (session?.user?.email !== 'amascaro08@gmail.com') {
+    if (isClient && session?.user?.email !== 'amascaro08@gmail.com') {
       router.push('/dashboard');
     }
-  }, [session, router]);
+  }, [session, router, isClient]);
 
-  // Fetch analytics data
+  // Fetch analytics data (client-side only)
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -86,12 +88,13 @@ const AdminAnalytics: React.FC = () => {
       }
     };
 
-    if (session?.user?.email === 'amascaro08@gmail.com') {
+    if (isClient && session?.user?.email === 'amascaro08@gmail.com') {
       fetchAnalytics();
     }
-  }, [session, selectedTimeframe]);
+  }, [session, selectedTimeframe, isClient]);
 
-  if (loading) {
+  // Show loading state during SSR or while fetching data
+  if (loading || !isClient) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
@@ -99,7 +102,8 @@ const AdminAnalytics: React.FC = () => {
     );
   }
 
-  if (session?.user?.email !== 'amascaro08@gmail.com') {
+  // Don't render content for unauthorized users (will redirect via useEffect)
+  if (isClient && session?.user?.email !== 'amascaro08@gmail.com') {
     return null;
   }
 

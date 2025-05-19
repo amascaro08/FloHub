@@ -27,8 +27,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
-  const { isLocked, toggleLock, user } = useAuth();
+  const isClient = typeof window !== 'undefined';
+  const auth = isClient ? useAuth() : null;
   const [topInput, setTopInput] = useState('');
+  
+  // Safely destructure auth values with fallbacks for SSR
+  const isLocked = auth?.isLocked || false;
+  const toggleLock = auth?.toggleLock || (() => {});
+  const user = auth?.user || null;
   
   // Check if user is admin
   const isAdmin = user?.email === 'amascaro08@gmail.com';
@@ -36,28 +42,18 @@ const Layout = ({ children }: { children: ReactNode }) => {
   // Create admin navigation item
   const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: "Settings" };
   
-  // Get chat state from context
-  // Get chat state from context with error handling
-  const chatContext = useChat();
-  const {
-    history,
-    send,
-    status,
-    loading,
-    input: chatInput,
-    setInput: setChatInput,
-    isChatOpen,
-    setIsChatOpen
-  } = chatContext || {
-    history: [],
-    send: async () => {},
-    status: 'idle',
-    loading: false,
-    input: '',
-    setInput: () => {},
-    isChatOpen: false,
-    setIsChatOpen: () => {}
-  };
+  // Get chat state from context with error handling for SSR
+  const chatContext = isClient && useChat ? useChat() : null;
+  
+  // Safely destructure chat values with fallbacks for SSR
+  const history = chatContext?.history || [];
+  const send = chatContext?.send || (async () => {});
+  const status = chatContext?.status || 'idle';
+  const loading = chatContext?.loading || false;
+  const chatInput = chatContext?.input || '';
+  const setChatInput = chatContext?.setInput || (() => {});
+  const isChatOpen = chatContext?.isChatOpen || false;
+  const setIsChatOpen = chatContext?.setIsChatOpen || (() => {});
 
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
