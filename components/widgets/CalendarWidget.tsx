@@ -31,7 +31,7 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error loading events');
   
-  // Handle both formats: direct array or {events: [...]} object
+  // Handle both formats: direct array or {events: [...]} object 
   if (Array.isArray(data)) {
     return data;
   } else if (data && Array.isArray(data.events)) {
