@@ -18,6 +18,10 @@ interface DayData {
   };
   hasEntry: boolean;
   activities?: string[];
+  sleep?: {
+    quality: string;
+    hours: number;
+  };
 }
 
 const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
@@ -113,76 +117,218 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         const startIdx = firstDayOfWeek;
         const endIdx = startIdx + lastDay.getDate();
         
-        // Batch the API calls for better performance
-        const promises = [];
-        
+        // Create a batch of dates to fetch at once
+        const currentMonthDates = [];
         for (let i = startIdx; i < endIdx; i++) {
-          const dateStr = updatedDays[i].date;
-          
-          // Create promises for all API calls
-          promises.push(
-            axios.get(`/api/journal/entry?date=${dateStr}`, {
-              withCredentials: true
-            })
-              .then(response => {
-                if (response.data && response.data.content && response.data.content.trim() !== '') {
-                  updatedDays[i].hasEntry = true;
-                }
-              })
-              .catch((error) => {
-                console.error(`Error fetching entry for ${dateStr}:`, error);
-              })
-          );
-          
-          promises.push(
-            axios.get(`/api/journal/mood?date=${dateStr}`, {
-              withCredentials: true
-            })
-              .then(response => {
-                if (response.data && response.data.emoji && response.data.label) {
-                  const moodScores: {[key: string]: number} = {
-                    'Rad': 5,
-                    'Good': 4,
-                    'Meh': 3,
-                    'Bad': 2,
-                    'Awful': 1
-                  };
-                  
-                  updatedDays[i].mood = {
-                    emoji: response.data.emoji,
-                    label: response.data.label,
-                    score: moodScores[response.data.label] || 3
-                  };
-                }
-              })
-              .catch((error) => {
-                console.error(`Error fetching mood for ${dateStr}:`, error);
-              })
-          );
-          
-          promises.push(
-            axios.get(`/api/journal/activities?date=${dateStr}`, {
-              withCredentials: true
-            })
-              .then(response => {
-                if (response.data &&
-                    response.data.activities &&
-                    Array.isArray(response.data.activities) &&
-                    response.data.activities.length > 0) {
-                  updatedDays[i].activities = response.data.activities;
-                }
-              })
-              .catch((error) => {
-                console.error(`Error fetching activities for ${dateStr}:`, error);
-              })
-          );
+          currentMonthDates.push(updatedDays[i].date);
         }
         
-        // Wait for all promises to resolve
-        await Promise.allSettled(promises);
+        // Check localStorage cache first
+        const cachedData: {[key: string]: any} = {};
+        if (typeof window !== 'undefined') {
+          const cacheKey = `journal_calendar_${year}_${month}_${session.user.email}`;
+          const cachedJSON = localStorage.getItem(cacheKey);
+          if (cachedJSON) {
+            try {
+              const cached = JSON.parse(cachedJSON);
+              if (cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000)) { // 5 minute cache
+                Object.assign(cachedData, cached.data);
+              }
+            } catch (e) {
+              console.error('Error parsing cached calendar data:', e);
+            }
+          }
+        }
+        
+        // Filter out dates that are already in the cache
+        const datesToFetch = currentMonthDates.filter(date => !cachedData[date]);
+        
+        if (datesToFetch.length > 0) {
+          // Batch API calls by fetching all entries, moods, and activities at once
+          try {
+            // Fetch entries for all dates at once
+            const entriesResponse = await axios.post('/api/journal/entries/batch', {
+              dates: datesToFetch
+            }, { withCredentials: true });
+            
+            if (entriesResponse.data && entriesResponse.data.entries) {
+              Object.entries(entriesResponse.data.entries).forEach(([date, hasContent]) => {
+                const idx = days.findIndex(day => day.date === date);
+                if (idx !== -1) {
+                  updatedDays[idx].hasEntry = !!hasContent;
+                  
+                  // Update cache
+                  if (!cachedData[date]) cachedData[date] = {};
+                  cachedData[date].hasEntry = !!hasContent;
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching batch entries:', error);
+          }
+          
+          try {
+            // Fetch moods for all dates at once
+            const moodsResponse = await axios.post('/api/journal/moods/batch', {
+              dates: datesToFetch
+            }, { withCredentials: true });
+            
+            if (moodsResponse.data && moodsResponse.data.moods) {
+              Object.entries(moodsResponse.data.moods).forEach(([date, moodData]) => {
+                const idx = days.findIndex(day => day.date === date);
+                if (idx !== -1 && moodData) {
+                  const moodObj = moodData as {emoji?: string; label?: string};
+                  if (moodObj.emoji && moodObj.label) {
+                    const moodScores: {[key: string]: number} = {
+                      'Rad': 5, 'Good': 4, 'Meh': 3, 'Bad': 2, 'Awful': 1
+                    };
+                    
+                    updatedDays[idx].mood = {
+                      emoji: moodObj.emoji,
+                      label: moodObj.label,
+                      score: moodScores[moodObj.label] || 3
+                    };
+                  }
+                  
+                  // Update cache
+                  if (!cachedData[date]) cachedData[date] = {};
+                  cachedData[date].mood = updatedDays[idx].mood;
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching batch moods:', error);
+          }
+          
+          try {
+            // Fetch activities for all dates at once
+            const activitiesResponse = await axios.post('/api/journal/activities/batch', {
+              dates: datesToFetch
+            }, { withCredentials: true });
+            
+            if (activitiesResponse.data && activitiesResponse.data.activities) {
+              Object.entries(activitiesResponse.data.activities).forEach(([date, activitiesList]) => {
+                const idx = days.findIndex(day => day.date === date);
+                if (idx !== -1 && Array.isArray(activitiesList) && activitiesList.length > 0) {
+                  updatedDays[idx].activities = activitiesList;
+                  
+                  // Update cache
+                  if (!cachedData[date]) cachedData[date] = {};
+                  cachedData[date].activities = activitiesList;
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching batch activities:', error);
+            
+            // Fallback to individual API calls if batch fails
+            const promises = [];
+            
+            for (let i = startIdx; i < endIdx; i++) {
+              const dateStr = updatedDays[i].date;
+              
+              if (cachedData[dateStr]) {
+                // Use cached data
+                if (cachedData[dateStr].hasEntry) updatedDays[i].hasEntry = true;
+                if (cachedData[dateStr].mood) updatedDays[i].mood = cachedData[dateStr].mood;
+                if (cachedData[dateStr].activities) updatedDays[i].activities = cachedData[dateStr].activities;
+                continue;
+              }
+              
+              // Create promises for all API calls
+              promises.push(
+                axios.get(`/api/journal/entry?date=${dateStr}`, {
+                  withCredentials: true
+                })
+                  .then(response => {
+                    if (response.data && response.data.content && response.data.content.trim() !== '') {
+                      updatedDays[i].hasEntry = true;
+                      
+                      // Update cache
+                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
+                      cachedData[dateStr].hasEntry = true;
+                    }
+                  })
+                  .catch((error) => {
+                    console.error(`Error fetching entry for ${dateStr}:`, error);
+                  })
+              );
+              
+              promises.push(
+                axios.get(`/api/journal/mood?date=${dateStr}`, {
+                  withCredentials: true
+                })
+                  .then(response => {
+                    if (response.data && response.data.emoji && response.data.label) {
+                      const moodScores: {[key: string]: number} = {
+                        'Rad': 5, 'Good': 4, 'Meh': 3, 'Bad': 2, 'Awful': 1
+                      };
+                      
+                      updatedDays[i].mood = {
+                        emoji: response.data.emoji,
+                        label: response.data.label,
+                        score: moodScores[response.data.label] || 3
+                      };
+                      
+                      // Update cache
+                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
+                      cachedData[dateStr].mood = updatedDays[i].mood;
+                    }
+                  })
+                  .catch((error) => {
+                    console.error(`Error fetching mood for ${dateStr}:`, error);
+                  })
+              );
+              
+              promises.push(
+                axios.get(`/api/journal/activities?date=${dateStr}`, {
+                  withCredentials: true
+                })
+                  .then(response => {
+                    if (response.data &&
+                        response.data.activities &&
+                        Array.isArray(response.data.activities) &&
+                        response.data.activities.length > 0) {
+                      updatedDays[i].activities = response.data.activities;
+                      
+                      // Update cache
+                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
+                      cachedData[dateStr].activities = response.data.activities;
+                    }
+                  })
+                  .catch((error) => {
+                    console.error(`Error fetching activities for ${dateStr}:`, error);
+                  })
+              );
+            }
+            
+            // Wait for all promises to resolve
+            await Promise.allSettled(promises);
+          }
+        } else {
+          // Use cached data for all dates
+          for (let i = startIdx; i < endIdx; i++) {
+            const dateStr = updatedDays[i].date;
+            if (cachedData[dateStr]) {
+              if (cachedData[dateStr].hasEntry) updatedDays[i].hasEntry = true;
+              if (cachedData[dateStr].mood) updatedDays[i].mood = cachedData[dateStr].mood;
+              if (cachedData[dateStr].activities) updatedDays[i].activities = cachedData[dateStr].activities;
+              if (cachedData[dateStr].sleep) updatedDays[i].sleep = cachedData[dateStr].sleep;
+            }
+          }
+        }
         
         // Update the calendar with the fetched data
         setCalendarDays(updatedDays);
+        
+        // Save to cache
+        if (typeof window !== 'undefined') {
+          const cacheKey = `journal_calendar_${year}_${month}_${session.user.email}`;
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data: cachedData
+          }));
+        }
       } catch (error) {
         console.error("Error generating calendar:", error);
         // Set a minimal calendar with just the current month's days
@@ -249,11 +395,11 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
     if (!score) return 'bg-slate-100 dark:bg-slate-700';
     
     const colors = [
-      'bg-red-200 dark:bg-red-900', // Awful
-      'bg-orange-200 dark:bg-orange-900', // Bad
-      'bg-yellow-200 dark:bg-yellow-900', // Meh
-      'bg-green-200 dark:bg-green-900', // Good
-      'bg-purple-200 dark:bg-purple-900' // Rad
+      'bg-red-200 dark:bg-red-900 border-red-300 dark:border-red-800', // Awful
+      'bg-orange-200 dark:bg-orange-900 border-orange-300 dark:border-orange-800', // Bad
+      'bg-yellow-200 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-800', // Meh
+      'bg-green-200 dark:bg-green-900 border-green-300 dark:border-green-800', // Good
+      'bg-purple-200 dark:bg-purple-900 border-purple-300 dark:border-purple-800' // Rad
     ];
     
     return colors[score - 1] || 'bg-slate-100 dark:bg-slate-700';
@@ -336,30 +482,43 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             key={index}
             onClick={() => handleDateSelect(day.date)}
             className={`
-              relative aspect-square flex flex-col items-center justify-center rounded-lg transition-all p-1
-              min-w-[30px] w-full
+              relative aspect-square flex flex-col rounded-xl transition-all p-1 sm:p-2
+              min-w-[30px] w-full border-2 border-transparent
               ${isCurrentMonth(day.date) ? 'opacity-100' : 'opacity-40'}
-              ${selectedDate === day.date ? 'ring-2 ring-teal-500 dark:ring-teal-400' : ''}
+              ${selectedDate === day.date ? 'ring-2 ring-black dark:ring-white' : ''}
               ${getMoodColor(day.mood?.score)}
               hover:brightness-95 dark:hover:brightness-110
             `}
           >
-            <span className={`text-xs font-medium ${isToday(day.date) ? 'text-teal-600 dark:text-teal-400' : ''}`}>
+            {/* Date number in top-left */}
+            <span className={`absolute top-0.5 sm:top-1 left-0.5 sm:left-1 text-[0.6rem] sm:text-xs font-medium ${isToday(day.date) ? 'text-teal-600 dark:text-teal-400' : ''}`}>
               {new Date(day.date).getDate()}
             </span>
             
-            <div className="flex flex-col items-center">
+            {/* Sleep hours in top-right */}
+            {day.sleep && day.sleep.hours > 0 && (
+              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200">
+                💤{day.sleep.hours}h
+              </div>
+            )}
+            
+            {/* Mood emoji in center */}
+            <div className="flex-grow flex items-center justify-center">
               {day.mood && (
-                <span className="text-sm">{day.mood.emoji}</span>
+                <span className="text-base sm:text-xl">{day.mood.emoji}</span>
               )}
               
+              {/* Entry indicator if no mood */}
               {day.hasEntry && !day.mood && (
-                <span className="text-sm">📝</span>
+                <span className="text-base sm:text-xl">📝</span>
               )}
-              
-              {day.activities && day.activities.length > 0 && (
-                <div className="flex flex-wrap justify-center mt-1">
-                  {day.activities.slice(0, 1).map((activity, idx) => {
+            </div>
+            
+            {/* Activities at bottom */}
+            {day.activities && day.activities.length > 0 && (
+              <div className="w-full mt-auto border-t border-black/10 dark:border-white/10 pt-0.5 sm:pt-1">
+                <div className="flex flex-wrap justify-center gap-[1px] sm:gap-[2px]">
+                  {day.activities.slice(0, 3).map((activity, idx) => {
                     // Get icon for activity
                     const activityIcons: {[key: string]: string} = {
                       'Work': '💼', 'Exercise': '🏋️', 'Social': '👥', 'Reading': '📚',
@@ -369,17 +528,17 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                       'Study': '📝', 'Meditation': '🧘', 'Art': '🖼️', 'Writing': '✍️'
                     };
                     return (
-                      <span key={idx} className="text-xs">
+                      <span key={idx} className="text-[0.6rem] sm:text-xs">
                         {activityIcons[activity] || '📌'}
                       </span>
                     );
                   })}
-                  {day.activities.length > 1 && (
-                    <span className="text-xs">+{day.activities.length - 1}</span>
+                  {day.activities.length > 3 && (
+                    <span className="text-[0.6rem] sm:text-xs">+{day.activities.length - 3}</span>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </button>
         ))}
       </div>

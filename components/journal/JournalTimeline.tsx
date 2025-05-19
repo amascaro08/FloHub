@@ -18,6 +18,11 @@ interface JournalEntry {
     tags: string[];
   };
   content?: string;
+  activities?: string[];
+  sleep?: {
+    quality: string;
+    hours: number;
+  };
 }
 
 const JournalTimeline: React.FC<JournalTimelineProps> = ({
@@ -36,7 +41,6 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   useEffect(() => {
     if (session?.user?.email) {
       const fetchTimelineData = async () => {
-        const dates: JournalEntry[] = [];
         const entriesMap: {[key: string]: boolean} = {};
         
         // Get all dates in the current month
@@ -49,107 +53,299 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
         const today = new Date();
         const showRecent = month === today.getMonth() && year === today.getFullYear();
         
+        // Check localStorage cache first
+        const cacheKey = `journal_timeline_${year}_${month}_${session.user.email}`;
+        let cachedData: {entries: JournalEntry[], hasEntries: {[key: string]: boolean}} | null = null;
+        
+        if (typeof window !== 'undefined') {
+          const cachedJSON = localStorage.getItem(cacheKey);
+          if (cachedJSON) {
+            try {
+              const cached = JSON.parse(cachedJSON);
+              if (cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000)) { // 5 minute cache
+                cachedData = cached.data;
+                if (cachedData) {
+                  setEntries(cachedData.entries);
+                  setHasEntries(cachedData.hasEntries);
+                }
+                
+                // Auto-scroll to the latest date if enabled
+                if (autoScrollToLatest && showRecent) {
+                  setTimeout(() => {
+                    const timelineContainer = document.getElementById('timeline-entries');
+                    if (timelineContainer) {
+                      timelineContainer.scrollLeft = timelineContainer.scrollWidth;
+                    }
+                  }, 100);
+                }
+                
+                return; // Use cached data and exit
+              }
+            } catch (e) {
+              console.error('Error parsing cached timeline data:', e);
+            }
+          }
+        }
+        
+        let timelineEntries: JournalEntry[] = [];
+        
         if (showRecent) {
           // Show the last 14 days if we're in the current month
-          const recentDates = [];
+          const recentDates: string[] = [];
+          const recentEntries: JournalEntry[] = [];
+          
+          // Prepare dates array
           for (let i = 13; i >= 0; i--) {
-            // Create date object for the current timezone
             const date = new Date();
             date.setDate(date.getDate() - i);
             
-            // Format the date in YYYY-MM-DD format for the user's timezone
             const dateStr = formatDate(date.toISOString(), timezone, {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit'
             }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
             
-            const entry: JournalEntry = { date: dateStr };
-            
-            // Fetch mood data from API
-            try {
-              const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
-                entry.mood = {
-                  emoji: moodResponse.data.emoji,
-                  label: moodResponse.data.label,
-                  tags: moodResponse.data.tags || []
-                };
-              }
-            } catch (error) {
-              console.error(`Error fetching mood for ${dateStr}:`, error);
-            }
-            
-            // Fetch entry data from API
-            try {
-              const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
-                entry.content = entryResponse.data.content;
-                entriesMap[dateStr] = true;
-              }
-            } catch (error) {
-              console.error(`Error fetching entry for ${dateStr}:`, error);
-            }
-            
-            recentDates.push(entry);
+            recentDates.push(dateStr);
+            recentEntries.push({ date: dateStr });
           }
           
-          setEntries(recentDates);
+          // Batch fetch data for all dates
+          try {
+            // Fetch entries
+            const entriesResponse = await axios.post('/api/journal/entries/batch', {
+              dates: recentDates
+            }, { withCredentials: true });
+            
+            if (entriesResponse.data && entriesResponse.data.entries) {
+              Object.entries(entriesResponse.data.entries).forEach(([date, hasContent]) => {
+                const idx = recentEntries.findIndex(entry => entry.date === date);
+                if (idx !== -1 && hasContent) {
+                  entriesMap[date] = true;
+                }
+              });
+            }
+            
+            // Fetch moods
+            const moodsResponse = await axios.post('/api/journal/moods/batch', {
+              dates: recentDates
+            }, { withCredentials: true });
+            
+            if (moodsResponse.data && moodsResponse.data.moods) {
+              Object.entries(moodsResponse.data.moods).forEach(([date, moodData]) => {
+                const idx = recentEntries.findIndex(entry => entry.date === date);
+                if (idx !== -1 && moodData) {
+                  const moodObj = moodData as {emoji?: string; label?: string; tags?: string[]};
+                  if (moodObj.emoji && moodObj.label) {
+                    recentEntries[idx].mood = {
+                      emoji: moodObj.emoji,
+                      label: moodObj.label,
+                      tags: moodObj.tags || []
+                    };
+                  }
+                }
+              });
+            }
+            
+            // Fetch activities
+            try {
+              const activitiesResponse = await axios.post('/api/journal/activities/batch', {
+                dates: recentDates
+              }, { withCredentials: true });
+              
+              if (activitiesResponse.data && activitiesResponse.data.activities) {
+                Object.entries(activitiesResponse.data.activities).forEach(([date, activitiesList]) => {
+                  const idx = recentEntries.findIndex(entry => entry.date === date);
+                  if (idx !== -1 && Array.isArray(activitiesList) && activitiesList.length > 0) {
+                    recentEntries[idx].activities = activitiesList;
+                  }
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching batch activities for timeline:', error);
+            }
+            
+            // Fetch sleep data
+            try {
+              const sleepPromises = recentDates.map(dateStr =>
+                axios.get(`/api/journal/sleep?date=${dateStr}`, { withCredentials: true })
+                  .then(response => {
+                    if (response.data && response.data.quality && response.data.hours) {
+                      const idx = recentEntries.findIndex(entry => entry.date === dateStr);
+                      if (idx !== -1) {
+                        recentEntries[idx].sleep = {
+                          quality: response.data.quality,
+                          hours: response.data.hours
+                        };
+                      }
+                    }
+                  })
+                  .catch(error => {
+                    console.error(`Error fetching sleep for ${dateStr}:`, error);
+                  })
+              );
+              
+              await Promise.allSettled(sleepPromises);
+            } catch (error) {
+              console.error('Error fetching sleep data for timeline:', error);
+            }
+            
+            // Fetch content for entries that exist
+            for (let i = 0; i < recentEntries.length; i++) {
+              const dateStr = recentEntries[i].date;
+              if (entriesMap[dateStr]) {
+                try {
+                  const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
+                    withCredentials: true
+                  });
+                  if (entryResponse.data && entryResponse.data.content) {
+                    recentEntries[i].content = entryResponse.data.content;
+                  }
+                } catch (error) {
+                  console.error(`Error fetching entry content for ${dateStr}:`, error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching batch data for timeline:', error);
+          }
+          
+          timelineEntries = recentEntries;
         } else {
           // For past months, scan the entire month for entries
+          const monthDates: string[] = [];
+          const monthEntries: JournalEntry[] = [];
+          
+          // Prepare dates array
           for (let day = 1; day <= lastDay.getDate(); day++) {
-            // Create date object for the current timezone
             const date = new Date(year, month, day);
             
-            // Format the date in YYYY-MM-DD format for the user's timezone
             const dateStr = formatDate(date.toISOString(), timezone, {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit'
             }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
             
-            const entry: JournalEntry = { date: dateStr };
-            
-            // Fetch mood data from API
-            try {
-              const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
-                entry.mood = {
-                  emoji: moodResponse.data.emoji,
-                  label: moodResponse.data.label,
-                  tags: moodResponse.data.tags || []
-                };
-              }
-            } catch (error) {
-              console.error(`Error fetching mood for ${dateStr}:`, error);
-            }
-            
-            // Fetch entry data from API
-            try {
-              const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim() !== '') {
-                entry.content = entryResponse.data.content;
-                entriesMap[dateStr] = true;
-              }
-            } catch (error) {
-              console.error(`Error fetching entry for ${dateStr}:`, error);
-            }
-            
-            dates.push(entry);
+            monthDates.push(dateStr);
+            monthEntries.push({ date: dateStr });
           }
           
-          setEntries(dates);
+          // Batch fetch data for all dates
+          try {
+            // Fetch entries
+            const entriesResponse = await axios.post('/api/journal/entries/batch', {
+              dates: monthDates
+            }, { withCredentials: true });
+            
+            if (entriesResponse.data && entriesResponse.data.entries) {
+              Object.entries(entriesResponse.data.entries).forEach(([date, hasContent]) => {
+                const idx = monthEntries.findIndex(entry => entry.date === date);
+                if (idx !== -1 && hasContent) {
+                  entriesMap[date] = true;
+                }
+              });
+            }
+            
+            // Fetch moods
+            const moodsResponse = await axios.post('/api/journal/moods/batch', {
+              dates: monthDates
+            }, { withCredentials: true });
+            
+            if (moodsResponse.data && moodsResponse.data.moods) {
+              Object.entries(moodsResponse.data.moods).forEach(([date, moodData]) => {
+                const idx = monthEntries.findIndex(entry => entry.date === date);
+                if (idx !== -1 && moodData) {
+                  const moodObj = moodData as {emoji?: string; label?: string; tags?: string[]};
+                  if (moodObj.emoji && moodObj.label) {
+                    monthEntries[idx].mood = {
+                      emoji: moodObj.emoji,
+                      label: moodObj.label,
+                      tags: moodObj.tags || []
+                    };
+                  }
+                }
+              });
+            }
+            
+            // Fetch activities
+            try {
+              const activitiesResponse = await axios.post('/api/journal/activities/batch', {
+                dates: monthDates
+              }, { withCredentials: true });
+              
+              if (activitiesResponse.data && activitiesResponse.data.activities) {
+                Object.entries(activitiesResponse.data.activities).forEach(([date, activitiesList]) => {
+                  const idx = monthEntries.findIndex(entry => entry.date === date);
+                  if (idx !== -1 && Array.isArray(activitiesList) && activitiesList.length > 0) {
+                    monthEntries[idx].activities = activitiesList;
+                  }
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching batch activities for timeline:', error);
+            }
+            
+            // Fetch sleep data
+            try {
+              const sleepPromises = monthDates.map(dateStr =>
+                axios.get(`/api/journal/sleep?date=${dateStr}`, { withCredentials: true })
+                  .then(response => {
+                    if (response.data && response.data.quality && response.data.hours) {
+                      const idx = monthEntries.findIndex(entry => entry.date === dateStr);
+                      if (idx !== -1) {
+                        monthEntries[idx].sleep = {
+                          quality: response.data.quality,
+                          hours: response.data.hours
+                        };
+                      }
+                    }
+                  })
+                  .catch(error => {
+                    console.error(`Error fetching sleep for ${dateStr}:`, error);
+                  })
+              );
+              
+              await Promise.allSettled(sleepPromises);
+            } catch (error) {
+              console.error('Error fetching sleep data for timeline:', error);
+            }
+            
+            // Fetch content for entries that exist
+            for (let i = 0; i < monthEntries.length; i++) {
+              const dateStr = monthEntries[i].date;
+              if (entriesMap[dateStr]) {
+                try {
+                  const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, {
+                    withCredentials: true
+                  });
+                  if (entryResponse.data && entryResponse.data.content) {
+                    monthEntries[i].content = entryResponse.data.content;
+                  }
+                } catch (error) {
+                  console.error(`Error fetching entry content for ${dateStr}:`, error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching batch data for timeline:', error);
+          }
+          
+          timelineEntries = monthEntries;
         }
         
+        // Update state
+        setEntries(timelineEntries);
         setHasEntries(entriesMap);
+        
+        // Save to cache
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data: {
+              entries: timelineEntries,
+              hasEntries: entriesMap
+            }
+          }));
+        }
         
         // Auto-scroll to the latest date if enabled
         if (autoScrollToLatest && showRecent) {
@@ -262,34 +458,85 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
       </div>
       
       <div className="overflow-x-auto pb-2 w-full">
-        <div className="flex space-x-2 md:space-x-3 w-full" id="timeline-entries">
-          {entries.map((entry) => (
-            <button
-              key={entry.date}
-              onClick={() => handleDateSelect(entry.date)}
-              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all min-w-[60px] ${
-                selectedDate === entry.date
-                  ? 'bg-teal-100 dark:bg-teal-900 shadow-md'
-                  : hasEntry(entry.date)
-                    ? 'bg-slate-50 dark:bg-slate-750 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
-            >
-              <span className="text-xl sm:text-2xl mb-1">
-                {entry.mood?.emoji || (hasEntry(entry.date) ? '📝' : '·')}
-              </span>
-              <span className={`text-xs font-medium truncate w-full text-center ${
-                isTodayDate(entry.date)
-                  ? 'text-teal-600 dark:text-teal-400'
-                  : hasEntry(entry.date)
-                    ? 'text-slate-700 dark:text-slate-300'
-                    : 'text-slate-500 dark:text-slate-500'
-              }`}>
-                {formatDateDisplay(entry.date)}
-                {isTodayDate(entry.date) && ' (Today)'}
-              </span>
-            </button>
-          ))}
+        <div className="flex space-x-1 sm:space-x-2 md:space-x-3 w-full" id="timeline-entries">
+          {entries.map((entry) => {
+            // Determine background color based on mood
+            let bgColorClass = 'bg-slate-100 dark:bg-slate-700';
+            if (entry.mood?.label) {
+              const moodColors: {[key: string]: string} = {
+                'Rad': 'bg-purple-200 dark:bg-purple-900',
+                'Good': 'bg-green-200 dark:bg-green-900',
+                'Meh': 'bg-yellow-200 dark:bg-yellow-900',
+                'Bad': 'bg-orange-200 dark:bg-orange-900',
+                'Awful': 'bg-red-200 dark:bg-red-900'
+              };
+              bgColorClass = moodColors[entry.mood.label] || bgColorClass;
+            }
+            
+            return (
+              <button
+                key={entry.date}
+                onClick={() => handleDateSelect(entry.date)}
+                className={`relative flex flex-col p-1 sm:p-2 rounded-xl transition-all min-w-[60px] sm:min-w-[70px] border-2 border-transparent ${
+                  selectedDate === entry.date
+                    ? 'ring-2 ring-black dark:ring-white shadow-md'
+                    : ''
+                } ${bgColorClass}`}
+              >
+                {/* Date at top */}
+                <span className={`text-[0.6rem] sm:text-xs font-medium truncate w-full text-center mb-0.5 sm:mb-1 ${
+                  isTodayDate(entry.date)
+                    ? 'text-teal-600 dark:text-teal-400'
+                    : hasEntry(entry.date)
+                      ? 'text-slate-700 dark:text-slate-300'
+                      : 'text-slate-500 dark:text-slate-500'
+                }`}>
+                  {formatDateDisplay(entry.date)}
+                  {isTodayDate(entry.date) && ' (Today)'}
+                </span>
+                
+                {/* Sleep hours in top-right if available */}
+                {entry.sleep && entry.sleep.hours > 0 && (
+                  <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200">
+                    💤{entry.sleep.hours}h
+                  </div>
+                )}
+                
+                {/* Mood emoji in center */}
+                <div className="flex-grow flex items-center justify-center py-1 sm:py-2">
+                  <span className="text-xl sm:text-2xl">
+                    {entry.mood?.emoji || (hasEntry(entry.date) ? '📝' : '·')}
+                  </span>
+                </div>
+                
+                {/* Activities at bottom if available */}
+                {entry.activities && entry.activities.length > 0 && (
+                  <div className="w-full mt-auto border-t border-black/10 dark:border-white/10 pt-0.5 sm:pt-1">
+                    <div className="flex flex-wrap justify-center gap-[1px] sm:gap-[2px]">
+                      {entry.activities.slice(0, 3).map((activity, idx) => {
+                        // Get icon for activity
+                        const activityIcons: {[key: string]: string} = {
+                          'Work': '💼', 'Exercise': '🏋️', 'Social': '👥', 'Reading': '📚',
+                          'Gaming': '🎮', 'Family': '👨‍👩‍👧‍👦', 'Shopping': '🛒', 'Cooking': '🍳',
+                          'Cleaning': '🧹', 'TV': '📺', 'Movies': '🎬', 'Music': '🎵',
+                          'Outdoors': '🌳', 'Travel': '✈️', 'Relaxing': '🛌', 'Hobbies': '🎨',
+                          'Study': '📝', 'Meditation': '🧘', 'Art': '🖼️', 'Writing': '✍️'
+                        };
+                        return (
+                          <span key={idx} className="text-[0.6rem] sm:text-xs">
+                            {activityIcons[activity] || '📌'}
+                          </span>
+                        );
+                      })}
+                      {entry.activities.length > 3 && (
+                        <span className="text-[0.6rem] sm:text-xs">+{entry.activities.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
       
