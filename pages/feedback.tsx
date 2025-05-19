@@ -9,12 +9,14 @@ interface Feedback {
   feedbackType: string;
   feedbackText: string;
   status: 'open' | 'resolved' | 'completed' | 'backlog';
+  notes?: string;
   createdAt: { seconds: number; nanoseconds: number };
 }
 
 interface BacklogItem {
   id: string;
   text: string;
+  originalId?: string;
   createdAt: { seconds: number; nanoseconds: number };
 }
 
@@ -26,37 +28,62 @@ const FeedbackPage: NextPage = () => {
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
   const [newBacklogItem, setNewBacklogItem] = useState('');
+  const [notes, setNotes] = useState<{[key: string]: string}>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if the user is an admin (replace with your actual admin check)
   const isAdmin = session?.user?.email === 'amascaro08@gmail.com';
 
-  useEffect(() => {
-    const fetchFeedback = async () => {
-      try {
-        const response = await fetch('/api/feedback');
-        if (response.ok) {
-          const data = await response.json();
-          // Initialize status field if it doesn't exist
-          const processedData = data.map((item: any) => ({
-            ...item,
-            status: item.status || 'open'
-          }));
-          setFeedbackData(processedData);
-        } else {
-          console.error('Failed to fetch feedback:', response.status);
-        }
-      } catch (error) {
-        console.error('Error fetching feedback:', error);
+  // Fetch feedback and backlog data
+  const fetchData = async () => {
+    if (!isAdmin) return;
+    
+    setIsLoading(true);
+    try {
+      // Fetch feedback
+      const feedbackResponse = await fetch('/api/feedback');
+      if (feedbackResponse.ok) {
+        const data = await feedbackResponse.json();
+        // Initialize status field if it doesn't exist
+        const processedData = data.map((item: any) => ({
+          ...item,
+          status: item.status || 'open'
+        }));
+        setFeedbackData(processedData);
+        
+        // Initialize notes state
+        const notesObj: {[key: string]: string} = {};
+        processedData.forEach((item: Feedback) => {
+          notesObj[item.id] = item.notes || '';
+        });
+        setNotes(notesObj);
+      } else {
+        console.error('Failed to fetch feedback:', feedbackResponse.status);
       }
-    };
-
-    if (isAdmin) {
-      fetchFeedback();
+      
+      // Fetch backlog items
+      const backlogResponse = await fetch('/api/feedback?type=backlog');
+      if (backlogResponse.ok) {
+        const data = await backlogResponse.json();
+        setBacklogItems(data);
+      } else {
+        console.error('Failed to fetch backlog items:', backlogResponse.status);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [isAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const response = await fetch('/api/feedback', {
@@ -71,6 +98,11 @@ const FeedbackPage: NextPage = () => {
         const data = await response.json();
         alert(`Feedback submitted successfully with ID: ${data.feedbackId}`);
         setFeedbackText(''); // Clear the form
+        
+        // Refresh data if admin
+        if (isAdmin) {
+          fetchData();
+        }
       } else {
         const errorData = await response.json();
         console.error('Failed to submit feedback:', errorData);
@@ -79,55 +111,121 @@ const FeedbackPage: NextPage = () => {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       alert('An error occurred while submitting feedback.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = async (feedbackId: string, newStatus: string) => {
-    // In a real app, you would update the status in the database
-    console.log(`Status changed for ${feedbackId} to ${newStatus}`);
-    
-    // For now, just update the local state
-    setFeedbackData((prevData: Feedback[]) => 
-      prevData.map((item: Feedback) => 
-        item.id === feedbackId 
-          ? { ...item, status: newStatus as 'open' | 'resolved' | 'completed' | 'backlog' } 
-          : item
-      )
-    );
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          id: feedbackId, 
+          status: newStatus,
+          notes: notes[feedbackId]
+        }),
+      });
 
-    // If status is "backlog", add to backlog items
-    if (newStatus === 'backlog') {
-      const feedbackItem = feedbackData.find((item: Feedback) => item.id === feedbackId);
-      if (feedbackItem) {
-        setBacklogItems((prev: BacklogItem[]) => [
-          ...prev, 
-          { 
-            id: feedbackId, 
-            text: feedbackItem.feedbackText,
-            createdAt: feedbackItem.createdAt
-          }
-        ]);
+      if (response.ok) {
+        // Update local state
+        setFeedbackData((prevData: Feedback[]) => 
+          prevData.map((item: Feedback) => 
+            item.id === feedbackId 
+              ? { ...item, status: newStatus as 'open' | 'resolved' | 'completed' | 'backlog' } 
+              : item
+          )
+        );
+        
+        // Refresh data to get updated backlog items
+        if (newStatus === 'backlog') {
+          fetchData();
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to update status:', errorData);
+        alert('Failed to update status.');
       }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('An error occurred while updating status.');
     }
   };
 
-  const addToBacklog = () => {
-    if (newBacklogItem.trim()) {
-      const now = new Date();
-      const timestamp = {
-        seconds: Math.floor(now.getTime() / 1000),
-        nanoseconds: 0
-      };
+  const handleNotesChange = (feedbackId: string, value: string) => {
+    setNotes(prev => ({
+      ...prev,
+      [feedbackId]: value
+    }));
+  };
+
+  const saveNotes = async (feedbackId: string) => {
+    try {
+      const feedback = feedbackData.find(f => f.id === feedbackId);
+      if (!feedback) return;
       
-      setBacklogItems((prev: BacklogItem[]) => [
-        ...prev,
-        {
-          id: `backlog-${Date.now()}`,
-          text: newBacklogItem,
-          createdAt: timestamp
-        }
-      ]);
-      setNewBacklogItem('');
+      const response = await fetch('/api/feedback', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          id: feedbackId, 
+          status: feedback.status,
+          notes: notes[feedbackId]
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setFeedbackData((prevData: Feedback[]) => 
+          prevData.map((item: Feedback) => 
+            item.id === feedbackId 
+              ? { ...item, notes: notes[feedbackId] } 
+              : item
+          )
+        );
+        alert('Notes saved successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to save notes:', errorData);
+        alert('Failed to save notes.');
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('An error occurred while saving notes.');
+    }
+  };
+
+  const addToBacklog = async () => {
+    if (!newBacklogItem.trim()) return;
+    
+    try {
+      const response = await fetch('/api/feedback?type=backlog', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: newBacklogItem }),
+      });
+
+      if (response.ok) {
+        // Clear input
+        setNewBacklogItem('');
+        
+        // Refresh backlog data
+        fetchData();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to add to backlog:', errorData);
+        alert('Failed to add to backlog.');
+      }
+    } catch (error) {
+      console.error('Error adding to backlog:', error);
+      alert('An error occurred while adding to backlog.');
     }
   };
 
@@ -143,7 +241,11 @@ const FeedbackPage: NextPage = () => {
     return (
       <>
         <h1 className="text-2xl font-semibold mb-4">Admin Feedback</h1>
-        {feedbackData.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <p>Loading...</p>
+          </div>
+        ) : feedbackData.length > 0 ? (
           <div>
             <div className="flex justify-between p-4 border rounded mb-4">
               <div>
@@ -175,10 +277,20 @@ const FeedbackPage: NextPage = () => {
                           <option value="completed">Completed</option>
                         </select>
                       </div>
-                      <textarea
-                        className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 mt-2"
-                        placeholder="Add notes here..."
-                      />
+                      <div className="mt-2">
+                        <textarea
+                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                          placeholder="Add notes here..."
+                          value={notes[feedback.id] || ''}
+                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
+                        />
+                        <button 
+                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
+                          onClick={() => saveNotes(feedback.id)}
+                        >
+                          Save Notes
+                        </button>
+                      </div>
                     </div>
                   ))}
               </section>
@@ -207,10 +319,20 @@ const FeedbackPage: NextPage = () => {
                           <option value="backlog">Add to Backlog</option>
                         </select>
                       </div>
-                      <textarea
-                        className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 mt-2"
-                        placeholder="Add notes here..."
-                      />
+                      <div className="mt-2">
+                        <textarea
+                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                          placeholder="Add notes here..."
+                          value={notes[feedback.id] || ''}
+                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
+                        />
+                        <button 
+                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
+                          onClick={() => saveNotes(feedback.id)}
+                        >
+                          Save Notes
+                        </button>
+                      </div>
                     </div>
                   ))}
               </section>
@@ -238,28 +360,40 @@ const FeedbackPage: NextPage = () => {
                           <option value="completed">Completed</option>
                         </select>
                       </div>
-                      <textarea
-                        className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 mt-2"
-                        placeholder="Add notes here..."
-                      />
+                      <div className="mt-2">
+                        <textarea
+                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                          placeholder="Add notes here..."
+                          value={notes[feedback.id] || ''}
+                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
+                        />
+                        <button 
+                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
+                          onClick={() => saveNotes(feedback.id)}
+                        >
+                          Save Notes
+                        </button>
+                      </div>
                     </div>
                   ))}
               </section>
 
               <section className="border rounded p-4">
                 <h2 className="text-lg font-medium mb-2">Feature Request Backlog</h2>
-                <textarea
-                  className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                  placeholder="Add a new feature request to the backlog..."
-                  value={newBacklogItem}
-                  onChange={(e) => setNewBacklogItem(e.target.value)}
-                />
-                <button 
-                  className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
-                  onClick={addToBacklog}
-                >
-                  Add to Backlog
-                </button>
+                <div className="flex gap-2">
+                  <textarea
+                    className="flex-1 p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    placeholder="Add a new feature request to the backlog..."
+                    value={newBacklogItem}
+                    onChange={(e) => setNewBacklogItem(e.target.value)}
+                  />
+                  <button 
+                    className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow"
+                    onClick={addToBacklog}
+                  >
+                    Add to Backlog
+                  </button>
+                </div>
                 
                 {backlogItems.length > 0 ? (
                   <div className="mt-4">
@@ -316,7 +450,13 @@ const FeedbackPage: NextPage = () => {
             className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
           />
         </div>
-        <button type="submit" className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow">Submit</button>
+        <button 
+          type="submit" 
+          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
       </form>
     </>
   );
