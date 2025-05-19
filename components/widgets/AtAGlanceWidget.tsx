@@ -22,28 +22,7 @@ import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { isSameDay } from 'date-fns';
 import useSWR from 'swr';
 import type { UserSettings } from '../../types/app';
-import type { Note } from '../../types/app';
-import type { Habit, HabitCompletion } from '../../types/habit-tracker';
-
-
-interface CalendarEvent {
-  id: string;
-  calendarId: string; // Calendar ID field
-  summary: string;
-  start: { dateTime?: string; date?: string };
-  end?: { dateTime?: string; date?: string };
-  source?: "personal" | "work"; // "personal" = Google, "work" = O365
-  description?: string; // Description field
-  calendarName?: string; // Calendar name field
-  tags?: string[]; // Tags field
-}
-
-interface Task {
-  id: string;
-  text: string;
-  done: boolean;
-  source?: "personal" | "work"; // Add source tag
-}
+import type { CalendarEvent, Task, Note, Habit, HabitCompletion } from '../../types/calendar';
 
 // Create a memoized markdown parser
 const createMarkdownParser = () => {
@@ -218,26 +197,40 @@ const AtAGlanceWidget = () => {
         ]);
 
         // Handle both response formats: direct array or {events: [...]} object
-        const eventsData = Array.isArray(eventsResponse)
-          ? eventsResponse
-          : (eventsResponse && Array.isArray(eventsResponse.events)
-              ? eventsResponse.events
-              : []);
+        // Extract events array from response
+        const eventsData = eventsResponse || [];
         
         console.log("Events data retrieved:", eventsData.length, "events");
 
         // Process events data
         const eventsInUserTimezone = eventsData.map((event: CalendarEvent) => {
-          const start = event.start.dateTime
-            ? { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
-            : event.start.date
-              ? { date: event.start.date } // All-day events don't need time conversion
-              : {};
-          const end = event.end?.dateTime
-            ? { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') }
-            : event.end?.date
-              ? { date: event.end.date } // All-day events don't need time conversion
-              : undefined;
+          // Handle start date/time based on type
+          let start: any = {};
+          if (event.start instanceof Date) {
+            start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+          } else {
+            // It's a CalendarEventDateTime
+            if (event.start.dateTime) {
+              start = { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+            } else if (event.start.date) {
+              start = { date: event.start.date }; // All-day events don't need time conversion
+            }
+          }
+          
+          // Handle end date/time based on type
+          let end: any = undefined;
+          if (event.end) {
+            if (event.end instanceof Date) {
+              end = { dateTime: formatInTimeZone(event.end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+            } else {
+              // It's a CalendarEventDateTime
+              if (event.end.dateTime) {
+                end = { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+              } else if (event.end.date) {
+                end = { date: event.end.date }; // All-day events don't need time conversion
+              }
+            }
+          }
 
           return {
             ...event,
@@ -249,16 +242,16 @@ const AtAGlanceWidget = () => {
         // Update state with fetched data
         if (isMounted) {
           setUpcomingEvents(eventsInUserTimezone);
-          setTasks(tasksData);
-          setNotes(notesData);
-          setMeetings(meetingsData);
+          setTasks(tasksData.tasks || []);
+          setNotes(notesData.notes || []);
+          setMeetings(meetingsData.meetings || []);
         }
 
         // Fetch habits in a separate non-blocking call with enhanced fetcher
         try {
           // Use enhanced fetcher for habits
           const habitsData = await fetchHabits();
-          if (isMounted) setHabits(habitsData);
+          if (isMounted) setHabits(habitsData.habits || []);
           
           // Fetch habit completions for the current month
           const today = new Date();
@@ -266,14 +259,14 @@ const AtAGlanceWidget = () => {
             today.getFullYear(),
             today.getMonth()
           );
-          if (isMounted) setHabitCompletions(completionsData);
+          if (isMounted) setHabitCompletions(completionsData.completions || []);
         } catch (err) {
           console.log("Error fetching habits:", err);
           // Don't fail the whole widget if habits can't be fetched
         }
 
         // Filter out completed tasks for the AI prompt
-        const incompleteTasks = tasksData.filter((task: Task) => !task.done);
+        const incompleteTasks = tasksData.tasks ? tasksData.tasks.filter((task: Task) => !task.completed) : [];
         console.log("Incomplete tasks found:", incompleteTasks.length);
 
         // Filter out past events for the AI prompt - include events for the next 7 days
@@ -284,24 +277,40 @@ const AtAGlanceWidget = () => {
           const oneWeekFromNow = new Date(nowInUserTimezone);
           oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
 
-          if (ev.start.dateTime) {
-            // Timed event
-            const startTime = toZonedTime(ev.start.dateTime, userTimezone);
-            const endTime = ev.end?.dateTime ? toZonedTime(ev.end.dateTime, userTimezone) : null;
+          // Handle Date or CalendarEventDateTime
+          if (ev.start instanceof Date) {
+            // It's a Date object
+            return ev.start.getTime() >= nowInUserTimezone.getTime() &&
+                   ev.start.getTime() <= oneWeekFromNow.getTime();
+          } else {
+            // It's a CalendarEventDateTime
+            if (ev.start.dateTime) {
+              // Timed event
+              const startTime = toZonedTime(ev.start.dateTime, userTimezone);
+              let endTime = null;
+              
+              if (ev.end) {
+                if (ev.end instanceof Date) {
+                  endTime = ev.end;
+                } else if (ev.end.dateTime) {
+                  endTime = toZonedTime(ev.end.dateTime, userTimezone);
+                }
+              }
 
-            // Include if the event hasn't ended yet and starts within the next 7 days
-            const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
-            const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
-            const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
+              // Include if the event hasn't ended yet and starts within the next 7 days
+              const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
+              const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
+              const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
 
-            return hasNotEnded && startsWithinNextWeek && startsAfterNow;
-          } else if (ev.start.date) {
-            // All-day event
-            const eventDate = toZonedTime(ev.start.date, userTimezone);
-            
-            // Include if the event date is within the next 7 days
-            return eventDate.getTime() >= nowInUserTimezone.getTime() &&
-                   eventDate.getTime() <= oneWeekFromNow.getTime();
+              return hasNotEnded && startsWithinNextWeek && startsAfterNow;
+            } else if (ev.start.date) {
+              // All-day event
+              const eventDate = toZonedTime(ev.start.date, userTimezone);
+              
+              // Include if the event date is within the next 7 days
+              return eventDate.getTime() >= nowInUserTimezone.getTime() &&
+                     eventDate.getTime() <= oneWeekFromNow.getTime();
+            }
           }
           return false;
         });
@@ -331,7 +340,8 @@ const AtAGlanceWidget = () => {
                 case 'weekly':
                   return dayOfWeek === 0; // Sunday
                 case 'custom':
-                  return habit.customDays?.includes(dayOfWeek) || false;
+                  // Check for customDays property, which might not be in the type definition
+                  return (habit as any).customDays?.includes(dayOfWeek) || false;
                 default:
                   return false;
               }
@@ -364,7 +374,7 @@ const AtAGlanceWidget = () => {
             const preferredName = loadedSettings?.preferredName || userName;
             
             // Build personality traits string from keywords
-            const personalityTraits = floCatPersonality.length > 0
+            const personalityTraits = Array.isArray(floCatPersonality) && floCatPersonality.length > 0
               ? `Your personality traits include: ${floCatPersonality.join(", ")}.`
               : "";
             
@@ -391,18 +401,25 @@ Generate a short "At A Glance" message for ${preferredName} with:
 
 EVENTS: ${limitedEvents.map((event: CalendarEvent) => {
   // Check if event has the required properties
-  if (!event || !event.summary || !event.start) {
+  if (!event || !(event.summary || event.title) || !event.start) {
     console.warn("Invalid event format:", event);
     return null; // Skip this event
   }
 
-  const eventTime = event.start.dateTime
-    ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
-    : event.start.date;
+  let eventTime;
+  if (event.start instanceof Date) {
+    eventTime = formatInTimeZone(event.start, userTimezone, 'h:mm a');
+  } else {
+    eventTime = event.start.dateTime
+      ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
+      : event.start.date;
+  }
+  
+  const eventTitle = event.summary || event.title || 'Untitled Event';
   const calendarType = event.source === "work" ? "work" : "personal";
   const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
-  return `${event.summary} at ${eventTime} [${calendarType}${calendarTags}]`;
-}).filter((event: CalendarEvent) => event !== null).join(', ') || 'None'}
+  return `${eventTitle} at ${eventTime} [${calendarType}${calendarTags}]`;
+}).filter(item => item !== null).join(', ') || 'None'}
 
 TASKS: ${limitedTasks.map((task: Task) => task.text).join(', ') || 'None'}
 
@@ -434,12 +451,19 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
 ${upcomingEventsForPrompt.length > 0 ? `
 **Upcoming Events:**
 ${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
-  const eventTime = event.start.dateTime
-    ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
-    : event.start.date;
+  let eventTime;
+  if (event.start instanceof Date) {
+    eventTime = formatInTimeZone(event.start, userTimezone, 'h:mm a');
+  } else {
+    eventTime = event.start.dateTime
+      ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
+      : event.start.date;
+  }
+  
+  const eventTitle = event.summary || event.title || 'Untitled Event';
   const calendarName = event.calendarName || (event.source === "work" ? "Work Calendar" : "Personal Calendar");
   const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
-  return `- ${event.summary} at ${eventTime} - ${calendarName}${calendarTags}`;
+  return `- ${eventTitle} at ${eventTime} - ${calendarName}${calendarTags}`;
 }).join('\n')}
 ` : ''}
 
