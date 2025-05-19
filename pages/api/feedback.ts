@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Feedback received:', { feedbackType, feedbackText });
 
-    res.status(200).json({ message: 'Feedback submitted successfully!' });
+    res.status(200).json({ message: 'Feedback submitted successfully' });
   } else if (req.method === 'GET') {
 
     res.status(200).json(existingFeedback);
