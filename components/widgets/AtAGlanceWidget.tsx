@@ -194,7 +194,7 @@ const AtAGlanceWidget = () => {
         }
         
         // Fetch data in parallel using Promise.all
-        const [eventsData, tasksData, notesData, meetingsData] = await Promise.all([
+        const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
           // Fetch calendar events
           fetch(`/api/calendar?${apiUrlParams}`).then(res => {
             if (!res.ok) throw new Error(`Error fetching events: ${res.statusText}`);
@@ -219,6 +219,15 @@ const AtAGlanceWidget = () => {
             return res.json();
           })
         ]);
+
+        // Handle both response formats: direct array or {events: [...]} object
+        const eventsData = Array.isArray(eventsResponse)
+          ? eventsResponse
+          : (eventsResponse && Array.isArray(eventsResponse.events)
+              ? eventsResponse.events
+              : []);
+        
+        console.log("Events data retrieved:", eventsData.length, "events");
 
         // Process events data
         const eventsInUserTimezone = eventsData.map((event: CalendarEvent) => {

@@ -42,7 +42,16 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   const res = await fetch(url, { credentials: 'include' });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error loading events');
-  return data;
+  
+  // Handle both formats: direct array or {events: [...]} object
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && Array.isArray(data.events)) {
+    return data.events;
+  } else {
+    console.error("Unexpected response format from calendar API:", data);
+    return [];
+  }
 };
 
 function CalendarWidget() {
@@ -376,6 +385,50 @@ function CalendarWidget() {
         </div>
       ) : (
         <>
+          {/* Calendar Events List */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Upcoming Events</h3>
+              <button
+                onClick={openAdd}
+                className="text-sm bg-teal-500 hover:bg-teal-600 text-white px-2 py-1 rounded-md transition-colors"
+              >
+                Add Event
+              </button>
+            </div>
+            
+            {error && (
+              <div className="text-red-500 mb-2">Error loading events: {error.message}</div>
+            )}
+            
+            {!data ? (
+              <div className="text-neutral-500 dark:text-neutral-400 py-2">Loading events...</div>
+            ) : upcomingEvents.length === 0 ? (
+              <div className="text-neutral-500 dark:text-neutral-400 py-2">No upcoming events</div>
+            ) : (
+              <ul className="space-y-2 max-h-[300px] overflow-y-auto">
+                {upcomingEvents.map((event) => (
+                  <li
+                    key={event.id}
+                    className="p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                    onClick={() => setViewingEvent(event)}
+                  >
+                    <div className="font-medium">{event.summary || "(No title)"}</div>
+                    <div className="text-sm text-neutral-500 dark:text-neutral-400 flex justify-between">
+                      <span>{formatEvent(event)}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        event.source === "work" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
+                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      }`}>
+                        {event.source === "work" ? "Work" : "Personal"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          
           {/* Event Details Modal */}
           {viewingEvent && (
             <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => setViewingEvent(null)}>
