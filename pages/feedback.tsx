@@ -53,7 +53,8 @@ const FeedbackPage: NextPage = () => {
       });
 
       if (response.ok) {
-        alert('Feedback submitted successfully!');
+        const data = await response.json();
+        alert(`Feedback submitted successfully with ID: ${data.feedbackId}`);
         setFeedbackText(''); // Clear the form
       } else {
         const errorData = await response.json();
