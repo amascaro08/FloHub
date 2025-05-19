@@ -6,7 +6,6 @@ import axios from 'axios';
 interface JournalTimelineProps {
   onSelectDate: (date: string) => void;
   timezone?: string;
-  refreshTrigger?: number; // A value that changes to trigger a refresh 
   autoScrollToLatest?: boolean; // Whether to auto-scroll to the latest date
 }
 
@@ -28,7 +27,6 @@ interface JournalEntry {
 const JournalTimeline: React.FC<JournalTimelineProps> = ({
   onSelectDate,
   timezone,
-  refreshTrigger = 0,
   autoScrollToLatest = false
 }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -36,6 +34,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
   const { data: session } = useSession();
+const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Generate dates for the timeline for the current month
   useEffect(() => {
@@ -368,15 +367,10 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
     onSelectDate(date);
   };
 
-  // Use our utility function for formatting dates
-  const formatDateDisplay = (dateStr: string) => {
-    return formatDate(dateStr, timezone);
+  const refreshTimeline = () => {
+    setRefreshTrigger((prev: number) => prev + 1);
   };
 
-  // Use our utility function to check if a date is today
-  const isTodayDate = (dateStr: string) => {
-    return isToday(dateStr, timezone);
-  };
 
   // Navigate to previous month
   const goToPreviousMonth = () => {
@@ -485,14 +479,14 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
               >
                 {/* Date at top */}
                 <span className={`text-[0.6rem] sm:text-xs font-medium truncate w-full text-center mb-0.5 sm:mb-1 ${
-                  isTodayDate(entry.date)
+                  isToday(entry.date, timezone)
                     ? 'text-teal-600 dark:text-teal-400'
                     : hasEntry(entry.date)
                       ? 'text-slate-700 dark:text-slate-300'
                       : 'text-slate-500 dark:text-slate-500'
                 }`}>
-                  {formatDateDisplay(entry.date)}
-                  {isTodayDate(entry.date) && ' (Today)'}
+                  {formatDate(entry.date, timezone)}
+                  {isToday(entry.date, timezone) && ' (Today)'}
                 </span>
                 
                 {/* Sleep hours in top-right if available */}
