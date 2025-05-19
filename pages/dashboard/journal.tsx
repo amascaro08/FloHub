@@ -291,7 +291,6 @@ export default function JournalPage() {
               setIsEditing(true);
             }}
             timezone={timezone}
-            refreshTrigger={refreshTrigger}
             autoScrollToLatest={true}
           />
         ) : (
