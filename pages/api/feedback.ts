@@ -5,6 +5,8 @@ import path from 'path';
 const feedbackFilePath = path.join(process.cwd(), 'data', 'feedback.json');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader('Allow', ['GET', 'POST']);
+
   // Read existing feedback
   let existingFeedback = [];
   try {

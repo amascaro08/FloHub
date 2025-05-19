@@ -56,6 +56,8 @@ const FeedbackPage: NextPage = () => {
         alert('Feedback submitted successfully!');
         setFeedbackText(''); // Clear the form
       } else {
+        const errorData = await response.json();
+        console.error('Failed to submit feedback:', errorData);
         alert('Failed to submit feedback.');
       }
     } catch (error) {
@@ -100,22 +102,23 @@ const FeedbackPage: NextPage = () => {
     <div className={styles.container}>
       <main className={styles.main}>
         <h1 className={styles.title}>Submit Feedback</h1>
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="feedbackType">Feedback Type:</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col">
+            <label htmlFor="feedbackType" className="mb-1">Feedback Type:</label>
             <select
               id="feedbackType"
               name="feedbackType"
               value={feedbackType}
               onChange={(e) => setFeedbackType(e.target.value)}
+              className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
             >
               <option value="bug">Bug Report</option>
               <option value="feature">Feature Request</option>
               <option value="general">General Feedback</option>
             </select>
           </div>
-          <div>
-            <label htmlFor="feedbackText">Feedback:</label>
+          <div className="flex flex-col">
+            <label htmlFor="feedbackText" className="mb-1">Feedback:</label>
             <textarea
               id="feedbackText"
               name="feedbackText"
@@ -123,9 +126,10 @@ const FeedbackPage: NextPage = () => {
               cols={50}
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
+              className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
             />
           </div>
-          <button type="submit">Submit</button>
+          <button type="submit" className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow">Submit</button>
         </form>
       </main>
     </div>
