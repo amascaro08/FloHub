@@ -15,6 +15,7 @@ export default function Index() {
       <Head>
         <title>FloHub - Streamline Your Day</title>
         <meta name="description" content="FloHub is your personal productivity assistant. Organize tasks, take notes, and manage your time effectively." />
+<meta name="google-site-verification" content="R056EcryNlVQjGSUl8zdt4IoNVpfsoFAodcPhP8Mbg4" />
       </Head>
 
       <main className="flex flex-col items-center justify-center w-full max-w-5xl px-4">
