@@ -62,7 +62,7 @@ export default function MeetingsPage() {
     fetcher,
     {
       revalidateOnFocus: false, // Don't revalidate on window focus
-      dedupingInterval: 60000 // Dedupe requests within 1 minute
+      dedupingInterval: 60000 // Dedupe requests within 1 minute 
     }
   );
 
