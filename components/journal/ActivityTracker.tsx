@@ -178,11 +178,14 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   };
 
   const toggleActivity = (activity: string) => {
-    // Check if the activity already exists in the array
-    const activityExists = selectedActivities.includes(activity);
+    // Create a new array with unique activities
+    const uniqueActivities = Array.from(new Set(selectedActivities));
     
-    // Create a new array without any duplicates of this activity
-    const filteredActivities = selectedActivities.filter(a => a !== activity);
+    // Check if the activity already exists in the array
+    const activityExists = uniqueActivities.includes(activity);
+    
+    // Create a new array without this activity
+    const filteredActivities = uniqueActivities.filter(a => a !== activity);
     
     // If the activity didn't exist, add it once
     let newActivities;
@@ -192,12 +195,18 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       newActivities = filteredActivities;
     }
     
+    console.log("Toggling activity:", activity);
+    console.log("Before:", uniqueActivities);
+    console.log("After:", newActivities);
+    
     setSelectedActivities(newActivities);
     
     // Auto-save when activities are updated
     setTimeout(async () => {
       if (session?.user?.email) {
         try {
+          console.log("Saving activities:", newActivities);
+          
           // Save selected activities for this date
           await axios.post('/api/journal/activities', {
             date: entryDate,
@@ -240,12 +249,17 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         localStorage.setItem(customActivitiesKey, JSON.stringify(newUserActivities));
       }
       
-      // Add to selected activities
-      let newActivities = selectedActivities;
-      if (!selectedActivities.includes(customActivity.trim())) {
-        newActivities = [...selectedActivities, customActivity.trim()];
-        setSelectedActivities(newActivities);
+      // Create a new array with unique activities
+      const uniqueActivities = Array.from(new Set(selectedActivities));
+      
+      // Add to selected activities if not already included
+      let newActivities = uniqueActivities;
+      if (!uniqueActivities.includes(customActivity.trim())) {
+        newActivities = [...uniqueActivities, customActivity.trim()];
       }
+      
+      // Update state with the new unique activities
+      setSelectedActivities(newActivities);
       
       setCustomActivity('');
       
@@ -397,7 +411,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           </h3>
           <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
             <div className="flex flex-wrap gap-2">
-              {selectedActivities.map(activity => (
+              {/* Use Array.from(new Set()) to ensure unique activities are displayed */}
+              {Array.from(new Set(selectedActivities)).map(activity => (
                 <div
                   key={`selected-${activity}`}
                   className="px-3 py-1 rounded-full text-sm bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 flex items-center"

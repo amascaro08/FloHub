@@ -56,6 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Date and activities array are required' });
     }
     
+    // Remove duplicates from activities array
+    const uniqueActivities = Array.from(new Set(activities));
+    console.log(`Received ${activities.length} activities, ${uniqueActivities.length} unique`);
+    
     try {
       // Check if activities data already exists for this date
       const activitiesRef = collection(db, 'journal_activities');
@@ -73,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await addDoc(collection(db, 'journal_activities'), {
           userEmail,
           date,
-          activities,
+          activities: uniqueActivities,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
@@ -82,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const docId = snapshot.docs[0].id;
         const docRef = doc(db, 'journal_activities', docId);
         await updateDoc(docRef, {
-          activities,
+          activities: uniqueActivities,
           updatedAt: new Date().toISOString()
         });
       }
