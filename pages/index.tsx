@@ -11,7 +11,7 @@ export default function Index() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-primary-50 to-white dark:from-primary-950 dark:to-neutral-900 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-between bg-gradient-to-b from-primary-50 to-white dark:from-primary-950 dark:to-neutral-900 p-4">
       <Head>
         <title>FloHub - Streamline Your Day</title>
         <meta name="description" content="FloHub is your personal productivity assistant. Organize tasks, take notes, and manage your time effectively." />
@@ -63,6 +63,43 @@ export default function Index() {
           </div>
         </div>
       </main>
+      
+      {/* Footer with links */}
+      <footer className="w-full py-6 px-4 mt-12 border-t border-gray-200 dark:border-gray-800">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-4 md:mb-0">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              © {new Date().getFullYear()} FloHub. All rights reserved.
+            </p>
+          </div>
+          <div className="flex space-x-6">
+            <a
+              href="https://flohub.replit.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              Homepage
+            </a>
+            <a
+              href="https://flohub.replit.app/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="https://flohub.replit.app/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              Terms of Service
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

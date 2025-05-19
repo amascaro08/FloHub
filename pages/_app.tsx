@@ -9,6 +9,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { usePageViewTracking } from '@/lib/analyticsTracker'
 import { usePerformanceMonitoring } from '@/lib/performanceMonitor'
+import dynamic from 'next/dynamic'
 
 // Create a performance monitoring component
 // Analytics and Performance Monitoring Component
@@ -22,15 +23,30 @@ const AnalyticsMonitor = () => {
   return null;
 };
 
-export default function App({
+// Disable SSR for authenticated pages
+function SafeHydrate({ children }: { children: React.ReactNode }) {
+  return (
+    <div suppressHydrationWarning>
+      {typeof window === 'undefined' ? null : children}
+    </div>
+  )
+}
+
+// Create a no-SSR version of the app for authenticated routes
+const App = ({
   Component,
   pageProps: { session, ...pageProps },
-}: AppProps<{ session?: any }>) {
+}: AppProps<{ session?: any }>) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   
   // Determine if we should show the layout based on the current route
   const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
+  
+  // Check if this is an authenticated route that should disable SSR
+  const isAuthRoute = router.pathname.includes('/dashboard') ||
+                      router.pathname.includes('/calendar') ||
+                      router.pathname.includes('/habit-tracker');
   
   // Handle route change loading states
   useEffect(() => {
@@ -126,7 +142,8 @@ export default function App({
     }
   }, []);
   
-  return (
+  // For authenticated routes, wrap in SafeHydrate to disable SSR
+  const content = (
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
@@ -135,8 +152,10 @@ export default function App({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
       
-      {/* Analytics and Performance monitoring component */}
-      <AnalyticsMonitor />
+      {typeof window !== 'undefined' && (
+        /* Analytics and Performance monitoring component - client-side only */
+        <AnalyticsMonitor />
+      )}
       
       <SessionProvider session={session}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
@@ -162,5 +181,13 @@ export default function App({
         </AuthProvider>
       </SessionProvider>
     </>
-  )
-}
+  );
+  
+  // Disable SSR for authenticated routes
+  return isAuthRoute ? <SafeHydrate>{content}</SafeHydrate> : content;
+};
+
+// Use dynamic import with SSR disabled for the entire app
+export default dynamic(() => Promise.resolve(App), {
+  ssr: false
+});
