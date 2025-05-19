@@ -20,11 +20,11 @@ type NotificationState = {
 
 const NotificationManager: React.FC = () => {
   const { data: session } = useSession();
-  const [state, setState] = useState<NotificationState>({
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
+  const [state, setState] = useState<NotificationState>({
     isSupported: false,
     permission: 'default',
     isSubscribed: false,
