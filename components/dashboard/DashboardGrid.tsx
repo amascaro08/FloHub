@@ -92,8 +92,16 @@ const getWidgetIcon = (widgetKey: string) => {
 };
 
 const DashboardGrid = () => {
-  const { data: session } = useSession();
-  const { isLocked } = useAuth();
+  // Check if we're on the client side
+  const isClient = typeof window !== 'undefined';
+  
+  // Use useSession with required: false to handle SSR
+  const { data: session } = useSession({ required: false });
+  
+  // Safely use useAuth only on client side
+  const auth = isClient ? useAuth() : null;
+  const isLocked = auth?.isLocked || false;
+  
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
   
   // Memoize widget components to prevent unnecessary re-renders
@@ -127,10 +135,10 @@ const DashboardGrid = () => {
   const [layouts, setLayouts] = useState(defaultLayouts);
   const [loadedSettings, setLoadedSettings] = useState(false);
   
-  // Fetch user settings to get active widgets
+  // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      if (session?.user?.email) {
+      if (isClient && session?.user?.email) {
         try {
           const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
           const docSnap = await getDoc(settingsDocRef);
@@ -153,13 +161,19 @@ const DashboardGrid = () => {
       }
     };
     
-    fetchUserSettings();
-  }, [session]);
+    if (isClient) {
+      fetchUserSettings();
+    } else {
+      // For SSR, use default widgets
+      setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+      setLoadedSettings(true);
+    }
+  }, [session, isClient]);
 
-  // Load layout from Firestore on component mount
+  // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
-      if (session?.user?.email) {
+      if (isClient && session?.user?.email) {
         const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
         try {
           const docSnap = await getDoc(layoutRef);
@@ -180,8 +194,10 @@ const DashboardGrid = () => {
       }
     };
 
-    fetchLayout();
-  }, [session]);
+    if (isClient) {
+      fetchLayout();
+    }
+  }, [session, isClient]);
 
 
   // Ref to store the timeout ID for debouncing
@@ -238,7 +254,7 @@ const DashboardGrid = () => {
       saveTimeoutRef.current = setTimeout(async () => {
         try {
           console.log("[DashboardGrid] Attempting to save layout...");
-          if (session?.user?.email) {
+          if (isClient && session?.user?.email) {
             const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
             await setDoc(layoutRef, { layouts: cleanedLayouts }); // Use cleanedLayouts directly
             console.log("[DashboardGrid] Layout saved successfully!");

@@ -38,18 +38,26 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
 const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
 export default function MobileDashboard() {
-  const { data: session } = useSession();
-  const { isLocked } = useAuth();
+  // Check if we're on the client side
+  const isClient = typeof window !== 'undefined';
+  
+  // Use useSession with required: false to handle SSR
+  const { data: session } = useSession({ required: false });
+  
+  // Safely use useAuth only on client side
+  const auth = isClient ? useAuth() : null;
+  const isLocked = auth?.isLocked || false;
+  
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleWidgets, setVisibleWidgets] = useState<WidgetType[]>([]);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
   
-  // Fetch user settings to get active widgets
+  // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
       setIsLoading(true);
-      if (session?.user?.email) {
+      if (isClient && session?.user?.email) {
         try {
           const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
           const docSnap = await getDoc(settingsDocRef);
@@ -75,12 +83,17 @@ export default function MobileDashboard() {
       }
     };
     
-    fetchUserSettings();
-  }, [session]);
+    if (isClient) {
+      fetchUserSettings();
+    } else {
+      // For SSR, use default widgets
+      setIsLoading(false);
+    }
+  }, [session, isClient]);
   
   // Save widget order when it changes
   const saveWidgetOrder = async () => {
-    if (session?.user?.email) {
+    if (isClient && session?.user?.email) {
       try {
         const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
         const docSnap = await getDoc(settingsDocRef);
@@ -119,9 +132,9 @@ export default function MobileDashboard() {
     }
   };
 
-  // Progressive loading of widgets with prioritization
+  // Progressive loading of widgets with prioritization (client-side only)
   useEffect(() => {
-    if (isLoading || activeWidgets.length === 0) return;
+    if (!isClient || isLoading || activeWidgets.length === 0) return;
 
     // First, immediately show the first widget (usually "at a glance")
     setVisibleWidgets([activeWidgets[0]]);
@@ -166,19 +179,22 @@ export default function MobileDashboard() {
       }, 500); // Delay loading QuickNoteWidget
     }
     
-    // Set up intersection observer for lazy loading remaining widgets
-    const observer = new IntersectionObserver((entries) => {
+    // Set up intersection observer for lazy loading remaining widgets (client-side only)
+    const observer = isClient && 'IntersectionObserver' in window ?
+      new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           loadNextWidgets();
         }
       });
-    }, { rootMargin: '200px' });
+      }, { rootMargin: '200px' }) : null;
     
-    // Observe the last visible widget
-    const lastWidget = document.querySelector('.mobile-widget:last-child');
-    if (lastWidget) {
-      observer.observe(lastWidget);
+    // Observe the last visible widget (client-side only)
+    if (isClient && observer) {
+      const lastWidget = document.querySelector('.mobile-widget:last-child');
+      if (lastWidget) {
+        observer.observe(lastWidget);
+      }
     }
     
     return () => {
@@ -186,9 +202,9 @@ export default function MobileDashboard() {
       clearTimeout(timer2);
       clearTimeout(timer3);
       if (quicknoteTimer) clearTimeout(quicknoteTimer);
-      observer.disconnect();
+      if (observer) observer.disconnect();
     };
-  }, [isLoading, activeWidgets]);
+  }, [isLoading, activeWidgets, isClient]);
   
   if (isLoading) {
     return (
