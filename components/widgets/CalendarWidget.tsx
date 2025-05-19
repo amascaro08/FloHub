@@ -4,7 +4,13 @@ import { useSession } from "next-auth/react"; // Import useSession
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 
-import { CalendarEvent, CalendarSettings } from "@/types/calendar";
+import {
+  CalendarEvent,
+  CalendarSettings,
+  CalendarEventDateTime,
+  isDate,
+  isCalendarEventDateTime
+} from "@/types/calendar";
 
 type ViewType = 'today' | 'tomorrow' | 'week' | 'month' | 'custom';
 type CustomRange = { start: string; end: string };
@@ -209,14 +215,30 @@ function CalendarWidget() {
           index === self.findIndex((e) => e.id === event.id)
         )
         .filter(ev => {
-          const eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) : (ev.start.date ? parseISO(ev.start.date) : null);
-          const eventEndDate = ev.end?.dateTime ? parseISO(ev.end.dateTime) : (ev.end?.date ? parseISO(ev.end.date) : null);
+          // Get start date based on type
+          let eventStartDate: Date | null = null;
+          let eventEndDate: Date | null = null;
+          
+          if (isDate(ev.start)) {
+            eventStartDate = ev.start;
+          } else if (isCalendarEventDateTime(ev.start)) {
+            eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) :
+                            (ev.start.date ? parseISO(ev.start.date) : null);
+          }
+          
+          if (ev.end) {
+            if (isDate(ev.end)) {
+              eventEndDate = ev.end;
+            } else if (isCalendarEventDateTime(ev.end)) {
+              eventEndDate = ev.end.dateTime ? parseISO(ev.end.dateTime) :
+                            (ev.end.date ? parseISO(ev.end.date) : null);
+            }
+          }
 
           console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
           console.log("Current time (local):", now);
           console.log("Start of today (local):", startOfToday);
           console.log("Active view:", activeView);
-
 
           if (!eventStartDate) return false; // Must have a start time/date
 
@@ -226,7 +248,7 @@ function CalendarWidget() {
           if (activeView === 'today' || activeView === 'tomorrow') {
              if (eventEndDate) {
                return eventEndDate.getTime() >= now.getTime();
-             } else if (ev.start.date && !ev.start.dateTime) {
+             } else if (isCalendarEventDateTime(ev.start) && ev.start.date && !ev.start.dateTime) {
                // All-day event today/tomorrow
                const allDayEndDate = new Date(ev.start.date);
                allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
@@ -247,8 +269,23 @@ function CalendarWidget() {
   // The next upcoming event is the first one in the sorted, filtered list
   // Note: Sorting is handled by the API, but we re-sort here just in case or for client-side additions
   upcomingEvents.sort((a, b) => {
-    const dateA = a.start.dateTime ? new Date(a.start.dateTime).getTime() : (a.start.date ? new Date(a.start.date).getTime() : 0);
-    const dateB = b.start.dateTime ? new Date(b.start.dateTime).getTime() : (b.start.date ? new Date(b.start.date).getTime() : 0);
+    let dateA = 0;
+    let dateB = 0;
+    
+    if (isDate(a.start)) {
+      dateA = a.start.getTime();
+    } else if (isCalendarEventDateTime(a.start)) {
+      dateA = a.start.dateTime ? new Date(a.start.dateTime).getTime() :
+             (a.start.date ? new Date(a.start.date).getTime() : 0);
+    }
+    
+    if (isDate(b.start)) {
+      dateB = b.start.getTime();
+    } else if (isCalendarEventDateTime(b.start)) {
+      dateB = b.start.dateTime ? new Date(b.start.dateTime).getTime() :
+             (b.start.date ? new Date(b.start.date).getTime() : 0);
+    }
+    
     return dateA - dateB;
   });
 
@@ -257,12 +294,17 @@ function CalendarWidget() {
 
   // Format event for display
   const formatEvent = (ev: CalendarEvent) => {
-    if (ev.start.date && !ev.start.dateTime) {
-      const d = new Date(ev.start.date);
-      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    if (isCalendarEventDateTime(ev.start)) {
+      if (ev.start.date && !ev.start.dateTime) {
+        const d = new Date(ev.start.date);
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+      const dt = new Date(ev.start.dateTime || ev.start.date!);
+      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    } else if (isDate(ev.start)) {
+      return ev.start.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     }
-    const dt = new Date(ev.start.dateTime || ev.start.date!);
-    return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return "Unknown date format";
   };
 
   // Handlers for opening modal
@@ -278,11 +320,29 @@ function CalendarWidget() {
   };
   const openEdit = (ev: CalendarEvent) => {
     setEditingEvent(ev);
+    
+    let startStr = '';
+    let endStr = '';
+    
+    if (isCalendarEventDateTime(ev.start)) {
+      startStr = ev.start.dateTime || (ev.start.date ? `${ev.start.date}T00:00` : '');
+    } else if (isDate(ev.start)) {
+      startStr = ev.start.toISOString().substring(0, 16); // Format as YYYY-MM-DDTHH:MM
+    }
+    
+    if (ev.end) {
+      if (isCalendarEventDateTime(ev.end)) {
+        endStr = ev.end.dateTime || (ev.end.date ? `${ev.end.date}T00:00` : '');
+      } else if (isDate(ev.end)) {
+        endStr = ev.end.toISOString().substring(0, 16); // Format as YYYY-MM-DDTHH:MM
+      }
+    }
+    
     setForm({
       calendarId: selectedCals[0] || '',
       summary: ev.summary || '',
-      start: ev.start.dateTime || `${ev.start.date}T00:00`,
-      end: ev.end?.dateTime || `${ev.end?.date}T00:00`,
+      start: startStr,
+      end: endStr,
     });
     setModalOpen(true);
   };
@@ -334,12 +394,14 @@ function CalendarWidget() {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, calendarId: string) => {
+  const handleDeleteEvent = async (eventId: string, calendarId?: string) => {
     console.log("Deleting event:", eventId, "from calendar:", calendarId);
     if (!viewingEvent) return; // Should not happen if button is visible, but for safety
 
     try {
-      const url = `/api/calendar/event?id=${eventId}&calendarId=${viewingEvent.calendarId}`;
+      // Use the provided calendarId or fall back to a default if not available
+      const effectiveCalendarId = calendarId || viewingEvent.calendarId || 'primary';
+      const url = `/api/calendar/event?id=${eventId}&calendarId=${effectiveCalendarId}`;
 
       const res = await fetch(url, {
         method: 'DELETE',

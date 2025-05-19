@@ -56,9 +56,6 @@ const CalendarPage = () => {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
   );
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<any[]>(

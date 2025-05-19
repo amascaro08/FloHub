@@ -105,14 +105,11 @@ function QuickNoteWidget() {
 
 
   // Simplified loading state
-  if (status === "loading") return <p>Loading...</p>;
-
   if (!session) return <p>Please sign in to add notes.</p>;
-  }
 
-if (settingsError) {
-  console.error("Error loading settings:", settingsError);
-  // Continue rendering even with error, just without tags
+  if (settingsError) {
+    console.error("Error loading settings:", settingsError);
+    // Continue rendering even with error, just without tags
   }
 
 

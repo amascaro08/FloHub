@@ -28,10 +28,10 @@ export default function NotesPage() {
   }
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!session) {
       router.push("/");
     }
-  }, [status, router]);
+  }, [session, router]);
 
   const shouldFetch = status === "authenticated";
   // Fetch notes
@@ -223,8 +223,8 @@ export default function NotesPage() {
     return filteredNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredNotes]);
 
-  // Show loading state if either notes or calendar events are loading
-  if (status === "loading" || (!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) { // Add userSettings loading check
+  // Show loading state if data is still loading
+  if ((!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) {
     return <p>Loading notes and calendar events…</p>;
   }
 
