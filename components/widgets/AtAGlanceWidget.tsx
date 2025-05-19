@@ -4,7 +4,15 @@ import React, { useState, useEffect, memo, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked';
 import { useWidgetTracking } from '@/lib/analyticsTracker';
-import { enhancedFetcher } from '@/lib/enhancedFetcher';
+import {
+  fetchUserSettings,
+  fetchCalendarEvents,
+  fetchTasks,
+  fetchNotes,
+  fetchMeetings,
+  fetchHabits,
+  fetchHabitCompletions
+} from '@/lib/widgetFetcher';
 // Initialize marked with GFM options and ensure it doesn't return promises
 marked.setOptions({
   gfm: true,
@@ -51,9 +59,9 @@ const createMarkdownParser = () => {
   return parseMarkdown;
 };
 
-// Memoized fetcher function with SWR pattern
+// Memoized fetcher function for SWR
 const fetcher = async (url: string) => {
-  return enhancedFetcher(url, undefined, undefined, 60000); // 1 minute cache
+  return fetchUserSettings(url);
 };
 
 const AtAGlanceWidget = () => {
@@ -76,8 +84,8 @@ const AtAGlanceWidget = () => {
   const [dataFetchStarted, setDataFetchStarted] = useState(false);
 
   // Fetch user settings with SWR for caching
-  const { data: loadedSettings, error: settingsError } = useSWR<UserSettings>(
-    session ? "/api/userSettings" : null, 
+  const { data: loadedSettings, error: settingsError } = useSWR(
+    session ? "/api/userSettings" : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60000 } // Cache for 1 minute
   );
@@ -105,7 +113,7 @@ const AtAGlanceWidget = () => {
       
       // Set calendar sources if available
       if (loadedSettings.calendarSources && loadedSettings.calendarSources.length > 0) {
-        setCalendarSources(loadedSettings.calendarSources.filter(source => source.isEnabled));
+        setCalendarSources(loadedSettings.calendarSources.filter((source: any) => source.isEnabled));
       }
     }
   }, [loadedSettings]);
@@ -189,16 +197,16 @@ const AtAGlanceWidget = () => {
         // Fetch data in parallel using Promise.all with enhanced fetcher
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
           // Fetch calendar events with enhanced fetcher
-          enhancedFetcher(`/api/calendar?${apiUrlParams}`, undefined, `flohub:calendar:${apiUrlParams}`),
+          fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `flohub:calendar:${apiUrlParams}`),
           
           // Fetch tasks with enhanced fetcher
-          enhancedFetcher('/api/tasks', undefined, 'flohub:tasks'),
+          fetchTasks(),
           
           // Fetch notes with enhanced fetcher
-          enhancedFetcher('/api/notes', undefined, 'flohub:notes'),
+          fetchNotes(),
           
           // Fetch meetings with enhanced fetcher
-          enhancedFetcher('/api/meetings', undefined, 'flohub:meetings')
+          fetchMeetings()
         ]);
 
         // Handle both response formats: direct array or {events: [...]} object
@@ -241,16 +249,14 @@ const AtAGlanceWidget = () => {
         // Fetch habits in a separate non-blocking call with enhanced fetcher
         try {
           // Use enhanced fetcher for habits
-          const habitsData: Habit[] = await enhancedFetcher('/api/habits', undefined, 'flohub:habits');
+          const habitsData = await fetchHabits();
           if (isMounted) setHabits(habitsData);
           
           // Fetch habit completions for the current month
           const today = new Date();
-          const completionsUrl = `/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`;
-          const completionsData: HabitCompletion[] = await enhancedFetcher(
-            completionsUrl,
-            undefined,
-            `flohub:habitCompletions:${today.getFullYear()}-${today.getMonth()}`
+          const completionsData = await fetchHabitCompletions(
+            today.getFullYear(),
+            today.getMonth()
           );
           if (isMounted) setHabitCompletions(completionsData);
         } catch (err) {
