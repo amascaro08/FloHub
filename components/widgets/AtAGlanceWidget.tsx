@@ -116,34 +116,24 @@ const AtAGlanceWidget = () => {
     return 'other'; // Should not happen with the current logic, but as a fallback
   };
 
-  // Check for cached message first before any data fetching
+  // Skip cache and always fetch fresh data
   useEffect(() => {
     if (!session || dataFetchStarted) return;
     
     try {
-      const now = new Date();
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const currentTimeInterval = getTimeInterval(now, userTimezone);
+      // Clear any existing cache
+      localStorage.removeItem('flohub.atAGlanceMessage');
+      localStorage.removeItem('flohub.atAGlanceTimestamp');
+      localStorage.removeItem('flohub.atAGlanceInterval');
       
-      const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
-      const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
-      const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
-      
-      if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval) {
-        // Use cached message if it's from the current time interval
-        setAiMessage(cachedMessage);
-        setFormattedHtml(parseMarkdown(cachedMessage));
-        setLoading(false);
-        console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
-      } else {
-        // Set flag to start data fetching
-        setDataFetchStarted(true);
-      }
+      // Always set flag to start data fetching
+      setDataFetchStarted(true);
+      console.log("AtAGlanceWidget: Starting fresh data fetch");
     } catch (err) {
       console.error("Error accessing localStorage:", err);
       setDataFetchStarted(true);
     }
-  }, [session, parseMarkdown, dataFetchStarted]);
+  }, [session, dataFetchStarted]);
 
   // Main data fetching effect
   useEffect(() => {
@@ -279,42 +269,48 @@ const AtAGlanceWidget = () => {
 
         // Filter out completed tasks for the AI prompt
         const incompleteTasks = tasksData.filter((task: Task) => !task.done);
+        console.log("Incomplete tasks found:", incompleteTasks.length);
 
-        // Filter out past events for the AI prompt
+        // Filter out past events for the AI prompt - include events for the next 7 days
         const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
           const nowInUserTimezone = toZonedTime(now, userTimezone);
+          
+          // Create a date 7 days from now for the filter window
+          const oneWeekFromNow = new Date(nowInUserTimezone);
+          oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
 
           if (ev.start.dateTime) {
             // Timed event
             const startTime = toZonedTime(ev.start.dateTime, userTimezone);
             const endTime = ev.end?.dateTime ? toZonedTime(ev.end.dateTime, userTimezone) : null;
 
-            // Include if the event starts today AND has not ended yet
-            const isToday = isSameDay(startTime, nowInUserTimezone);
+            // Include if the event hasn't ended yet and starts within the next 7 days
             const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
+            const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
+            const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
 
-            return isToday && hasNotEnded;
+            return hasNotEnded && startsWithinNextWeek && startsAfterNow;
           } else if (ev.start.date) {
             // All-day event
             const eventDate = toZonedTime(ev.start.date, userTimezone);
-            // Include if the event date is today
-            return isSameDay(eventDate, nowInUserTimezone);
+            
+            // Include if the event date is within the next 7 days
+            return eventDate.getTime() >= nowInUserTimezone.getTime() &&
+                   eventDate.getTime() <= oneWeekFromNow.getTime();
           }
           return false;
         });
+        
+        console.log("Upcoming events for prompt:", upcomingEventsForPrompt.length, "events found");
 
-        // Check for cached message again after fetching data
+        // Clear any cached message to force a new one to be generated
         try {
-          const cachedMessage = localStorage.getItem('flohub.atAGlanceMessage');
-          const cachedTimestamp = localStorage.getItem('flohub.atAGlanceTimestamp');
-          const cachedInterval = localStorage.getItem('flohub.atAGlanceInterval');
-
-          if (cachedMessage && cachedTimestamp && cachedInterval === currentTimeInterval && isMounted) {
-            // Use cached message if it's from the current time interval
-            setAiMessage(cachedMessage);
-            setFormattedHtml(parseMarkdown(cachedMessage));
-            console.log("AtAGlanceWidget: Using cached message for interval:", currentTimeInterval);
-          } else if (isMounted) {
+          localStorage.removeItem('flohub.atAGlanceMessage');
+          localStorage.removeItem('flohub.atAGlanceTimestamp');
+          localStorage.removeItem('flohub.atAGlanceInterval');
+          
+          // Always generate a new message
+          if (isMounted) {
             console.log("AtAGlanceWidget: Generating new message for interval:", currentTimeInterval);
             
             // Get today's date in YYYY-MM-DD format for habit completions
@@ -350,9 +346,12 @@ const AtAGlanceWidget = () => {
               ? Math.round((completedHabits.length / todaysHabits.length) * 100)
               : 0;
             
-            // Limit the number of items in each category to reduce prompt size
-            const limitedEvents = upcomingEventsForPrompt.slice(0, 3);
-            const limitedTasks = incompleteTasks.slice(0, 3);
+            // Include more items in each category
+            const limitedEvents = upcomingEventsForPrompt.slice(0, 5);
+            const limitedTasks = incompleteTasks.slice(0, 5);
+            
+            console.log("Events for AI message:", limitedEvents.length);
+            console.log("Tasks for AI message:", limitedTasks.length);
             
             // Get the user's FloCat style and personality preferences from settings
             const floCatStyle = loadedSettings?.floCatStyle || "default";
@@ -429,7 +428,7 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
 
 ${upcomingEventsForPrompt.length > 0 ? `
 **Upcoming Events:**
-${upcomingEventsForPrompt.slice(0, 3).map((event: CalendarEvent) => {
+${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
   const eventTime = event.start.dateTime
     ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
     : event.start.date;
@@ -441,7 +440,7 @@ ${upcomingEventsForPrompt.slice(0, 3).map((event: CalendarEvent) => {
 
 ${incompleteTasks.length > 0 ? `
 **Tasks to Complete:**
-${incompleteTasks.slice(0, 3).map((task: Task) => `- ${task.text}`).join('\n')}
+${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text}`).join('\n')}
 ` : ''}
 
 ${todaysHabits.length > 0 ? `

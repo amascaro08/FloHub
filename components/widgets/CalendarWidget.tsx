@@ -385,6 +385,80 @@ function CalendarWidget() {
         </div>
       ) : (
         <>
+          {/* Time Frame Selector */}
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                onClick={() => setActiveView('today')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'today'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setActiveView('tomorrow')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'tomorrow'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Tomorrow
+              </button>
+              <button
+                onClick={() => setActiveView('week')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'week'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => setActiveView('month')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'month'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => setActiveView('custom')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'custom'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Custom Range
+              </button>
+            </div>
+            
+            {activeView === 'custom' && (
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="date"
+                  value={customRange.start}
+                  onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                  className="input-modern flex-1"
+                />
+                <span className="self-center">to</span>
+                <input
+                  type="date"
+                  value={customRange.end}
+                  onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                  className="input-modern flex-1"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Calendar Events List */}
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
