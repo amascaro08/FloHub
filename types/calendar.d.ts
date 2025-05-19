@@ -16,6 +16,7 @@ export interface CalendarEvent {
   source?: "personal" | "work";
   calendarName?: string;
   tags?: string[];
+  location?: string;
 }
 
 // Helper type guard to check if an object is a Date

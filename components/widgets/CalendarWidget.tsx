@@ -232,8 +232,8 @@ function CalendarWidget() {
             } else if (isCalendarEventDateTime(ev.end)) {
               eventEndDate = ev.end.dateTime ? parseISO(ev.end.dateTime) :
                             (ev.end.date ? parseISO(ev.end.date) : null);
-            }
           }
+        }
 
           console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
           console.log("Current time (local):", now);
@@ -397,7 +397,7 @@ function CalendarWidget() {
   const handleDeleteEvent = async (eventId: string, calendarId?: string) => {
     console.log("Deleting event:", eventId, "from calendar:", calendarId);
     if (!viewingEvent) return; // Should not happen if button is visible, but for safety
-
+    
     try {
       // Use the provided calendarId or fall back to a default if not available
       const effectiveCalendarId = calendarId || viewingEvent.calendarId || 'primary';
@@ -506,189 +506,175 @@ function CalendarWidget() {
               </div>
             )}
           </div>
-
-          {/* Calendar Events List */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold">Upcoming Events</h3>
-              <button
-                onClick={openAdd}
-                className="text-sm bg-teal-500 hover:bg-teal-600 text-white px-2 py-1 rounded-md transition-colors"
-              >
-                Add Event
-              </button>
-            </div>
-            
-            {error && (
-              <div className="text-red-500 mb-2">Error loading events: {error.message}</div>
-            )}
-            
-            {!data ? (
-              <div className="text-neutral-500 dark:text-neutral-400 py-2">Loading events...</div>
-            ) : upcomingEvents.length === 0 ? (
-              <div className="text-neutral-500 dark:text-neutral-400 py-2">No upcoming events</div>
-            ) : (
-              <ul className="space-y-2 max-h-[300px] overflow-y-auto">
-                {upcomingEvents.map((event) => (
-                  <li
-                    key={event.id}
-                    className="p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
-                    onClick={() => setViewingEvent(event)}
-                  >
-                    <div className="font-medium">{event.summary || "(No title)"}</div>
-                    <div className="text-sm text-neutral-500 dark:text-neutral-400 flex justify-between">
-                      <span>{formatEvent(event)}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        event.source === "work" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
-                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                      }`}>
-                        {event.source === "work" ? "Work" : "Personal"}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
           
-          {/* Event Details Modal */}
-          {viewingEvent && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => setViewingEvent(null)}>
-              <div className="bg-[var(--surface)] p-6 rounded-xl shadow-lg w-full max-w-md max-h-full overflow-y-auto border border-neutral-200 dark:border-neutral-700" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-semibold mb-4 border-b pb-2 border-neutral-200 dark:border-neutral-700">Event Details</h3>
-                <div className="space-y-3">
-                  <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Title: </span>
-                    <span className="font-semibold">{viewingEvent.summary || "(No title)"}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">When: </span>
-                    <span>{formatEvent(viewingEvent)}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Calendar: </span>
-                    <span>{viewingEvent.calendarName || (viewingEvent.source === "work" ? "Work Calendar" : "Personal Calendar")}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Type: </span>
-                    <span className={`tag ${viewingEvent.source === "work" ? "tag-work" : "tag-personal"}`}>
-                      {viewingEvent.source === "work" ? "Work" : "Personal"}
-                    </span>
-                  </div>
-                  {viewingEvent.tags && viewingEvent.tags.length > 0 && (
-                    <div>
-                      <span className="font-medium text-neutral-600 dark:text-neutral-300">Tags: </span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {viewingEvent.tags.map(tag => (
-                          <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {viewingEvent.description && (
-                    <div>
-                      <span className="font-medium text-neutral-600 dark:text-neutral-300">Description: </span>
-                      <div className="mt-1 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg" dangerouslySetInnerHTML={{ __html: viewingEvent.description }} />
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-2 mt-6 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                  {viewingEvent?.source === "personal" && (
-                    <>
-                      <button
-                        onClick={() => { setViewingEvent(null); openEdit(viewingEvent); }}
-                        className="btn-secondary"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-all duration-200"
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                  <button onClick={() => setViewingEvent(null)} className="btn-secondary">Close</button>
-                </div>
-              </div>
+          {/* Display Next Upcoming Event */}
+          {!data ? (
+            <div className="text-neutral-500 dark:text-neutral-400 flex items-center justify-center py-8">
+              Loading calendar events...
             </div>
-          )}
-
-          {/* Add/Edit Event Modal */}
-          {modalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
-              <div className="bg-[var(--surface)] p-6 rounded-xl shadow-lg w-full max-w-md border border-neutral-200 dark:border-neutral-700" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-semibold mb-4 border-b pb-2 border-neutral-200 dark:border-neutral-700">
-                  {editingEvent ? "Edit Event" : "Add Event"}
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Calendar</label>
-                    <select
-                      value={form.calendarId}
-                      onChange={(e) => setForm((f) => ({ ...f, calendarId: e.target.value }))}
-                      className="input-modern"
-                    >
-                      {selectedCals.map((id) => (
-                        <option key={id} value={id}>
-                          {id}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={form.summary}
-                      onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
-                      className="input-modern"
-                      placeholder="Event title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Start</label>
-                    <input
-                      type="datetime-local"
-                      value={form.start}
-                      onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))}
-                      className="input-modern"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">End</label>
-                    <input
-                      type="datetime-local"
-                      value={form.end}
-                      onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))}
-                      className="input-modern"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 mt-6 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+          ) : upcomingEvents.length === 0 ? (
+            <div className="text-neutral-500 dark:text-neutral-400 flex items-center justify-center py-8">
+              No upcoming events in the selected time frame.
+            </div>
+          ) : (
+            <>
+              <div className="bg-white dark:bg-neutral-800 shadow rounded-lg p-4">
+                <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 mb-2">Next Up</h2>
+                {upcomingEvents.map((event) => (
+                  <div key={event.id} className="mb-4">
+                    <h3 className="font-medium text-neutral-700 dark:text-neutral-200">{event.summary}</h3>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                      {formatEvent(event)}
+                    </p>
+                    {/* View Details Button */}
                     <button
-                      onClick={() => setModalOpen(false)}
-                      className="btn-secondary"
+                      onClick={() => setViewingEvent(event)}
+                      className="text-teal-500 hover:text-teal-400 underline text-sm mt-1"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveEvent}
-                      className="btn-primary"
-                    >
-                      Save Event
+                      View Details
                     </button>
                   </div>
-                </div>
+                ))}
               </div>
-            </div>
+            </>
           )}
         </>
+      )}
+
+      {/* Event Details Modal */}
+      {viewingEvent && (
+        <div className="fixed inset-0 bg-neutral-600 bg-opacity-50 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-neutral-800">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-neutral-900 dark:text-neutral-100">
+                {viewingEvent.summary}
+              </h3>
+              <div className="mt-2">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {formatEvent(viewingEvent)}
+                </p>
+                {viewingEvent.description && (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
+                    {viewingEvent.description}
+                  </p>
+                )}
+                {viewingEvent.location && (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
+                    Location: {viewingEvent.location}
+                  </p>
+                )}
+                {viewingEvent.tags && viewingEvent.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {viewingEvent.tags.map(tag => (
+                      <span key={tag} className="bg-teal-100 text-teal-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-teal-700 dark:text-teal-300">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  className="px-4 py-2 bg-teal-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                  onClick={() => openEdit(viewingEvent)}
+                >
+                  Edit Event
+                </button>
+                <button
+                  className="mt-2 px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)}
+                >
+                  Delete Event
+                </button>
+                <button
+                  className="mt-2 px-4 py-2 bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-base font-medium rounded-md w-full shadow-sm hover:bg-neutral-300 dark:hover:bg-neutral-600 focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-500"
+                  onClick={() => setViewingEvent(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Event Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-neutral-600 bg-opacity-50 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-neutral-800">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-neutral-900 dark:text-neutral-100">
+                {editingEvent ? 'Edit Event' : 'Add New Event'}
+              </h3>
+              <div className="mt-2">
+                <label htmlFor="calendarId" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Calendar</label>
+                <div className="mt-1">
+                  <select
+                    id="calendarId"
+                    name="calendarId"
+                    value={form.calendarId}
+                    onChange={(e) => setForm({ ...form, calendarId: e.target.value })}
+                    className="shadow-sm focus:ring-teal-500 focus:border-teal-500 block w-full sm:text-sm border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-700 dark:text-neutral-200"
+                  >
+                    {selectedCals.map((id) => (
+                      <option key={id} value={id}>{id}</option>
+                    ))}
+                  </select>
+                </div>
+                <label htmlFor="summary" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-3">Event Summary</label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="summary"
+                    id="summary"
+                    className="shadow-sm focus:ring-teal-500 focus:border-teal-500 block w-full sm:text-sm border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-700 dark:text-neutral-200"
+                    value={form.summary}
+                    onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                  />
+                </div>
+                <label htmlFor="start" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-3">Start Time</label>
+                <div className="mt-1">
+                  <input
+                    type="datetime-local"
+                    name="start"
+                    id="start"
+                    className="shadow-sm focus:ring-teal-500 focus:border-teal-500 block w-full sm:text-sm border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-700 dark:text-neutral-200"
+                    value={form.start}
+                    onChange={(e) => setForm({ ...form, start: e.target.value })}
+                  />
+                </div>
+                <label htmlFor="end" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-3">End Time (optional)</label>
+                <div className="mt-1">
+                  <input
+                    type="datetime-local"
+                    name="end"
+                    id="end"
+                    className="shadow-sm focus:ring-teal-500 focus:border-teal-500 block w-full sm:text-sm border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-700 dark:text-neutral-200"
+                    value={form.end}
+                    onChange={(e) => setForm({ ...form, end: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  className="px-4 py-2 bg-teal-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                  onClick={handleSaveEvent}
+                >
+                  Save Event
+                </button>
+                <button
+                  className="mt-2 px-4 py-2 bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-base font-medium rounded-md w-full shadow-sm hover:bg-neutral-300 dark:hover:bg-neutral-600 focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-500"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-export default CalendarWidget;
+export default memo(CalendarWidget);
