@@ -377,13 +377,19 @@ const AtAGlanceWidget = () => {
 Generate a short "At A Glance" message for ${preferredName} with:
 
 EVENTS: ${limitedEvents.map((event: CalendarEvent) => {
+  // Check if event has the required properties
+  if (!event || !event.summary || !event.start) {
+    console.warn("Invalid event format:", event);
+    return null; // Skip this event
+  }
+
   const eventTime = event.start.dateTime
     ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
     : event.start.date;
   const calendarType = event.source === "work" ? "work" : "personal";
   const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
   return `${event.summary} at ${eventTime} [${calendarType}${calendarTags}]`;
-}).join(', ') || 'None'}
+}).filter((event: CalendarEvent) => event !== null).join(', ') || 'None'}
 
 TASKS: ${limitedTasks.map((task: Task) => task.text).join(', ') || 'None'}
 

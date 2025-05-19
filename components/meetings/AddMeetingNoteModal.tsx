@@ -106,7 +106,14 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
   };
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
-  const eventOptions = workCalendarEvents.map(event => ({ value: event.id, label: event.summary || '' })); // Use passed-in workCalendarEvents and provide default for label
+  const eventOptions = workCalendarEvents.map(event => {
+    // Check if event has the required properties
+    if (!event || !event.id || !event.summary) {
+      console.warn("Invalid event format:", event);
+      return null; // Skip this event
+    }
+    return { value: event.id, label: event.summary };
+  }).filter(option => option !== null) as { value: string; label: string }[]; // Filter out null values and cast to the correct type
 
   // Log passed-in events and generated options for debugging
   useEffect(() => {
