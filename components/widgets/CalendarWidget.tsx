@@ -10,7 +10,7 @@ import {
   CalendarEventDateTime,
   isDate,
   isCalendarEventDateTime
-} from "@/types/calendar.js";
+} from "../../types/calendar";
 
 type ViewType = 'today' | 'tomorrow' | 'week' | 'month' | 'custom';
 type CustomRange = { start: string; end: string };
