@@ -29,15 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   
   try {
-    const entriesRef = collection(db, 'journal_entries');
-    const q = query(
-      entriesRef,
-      where('userEmail', '==', userEmail),
-      where('date', 'in', dates)
-    );
-    
-    const snapshot = await getDocs(q);
-    
     // Create a map of date to hasContent
     const entries: Record<string, boolean> = {};
     
@@ -46,13 +37,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entries[date] = false;
     });
     
-    // Update entries that have content
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.date && data.content && data.content.trim() !== '') {
-        entries[data.date] = true;
-      }
-    });
+    // Firestore 'in' operator can only handle up to 10 values
+    // Process dates in chunks of 10
+    const chunkSize = 10;
+    for (let i = 0; i < dates.length; i += chunkSize) {
+      const chunk = dates.slice(i, i + chunkSize);
+      
+      const entriesRef = collection(db, 'journal_entries');
+      const q = query(
+        entriesRef,
+        where('userEmail', '==', userEmail),
+        where('date', 'in', chunk)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      // Update entries that have content
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.date && data.content && data.content.trim() !== '') {
+          entries[data.date] = true;
+        }
+      });
+    }
     
     return res.status(200).json({ entries });
   } catch (error) {

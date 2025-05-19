@@ -218,6 +218,36 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                 }
               });
             }
+            
+            // Fetch sleep data for all dates
+            try {
+              // Fetch sleep data for all dates at once
+              const sleepPromises = datesToFetch.map(dateStr =>
+                axios.get(`/api/journal/sleep?date=${dateStr}`, { withCredentials: true })
+                  .then(response => {
+                    if (response.data && response.data.quality && response.data.hours) {
+                      const idx = days.findIndex(day => day.date === dateStr);
+                      if (idx !== -1) {
+                        updatedDays[idx].sleep = {
+                          quality: response.data.quality,
+                          hours: response.data.hours
+                        };
+                        
+                        // Update cache
+                        if (!cachedData[dateStr]) cachedData[dateStr] = {};
+                        cachedData[dateStr].sleep = updatedDays[idx].sleep;
+                      }
+                    }
+                  })
+                  .catch(error => {
+                    console.error(`Error fetching sleep for ${dateStr}:`, error);
+                  })
+              );
+              
+              await Promise.allSettled(sleepPromises);
+            } catch (error) {
+              console.error('Error fetching sleep data:', error);
+            }
           } catch (error) {
             console.error('Error fetching batch activities:', error);
             
@@ -298,6 +328,28 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                   })
                   .catch((error) => {
                     console.error(`Error fetching activities for ${dateStr}:`, error);
+                  })
+              );
+              
+              // Fetch sleep data
+              promises.push(
+                axios.get(`/api/journal/sleep?date=${dateStr}`, {
+                  withCredentials: true
+                })
+                  .then(response => {
+                    if (response.data && response.data.quality && response.data.hours) {
+                      updatedDays[i].sleep = {
+                        quality: response.data.quality,
+                        hours: response.data.hours
+                      };
+                      
+                      // Update cache
+                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
+                      cachedData[dateStr].sleep = updatedDays[i].sleep;
+                    }
+                  })
+                  .catch((error) => {
+                    console.error(`Error fetching sleep for ${dateStr}:`, error);
                   })
               );
             }
@@ -497,7 +549,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             
             {/* Sleep hours in top-right */}
             {day.sleep && day.sleep.hours > 0 && (
-              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200">
+              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200 max-w-[40%] truncate">
                 💤{day.sleep.hours}h
               </div>
             )}

@@ -178,11 +178,18 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   };
 
   const toggleActivity = (activity: string) => {
+    // Check if the activity already exists in the array
+    const activityExists = selectedActivities.includes(activity);
+    
+    // Create a new array without any duplicates of this activity
+    const filteredActivities = selectedActivities.filter(a => a !== activity);
+    
+    // If the activity didn't exist, add it once
     let newActivities;
-    if (selectedActivities.includes(activity)) {
-      newActivities = selectedActivities.filter(a => a !== activity);
+    if (!activityExists) {
+      newActivities = [...filteredActivities, activity];
     } else {
-      newActivities = [...selectedActivities, activity];
+      newActivities = filteredActivities;
     }
     
     setSelectedActivities(newActivities);
@@ -397,9 +404,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
                 >
                   <span className="mr-1">{getActivityIcon(activity)}</span>
                   <span>{activity}</span>
-                  <button 
+                  <button
                     onClick={() => toggleActivity(activity)}
                     className="ml-2 text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200"
+                    aria-label={`Remove ${activity}`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />

@@ -497,7 +497,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
                 
                 {/* Sleep hours in top-right if available */}
                 {entry.sleep && entry.sleep.hours > 0 && (
-                  <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200">
+                  <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200 max-w-[40%] truncate">
                     💤{entry.sleep.hours}h
                   </div>
                 )}

@@ -29,29 +29,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   
   try {
-    const moodsRef = collection(db, 'journal_moods');
-    const q = query(
-      moodsRef,
-      where('userEmail', '==', userEmail),
-      where('date', 'in', dates)
-    );
-    
-    const snapshot = await getDocs(q);
-    
     // Create a map of date to mood data
     const moods: Record<string, any> = {};
     
-    // Add mood data for each date
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.date && data.emoji && data.label) {
-        moods[data.date] = {
-          emoji: data.emoji,
-          label: data.label,
-          tags: data.tags || []
-        };
-      }
-    });
+    // Firestore 'in' operator can only handle up to 10 values
+    // Process dates in chunks of 10
+    const chunkSize = 10;
+    for (let i = 0; i < dates.length; i += chunkSize) {
+      const chunk = dates.slice(i, i + chunkSize);
+      
+      const moodsRef = collection(db, 'journal_moods');
+      const q = query(
+        moodsRef,
+        where('userEmail', '==', userEmail),
+        where('date', 'in', chunk)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      // Add mood data for each date
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.date && data.emoji && data.label) {
+          moods[data.date] = {
+            emoji: data.emoji,
+            label: data.label,
+            tags: data.tags || []
+          };
+        }
+      });
+    }
     
     return res.status(200).json({ moods });
   } catch (error) {
