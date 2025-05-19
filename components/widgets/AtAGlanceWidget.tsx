@@ -3,6 +3,8 @@
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { marked } from 'marked';
+import { useWidgetTracking } from '@/lib/analyticsTracker';
+import { enhancedFetcher } from '@/lib/enhancedFetcher';
 // Initialize marked with GFM options and ensure it doesn't return promises
 marked.setOptions({
   gfm: true,
@@ -49,16 +51,17 @@ const createMarkdownParser = () => {
   return parseMarkdown;
 };
 
-// Memoized fetcher function
+// Memoized fetcher function with SWR pattern
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  return enhancedFetcher(url, undefined, undefined, 60000); // 1 minute cache
 };
 
 const AtAGlanceWidget = () => {
   const { data: session } = useSession();
   const userName = session?.user?.name || "User";
+  
+  // Track widget usage
+  const { trackInteraction } = useWidgetTracking('AtAGlanceWidget');
 
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -183,31 +186,19 @@ const AtAGlanceWidget = () => {
           }
         }
         
-        // Fetch data in parallel using Promise.all
+        // Fetch data in parallel using Promise.all with enhanced fetcher
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
-          // Fetch calendar events
-          fetch(`/api/calendar?${apiUrlParams}`).then(res => {
-            if (!res.ok) throw new Error(`Error fetching events: ${res.statusText}`);
-            return res.json();
-          }),
+          // Fetch calendar events with enhanced fetcher
+          enhancedFetcher(`/api/calendar?${apiUrlParams}`, undefined, `flohub:calendar:${apiUrlParams}`),
           
-          // Fetch tasks
-          fetch('/api/tasks').then(res => {
-            if (!res.ok) throw new Error(`Error fetching tasks: ${res.statusText}`);
-            return res.json();
-          }),
+          // Fetch tasks with enhanced fetcher
+          enhancedFetcher('/api/tasks', undefined, 'flohub:tasks'),
           
-          // Fetch notes
-          fetch('/api/notes').then(res => {
-            if (!res.ok) throw new Error(`Error fetching notes: ${res.statusText}`);
-            return res.json();
-          }),
+          // Fetch notes with enhanced fetcher
+          enhancedFetcher('/api/notes', undefined, 'flohub:notes'),
           
-          // Fetch meetings
-          fetch('/api/meetings').then(res => {
-            if (!res.ok) throw new Error(`Error fetching meetings: ${res.statusText}`);
-            return res.json();
-          })
+          // Fetch meetings with enhanced fetcher
+          enhancedFetcher('/api/meetings', undefined, 'flohub:meetings')
         ]);
 
         // Handle both response formats: direct array or {events: [...]} object
@@ -247,21 +238,21 @@ const AtAGlanceWidget = () => {
           setMeetings(meetingsData);
         }
 
-        // Fetch habits in a separate non-blocking call
+        // Fetch habits in a separate non-blocking call with enhanced fetcher
         try {
-          const habitsRes = await fetch('/api/habits');
-          if (habitsRes.ok) {
-            const habitsData: Habit[] = await habitsRes.json();
-            if (isMounted) setHabits(habitsData);
-            
-            // Fetch habit completions for the current month
-            const today = new Date();
-            const habitCompletionsRes = await fetch(`/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`);
-            if (habitCompletionsRes.ok) {
-              const completionsData: HabitCompletion[] = await habitCompletionsRes.json();
-              if (isMounted) setHabitCompletions(completionsData);
-            }
-          }
+          // Use enhanced fetcher for habits
+          const habitsData: Habit[] = await enhancedFetcher('/api/habits', undefined, 'flohub:habits');
+          if (isMounted) setHabits(habitsData);
+          
+          // Fetch habit completions for the current month
+          const today = new Date();
+          const completionsUrl = `/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`;
+          const completionsData: HabitCompletion[] = await enhancedFetcher(
+            completionsUrl,
+            undefined,
+            `flohub:habitCompletions:${today.getFullYear()}-${today.getMonth()}`
+          );
+          if (isMounted) setHabitCompletions(completionsData);
         } catch (err) {
           console.log("Error fetching habits:", err);
           // Don't fail the whole widget if habits can't be fetched

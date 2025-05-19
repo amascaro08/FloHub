@@ -3,6 +3,11 @@
  * This file contains functions to monitor and report performance metrics
  */
 
+import { db } from './firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useSession } from 'next-auth/react';
+import { useEffect } from 'react';
+
 // Interface for performance metrics
 interface PerformanceMetrics {
   fcp: number | null;  // First Contentful Paint
@@ -163,26 +168,51 @@ export function getPerformanceMetrics(): PerformanceMetrics {
 }
 
 // Send metrics to analytics service
-function sendMetricsToAnalytics(): void {
-  // This is a placeholder - in a real app, you would send these metrics to your analytics service
+async function sendMetricsToAnalytics(): Promise<void> {
+  // Log metrics to console for debugging
   console.log('[Performance] Sending metrics to analytics:', metrics);
   
-  // Example of how you might send metrics to a backend endpoint
-  if (typeof fetch !== 'undefined') {
-    try {
-      fetch('/api/analytics/performance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(metrics),
-        // Don't wait for the response - fire and forget
-        keepalive: true,
-      }).catch(err => {
-        console.warn('[Performance] Failed to send metrics:', err);
-      });
-    } catch (e) {
-      console.warn('[Performance] Error sending metrics:', e);
+  try {
+    // Get user ID if available
+    let userId = null;
+    if (typeof window !== 'undefined') {
+      try {
+        // Try to get user email from localStorage (set during session)
+        userId = localStorage.getItem('flohub.userEmail');
+      } catch (e) {
+        console.warn('[Performance] Error getting user ID:', e);
+      }
+    }
+    
+    // Send metrics to Firestore
+    const performanceRef = collection(db, 'analytics', 'performance', 'metrics');
+    await addDoc(performanceRef, {
+      ...metrics,
+      userId,
+      timestamp: serverTimestamp()
+    });
+    
+    console.log('[Performance] Metrics sent to Firestore successfully');
+  } catch (e) {
+    console.warn('[Performance] Error sending metrics to Firestore:', e);
+    
+    // Fallback to API endpoint if Firestore fails
+    if (typeof fetch !== 'undefined') {
+      try {
+        fetch('/api/analytics/performance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(metrics),
+          // Don't wait for the response - fire and forget
+          keepalive: true,
+        }).catch(err => {
+          console.warn('[Performance] Failed to send metrics to API:', err);
+        });
+      } catch (e) {
+        console.warn('[Performance] Error sending metrics to API:', e);
+      }
     }
   }
 }
@@ -216,7 +246,89 @@ export function performanceFetch(
   });
 }
 
+// Track user session duration
+let sessionStartTime = Date.now();
+let isTracking = false;
+
+export function startSessionTracking(): void {
+  if (isTracking) return;
+  
+  sessionStartTime = Date.now();
+  isTracking = true;
+  
+  // Set up event listeners for session end
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', trackSessionEnd);
+    
+    // Also track session when user navigates away (SPA)
+    window.addEventListener('pagehide', trackSessionEnd);
+  }
+}
+
+async function trackSessionEnd(): Promise<void> {
+  if (!isTracking) return;
+  
+  const sessionDuration = (Date.now() - sessionStartTime) / 1000 / 60; // Convert to minutes
+  isTracking = false;
+  
+  try {
+    // Get user ID if available
+    let userId = null;
+    if (typeof window !== 'undefined') {
+      try {
+        // Try to get user email from localStorage
+        userId = localStorage.getItem('flohub.userEmail');
+      } catch (e) {
+        console.warn('[Performance] Error getting user ID for session tracking:', e);
+      }
+    }
+    
+    // Send session data to Firestore
+    const sessionsRef = collection(db, 'analytics', 'sessions', 'durations');
+    await addDoc(sessionsRef, {
+      sessionDuration,
+      userId,
+      timestamp: serverTimestamp()
+    });
+    
+    console.log(`[Performance] Session duration tracked: ${sessionDuration.toFixed(2)} minutes`);
+  } catch (e) {
+    console.warn('[Performance] Error tracking session duration:', e);
+  }
+}
+
+// React hook to use performance monitoring in components
+export function usePerformanceMonitoring() {
+  const { data: session } = useSession();
+  
+  useEffect(() => {
+    // Start performance monitoring
+    startPerformanceMonitoring();
+    
+    // Start session tracking
+    startSessionTracking();
+    
+    // Store user email in localStorage for analytics
+    if (session?.user?.email) {
+      try {
+        localStorage.setItem('flohub.userEmail', session.user.email);
+      } catch (e) {
+        console.warn('[Performance] Error storing user email:', e);
+      }
+    }
+    
+    // Clean up
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', trackSessionEnd);
+        window.removeEventListener('pagehide', trackSessionEnd);
+      }
+    };
+  }, [session]);
+}
+
 // Initialize performance monitoring
 if (typeof window !== 'undefined') {
   startPerformanceMonitoring();
+  startSessionTracking();
 }

@@ -7,57 +7,17 @@ import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvid
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { usePageViewTracking } from '@/lib/analyticsTracker'
+import { usePerformanceMonitoring } from '@/lib/performanceMonitor'
 
 // Create a performance monitoring component
-const PerformanceMonitor = () => {
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'performance' in window && 'PerformanceObserver' in window) {
-      // Monitor First Input Delay (FID)
-      const fidObserver = new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          // Need to cast to any because TypeScript doesn't know about these properties
-          const fidEntry = entry as any;
-          const delay = fidEntry.processingStart - fidEntry.startTime;
-          console.log(`[Performance] First Input Delay: ${Math.round(delay)}ms`);
-        }
-      });
-      
-      fidObserver.observe({ type: 'first-input', buffered: true });
-      
-      // Monitor Largest Contentful Paint (LCP)
-      const lcpObserver = new PerformanceObserver((entryList) => {
-        const entries = entryList.getEntries();
-        const lastEntry = entries[entries.length - 1];
-        console.log(`[Performance] Largest Contentful Paint: ${Math.round(lastEntry.startTime)}ms`);
-      });
-      
-      lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
-      
-      // Monitor Cumulative Layout Shift (CLS)
-      let clsValue = 0;
-      let clsEntries: any[] = [];
-      
-      const clsObserver = new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          // Need to cast to any because TypeScript doesn't know about these properties
-          const layoutShiftEntry = entry as any;
-          if (!layoutShiftEntry.hadRecentInput) {
-            clsValue += layoutShiftEntry.value;
-            clsEntries.push(layoutShiftEntry);
-          }
-        }
-        console.log(`[Performance] Cumulative Layout Shift: ${clsValue.toFixed(3)}`);
-      });
-      
-      clsObserver.observe({ type: 'layout-shift', buffered: true });
-      
-      return () => {
-        fidObserver.disconnect();
-        lcpObserver.disconnect();
-        clsObserver.disconnect();
-      };
-    }
-  }, []);
+// Analytics and Performance Monitoring Component
+const AnalyticsMonitor = () => {
+  // Track page views
+  usePageViewTracking();
+  
+  // Use enhanced performance monitoring
+  usePerformanceMonitoring();
   
   return null;
 };
@@ -175,8 +135,8 @@ export default function App({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
       
-      {/* Performance monitoring component */}
-      <PerformanceMonitor />
+      {/* Analytics and Performance monitoring component */}
+      <AnalyticsMonitor />
       
       <SessionProvider session={session}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}

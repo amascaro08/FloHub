@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { useRouter } from 'next/router';
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react' // Import icons
 import Link from 'next/link'
+import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from "./AuthContext";
@@ -26,8 +27,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
-  const { isLocked, toggleLock } = useAuth();
+  const { isLocked, toggleLock, user } = useAuth();
   const [topInput, setTopInput] = useState('');
+  
+  // Check if user is admin
+  const isAdmin = user?.email === 'amascaro08@gmail.com';
+  
+  // Create admin navigation item
+  const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: "Settings" };
   
   // Get chat state from context
   // Get chat state from context with error handling
@@ -94,7 +101,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
       >
         <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!desktopSidebarCollapsed && (
-            <img src="/FloHub_Logo_Transparent.png" alt="FloHub" className="h-10 animate-pulse-subtle"/>
+            <Image
+              src="/FloHub_Logo_Transparent.png"
+              alt="FloHub"
+              width={40}
+              height={40}
+              priority={true}
+              quality={85}
+              className="animate-pulse-subtle"
+            />
           )}
           {/* Toggle button for desktop sidebar */}
           <button
@@ -106,6 +121,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         <nav className="p-4 space-y-1">
+          {/* Regular navigation items */}
           {nav.map((x) => (
             <Link
               key={x.href}
@@ -130,6 +146,31 @@ const Layout = ({ children }: { children: ReactNode }) => {
               )}
             </Link>
           ))}
+          
+          {/* Admin navigation item - only visible to admin */}
+          {isAdmin && (
+            <Link
+              href={adminNavItem.href}
+              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+                desktopSidebarCollapsed ? 'justify-center' : ''
+              } group`}
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileSidebarOpen(false);
+                // Use Next.js router for client-side navigation
+                window.location.href = adminNavItem.href;
+              }}
+            >
+              <Settings className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
+                !desktopSidebarCollapsed && 'mr-3'
+              }`} />
+              {!desktopSidebarCollapsed && (
+                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                  {adminNavItem.name}
+                </span>
+              )}
+            </Link>
+          )}
           {/* Sign Out button */}
           <button
             className={`flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
@@ -167,7 +208,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
             >
               <Menu className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
             </button>
-            <img src="/FloHub_Logo_Transparent.png" alt="FloHub" className="h-8 ml-2 md:hidden" />
+            <Image
+              src="/FloHub_Logo_Transparent.png"
+              alt="FloHub"
+              width={32}
+              height={32}
+              priority={true}
+              quality={85}
+              className="ml-2 md:hidden"
+            />
           </div>
           
           {/* FloCat Chat Bubble */}
