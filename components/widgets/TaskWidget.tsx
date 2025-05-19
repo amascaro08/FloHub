@@ -170,9 +170,8 @@ function TaskWidget() {
     setSelectedTags(t.tags || []); // Set tags when editing
   };
 
-  if (status === "loading") {
-    return <p>Loading tasks…</p>;
-  }
+  if (status === "loading") return <p>Loading tasks…</p>;
+
   if (!session) {
     return <p>Please sign in to see your tasks.</p>;
   }

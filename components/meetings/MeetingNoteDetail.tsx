@@ -5,7 +5,7 @@ import { useState, useEffect, FormEvent, useMemo } from "react"; // Import useMe
 import type { Note, Action } from "@/types/app"; // Import shared Note and Action types
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
-import type { CalendarEvent } from "@/components/widgets/CalendarWidget"; // Import CalendarEvent type
+import type { CalendarEvent } from "@/types/calendar"; // Import CalendarEvent type
 
 type MeetingNoteDetailProps = { // Renamed type
   note: Note;

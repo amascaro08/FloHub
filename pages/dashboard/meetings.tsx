@@ -7,7 +7,7 @@ import useSWR from "swr";
 import { useRouter } from "next/navigation";
 // Import types
 import type { Note, UserSettings, Action } from "@/types/app"; // Import Note, UserSettings, and Action types
-import type { CalendarEvent, Settings } from "@/components/widgets/CalendarWidget"; // Import CalendarEvent and Settings types
+import type { CalendarEvent, CalendarSettings } from "@/types/calendar"; // Import CalendarEvent and CalendarSettings types
 import { parseISO } from 'date-fns'; // Import parseISO
 // Import meeting notes components
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";

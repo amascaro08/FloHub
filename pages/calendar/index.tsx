@@ -2,27 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
-
-// Define Settings type (can be moved to a shared types file)
-type Settings = {
-  selectedCals: string[];
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  customRange: { start: string; end: string };
-  powerAutomateUrl?: string;
-};
-
-export type CalendarEvent = {
-  id: string;
-  summary?: string;
-  title?: string; // Some APIs return title instead of summary
-  start: { dateTime?: string | null; date?: string | null; timeZone?: string | null } | Date;
-  end?: { dateTime?: string | null; date?: string | null; timeZone?: string | null } | Date;
-  description?: string;
-  calendarId?: string;
-  source?: "personal" | "work";
-  calendarName?: string;
-  tags?: string[];
-};
+import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -68,15 +48,10 @@ const fetcher = async (url: string) => {
 const CalendarPage = () => {
   const { data: session, status } = useSession();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-
-  if (status === "loading") {
-    return <p>Loading calendar...</p>;
-  }
-
-  if (!session) {
-    return <p>Please sign in to see your calendar.</p>;
-  }
-  const { data: settings, error: settingsError } = useSWR<Settings>(
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
     session ? '/api/userSettings' : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
@@ -292,13 +267,13 @@ const CalendarPage = () => {
   }, []);
 
   const handleViewEvent = useCallback((event: CalendarEvent) => {
-    if (status !== "loading") {
+    if (session) {
       setSelectedEvent(event);
     }
-  }, [status]);
+  }, [session]);
   
   // Handle authentication and loading states with better UI
-  if (status === "loading" || isLoading) {
+  if (!session || isLoading) {
     return (
       <div className="container mx-auto py-10">
         <h1 className="text-2xl font-bold mb-5">Calendar</h1>
@@ -345,17 +320,6 @@ const CalendarPage = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-
-
-
-        <h1 className="text-2xl font-bold mb-5">Calendar</h1>
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
-          <p>Please sign in to view your calendar.</p>
         </div>
       </div>
     );

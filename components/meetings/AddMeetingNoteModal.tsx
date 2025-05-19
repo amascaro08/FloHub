@@ -4,7 +4,7 @@
 import { useState, FormEvent, useEffect } from "react"; // Import useEffect
 import CreatableSelect from 'react-select/creatable';
 import useSWR from "swr"; // Import useSWR
-import type { CalendarEvent } from "@/components/widgets/CalendarWidget"; // Import CalendarEvent type
+import type { CalendarEvent } from "@/types/calendar"; // Import CalendarEvent type
 import type { Action } from "@/types/app"; // Import Action type
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
 

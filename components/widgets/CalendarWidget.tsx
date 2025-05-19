@@ -4,28 +4,10 @@ import { useSession } from "next-auth/react"; // Import useSession
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 
-// Define Settings type (can be moved to a shared types file)
-export type Settings = {
-  selectedCals: string[];
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  customRange: { start: string; end: string };
-  powerAutomateUrl?: string;
-};
+import { CalendarEvent, CalendarSettings } from "@/types/calendar";
 
 type ViewType = 'today' | 'tomorrow' | 'week' | 'month' | 'custom';
 type CustomRange = { start: string; end: string };
-
-export interface CalendarEvent {
-  id: string;
-  calendarId: string; // Calendar ID field
-  summary?: string;
-  start: { dateTime?: string; date?: string };
-  end?: { dateTime?: string; date?: string };
-  source?: "personal" | "work"; // "personal" = Google, "work" = O365
-  description?: string; // Description field
-  calendarName?: string; // Calendar name field
-  tags?: string[]; // Tags field
-}
 
 // Generic fetcher for SWR
 const fetcher = async (url: string) => {
@@ -64,7 +46,7 @@ function CalendarWidget() {
 
   // Fetch persistent user settings via SWR
   const { data: loadedSettings, error: settingsError } =
-    useSWR<Settings>(session ? "/api/userSettings" : null, fetcher);
+    useSWR<CalendarSettings>(session ? "/api/userSettings" : null, fetcher);
 
   // Local state derived from loadedSettings or defaults
   const [selectedCals, setSelectedCals] = useState<string[]>(['primary']);

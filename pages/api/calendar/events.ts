@@ -3,23 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 
-export type CalendarEvent = {
-  id: string;
-  title: string;
-  summary?: string; // Include both title and summary for compatibility
-  start: { dateTime?: string; date?: string } | Date;
-  end: { dateTime?: string; date?: string } | Date;
-  description?: string;
-  calendarId?: string;
-  source?: "personal" | "work";
-  calendarName?: string;
-  tags?: string[];
-};
-
-export type GetCalendarEventsResponse = {
-  events?: CalendarEvent[];
-  error?: string;
-};
+import { CalendarEvent, GetCalendarEventsResponse } from "@/types/calendar";
 
 export default async function handler(
   req: NextApiRequest,
