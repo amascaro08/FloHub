@@ -283,7 +283,7 @@ export default function MeetingsPage() {
 
 
   // Show loading state if needed
-  if (!session && isLoading) {
+  if (!session && status === "loading") {
     return <p>Loading meeting notes, calendar events, and settings…</p>;
   }
 
