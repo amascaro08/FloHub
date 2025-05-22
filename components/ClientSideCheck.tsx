@@ -11,12 +11,13 @@ interface ClientSideCheckProps {
 
 const ClientSideCheck: React.FC<ClientSideCheckProps> = ({ Component, pageProps, isLoading, showLayout }) => {
   const { status } = useSession();
-
+  console.log("ClientSideCheck status:", status);
   return (
     <>
       {status === "authenticated" ? (
         <Layout>
           {isLoading ? (
+            console.log("Layout component rendered"),
             <div className="flex items-center justify-center min-h-screen">
               <div className="animate-pulse flex flex-col items-center">
                 <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
