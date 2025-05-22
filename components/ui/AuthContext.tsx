@@ -28,7 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize state from localStorage, default to false if not found
   const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
 
+  console.log("AuthContext status:", status);
   if (status === 'loading') {
+    console.log("AuthContext is loading...");
     return <div>Loading...</div>; // Or any other fallback UI
   }
   
@@ -72,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const toggleLock = () => {
     setIsLocked(!isLocked);
   };
-
+  
+  console.log("AuthContext providing value:", { user: session?.user || null, login, logout, isLocked, toggleLock, status });
   return (
     <AuthContext.Provider value={{ user: session?.user || null, login, logout, isLocked, toggleLock, status }}>
       {children}
