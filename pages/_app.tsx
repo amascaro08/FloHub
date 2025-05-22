@@ -9,6 +9,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { usePageViewTracking } from '@/lib/analyticsTracker';
 import dynamic from 'next/dynamic';
+import { useSession } from 'next-auth/react';
 
 const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
 
@@ -33,6 +34,7 @@ const App = ({
   // Determine if we should show the layout based on the current route
   const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
   console.log("showLayout:", showLayout);
+  const { status } = useSession();
   // Handle route change loading states
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
@@ -137,9 +139,9 @@ const App = ({
 
       <SessionProvider session={session || null}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
-        <AuthProvider >
+        <AuthProvider>
           <ChatProvider>
-            {showLayout ? (
+            {status === "authenticated" ? (
               <Layout>
                 {isLoading ? (
                   <div className="flex items-center justify-center min-h-screen">
