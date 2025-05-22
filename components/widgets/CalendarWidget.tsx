@@ -476,5 +476,6 @@ function CalendarWidget() {
     </div>
   );
 }
+export default memo(CalendarWidget);
 
 {"\n"}
