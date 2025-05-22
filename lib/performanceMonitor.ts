@@ -299,16 +299,13 @@ async function trackSessionEnd(): Promise<void> {
 
 // React hook to use performance monitoring in components
 export function usePerformanceMonitoring() {
-  const { data: session } = useSession();
+  // Defensive: useSession may be undefined if next-auth is not initialized or during SSR
+  const sessionHook = useSession ? useSession() : { data: undefined };
+  const session = sessionHook?.data;
   
   useEffect(() => {
-    // Start performance monitoring
     startPerformanceMonitoring();
-    
-    // Start session tracking
     startSessionTracking();
-    
-    // Store user email in localStorage for analytics
     if (session?.user?.email) {
       try {
         localStorage.setItem('flohub.userEmail', session.user.email);
@@ -316,8 +313,6 @@ export function usePerformanceMonitoring() {
         console.warn('[Performance] Error storing user email:', e);
       }
     }
-    
-    // Clean up
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('beforeunload', trackSessionEnd);
