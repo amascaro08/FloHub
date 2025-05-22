@@ -19,12 +19,13 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   // Initialize state from localStorage, default to false if not found
 
-  if (!session) {
+  if (status === 'loading') {
     return <div>Loading...</div>; // Or any other fallback UI
   }
+
   const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
   
   // Load lock state from localStorage on mount (client-side only)

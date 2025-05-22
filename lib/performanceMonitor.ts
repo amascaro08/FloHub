@@ -42,7 +42,7 @@ export function resetMetrics(): void {
     fid: null,
     cls: null,
     ttfb: null,
-    navStart: typeof performance !== 'undefined' ? performance.now() : 0,
+    navStart: typeof performance !== 'undefined' ? performance.now() : 0, // Use performance.now() for consistency
     loadComplete: null,
     apiCalls: {},
     componentRenders: {}
@@ -56,7 +56,7 @@ export function startPerformanceMonitoring(): void {
   }
 
   // Record navigation start time
-  metrics.navStart = performance.timeOrigin || performance.timing.navigationStart;
+  metrics.navStart = performance.now(); // Use performance.now() for consistency
 
   // Monitor First Contentful Paint (FCP)
   try {
@@ -135,11 +135,12 @@ export function startPerformanceMonitoring(): void {
   window.addEventListener('load', () => {
     // Always use performance.now() for both navStart and loadComplete
     metrics.loadComplete = performance.now();
-    // If navStart is not set, set it to performance.timing.navigationStart or performance.now()
+    // If navStart is not set, set it to performance.now()
     if (!metrics.navStart || metrics.navStart < 0) {
-      metrics.navStart = performance.timing?.navigationStart || performance.now();
+      metrics.navStart = performance.now();
     }
     let loadTime = metrics.loadComplete - metrics.navStart;
+    // The check for negative loadTime might still be useful as a safeguard, but should be less frequent with consistent timing
     if (loadTime < 0) {
       console.warn('[Performance] Detected negative page load time. navStart:', metrics.navStart, 'loadComplete:', metrics.loadComplete);
       loadTime = 0;
