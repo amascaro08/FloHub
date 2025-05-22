@@ -32,7 +32,7 @@ const App = ({
 
   // Determine if we should show the layout based on the current route
   const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
-
+  console.log("showLayout:", showLayout);
   // Handle route change loading states
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
@@ -137,7 +137,7 @@ const App = ({
 
       <SessionProvider session={session || null}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
-        <AuthProvider>
+        <AuthProvider >
           <ChatProvider>
             {showLayout ? (
               <Layout>
