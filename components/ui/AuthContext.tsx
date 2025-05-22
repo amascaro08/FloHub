@@ -8,6 +8,7 @@ type AuthContextType = {
   logout: () => void;
   isLocked: boolean;
   toggleLock: () => void;
+  status: "loading" | "authenticated" | "unauthenticated"; // Add status to context type
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isLocked: false,
   toggleLock: () => {},
+  status: "unauthenticated", // Default status
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user: session?.user || null, login, logout, isLocked, toggleLock }}>
+    <AuthContext.Provider value={{ user: session?.user || null, login, logout, isLocked, toggleLock, status }}>
       {children}
     </AuthContext.Provider>
   );

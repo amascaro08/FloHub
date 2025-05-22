@@ -30,11 +30,12 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const isClient = typeof window !== 'undefined';
   const auth = isClient ? useAuth() : null;
   const [topInput, setTopInput] = useState('');
-  
-  // Safely destructure auth values with fallbacks for SSR
+
+  // Safely destructure auth values with fallbacks for SSR, including status
   const isLocked = auth?.isLocked || false;
   const toggleLock = auth?.toggleLock || (() => {});
   const user = auth?.user || null;
+  const authStatus = auth?.status; // Get status from useAuth
   
   // Check if user is admin
   const isAdmin = user?.email === 'amascaro08@gmail.com';
@@ -72,6 +73,18 @@ const Layout = ({ children }: { children: ReactNode }) => {
     }
   };
 
+
+  // Render a loading state if authentication is still loading
+  if (authStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[var(--bg)] text-[var(--fg)]">

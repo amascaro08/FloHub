@@ -12,7 +12,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 function TaskWidget() {
   const { data: session, status } = useSession();
   
-  if (!session) {
+  if (status === 'loading') {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const shouldFetch               = status === "authenticated";
