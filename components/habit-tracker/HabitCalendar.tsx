@@ -23,7 +23,8 @@ import {
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
-  const { user } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user;
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);
