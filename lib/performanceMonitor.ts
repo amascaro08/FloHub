@@ -133,10 +133,18 @@ export function startPerformanceMonitoring(): void {
 
   // Record when page load is complete
   window.addEventListener('load', () => {
+    // Always use performance.now() for both navStart and loadComplete
     metrics.loadComplete = performance.now();
-    const loadTime = metrics.loadComplete - metrics.navStart;
+    // If navStart is not set, set it to performance.timing.navigationStart or performance.now()
+    if (!metrics.navStart || metrics.navStart < 0) {
+      metrics.navStart = performance.timing?.navigationStart || performance.now();
+    }
+    let loadTime = metrics.loadComplete - metrics.navStart;
+    if (loadTime < 0) {
+      console.warn('[Performance] Detected negative page load time. navStart:', metrics.navStart, 'loadComplete:', metrics.loadComplete);
+      loadTime = 0;
+    }
     console.log(`[Performance] Total page load time: ${Math.round(loadTime)}ms`);
-    
     // Send metrics to analytics after page load
     setTimeout(() => {
       sendMetricsToAnalytics();
