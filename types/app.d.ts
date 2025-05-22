@@ -23,6 +23,9 @@ export type UserSettings = {
   notificationSettings?: {
     subscribed: boolean;
   };
+  floCatSettings?: {
+    enabledCapabilities: string[];
+  };
 };
 
 // Define a type for calendar sources
