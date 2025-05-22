@@ -23,7 +23,7 @@ import SleepTracker from "@/components/journal/SleepTracker";
 
 export default function JournalPage() {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 

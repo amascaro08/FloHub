@@ -17,6 +17,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
   const [floCatsSummary, setFloCatsSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

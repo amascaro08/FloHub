@@ -29,6 +29,7 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const { data: session, status } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

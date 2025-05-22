@@ -6,7 +6,7 @@ import AuthLayout from '@/components/ui/AuthLayout';
 export default function LoginPage() {
   const router = useRouter();
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const [email, setEmail] = useState('');
 

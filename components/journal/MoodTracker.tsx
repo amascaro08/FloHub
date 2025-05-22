@@ -17,6 +17,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [moodData, setMoodData] = useState<{date: string, emoji: string, label: string}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

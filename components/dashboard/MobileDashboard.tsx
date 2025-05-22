@@ -43,7 +43,7 @@ export default function MobileDashboard() {
   
   // Use useSession with required: false to handle SSR
   const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

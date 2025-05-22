@@ -21,7 +21,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function NotesPage() {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 

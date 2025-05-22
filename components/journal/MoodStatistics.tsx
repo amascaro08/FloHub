@@ -26,6 +26,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const [activityCorrelations, setActivityCorrelations] = useState<{[key: string]: ActivityCorrelation}>({});
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days'>('30days');
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

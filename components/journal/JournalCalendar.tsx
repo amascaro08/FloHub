@@ -31,6 +31,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

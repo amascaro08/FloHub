@@ -26,7 +26,7 @@ const formatDate = (dateString: string | null) => {
 
 export default function TasksPage() {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 

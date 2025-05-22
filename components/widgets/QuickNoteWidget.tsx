@@ -17,7 +17,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
 
   if (!session) {

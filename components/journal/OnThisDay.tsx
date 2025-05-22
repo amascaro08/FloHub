@@ -16,6 +16,7 @@ interface HistoricalEntry {
 const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   const [historicalEntry, setHistoricalEntry] = useState<HistoricalEntry | null>(null);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

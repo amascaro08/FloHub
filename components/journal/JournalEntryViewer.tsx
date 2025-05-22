@@ -17,6 +17,7 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

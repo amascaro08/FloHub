@@ -47,7 +47,7 @@ const fetcher = async (url: string) => {
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);

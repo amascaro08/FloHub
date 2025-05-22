@@ -34,6 +34,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

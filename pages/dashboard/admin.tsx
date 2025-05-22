@@ -7,7 +7,7 @@ import Head from 'next/head';
 
 export default function AdminPage() {
   const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 

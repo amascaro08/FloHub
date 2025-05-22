@@ -27,6 +27,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const { data: session } = useSession();
+  const sessionData = session ? session : null;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

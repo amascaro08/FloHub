@@ -54,7 +54,7 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 
 function CalendarWidget() {
   const sessionHookResult = useSession();
-  const session = sessionHookResult?.data;
+  const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
   const { mutate } = useSWRConfig();
 
