@@ -124,7 +124,7 @@ const App = ({
       </Head>
 
 
-      <SessionProvider session={session}>
+      <SessionProvider session={session || null}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
         <AuthProvider>
           <ChatProvider>
