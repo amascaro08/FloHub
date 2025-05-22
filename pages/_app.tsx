@@ -113,6 +113,17 @@ const App = ({
 
   }, []);
 
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.unregister();
+        console.log('Service worker unregistered');
+      }).catch(error => {
+        console.error('Service worker unregistration failed:', error);
+      });
+    }
+  }, []);
+
   return (
     <>
       <Head>
