@@ -21,12 +21,21 @@ interface BacklogItem {
 }
 
 const FeedbackPage: NextPage = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
+  // Handle loading state
+  if (status === 'loading') {
+    return <div>Loading session...</div>;
   }
+
+  // Handle unauthenticated state
+  if (status !== 'authenticated' || !session) {
+    // Redirect to login or show a message
+    // For now, showing a message as per original logic
+    return <div>You must be signed in to view this page.</div>;
+  }
+
   const [feedbackType, setFeedbackType] = useState('bug');
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);

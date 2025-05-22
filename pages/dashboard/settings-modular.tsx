@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
   // Save settings
   const save = async () => {
-    if (!session?.user?.email) {
+    if (status !== 'authenticated' || !session?.user?.email) {
       alert("You must be signed in to save settings.");
       return;
     }

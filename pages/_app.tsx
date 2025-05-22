@@ -23,15 +23,6 @@ const AnalyticsMonitor = () => {
   return null;
 };
 
-// Disable SSR for authenticated pages
-function SafeHydrate({ children }: { children: React.ReactNode }) {
-  return (
-    <div suppressHydrationWarning>
-      {typeof window === 'undefined' ? null : children}
-    </div>
-  )
-}
-
 // Create a no-SSR version of the app for authenticated routes
 const App = ({
   Component,
@@ -39,31 +30,26 @@ const App = ({
 }: AppProps<{ session?: any }>) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Determine if we should show the layout based on the current route
   const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
-  
-  // Check if this is an authenticated route that should disable SSR
-  const isAuthRoute = router.pathname.includes('/dashboard') ||
-                      router.pathname.includes('/calendar') ||
-                      router.pathname.includes('/habit-tracker');
-  
+
   // Handle route change loading states
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
-    
+
     router.events.on('routeChangeStart', handleStart);
     router.events.on('routeChangeComplete', handleComplete);
     router.events.on('routeChangeError', handleComplete);
-    
+
     return () => {
       router.events.off('routeChangeStart', handleStart);
       router.events.off('routeChangeComplete', handleComplete);
       router.events.off('routeChangeError', handleComplete);
     };
   }, [router]);
-  
+
   // Register service worker for PWA
   useEffect(() => {
     const registerSW = async () => {
@@ -72,14 +58,14 @@ const App = ({
           // Check if running on iOS or Android
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
           const isAndroid = /Android/.test(navigator.userAgent);
-          
+
           console.log('Registering service worker for platform:', {
             isIOS,
             isAndroid,
             userAgent: navigator.userAgent,
             production: process.env.NODE_ENV === 'production'
           });
-          
+
           // Always register in development for testing, only in production otherwise
           if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
             // Use different registration options for iOS
@@ -89,9 +75,9 @@ const App = ({
               // Use update on reload for development to ensure latest service worker
               updateViaCache: process.env.NODE_ENV === 'development' ? 'none' : 'imports'
             });
-            
+
             console.log('Service Worker registration successful with scope: ', registration.scope);
-            
+
             // Force update for existing service workers
             if (registration.installing) {
               console.log('Service worker installing');
@@ -101,12 +87,12 @@ const App = ({
             } else if (registration.active) {
               console.log('Service worker active');
             }
-            
+
             // Set up service worker update handling
             navigator.serviceWorker.addEventListener('controllerchange', () => {
               console.log('Service worker controller changed');
             });
-            
+
             // Listen for service worker messages
             navigator.serviceWorker.addEventListener('message', (event) => {
               if (event.data && event.data.type === 'CACHE_UPDATED') {
@@ -122,28 +108,27 @@ const App = ({
         console.warn('Service workers are not supported in this browser');
       }
     };
-    
+
     // Register immediately instead of waiting for load event
     registerSW();
-    
+
     // Set up performance monitoring
     if (typeof window !== 'undefined') {
       // Mark navigation start
       performance.mark('app-init');
-      
+
       // Measure time to first render
       window.addEventListener('load', () => {
         performance.mark('app-loaded');
         performance.measure('app-startup', 'app-init', 'app-loaded');
-        
+
         const startupTime = performance.getEntriesByName('app-startup')[0].duration;
         console.log(`[Performance] App startup time: ${Math.round(startupTime)}ms`);
       });
     }
   }, []);
-  
-  // For authenticated routes, wrap in SafeHydrate to disable SSR
-  const content = (
+
+  return (
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
@@ -151,12 +136,12 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      
+
       {typeof window !== 'undefined' && (
         /* Analytics and Performance monitoring component - client-side only */
         <AnalyticsMonitor />
       )}
-      
+
       <SessionProvider session={session}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
         <AuthProvider>
@@ -171,20 +156,17 @@ const App = ({
                     </div>
                   </div>
                 ) : (
-                  <Component {...pageProps}/>
+                  <Component {...pageProps} />
                 )}
               </Layout>
             ) : (
-              <Component {...pageProps}/>
+              <Component {...pageProps} />
             )}
           </ChatProvider>
         </AuthProvider>
       </SessionProvider>
     </>
   );
-  
-  // Disable SSR for authenticated routes
-  return isAuthRoute ? <SafeHydrate>{content}</SafeHydrate> : content;
 };
 
 // Use dynamic import with SSR disabled for the entire app

@@ -23,15 +23,17 @@ export default function NotesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
+  // Handle loading state
+  if (status === 'loading') {
+    return <p className="text-center p-8">Loading notes...</p>;
   }
 
-  useEffect(() => {
-    if (!session) {
-      router.push("/");
-    }
-  }, [session, router]);
+  // Handle unauthenticated state
+  if (status !== 'authenticated' || !session) {
+    // Redirect to login or show a message
+    // For now, showing a message
+    return <p className="text-center p-8">Please sign in to access your notes.</p>;
+  }
 
   const shouldFetch = status === "authenticated";
   // Fetch notes
@@ -228,9 +230,6 @@ export default function NotesPage() {
     return <p>Loading notes and calendar events…</p>;
   }
 
-  if (!session) {
-    return <p>Please sign in to see your notes.</p>;
-  }
 
   // Show error state if either notes or calendar events failed to load
   if (notesError || calendarError || settingsError) { // Add settingsError check

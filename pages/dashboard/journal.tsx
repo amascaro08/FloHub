@@ -25,9 +25,16 @@ export default function JournalPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
+  // Handle loading state
+  if (status === 'loading') {
+    return <p className="text-center p-8">Loading journal...</p>;
   }
+
+  // Handle unauthenticated state
+  if (status !== 'authenticated' || !session) {
+    return <p className="text-center p-8">Please sign in to access your journal.</p>;
+  }
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
   const [showNewEntryButton, setShowNewEntryButton] = useState(false);
@@ -203,10 +210,6 @@ export default function JournalPage() {
     }
   };
 
-  // Show message if not authenticated
-  if (!session) {
-    return <p className="text-center p-8">Please sign in to access your journal.</p>;
-  }
 
   return (
     <div className="relative max-w-full">
