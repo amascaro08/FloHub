@@ -19,16 +19,6 @@ export interface CalendarEvent {
   location?: string;
 }
 
-// Helper type guard to check if an object is a Date
-export function isDate(obj: any): obj is Date {
-  return obj instanceof Date;
-}
-
-// Helper type guard to check if an object is a CalendarEventDateTime
-export function isCalendarEventDateTime(obj: any): obj is CalendarEventDateTime {
-  return obj && (typeof obj.dateTime === 'string' || typeof obj.date === 'string' || obj.dateTime === null || obj.date === null);
-}
-
 // Settings type for calendar components
 export interface CalendarSettings {
   selectedCals: string[];

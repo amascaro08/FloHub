@@ -4,13 +4,23 @@ import { useSession } from "next-auth/react"; // Import useSession
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 
-import {
+import type {
   CalendarEvent,
   CalendarSettings,
   CalendarEventDateTime,
-  isDate,
-  isCalendarEventDateTime
-} from "../../types/calendar.js";
+} from "../../types/calendar.d.ts";
+
+type CalendarEventDateTimeType = CalendarEventDateTime | Date;
+
+// Helper type guard to check if an object is a Date
+function isDate(obj: any): obj is Date {
+  return obj instanceof Date;
+}
+
+// Helper type guard to check if an object is a CalendarEventDateTime
+function isCalendarEventDateTime(obj: any): obj is CalendarEventDateTime {
+  return obj && (typeof obj.dateTime === 'string' || typeof obj.date === 'string' || obj.dateTime === null || obj.date === null);
+}
 
 type ViewType = 'today' | 'tomorrow' | 'week' | 'month' | 'custom';
 type CustomRange = { start: string; end: string };
@@ -248,11 +258,18 @@ function CalendarWidget() {
           if (activeView === 'today' || activeView === 'tomorrow') {
              if (eventEndDate) {
                return eventEndDate.getTime() >= now.getTime();
-             } else if (isCalendarEventDateTime(ev.start) && ev.start.date && !ev.start.dateTime) {
-               // All-day event today/tomorrow
-               const allDayEndDate = new Date(ev.start.date);
-               allDayEndDate.setHours(23, 59, 59, 999); // Consider all-day event ending at end of day
-               return allDayEndDate.getTime() >= now.getTime();
+             } else if (isCalendarEventDateTime(ev.start)) {
+                const start = ev.start as CalendarEventDateTime;
+                if (start.date && !start.dateTime) {
+                  // All-day event today/tomorrow
+                  const date = start.date;
+                  const allDayEndDate = date ? new Date(date) : null;
+                  if (!allDayEndDate) return false;
+                  allDayEndDate.setHours(23, 59, 59, 999);
+                  return allDayEndDate.getTime() >= now.getTime();
+                } else {
+                  return false;
+                }
              } else {
                 // Timed event with no end time? Assume it's ongoing from start time
                 return eventStartDate.getTime() >= now.getTime();
@@ -294,18 +311,22 @@ function CalendarWidget() {
 
   // Format event for display
   const formatEvent = (ev: CalendarEvent) => {
-    if (isCalendarEventDateTime(ev.start)) {
-      if (ev.start.date && !ev.start.dateTime) {
-        const d = new Date(ev.start.date);
-        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-      }
-      const dt = new Date(ev.start.dateTime || ev.start.date!);
-      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    } else if (isDate(ev.start)) {
-      return ev.start.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+   if (isCalendarEventDateTime(ev.start)) {
+     const start = ev.start as CalendarEventDateTime;
+     if (start.date && !start.dateTime) {
+      const date = start.date;
+      const d = date ? new Date(date) : null;
+      return d ? d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : "Unknown date format";
     }
-    return "Unknown date format";
-  };
+    const dateTime = start.dateTime;
+    const date = start.date;
+    const dt = dateTime ? new Date(dateTime) : date ? new Date(date) : null;
+    return dt ? dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : "Unknown date format";
+  } else if (isDate(ev.start)) {
+    return (ev.start as Date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  return "Unknown date format";
+};
 
   // Handlers for opening modal
   const openAdd = () => {
@@ -325,16 +346,18 @@ function CalendarWidget() {
     let endStr = '';
     
     if (isCalendarEventDateTime(ev.start)) {
-      startStr = ev.start.dateTime || (ev.start.date ? `${ev.start.date}T00:00` : '');
+      const start = ev.start as CalendarEventDateTime;
+      startStr = start.dateTime || (start.date ? `${start.date}T00:00` : '');
     } else if (isDate(ev.start)) {
-      startStr = ev.start.toISOString().substring(0, 16); // Format as YYYY-MM-DDTHH:MM
+      startStr = (ev.start as Date).toISOString().substring(0, 16);
     }
     
     if (ev.end) {
       if (isCalendarEventDateTime(ev.end)) {
-        endStr = ev.end.dateTime || (ev.end.date ? `${ev.end.date}T00:00` : '');
+        const end = ev.end as CalendarEventDateTime;
+        endStr = end.dateTime || (end.date ? `${end.date}T00:00` : '');
       } else if (isDate(ev.end)) {
-        endStr = ev.end.toISOString().substring(0, 16); // Format as YYYY-MM-DDTHH:MM
+        endStr = (ev.end as Date).toISOString().substring(0, 16);
       }
     }
     
