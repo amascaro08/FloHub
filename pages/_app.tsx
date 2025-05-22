@@ -7,8 +7,7 @@ import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvid
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { usePageViewTracking } from '@/lib/analyticsTracker'
-import { usePerformanceMonitoring } from '@/lib/performanceMonitor'
+import { usePageViewTracking } from '@/lib/analyticsTracker';
 import dynamic from 'next/dynamic';
 
 const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
@@ -19,8 +18,6 @@ const AnalyticsMonitor = () => {
   // Track page views
   usePageViewTracking();
   
-  // Use enhanced performance monitoring
-  usePerformanceMonitoring();
   
   return null;
 };
@@ -115,20 +112,6 @@ const App = ({
     // Register immediately instead of waiting for load event
     registerSW();
 
-    // Set up performance monitoring
-    if (typeof window !== 'undefined') {
-      // Mark navigation start
-      performance.mark('app-init');
-
-      // Measure time to first render
-      window.addEventListener('load', () => {
-        performance.mark('app-loaded');
-        performance.measure('app-startup', 'app-init', 'app-loaded');
-
-        const startupTime = performance.getEntriesByName('app-startup')[0].duration;
-        console.log(`[Performance] App startup time: ${Math.round(startupTime)}ms`);
-      });
-    }
   }, []);
 
   return (
@@ -140,10 +123,6 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
-      {typeof window !== 'undefined' && (
-        /* Analytics and Performance monitoring component - client-side only */
-        <AnalyticsMonitor />
-      )}
 
       <SessionProvider session={session}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
