@@ -107,11 +107,11 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.tags.join(",")}
+          value={settings.tags?.join(",")}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
-              tags: e.target.value.split(","),
+              tags: e.target.value.split(",")
             })
           }
         />
@@ -124,11 +124,11 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.widgets.join(",")}
+          value={settings.widgets?.join(",")}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
-              widgets: e.target.value.split(","),
+              widgets: e.target.value.split(",")
             })
           }
         />
@@ -160,13 +160,13 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.floCatSettings?.enabledCapabilities.join(",")}
+          value={settings.floCatSettings?.enabledCapabilities?.join(",")}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
               floCatSettings: {
-                enabledCapabilities: e.target.value.split(","),
-              },
+                enabledCapabilities: e.target.value.split(",")
+              }
             })
           }
         />
@@ -191,7 +191,7 @@ const SettingsModularPage = () => {
         />
       </div>
       <button
-        onClick={() => signOut()}
+        onClick={() => logout()}
         className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
       >
         Sign Out

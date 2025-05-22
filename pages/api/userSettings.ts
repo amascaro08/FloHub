@@ -35,6 +35,14 @@ export default async function handler(
           floCatStyle: "default", // Default FloCat communication style
           floCatPersonality: [], // Default empty array for FloCat personality keywords
           preferredName: "", // Default empty string for preferred name
+          tags: [],
+          widgets: [],
+          calendarSettings: {
+            calendars: [],
+          },
+          notificationSettings: {
+            subscribed: false,
+          },
         };
         console.log("User settings not found for", userEmail, "- returning default settings");
         return res.status(200).json(defaultSettings);
