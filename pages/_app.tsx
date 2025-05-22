@@ -9,7 +9,6 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { usePageViewTracking } from '@/lib/analyticsTracker';
 import dynamic from 'next/dynamic';
-import { useSession } from 'next-auth/react';
 
 const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
 
@@ -23,6 +22,11 @@ const AnalyticsMonitor = () => {
   return null;
 };
 
+const ClientSideCheck = dynamic(
+  () => import('../components/ClientSideCheck'),
+  { ssr: false }
+);
+
 // Create a no-SSR version of the app for authenticated routes
 const App = ({
   Component,
@@ -34,7 +38,6 @@ const App = ({
   // Determine if we should show the layout based on the current route
   const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
   console.log("showLayout:", showLayout);
-  const { status } = useSession();
   // Handle route change loading states
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
@@ -141,22 +144,12 @@ const App = ({
         {/* Wrap Layout with AuthProvider and ChatProvider */}
         <AuthProvider>
           <ChatProvider>
-            {status === "authenticated" ? (
-              <Layout>
-                {isLoading ? (
-                  <div className="flex items-center justify-center min-h-screen">
-                    <div className="animate-pulse flex flex-col items-center">
-                      <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                    </div>
-                  </div>
-                ) : (
-                  <Component {...pageProps} />
-                )}
-              </Layout>
-            ) : (
-              <Component {...pageProps} />
-            )}
+            <ClientSideCheck 
+              Component={Component}
+              pageProps={pageProps}
+              isLoading={isLoading}
+              showLayout={showLayout}
+            />
           </ChatProvider>
         </AuthProvider>
       </SessionProvider>
