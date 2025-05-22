@@ -15,6 +15,14 @@ export type UserSettings = {
   floCatStyle?: "default" | "more_catty" | "less_catty" | "professional"; // FloCat communication style
   floCatPersonality?: string[]; // Personality keywords for FloCat (e.g., "humorous", "sarcastic", "serious")
   preferredName?: string; // User's preferred name for FloCat to use
+  tags: string[];
+  widgets: string[];
+  calendarSettings: {
+    calendars: string[];
+  };
+  notificationSettings: {
+    subscribed: boolean;
+  };
 };
 
 // Define a type for calendar sources

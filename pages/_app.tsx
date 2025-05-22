@@ -24,10 +24,9 @@ const AnalyticsMonitor = () => {
 
 // Create a no-SSR version of the app for authenticated routes
 const App = ({
-  Component: OriginalComponent,
+  Component,
   pageProps: { session, ...pageProps },
 }: AppProps<{ session?: any }>) => {
-  const Component = dynamic(() => Promise.resolve(OriginalComponent), { ssr: false });
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
