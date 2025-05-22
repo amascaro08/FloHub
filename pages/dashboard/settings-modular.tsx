@@ -26,7 +26,9 @@ const fetcher = async (url: string) => {
 
 export default function SettingsPage() {
   // Session state
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const loadingSession = status === "loading";
 
   if (!session) {

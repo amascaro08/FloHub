@@ -19,7 +19,8 @@ type NotificationState = {
 };
 
 const NotificationManager: React.FC = () => {
-  const { data: session } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

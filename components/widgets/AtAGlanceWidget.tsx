@@ -44,7 +44,8 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-  const { data: session } = useSession({ required: false });
+  const sessionHookResult = useSession({ required: false });
+  const session = sessionHookResult?.data;
   
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

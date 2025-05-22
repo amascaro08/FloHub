@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
 const DebugWidget = () => {
-const { data: session, status } = useSession();
+const sessionHookResult = useSession();
+const session = sessionHookResult?.data;
+const status = sessionHookResult?.status || "unauthenticated";
 const [debugInfo, setDebugInfo] = useState<any>(null);
 
 if (!session) {

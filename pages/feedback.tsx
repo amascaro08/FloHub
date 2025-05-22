@@ -21,7 +21,9 @@ interface BacklogItem {
 }
 
 const FeedbackPage: NextPage = () => {
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 
   // Handle loading state

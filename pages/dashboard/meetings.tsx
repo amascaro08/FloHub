@@ -31,7 +31,9 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 export default function MeetingsPage() {
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 
   if (!session) {

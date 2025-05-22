@@ -22,7 +22,9 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 
 export default function JournalPage() {
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 
   // Handle loading state

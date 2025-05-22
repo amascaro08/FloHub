@@ -169,7 +169,4 @@ const App = ({
   );
 };
 
-// Use dynamic import with SSR disabled for the entire app
-export default dynamic(() => Promise.resolve(App), {
-  ssr: false
-});
+export default App;

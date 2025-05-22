@@ -8,7 +8,9 @@ import { hash } from 'bcryptjs';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const [name, setName] = useState('');
 
   if (!session) {

@@ -53,7 +53,9 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 function CalendarWidget() {
-  const { data: session, status } = useSession(); // Destructure status
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const { mutate } = useSWRConfig();
 
   if (status === 'loading') { // Correctly check for loading status

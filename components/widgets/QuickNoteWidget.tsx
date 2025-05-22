@@ -16,7 +16,9 @@ const CreatableSelect = dynamic(() => import('react-select/creatable'), {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
 
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI

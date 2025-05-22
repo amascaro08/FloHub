@@ -10,7 +10,9 @@ import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSe
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function TaskWidget() {
-  const { data: session, status } = useSession();
+  const sessionHookResult = useSession();
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   
   if (status === 'loading') {
     return <div>Loading...</div>; // Or any other fallback UI

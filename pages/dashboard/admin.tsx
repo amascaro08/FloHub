@@ -6,7 +6,9 @@ import AdminAnalytics from '@/components/admin/AdminAnalytics';
 import Head from 'next/head';
 
 export default function AdminPage() {
-  const { data: session, status } = useSession({ required: false });
+  const sessionHookResult = useSession({ required: false });
+  const session = sessionHookResult?.data;
+  const status = sessionHookResult?.status || "unauthenticated";
   const router = useRouter();
 
   const isClient = typeof window !== 'undefined';
