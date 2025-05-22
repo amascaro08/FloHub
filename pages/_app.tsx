@@ -9,7 +9,9 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { usePageViewTracking } from '@/lib/analyticsTracker'
 import { usePerformanceMonitoring } from '@/lib/performanceMonitor'
-import dynamic from 'next/dynamic'
+import dynamic from 'next/dynamic';
+
+const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
 
 // Create a performance monitoring component
 // Analytics and Performance Monitoring Component
@@ -25,9 +27,10 @@ const AnalyticsMonitor = () => {
 
 // Create a no-SSR version of the app for authenticated routes
 const App = ({
-  Component,
+  Component: OriginalComponent,
   pageProps: { session, ...pageProps },
 }: AppProps<{ session?: any }>) => {
+  const Component = dynamic(() => Promise.resolve(OriginalComponent), { ssr: false });
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
