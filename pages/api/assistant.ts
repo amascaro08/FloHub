@@ -102,11 +102,15 @@ export default async function handler(
 
   const lowerPrompt = userInput.toLowerCase();
 
-  const callInternalApi = async (path: string, method: string, body: any) => {
-    const url = path;
+  const callInternalApi = async (path: string, method: string, body: any, originalReq: NextApiRequest) => {
+    const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
     const response = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Forward the cookie from the original request for authentication in internal API calls
+        "Cookie": originalReq.headers.cookie || "",
+      },
       body: JSON.stringify(body),
     });
 
@@ -128,10 +132,14 @@ export default async function handler(
     const payload: any = { text: taskText };
     if (dueDate) payload.dueDate = dueDate;
 
-    await callInternalApi("/api/tasks", "POST", payload);
-    return res.status(200).json({
-      reply: `✅ Task "${taskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
-    });
+    const success = await callInternalApi("/api/tasks", "POST", payload, req);
+    if (success) {
+      return res.status(200).json({
+        reply: `✅ Task "${taskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+      });
+    } else {
+      return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+    }
   }
 
   // ── Add Calendar Event Detection ───────────────────
@@ -146,8 +154,12 @@ export default async function handler(
       const now = new Date();
       const start = now.toISOString();
       const end = new Date(now.getTime() + 3600000).toISOString();
-      await callInternalApi("/api/calendar", "POST", { summary, start, end });
-      return res.status(200).json({ reply: `📅 Event "${summary}" scheduled.` });
+      const success = await callInternalApi("/api/calendar", "POST", { summary, start, end }, req);
+      if (success) {
+        return res.status(200).json({ reply: `📅 Event "${summary}" scheduled.` });
+      } else {
+        return res.status(500).json({ error: "Sorry, I couldn't schedule the event. There was an internal error." });
+      }
     }
   }
 
@@ -203,12 +215,6 @@ export default async function handler(
         content: styleInstruction,
       }
     ];
-    
-    // Map history messages (can be done while waiting for context)
-    const historyMessages = history.map((msg) => ({
-      role: msg.role as "user" | "assistant" | "system",
-      content: msg.content || "", // Ensure content is never undefined
-    }));
     
     // Wait for context to complete
     const relevantContext = await relevantContextPromise;
