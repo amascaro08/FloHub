@@ -8,12 +8,24 @@ export default function LoginPage() {
   const sessionHookResult = useSession();
   const session = sessionHookResult?.data ? sessionHookResult.data : null;
   const status = sessionHookResult?.status || "unauthenticated";
-  const [email, setEmail] = useState('');
+  console.log("LoginPage - sessionHookResult:", sessionHookResult);
+  console.log("LoginPage - session:", session);
+  console.log("LoginPage - status:", status);
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // If status is loading, show a loading indicator
+  if (status === 'loading') {
+    console.log("LoginPage: status is loading, showing loading UI.");
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading authentication status...</p>
+      </div>
+    );
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
