@@ -140,11 +140,10 @@ const App = ({
       </Head>
 
 
-      <SessionProvider session={session || null}>
         {/* Wrap Layout with AuthProvider and ChatProvider */}
         <AuthProvider>
           <ChatProvider>
-            <ClientSideCheck 
+            <ClientSideCheck
               Component={Component}
               pageProps={pageProps}
               isLoading={isLoading}
@@ -152,7 +151,7 @@ const App = ({
             />
           </ChatProvider>
         </AuthProvider>
-      </SessionProvider>
+      
     </>
   );
 };
