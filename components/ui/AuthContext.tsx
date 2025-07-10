@@ -29,11 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
 
   console.log("AuthContext status:", status);
-  if (status === 'loading') {
-    console.log("AuthContext is loading...");
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-  
   // Load lock state from localStorage on mount (client-side only)
   useEffect(() => {
     try {
