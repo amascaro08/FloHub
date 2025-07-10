@@ -1,6 +1,6 @@
 import { FloCatCapability } from '../floCatCapabilities';
 import { getUserHabits, toggleHabitCompletion, createHabit, getTodayFormatted } from '../habitService';
-import { firestore } from '../firebaseAdmin';
+// No direct database import needed, will use fetch to API route
 
 /**
  * FloCat capability for managing habits
@@ -21,9 +21,9 @@ export const habitCapability: FloCatCapability = {
       let preferredName = "";
       
       try {
-        const userSettingsDoc = await firestore.collection("users").doc(userEmail).collection("settings").doc("userSettings").get();
-        if (userSettingsDoc.exists) {
-          const userSettings = userSettingsDoc.data();
+        const response = await fetch(`/api/userSettings?userId=${userEmail}`);
+        if (response.ok) {
+          const userSettings = await response.json();
           floCatStyle = userSettings?.floCatStyle || "default";
           floCatPersonality = userSettings?.floCatPersonality || [];
           preferredName = userSettings?.preferredName || "";
