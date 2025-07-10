@@ -2,8 +2,6 @@
 
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext";
@@ -66,19 +64,17 @@ export default function MobileDashboard() {
       setIsLoading(true);
       if (isClient && session?.user?.email) {
         try {
-          const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
-          const docSnap = await getDoc(settingsDocRef);
-          
-          if (docSnap.exists()) {
-            const userSettings = docSnap.data() as UserSettings;
+          const response = await fetch(`/api/userSettings?userId=${session.user.email}`);
+          if (response.ok) {
+            const userSettings = await response.json() as UserSettings;
             if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
-              // Filter to only include valid widget types and maintain order
               const validWidgets = userSettings.activeWidgets.filter(
                 widget => Object.keys(widgetComponents).includes(widget)
               ) as WidgetType[];
-              
               setActiveWidgets(validWidgets);
             }
+          } else {
+            console.error("[MobileDashboard] Failed to fetch user settings, using defaults.");
           }
         } catch (e) {
           console.error("[MobileDashboard] Error fetching user settings:", e);
@@ -102,15 +98,17 @@ export default function MobileDashboard() {
   const saveWidgetOrder = async () => {
     if (isClient && session?.user?.email) {
       try {
-        const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
-        const docSnap = await getDoc(settingsDocRef);
-        
-        if (docSnap.exists()) {
-          const userSettings = docSnap.data() as UserSettings;
-          await setDoc(settingsDocRef, {
-            ...userSettings,
-            activeWidgets: activeWidgets
-          });
+        const response = await fetch("/api/userSettings/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ activeWidgets: activeWidgets }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("[MobileDashboard] Failed to save widget order:", errorData.error);
         }
       } catch (e) {
         console.error("[MobileDashboard] Error saving widget order:", e);
