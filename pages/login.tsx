@@ -26,8 +26,6 @@ export default function LoginPage() {
       </div>
     );
   }
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
