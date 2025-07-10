@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
     widgets TEXT[],
     calendar_settings JSONB,
     notification_settings JSONB,
-    flo_cat_settings JSONB
+    flo_cat_settings JSONB,
+    layouts JSONB
 );
 
 CREATE TABLE IF NOT EXISTS notes (

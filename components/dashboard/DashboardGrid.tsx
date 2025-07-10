@@ -31,8 +31,6 @@ const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerW
 
 import { ReactElement } from "react";
 import { useAuth } from "../ui/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import { UserSettings } from "@/types/app";
 
@@ -144,16 +142,13 @@ const DashboardGrid = () => {
     const fetchUserSettings = async () => {
       if (isClient && session?.user?.email) {
         try {
-          const settingsDocRef = doc(db, "users", session.user.email, "settings", "userSettings");
-          const docSnap = await getDoc(settingsDocRef);
-          
-          if (docSnap.exists()) {
-            const userSettings = docSnap.data() as UserSettings;
-            // Use the user's selected widgets without forcing habit-tracker
+          const response = await fetch(`/api/userSettings?userId=${session.user.email}`);
+          if (response.ok) {
+            const userSettings = await response.json() as UserSettings;
             setActiveWidgets(userSettings.activeWidgets || []);
           } else {
-            // If no settings exist, use all widgets, including habit-tracker
-            setActiveWidgets(Object.keys(widgetComponents) as string[]);
+            console.error("[DashboardGrid] Failed to fetch user settings, using defaults.");
+            setActiveWidgets(Object.keys(memoizedWidgetComponents) as string[]);
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching user settings:", e);
@@ -178,22 +173,28 @@ const DashboardGrid = () => {
   useEffect(() => {
     const fetchLayout = async () => {
       if (isClient && session?.user?.email) {
-        const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
         try {
-          const docSnap = await getDoc(layoutRef);
-          if (docSnap.exists()) {
-            const savedLayouts = docSnap.data()?.layouts;
+          const response = await fetch(`/api/userSettings/layouts?userId=${session.user.email}`);
+          if (response.ok) {
+            const { layouts: savedLayouts } = await response.json();
             if (savedLayouts) {
               setLayouts(savedLayouts);
             } else {
               setLayouts(defaultLayouts);
+              // Optionally save default layouts if none exist
+              await fetch('/api/userSettings/layouts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ layouts: defaultLayouts }),
+              });
             }
           } else {
-            // If no layout exists, save the default layouts
-            await setDoc(layoutRef, { layouts: defaultLayouts });
+            console.error("[DashboardGrid] Failed to fetch layouts, using defaults.");
+            setLayouts(defaultLayouts);
           }
         } catch (e) {
           console.error("[DashboardGrid] Error fetching layout:", e);
+          setLayouts(defaultLayouts); // Fallback to default on error
         }
       }
     };
@@ -259,9 +260,17 @@ const DashboardGrid = () => {
         try {
           console.log("[DashboardGrid] Attempting to save layout...");
           if (isClient && session?.user?.email) {
-            const layoutRef = doc(db, "users", session.user.email, "settings", "layouts");
-            await setDoc(layoutRef, { layouts: cleanedLayouts }); // Use cleanedLayouts directly
-            console.log("[DashboardGrid] Layout saved successfully!");
+            const response = await fetch('/api/userSettings/layouts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ layouts: cleanedLayouts }),
+            });
+            if (response.ok) {
+              console.log("[DashboardGrid] Layout saved successfully!");
+            } else {
+              const errorData = await response.json();
+              console.error("[DashboardGrid] Failed to save layout:", errorData.error);
+            }
           }
         } catch (e) {
           console.error("[DashboardGrid] Error saving layout:", e);
