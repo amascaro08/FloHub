@@ -22,8 +22,12 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionHookResult = useSession();
+  const [status, setStatus] = useState(sessionHookResult?.status || "unauthenticated");
   const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated"; // Default to "unauthenticated" if hook result is undefined
+
+  useEffect(() => {
+    setStatus(sessionHookResult?.status || "unauthenticated");
+  }, [sessionHookResult]);
 
   // Initialize state from localStorage, default to false if not found
   const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
