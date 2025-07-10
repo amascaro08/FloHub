@@ -139,18 +139,19 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
-
-        {/* Wrap Layout with AuthProvider and ChatProvider */}
-        <AuthProvider>
-          <ChatProvider>
-            <ClientSideCheck
-              Component={Component}
-              pageProps={pageProps}
-              isLoading={isLoading}
-              showLayout={showLayout}
-            />
-          </ChatProvider>
-        </AuthProvider>
+<SessionProvider session={session || null}>
+{/* Wrap Layout with AuthProvider and ChatProvider */}
+<AuthProvider>
+  <ChatProvider>
+    <ClientSideCheck
+      Component={Component}
+      pageProps={pageProps}
+      isLoading={isLoading}
+      showLayout={showLayout}
+    />
+  </ChatProvider>
+</AuthProvider>
+</SessionProvider>
       
     </>
   );
