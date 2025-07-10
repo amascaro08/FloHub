@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import OpenAI from "openai";
-import { firestore } from "../../lib/firebaseAdmin";
+import { query } from "../../lib/neon";
 import {
   fetchUserNotes,
   fetchUserMeetingNotes,
@@ -173,8 +173,8 @@ export default async function handler(
     ]);
     
     // Fetch user settings to get FloCat style preference
-    const userSettingsDoc = await firestore.collection("users").doc(email).collection("settings").doc("userSettings").get();
-    const userSettings = userSettingsDoc.exists ? userSettingsDoc.data() : { floCatStyle: "default", floCatPersonality: [], preferredName: "" };
+    const { rows } = await query('SELECT flo_cat_style AS "floCatStyle", flo_cat_personality AS "floCatPersonality", preferred_name AS "preferredName" FROM user_settings WHERE user_email = $1', [email]);
+    const userSettings = rows.length > 0 ? rows[0] : { floCatStyle: "default", floCatPersonality: [], preferredName: "" };
     const floCatStyle = userSettings?.floCatStyle || "default";
     const floCatPersonality = userSettings?.floCatPersonality || [];
     const preferredName = userSettings?.preferredName || "";

@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
-import { firestore } from "@/lib/firebaseAdmin";
-import admin from "firebase-admin";
+import { query } from "../../../lib/neon";
 
 type CreateNoteRequest = {
   title?: string; // Add optional title field
@@ -51,18 +50,20 @@ export default async function handler(
 
   try {
     // 3) Save the note to the database
-    const newNoteRef = await firestore.collection("notes").add({
-      userId,
-      title: title ?? "",
-      content,
-      tags: tags ?? [],
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      ...(eventId !== undefined && { eventId }),
-      ...(eventTitle !== undefined && { eventTitle }),
-      ...(isAdhoc !== undefined && { isAdhoc }),
-    });
-    const snap = await newNoteRef.get();
-    return res.status(201).json({ success: true, noteId: snap.id });
+    const { rows } = await query(
+      `INSERT INTO notes (user_email, title, content, tags, created_at, event_id, event_title, is_adhoc)
+       VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7) RETURNING id`,
+      [
+        userId,
+        title ?? "",
+        content,
+        tags ?? [],
+        eventId ?? null,
+        eventTitle ?? null,
+        isAdhoc ?? false,
+      ]
+    );
+    return res.status(201).json({ success: true, noteId: rows[0].id });
 
   } catch (err: any) {
     console.error("Create note error:", err);

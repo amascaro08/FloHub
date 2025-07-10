@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin'; // Import admin directly
+import { getToken } from "next-auth/jwt";
+import { query } from "@/lib/neon";
 
 // Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
 // If not, uncomment the initialization block below:
@@ -17,8 +16,6 @@ if (!admin.apps.length) {
 }
 */
 
-const db = getFirestore();
-const auth = getAuth();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'OPTIONS') {
@@ -31,6 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token?.email) {
+    return res.status(401).json({ message: "Not signed in" });
+  }
+  const userEmail = token.email as string;
+
   const { ids } = req.body; // Assuming an array of note IDs is sent in the request body
 
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -42,13 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // This would involve checking each note's ownership before deleting
     // For simplicity, this is omitted in this example but recommended for production
 
-    const batch = db.batch();
-    ids.forEach(id => {
-      const noteRef = db.collection('notes').doc(id);
-      batch.delete(noteRef);
-    });
-
-    await batch.commit();
+    await query('DELETE FROM notes WHERE id = ANY($1::int[]) AND user_email = $2', [ids, userEmail]);
 
     res.status(200).json({ message: `${ids.length} notes deleted successfully` });
   } catch (error) {

@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getSession for better compatibility with API routes 
@@ -25,23 +24,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const entriesRef = collection(db, 'journal_entries');
-      const q = query(
-        entriesRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      const { rows } = await query(
+        'SELECT content, created_at AS "timestamp" FROM journal_entries WHERE user_email = $1 AND date = $2',
+        [userEmail, date]
       );
       
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Return empty data instead of 404
+      if (rows.length === 0) {
         return res.status(200).json({ content: '', timestamp: new Date().toISOString() });
       }
       
-      const entryData = snapshot.docs[0].data();
-      return res.status(200).json(entryData);
+      return res.status(200).json({ content: rows[0].content, timestamp: rows[0].timestamp ? new Date(rows[0].timestamp).toISOString() : new Date().toISOString() });
     } catch (error) {
       console.error('Error retrieving journal entry:', error);
       return res.status(500).json({ error: 'Failed to retrieve journal entry' });
@@ -58,36 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Check if entry already exists
-      const entriesRef = collection(db, 'journal_entries');
-      const q = query(
-        entriesRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      await query(
+        `INSERT INTO journal_entries (user_email, date, content, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (user_email, date) DO UPDATE SET
+           content = EXCLUDED.content,
+           updated_at = NOW()`,
+        [userEmail, date, content]
       );
-      
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Create new entry
-        await addDoc(collection(db, 'journal_entries'), {
-          userEmail,
-          date,
-          content,
-          timestamp: timestamp || new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        // Update existing entry
-        const docId = snapshot.docs[0].id;
-        const docRef = doc(db, 'journal_entries', docId);
-        await updateDoc(docRef, {
-          content,
-          timestamp: timestamp || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      }
       
       return res.status(200).json({ success: true });
     } catch (error) {

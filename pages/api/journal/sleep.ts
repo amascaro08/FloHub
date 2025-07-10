@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getSession for better compatibility with API routes
@@ -25,23 +24,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const sleepRef = collection(db, 'journal_sleep');
-      const q = query(
-        sleepRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      const { rows } = await query(
+        'SELECT quality, hours FROM journal_sleep WHERE user_email = $1 AND date = $2',
+        [userEmail, date]
       );
       
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Return empty data instead of 404
+      if (rows.length === 0) {
         return res.status(200).json({ quality: '', hours: 7 });
       }
       
-      const sleepData = snapshot.docs[0].data();
-      return res.status(200).json(sleepData);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error('Error retrieving sleep data:', error);
       return res.status(500).json({ error: 'Failed to retrieve sleep data' });
@@ -58,36 +50,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Check if sleep data already exists for this date
-      const sleepRef = collection(db, 'journal_sleep');
-      const q = query(
-        sleepRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      await query(
+        `INSERT INTO journal_sleep (user_email, date, quality, hours, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT (user_email, date) DO UPDATE SET
+           quality = EXCLUDED.quality,
+           hours = EXCLUDED.hours,
+           updated_at = NOW()`,
+        [userEmail, date, quality, hours]
       );
-      
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Create new sleep entry
-        await addDoc(collection(db, 'journal_sleep'), {
-          userEmail,
-          date,
-          quality,
-          hours,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        // Update existing sleep entry
-        const docId = snapshot.docs[0].id;
-        const docRef = doc(db, 'journal_sleep', docId);
-        await updateDoc(docRef, {
-          quality,
-          hours,
-          updatedAt: new Date().toISOString()
-        });
-      }
       
       return res.status(200).json({ success: true });
     } catch (error) {

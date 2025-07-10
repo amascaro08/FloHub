@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -38,20 +37,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (let i = 0; i < dates.length; i += chunkSize) {
       const chunk = dates.slice(i, i + chunkSize);
       
-      const activitiesRef = collection(db, 'journal_activities');
-      const q = query(
-        activitiesRef,
-        where('userEmail', '==', userEmail),
-        where('date', 'in', chunk)
+      const { rows } = await query(
+        'SELECT date, activities FROM journal_activities WHERE user_email = $1 AND date = ANY($2::date[])',
+        [userEmail, chunk]
       );
       
-      const snapshot = await getDocs(q);
-      
       // Add activities for each date
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && Array.isArray(data.activities) && data.activities.length > 0) {
-          activities[data.date] = data.activities;
+      rows.forEach(row => {
+        if (row.date && Array.isArray(row.activities) && row.activities.length > 0) {
+          activities[row.date] = row.activities;
         }
       });
     }

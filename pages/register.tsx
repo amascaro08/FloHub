@@ -2,8 +2,7 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import AuthLayout from '@/components/ui/AuthLayout';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 import { hash } from 'bcryptjs';
 
 export default function RegisterPage() {
@@ -61,11 +60,9 @@ export default function RegisterPage() {
 
     try {
       // Check if user already exists
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', email));
-      const querySnapshot = await getDocs(q);
+      const userExists = await query('SELECT * FROM users WHERE email = $1', [email]);
 
-      if (!querySnapshot.empty) {
+      if (userExists.rows.length > 0) {
         setError('A user with this email already exists');
         setIsLoading(false);
         return;
@@ -75,12 +72,10 @@ export default function RegisterPage() {
       const hashedPassword = await hash(password, 12);
 
       // Create the user in Firestore
-      await addDoc(collection(db, 'users'), {
-        name,
-        email,
-        password: hashedPassword,
-        createdAt: new Date().toISOString(),
-      });
+      await query(
+        'INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW())',
+        [name, email, hashedPassword]
+      );
 
       setSuccess(true);
       

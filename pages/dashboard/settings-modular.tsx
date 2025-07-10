@@ -3,8 +3,6 @@ import { useSession, signIn } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import { UserSettings } from "@/types/app";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "@/components/ui/AuthContext";
 import dynamic from 'next/dynamic';
 
@@ -57,8 +55,18 @@ const SettingsModularPage = () => {
     setSettings(newSettings);
     if (session) {
       try {
-        const userSettingsRef = doc(db, "userSettings", session?.user?.email || "default");
-        await setDoc(userSettingsRef, newSettings);
+        const response = await fetch("/api/userSettings/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newSettings),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to update settings");
+        }
         console.log("Settings updated successfully!");
       } catch (e) {
         console.error("Error updating settings: ", e);

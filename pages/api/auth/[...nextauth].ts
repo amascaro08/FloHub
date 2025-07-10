@@ -7,9 +7,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { compare } from "bcryptjs";
+import { PostgresAdapter } from "@auth/pg-adapter";
+import { db } from "@/lib/drizzle"; // Import the Drizzle client
 
 // Function to refresh the Google access token
 async function refreshAccessToken(token) {
@@ -52,16 +52,17 @@ async function refreshAccessToken(token) {
 
 
 export const authOptions = {
+  adapter: PostgresAdapter(db), // Use Drizzle adapter
   // 1) OAuth providers
   providers: [
     GoogleProvider({
-      clientId:     process.env.GOOGLE_OAUTH_ID!,
+      clientId: process.env.GOOGLE_OAUTH_ID!,
       clientSecret: process.env.GOOGLE_OAUTH_SECRET!,
       authorization: {
         params: {
-          scope:       "openid email profile https://www.googleapis.com/auth/calendar",
+          scope: "openid email profile https://www.googleapis.com/auth/calendar",
           access_type: "offline",
-          prompt:      "consent",
+          prompt: "consent",
         },
       },
     }),
@@ -77,30 +78,27 @@ export const authOptions = {
         }
 
         try {
-          // Query Firestore for the user
-          const usersRef = collection(db, "users");
-          const q = query(usersRef, where("email", "==", credentials.email));
-          const querySnapshot = await getDocs(q);
-          
-          if (querySnapshot.empty) {
+          // Query PostgreSQL for the user
+          const { rows } = await query('SELECT id, email, name, password FROM users WHERE email = $1', [credentials.email]);
+
+          if (rows.length === 0) {
             return null;
           }
 
-          const userDoc = querySnapshot.docs[0];
-          const user = userDoc.data();
-          
+          const user = rows[0];
+
           // Verify password
           const isValid = await compare(credentials.password, user.password);
-          
+
           if (!isValid) {
             return null;
           }
-          
+
           return {
-            id: userDoc.id,
+            id: user.id.toString(), // Convert numeric ID to string
             email: user.email,
             name: user.name || user.email.split('@')[0],
-            image: user.image || null
+            image: null // Assuming no image field in PostgreSQL for now
           };
         } catch (error) {
           console.error("Error authenticating user:", error);

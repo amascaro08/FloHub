@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import modular Firestore functions
+import { query } from "../../../lib/neon";
 
 type UpdateNoteRequest = {
   id: string;
@@ -64,16 +63,14 @@ export default async function handler(
 
   try {
     // 3) Check if the note exists and belongs to the authenticated user
-    const noteRef = doc(db, "notes", id);
-    const noteSnap = await getDoc(noteRef);
+    const { rows: existingNotes } = await query('SELECT user_email FROM notes WHERE id = $1', [id]);
 
-    if (!noteSnap.exists()) {
-        return res.status(404).json({ error: "Note not found" });
+    if (existingNotes.length === 0) {
+      return res.status(404).json({ error: "Note not found" });
     }
 
-    const noteData = noteSnap.data();
-    if (noteData.userId !== userId) {
-        return res.status(403).json({ error: "Unauthorized to update this note" });
+    if (existingNotes[0].user_email !== userId) {
+      return res.status(403).json({ error: "Unauthorized to update this note" });
     }
 
     // 4) Prepare update data
@@ -101,7 +98,41 @@ export default async function handler(
 
 
     // 5) Update the note in the database
-    await updateDoc(noteRef, updateData);
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    if (title !== undefined) {
+      updateFields.push(`title = $${paramIndex++}`);
+      updateValues.push(title);
+    }
+    if (content !== undefined) {
+      updateFields.push(`content = $${paramIndex++}`);
+      updateValues.push(content);
+    }
+    if (tags !== undefined) {
+      updateFields.push(`tags = $${paramIndex++}`);
+      updateValues.push(tags);
+    }
+    if (eventId !== undefined) {
+      updateFields.push(`event_id = $${paramIndex++}`);
+      updateValues.push(eventId);
+    }
+    if (eventTitle !== undefined) {
+      updateFields.push(`event_title = $${paramIndex++}`);
+      updateValues.push(eventTitle);
+    }
+    if (isAdhoc !== undefined) {
+      updateFields.push(`is_adhoc = $${paramIndex++}`);
+      updateValues.push(isAdhoc);
+    }
+
+    if (updateFields.length > 0) {
+      await query(
+        `UPDATE notes SET ${updateFields.join(', ')} WHERE id = $${paramIndex++} AND user_email = $${paramIndex++}`,
+        [...updateValues, id, userId]
+      );
+    }
 
     return res.status(200).json({ success: true });
 

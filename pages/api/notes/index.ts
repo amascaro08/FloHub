@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { collection, query, where, orderBy, getDocs, QueryDocumentSnapshot } from "firebase/firestore"; // Import modular Firestore functions and QueryDocumentSnapshot
+import { query } from "../../../lib/neon";
 
 import type { Note } from "@/types/app"; // Import shared Note type
 
@@ -33,23 +32,25 @@ export default async function handler(
     // 2) Fetch notes for the authenticated user from the database
     // This is a placeholder. You will need to implement the actual database logic here.
 
-    const notesSnapshot = await getDocs(query(
-      collection(db, "notes"),
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
-    ));
+    const { rows } = await query(
+      'SELECT id, title, content, tags, created_at AS "createdAt", source, event_id AS "eventId", event_title AS "eventTitle", is_adhoc AS "isAdhoc", actions, agenda, ai_summary AS "aiSummary" FROM notes WHERE user_email = $1 ORDER BY created_at DESC',
+      [userId]
+    );
 
-    const notes: Note[] = notesSnapshot.docs.map((doc: QueryDocumentSnapshot) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title || "", // Include the title field
-        content: data.content,
-        tags: data.tags || [],
-        // Ensure createdAt is a string before assigning to the shared Note type
-        createdAt: data.createdAt.toDate().toISOString(),
-      };
-    });
+    const notes: Note[] = rows.map((row) => ({
+      id: row.id,
+      title: row.title || "",
+      content: row.content,
+      tags: row.tags || [],
+      createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
+      source: row.source || undefined,
+      eventId: row.eventId || undefined,
+      eventTitle: row.eventTitle || undefined,
+      isAdhoc: row.isAdhoc || false,
+      actions: row.actions || undefined,
+      agenda: row.agenda || undefined,
+      aiSummary: row.aiSummary || undefined,
+    }));
 
     return res.status(200).json({ notes: notes });
 

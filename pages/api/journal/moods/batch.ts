@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -38,23 +37,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (let i = 0; i < dates.length; i += chunkSize) {
       const chunk = dates.slice(i, i + chunkSize);
       
-      const moodsRef = collection(db, 'journal_moods');
-      const q = query(
-        moodsRef,
-        where('userEmail', '==', userEmail),
-        where('date', 'in', chunk)
+      const { rows } = await query(
+        'SELECT date, emoji, label, tags FROM journal_moods WHERE user_email = $1 AND date = ANY($2::date[])',
+        [userEmail, chunk]
       );
       
-      const snapshot = await getDocs(q);
-      
       // Add mood data for each date
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && data.emoji && data.label) {
-          moods[data.date] = {
-            emoji: data.emoji,
-            label: data.label,
-            tags: data.tags || []
+      rows.forEach(row => {
+        if (row.date && row.emoji && row.label) {
+          moods[row.date] = {
+            emoji: row.emoji,
+            label: row.label,
+            tags: row.tags || []
           };
         }
       });

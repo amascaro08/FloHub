@@ -4,17 +4,17 @@
 
 // Define a type for user settings
 export type UserSettings = {
-  selectedCals: string[]; // Legacy field for backward compatibility
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  customRange: { start: string; end: string };
-  powerAutomateUrl?: string; // Legacy field for backward compatibility
-  globalTags: string[]; // Field for global tags
-  activeWidgets?: string[]; // Array of active widget IDs
-  calendarSources?: CalendarSource[]; // New field for multiple calendar sources
-  timezone?: string; // User's preferred timezone (e.g., "America/New_York")
-  floCatStyle?: "default" | "more_catty" | "less_catty" | "professional"; // FloCat communication style
-  floCatPersonality?: string[]; // Personality keywords for FloCat (e.g., "humorous", "sarcastic", "serious")
-  preferredName?: string; // User's preferred name for FloCat to use
+  selectedCals?: string[];
+  defaultView?: "today" | "tomorrow" | "week" | "month" | "custom";
+  customRange?: { start: string; end: string };
+  powerAutomateUrl?: string;
+  globalTags?: string[];
+  activeWidgets?: string[];
+  calendarSources?: CalendarSource[];
+  timezone?: string;
+  floCatStyle?: "default" | "more_catty" | "less_catty" | "professional";
+  floCatPersonality?: string[];
+  preferredName?: string;
   tags?: string[];
   widgets?: string[];
   calendarSettings?: {

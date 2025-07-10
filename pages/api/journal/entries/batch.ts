@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -43,20 +42,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (let i = 0; i < dates.length; i += chunkSize) {
       const chunk = dates.slice(i, i + chunkSize);
       
-      const entriesRef = collection(db, 'journal_entries');
-      const q = query(
-        entriesRef,
-        where('userEmail', '==', userEmail),
-        where('date', 'in', chunk)
+      const { rows } = await query(
+        'SELECT date, content FROM journal_entries WHERE user_email = $1 AND date = ANY($2::date[])',
+        [userEmail, chunk]
       );
       
-      const snapshot = await getDocs(q);
-      
       // Update entries that have content
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && data.content && data.content.trim() !== '') {
-          entries[data.date] = true;
+      rows.forEach(row => {
+        if (row.date && row.content && row.content.trim() !== '') {
+          entries[row.date] = true;
         }
       });
     }

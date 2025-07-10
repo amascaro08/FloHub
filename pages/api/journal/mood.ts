@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from 'firebase/firestore';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getSession for better compatibility with API routes 
@@ -25,23 +24,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const moodsRef = collection(db, 'journal_moods');
-      const q = query(
-        moodsRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      const { rows } = await query(
+        'SELECT emoji, label, tags FROM journal_moods WHERE user_email = $1 AND date = $2',
+        [userEmail, date]
       );
       
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Return empty data instead of 404
+      if (rows.length === 0) {
         return res.status(200).json({ emoji: '', label: '', tags: [] });
       }
       
-      const moodData = snapshot.docs[0].data();
-      return res.status(200).json(moodData);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error('Error retrieving mood data:', error);
       return res.status(500).json({ error: 'Failed to retrieve mood data' });
@@ -58,38 +50,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Check if mood data already exists for this date
-      const moodsRef = collection(db, 'journal_moods');
-      const q = query(
-        moodsRef,
-        where('userEmail', '==', userEmail),
-        where('date', '==', date),
-        limit(1)
+      await query(
+        `INSERT INTO journal_moods (user_email, date, emoji, label, tags, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         ON CONFLICT (user_email, date) DO UPDATE SET
+           emoji = EXCLUDED.emoji,
+           label = EXCLUDED.label,
+           tags = EXCLUDED.tags,
+           updated_at = NOW()`,
+        [userEmail, date, emoji, label, tags || []]
       );
-      
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        // Create new mood entry
-        await addDoc(collection(db, 'journal_moods'), {
-          userEmail,
-          date,
-          emoji,
-          label,
-          tags: tags || [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        // Update existing mood entry
-        const docId = snapshot.docs[0].id;
-        const docRef = doc(db, 'journal_moods', docId);
-        await updateDoc(docRef, {
-          emoji,
-          label,
-          tags: tags || [],
-          updatedAt: new Date().toISOString()
-        });
-      }
       
       return res.status(200).json({ success: true });
     } catch (error) {

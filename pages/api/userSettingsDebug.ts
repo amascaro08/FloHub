@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { firestore } from "../../lib/firebaseAdmin";
+import { query } from "../../lib/neon";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,9 +13,8 @@ export default async function handler(
 
   const userEmail = token.email;
   try {
-    const settingsCollectionRef = firestore.collection("users").doc(userEmail).collection("settings");
-    const snapshot = await settingsCollectionRef.get();
-    const docs = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+    const { rows } = await query('SELECT * FROM user_settings WHERE user_email = $1', [userEmail]);
+    const docs = rows.map(row => ({ id: row.user_email, data: row }));
     return res.status(200).json({ documents: docs });
   } catch (error) {
     console.error("Error listing user settings documents for", userEmail, error);
