@@ -107,6 +107,14 @@ CREATE TABLE IF NOT EXISTS journal_moods (
     UNIQUE (user_email, date)
 );
 
+CREATE TABLE IF NOT EXISTS analytics (
+    id SERIAL PRIMARY KEY,
+    user_email VARCHAR(255) REFERENCES users(email) ON DELETE SET NULL,
+    event_type VARCHAR(255) NOT NULL,
+    event_data JSONB,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS journal_sleep (
     id SERIAL PRIMARY KEY,
     user_email VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,

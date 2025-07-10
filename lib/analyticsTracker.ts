@@ -3,8 +3,7 @@
  * This file contains functions to track user behavior and send it to Firestore
  */
 
-import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+// No direct database import needed, will use fetch to API route
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
@@ -12,11 +11,13 @@ import { useEffect } from 'react';
 // Track page visit
 export async function trackPageVisit(page: string, userId?: string) {
   try {
-    const pageVisitsRef = collection(db, 'analytics', 'pageVisits', 'visits');
-    await addDoc(pageVisitsRef, {
-      page,
-      userId,
-      timestamp: serverTimestamp()
+    await fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'page_visit',
+        eventData: { page, userId },
+      }),
     });
   } catch (error) {
     console.warn('[Analytics] Failed to track page visit:', error);
@@ -26,11 +27,13 @@ export async function trackPageVisit(page: string, userId?: string) {
 // Track widget usage
 export async function trackWidgetUsage(widget: string, userId?: string) {
   try {
-    const widgetUsageRef = collection(db, 'analytics', 'widgetUsage', 'widgets');
-    await addDoc(widgetUsageRef, {
-      widget,
-      userId,
-      timestamp: serverTimestamp()
+    await fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'widget_usage',
+        eventData: { widget, userId },
+      }),
     });
   } catch (error) {
     console.warn('[Analytics] Failed to track widget usage:', error);
@@ -40,11 +43,13 @@ export async function trackWidgetUsage(widget: string, userId?: string) {
 // Track FloCat interaction
 export async function trackFloCatInteraction(interactionType: string, userId?: string) {
   try {
-    const floCatInteractionsRef = collection(db, 'analytics', 'floCatInteractions', 'interactions');
-    await addDoc(floCatInteractionsRef, {
-      interactionType,
-      userId,
-      timestamp: serverTimestamp()
+    await fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'flocat_interaction',
+        eventData: { interactionType, userId },
+      }),
     });
   } catch (error) {
     console.warn('[Analytics] Failed to track FloCat interaction:', error);
@@ -54,11 +59,13 @@ export async function trackFloCatInteraction(interactionType: string, userId?: s
 // Track feature usage
 export async function trackFeatureUsage(feature: string, userId?: string) {
   try {
-    const featureUsageRef = collection(db, 'analytics', 'featureUsage', 'features');
-    await addDoc(featureUsageRef, {
-      feature,
-      userId,
-      timestamp: serverTimestamp()
+    await fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'feature_usage',
+        eventData: { feature, userId },
+      }),
     });
   } catch (error) {
     console.warn('[Analytics] Failed to track feature usage:', error);
