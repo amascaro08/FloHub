@@ -34,6 +34,7 @@ export default function LoginPage() {
     if (status === 'authenticated') {
       router.push('/dashboard');
     }
+    console.log("LoginPage - useEffect - status:", status);
   }, [status, router]);
 
   const handleSubmit = async (e: FormEvent) => {
