@@ -49,9 +49,9 @@ export default async function handler(
 
       const data = rows[0];
       const userSettings: UserSettings = {
-        selectedCals: data.selected_cals || ["primary"],
+        selectedCals: data.selected_cals || [], // Ensure it's an array
         defaultView: data.default_view || "month",
-        customRange: data.custom_range || { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
+        customRange: data.custom_range || { start: "", end: "" }, // Ensure it's an object
         powerAutomateUrl: data.power_automate_url || "",
         globalTags: data.global_tags || [],
         activeWidgets: data.active_widgets || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],

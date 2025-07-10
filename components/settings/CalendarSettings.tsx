@@ -169,11 +169,11 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
               <input
                 type="date"
-                value={settings.customRange.start}
+                value={settings.customRange?.start || ''}
                 onChange={(e) =>
                   setSettings((s) => ({
                     ...s,
-                    customRange: { ...s.customRange, start: e.target.value },
+                    customRange: { ...s.customRange, start: e.target.value, end: s.customRange?.end || '' },
                   }))
                 }
                 className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -183,11 +183,11 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
               <input
                 type="date"
-                value={settings.customRange.end}
+                value={settings.customRange?.end || ''}
                 onChange={(e) =>
                   setSettings((s) => ({
                     ...s,
-                    customRange: { ...s.customRange, end: e.target.value },
+                    customRange: { ...s.customRange, start: s.customRange?.start || '', end: e.target.value },
                   }))
                 }
                 className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
