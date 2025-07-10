@@ -1,5 +1,4 @@
-import { db } from "./firebase";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { query } from "./neon";
 import type { Note } from "@/types/app";
 import type { CalendarEvent } from "@/types/calendar";
 type ConversationMessage = {
@@ -21,43 +20,60 @@ const openai = new OpenAI({
 });
 
 export async function fetchUserNotes(userId: string): Promise<Note[]> {
-  const notesRef = collection(db, "notes");
-  const q = query(notesRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
-  const snapshot = await getDocs(q);
-  const notes: Note[] = [];
-  snapshot.forEach((doc) => {
-    notes.push(doc.data() as Note);
-  });
+  const { rows } = await query(
+    'SELECT id, title, content, tags, created_at AS "createdAt", source, event_id AS "eventId", event_title AS "eventTitle", is_adhoc AS "isAdhoc", actions, agenda, ai_summary AS "aiSummary" FROM notes WHERE user_email = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  const notes: Note[] = rows.map((row) => ({
+    id: row.id,
+    title: row.title || "",
+    content: row.content,
+    tags: row.tags || [],
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
+    source: row.source || undefined,
+    eventId: row.eventId || undefined,
+    eventTitle: row.eventTitle || undefined,
+    isAdhoc: row.isAdhoc || false,
+    actions: row.actions || undefined,
+    agenda: row.agenda || undefined,
+    aiSummary: row.aiSummary || undefined,
+  }));
   return notes;
 }
 
 export async function fetchUserMeetingNotes(userId: string): Promise<Note[]> {
-  const notesRef = collection(db, "notes");
-  const q = query(
-    notesRef,
-    where("userId", "==", userId),
-    // Additional filters for meeting notes can be added here if needed
-    orderBy("createdAt", "desc")
+  const { rows } = await query(
+    'SELECT id, title, content, tags, created_at AS "createdAt", source, event_id AS "eventId", event_title AS "eventTitle", is_adhoc AS "isAdhoc", actions, agenda, ai_summary AS "aiSummary" FROM notes WHERE user_email = $1 AND (event_id IS NOT NULL OR is_adhoc = TRUE) ORDER BY created_at DESC',
+    [userId]
   );
-  const snapshot = await getDocs(q);
-  const meetingNotes: Note[] = [];
-  snapshot.forEach((doc) => {
-    const note = doc.data() as Note;
-    if (note.eventId || note.isAdhoc) {
-      meetingNotes.push(note);
-    }
-  });
+  const meetingNotes: Note[] = rows.map((row) => ({
+    id: row.id,
+    title: row.title || "",
+    content: row.content,
+    tags: row.tags || [],
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
+    source: row.source || undefined,
+    eventId: row.eventId || undefined,
+    eventTitle: row.eventTitle || undefined,
+    isAdhoc: row.isAdhoc || false,
+    actions: row.actions || undefined,
+    agenda: row.agenda || undefined,
+    aiSummary: row.aiSummary || undefined,
+  }));
   return meetingNotes;
 }
 
 export async function fetchUserConversations(userId: string): Promise<Conversation[]> {
-  const conversationsRef = collection(db, "conversations");
-  const q = query(conversationsRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
-  const snapshot = await getDocs(q);
-  const conversations: Conversation[] = [];
-  snapshot.forEach((doc) => {
-    conversations.push(doc.data() as Conversation);
-  });
+  const { rows } = await query(
+    'SELECT id, user_id AS "userId", messages, created_at AS "createdAt" FROM conversations WHERE user_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  const conversations: Conversation[] = rows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    messages: row.messages,
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
+  }));
   return conversations;
 }
 
