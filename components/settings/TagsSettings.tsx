@@ -24,10 +24,10 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
               if (e.key === 'Enter') {
                 const input = e.target as HTMLInputElement;
                 const newTag = input.value.trim();
-                if (newTag && !settings.globalTags.includes(newTag)) {
+                if (newTag && !(settings.globalTags || []).includes(newTag)) {
                   setSettings(s => ({
                     ...s,
-                    globalTags: [...s.globalTags, newTag]
+                    globalTags: [...(s.globalTags || []), newTag]
                   }));
                   input.value = ''; // Clear input
                 }
@@ -38,10 +38,10 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
             onClick={() => {
               const input = document.getElementById('newTagInput') as HTMLInputElement;
               const newTag = input.value.trim();
-              if (newTag && !settings.globalTags.includes(newTag)) {
+              if (newTag && !(settings.globalTags || []).includes(newTag)) {
                 setSettings(s => ({
                   ...s,
-                  globalTags: [...s.globalTags, newTag]
+                  globalTags: [...(s.globalTags || []), newTag]
                 }));
                 input.value = ''; // Clear input
               }
@@ -52,13 +52,13 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {settings.globalTags.map(tag => (
+          {(settings.globalTags || []).map(tag => (
             <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full flex items-center gap-1">
               {tag}
               <button
                 onClick={() => setSettings(s => ({
                   ...s,
-                  globalTags: s.globalTags.filter(t => t !== tag)
+                  globalTags: (s.globalTags || []).filter(t => t !== tag)
                 }))}
                 className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-1"
                 aria-label={`Remove ${tag} tag`}
