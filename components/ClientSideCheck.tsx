@@ -1,4 +1,4 @@
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/components/ui/AuthContext';
 import Layout from '@/components/ui/Layout';
 import { NextPage } from 'next';
 
@@ -10,7 +10,7 @@ interface ClientSideCheckProps {
 }
 
 const ClientSideCheck: React.FC<ClientSideCheckProps> = ({ Component, pageProps, isLoading, showLayout }) => {
-  const { status } = useSession();
+  const { status } = useAuth();
   console.log("ClientSideCheck status:", status);
   return (
     <>
