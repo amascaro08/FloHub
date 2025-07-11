@@ -149,7 +149,7 @@ export default function TasksPage() {
         {/* Tags Input */}
         <CreatableSelect
           isMulti
-          options={userSettings?.globalTags.map(tag => ({ value: tag, label: tag })) || []} // Use global tags as options
+          options={userSettings?.globalTags?.map(tag => ({ value: tag, label: tag })) || []} // Use global tags as options
           onChange={(newValue) => setSelectedTags(newValue as { value: string; label: string }[])}
           value={selectedTags}
           placeholder="Select or create tags..."
