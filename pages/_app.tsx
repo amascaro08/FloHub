@@ -1,6 +1,5 @@
 import '@/styles/globals.css'                   // ← must come first
 import type { AppProps } from 'next/app'
-import { SessionProvider } from 'next-auth/react'
 import Layout from '@/components/ui/Layout'
 import { ChatProvider } from '@/components/assistant/ChatContext'
 import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider at the top
@@ -139,19 +138,17 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
-<SessionProvider session={session}>
-  {/* Wrap Layout with AuthProvider and ChatProvider */}
-  <AuthProvider>
-    <ChatProvider>
-      <ClientSideCheck
-        Component={Component}
-        pageProps={pageProps}
-        isLoading={isLoading}
-        showLayout={showLayout}
-      />
-    </ChatProvider>
-  </AuthProvider>
-</SessionProvider>
+{/* Wrap Layout with AuthProvider and ChatProvider */}
+<AuthProvider>
+  <ChatProvider>
+    <ClientSideCheck
+      Component={Component}
+      pageProps={pageProps}
+      isLoading={isLoading}
+      showLayout={showLayout}
+    />
+  </ChatProvider>
+</AuthProvider>
       
     </>
   );

@@ -6,15 +6,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('Callback API: Received request.');
   const { token } = req.query;
+  console.log('Callback API: Token received:', token ? '[PRESENT]' : '[MISSING]');
 
   if (!token || typeof token !== 'string') {
     return res.status(400).json({ error: 'Token is required' });
   }
 
   try {
+    console.log('Callback API: Calling handleAuth...');
     const user = await handleAuth(token);
+    console.log('Callback API: handleAuth result - user:', user ? '[PRESENT]' : '[NULL]');
     if (!user) {
+      console.log('Callback API: Invalid token, returning 401.');
       return res.status(401).json({ error: 'Invalid token' });
     }
 

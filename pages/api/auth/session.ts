@@ -6,12 +6,16 @@ export default async function session(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('Session API: Checking for auth-token cookie...');
     const token = req.cookies['auth-token'];
+    console.log('Session API: auth-token:', token ? '[PRESENT]' : '[MISSING]');
 
     if (!token) {
       return res.status(401).json({ error: 'No session found' });
     }
 
+    console.log('Session API: Verifying token with Stack Auth...');
+    console.log('Session API: STACK_SECRET_SERVER_KEY:', process.env.STACK_SECRET_SERVER_KEY ? '[PRESENT]' : '[MISSING]');
     const response = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
       method: 'POST',
       headers: {
@@ -20,6 +24,7 @@ export default async function session(req: NextApiRequest, res: NextApiResponse)
       },
       body: JSON.stringify({ token })
     });
+    console.log('Session API: Stack Auth verify response status:', response.status);
 
     const data = await response.json();
 

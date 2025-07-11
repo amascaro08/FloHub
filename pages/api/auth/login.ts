@@ -8,6 +8,8 @@ export default async function login(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { email, password } = req.body;
 
+    console.log('Login API: Attempting login with Stack Auth...');
+    console.log('Login API: STACK_SECRET_SERVER_KEY:', process.env.STACK_SECRET_SERVER_KEY ? '[PRESENT]' : '[MISSING]');
     const response = await fetch('https://api.stack-auth.com/api/v1/auth/login', {
       method: 'POST',
       headers: {
@@ -16,6 +18,7 @@ export default async function login(req: NextApiRequest, res: NextApiResponse) {
       },
       body: JSON.stringify({ email, password })
     });
+    console.log('Login API: Stack Auth login response status:', response.status);
 
     const data = await response.json();
 
