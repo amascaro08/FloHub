@@ -1,20 +1,12 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import AuthLayout from '@/components/ui/AuthLayout';
-import { query } from '@/lib/neon';
-import { hash } from 'bcryptjs';
+import { useAuth } from '@/components/ui/AuthContext';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+  const { status, signup } = useAuth();
   const [name, setName] = useState('');
-
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -57,35 +49,19 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     setError('');
+    setSuccess(false);
 
     try {
-      // Check if user already exists
-      const userExists = await query('SELECT * FROM users WHERE email = $1', [email]);
-
-      if (userExists.rows.length > 0) {
-        setError('A user with this email already exists');
-        setIsLoading(false);
-        return;
-      }
-
-      // Hash the password
-      const hashedPassword = await hash(password, 12);
-
-      // Create the user in Firestore
-      await query(
-        'INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW())',
-        [name, email, hashedPassword]
-      );
-
+      await signup(email, password);
       setSuccess(true);
-      
       // Redirect to login page after 2 seconds
       setTimeout(() => {
         router.push('/login');
       }, 2000);
-    } catch (error) {
-      console.error('Registration error:', error);
-      setError('An error occurred during registration. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during registration.');
+      console.error('Registration error:', err);
+    } finally {
       setIsLoading(false);
     }
   };

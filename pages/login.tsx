@@ -1,15 +1,11 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { signIn, useSession } from 'next-auth/react';
+import { useAuth } from '@/components/ui/AuthContext';
 import { useRouter } from 'next/router';
 import AuthLayout from '@/components/ui/AuthLayout';
 
 export default function LoginPage() {
   const router = useRouter();
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
-  console.log("LoginPage - sessionHookResult:", sessionHookResult);
-  console.log("LoginPage - session:", session);
+  const { status, login } = useAuth();
   console.log("LoginPage - status:", status);
 
   const [email, setEmail] = useState('');
@@ -41,29 +37,22 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (result?.error) {
-        setError('Invalid email or password');
-        setIsLoading(false);
-        return;
-      }
-
-      // Success - will be redirected by the useEffect
-    } catch (error) {
-      setError('An error occurred during login. Please try again.');
-      console.error('Login error:', error);
+      await login(email, password);
+      // Success - AuthContext will handle state and redirect via its useEffect
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during login.');
+      console.error('Login error:', err);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    signIn('google', { callbackUrl: '/dashboard' });
+    // Redirect to Stack Auth's Google OAuth endpoint
+    // Ensure NEXT_PUBLIC_STACK_PROJECT_ID and NEXT_PUBLIC_STACK_REDIRECT_URI are set in your environment variables
+    const redirectUri = encodeURIComponent(process.env.NEXT_PUBLIC_STACK_REDIRECT_URI || 'https://flohub.vercel.app/api/auth/callback');
+    window.location.href = `https://api.stack-auth.com/api/v1/auth/google/redirect?project_id=${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}&redirect_uri=${redirectUri}`;
   };
 
   // Don't render the login form if already authenticated
