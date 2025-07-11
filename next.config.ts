@@ -6,8 +6,18 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  // Exclude specific files from precaching to avoid 404 errors
-  buildExcludes: [/dynamic-css-manifest\.json$/]
+  buildExcludes: [/dynamic-css-manifest\.json$/],
+  // Additional PWA configuration
+  runtimeCaching: [
+    {
+      urlPattern: /^https?.*/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'offlineCache',
+        networkTimeoutSeconds: 15,
+      },
+    },
+  ],
 });
 
 const nextConfig = {

@@ -51,50 +51,16 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable-icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/maskable-icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
-  "start_url": "/dashboard",
   "scope": "/",
+  "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#FFFFFF",
   "theme_color": "#000000",
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "View your dashboard",
-      "url": "/dashboard"
-    },
-    {
-      "name": "Meetings",
-      "short_name": "Meetings",
-      "description": "View your meetings",
-      "url": "/dashboard/meetings"
-    },
-    {
-      "name": "Notes",
-      "short_name": "Notes",
-      "description": "View your notes",
-      "url": "/dashboard/notes"
-    },
-    {
-      "name": "Tasks",
-      "short_name": "Tasks",
-      "description": "View your tasks",
-      "url": "/dashboard/tasks"
-    }
-  ]
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "serviceworker": {
+    "src": "/sw.js",
+    "scope": "/"
+  }
 }
