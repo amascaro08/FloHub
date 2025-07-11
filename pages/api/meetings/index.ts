@@ -2,8 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { collection, query, where, orderBy, getDocs, QueryDocumentSnapshot, or, and } from "firebase/firestore"; // Import modular Firestore functions, QueryDocumentSnapshot, 'or', and 'and'
+import { query } from "../../../lib/neon";
 import type { Note } from "@/types/app"; // Import shared Note type
 
 export type GetMeetingNotesResponse = { // Export the type
@@ -34,32 +33,27 @@ export default async function handler(
     // 2) Fetch meeting notes for the authenticated user from the database
     // We need to use a different approach since Firestore has limitations with OR queries
     // First, get all notes for the user
-    const meetingNotesSnapshot = await getDocs(query(
-      collection(db, "notes"),
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
-    ));
+    const { rows: meetingNotesRows } = await query(
+      `SELECT id, title, content, tags, "createdAt", "eventId", "eventTitle", "isAdhoc", actions, agenda, "aiSummary"
+       FROM notes
+       WHERE "userId" = $1 AND ("eventId" IS NOT NULL OR "isAdhoc" = TRUE)
+       ORDER BY "createdAt" DESC`,
+      [userId]
+    );
 
-    // Process the meeting notes efficiently
-    const meetingNotes: Note[] = meetingNotesSnapshot.docs
-      .map((doc: QueryDocumentSnapshot) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || "",
-          content: data.content,
-          tags: data.tags || [],
-          createdAt: data.createdAt.toDate().toISOString(),
-          eventId: data.eventId || undefined,
-          eventTitle: data.eventTitle || undefined,
-          isAdhoc: data.isAdhoc || undefined,
-          actions: data.actions || [],
-          agenda: data.agenda || undefined,
-          aiSummary: data.aiSummary || undefined,
-        };
-      })
-      // Filter for meeting notes in memory
-      .filter(note => note.eventId !== undefined || note.isAdhoc === true);
+    const meetingNotes: Note[] = meetingNotesRows.map((row) => ({
+      id: row.id,
+      title: row.title || "",
+      content: row.content,
+      tags: row.tags || [],
+      createdAt: new Date(Number(row.createdAt)).toISOString(),
+      eventId: row.eventId || undefined,
+      eventTitle: row.eventTitle || undefined,
+      isAdhoc: row.isAdhoc || undefined,
+      actions: row.actions || [],
+      agenda: row.agenda || undefined,
+      aiSummary: row.aiSummary || undefined,
+    }));
 
     return res.status(200).json({ meetingNotes: meetingNotes });
 

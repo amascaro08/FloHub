@@ -3,8 +3,7 @@
  * This file contains functions to monitor and report performance metrics
  */
 
-import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { query } from './neon';
 import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 
@@ -194,18 +193,27 @@ async function sendMetricsToAnalytics(): Promise<void> {
     }
     
     // Send metrics to Firestore
-    const performanceRef = collection(db, 'analytics', 'performance', 'metrics');
-    await addDoc(performanceRef, {
+    // Send metrics to Neon
+    const dataToStore = {
       ...metrics,
       userId,
-      timestamp: serverTimestamp()
-    });
+      timestamp: Date.now()
+    };
+
+    const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
+    const values = Object.values(dataToStore);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+
+    await query(
+      `INSERT INTO "analytics_performance_metrics" (${columns}) VALUES (${placeholders})`,
+      values
+    );
     
-    console.log('[Performance] Metrics sent to Firestore successfully');
+    console.log('[Performance] Metrics sent to Neon successfully');
   } catch (e) {
-    console.warn('[Performance] Error sending metrics to Firestore:', e);
+    console.warn('[Performance] Error sending metrics to Neon:', e);
     
-    // Fallback to API endpoint if Firestore fails
+    // Fallback to API endpoint if Neon fails (or if this is a client-side error)
     if (typeof fetch !== 'undefined') {
       try {
         fetch('/api/analytics/performance', {
@@ -293,12 +301,21 @@ async function trackSessionEnd(): Promise<void> {
     }
     
     // Send session data to Firestore
-    const sessionsRef = collection(db, 'analytics', 'sessions', 'durations');
-    await addDoc(sessionsRef, {
+    // Send session data to Neon
+    const dataToStore = {
       sessionDuration,
       userId,
-      timestamp: serverTimestamp()
-    });
+      timestamp: Date.now()
+    };
+
+    const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
+    const values = Object.values(dataToStore);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+
+    await query(
+      `INSERT INTO "analytics_sessions_durations" (${columns}) VALUES (${placeholders})`,
+      values
+    );
     
     console.log(`[Performance] Session duration tracked: ${sessionDuration.toFixed(2)} minutes`);
   } catch (e) {

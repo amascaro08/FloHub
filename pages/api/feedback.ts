@@ -1,18 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "@/lib/firebase";
-import { 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  query, 
-  orderBy, 
-  getDocs,
-  doc,
-  updateDoc,
-  getDoc,
-  where
-} from "firebase/firestore";
+import { query } from "@/lib/neon";
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,32 +24,28 @@ export default async function handler(
     try {
       if (type === "backlog") {
         // Retrieve backlog items
-        const backlogQuery = query(
-          collection(db, "backlog"),
-          orderBy("createdAt", "desc")
+        const { rows: backlogItems } = await query(
+          `SELECT id, text, "userId", "createdAt" FROM backlog ORDER BY "createdAt" DESC`
         );
-        const querySnapshot = await getDocs(backlogQuery);
-
-        const backlogItems = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        return res.status(200).json(backlogItems);
+        return res.status(200).json(backlogItems.map(item => ({
+          id: item.id,
+          text: item.text,
+          userId: item.userId,
+          createdAt: Number(item.createdAt)
+        })));
       } else {
         // Retrieve feedback items
-        const feedbackQuery = query(
-          collection(db, "feedback"),
-          orderBy("createdAt", "desc")
+        const { rows: feedbackItems } = await query(
+          `SELECT id, "userId", "feedbackType", "feedbackText", status, "createdAt" FROM feedback ORDER BY "createdAt" DESC`
         );
-        const querySnapshot = await getDocs(feedbackQuery);
-
-        const feedback = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        return res.status(200).json(feedback);
+        return res.status(200).json(feedbackItems.map(item => ({
+          id: item.id,
+          userId: item.userId,
+          feedbackType: item.feedbackType,
+          feedbackText: item.feedbackText,
+          status: item.status,
+          createdAt: Number(item.createdAt)
+        })));
       }
     } catch (err: any) {
       console.error("Get feedback error:", err);
@@ -76,15 +60,15 @@ export default async function handler(
     }
     
     try {
-      const newBacklogRef = await addDoc(collection(db, "backlog"), {
-        text,
-        userId: userId,
-        createdAt: serverTimestamp(),
-      });
+      const now = Date.now();
+      const { rows } = await query(
+        `INSERT INTO backlog (text, "userId", "createdAt") VALUES ($1, $2, $3) RETURNING id`,
+        [text, userId, now]
+      );
       
-      return res.status(201).json({ 
-        success: true, 
-        backlogId: newBacklogRef.id 
+      return res.status(201).json({
+        success: true,
+        backlogId: rows[0].id
       });
     } catch (err: any) {
       console.error("Create backlog error:", err);
@@ -98,14 +82,12 @@ export default async function handler(
     }
 
     try {
-      const newFeedbackRef = await addDoc(collection(db, "feedback"), {
-        userId: userId,
-        feedbackType: feedbackType || "general",
-        feedbackText: feedbackText,
-        status: "open", // Default status
-        createdAt: serverTimestamp(),
-      });
-      const feedbackId = newFeedbackRef.id;
+      const now = Date.now();
+      const { rows } = await query(
+        `INSERT INTO feedback ("userId", "feedbackType", "feedbackText", status, "createdAt") VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [userId, feedbackType || "general", feedbackText, "open", now]
+      );
+      const feedbackId = rows[0].id;
 
       return res.status(201).json({ success: true, feedbackId });
     } catch (err: any) {
@@ -125,29 +107,43 @@ export default async function handler(
     }
 
     try {
-      const feedbackRef = doc(db, "feedback", id);
-      const feedbackDoc = await getDoc(feedbackRef);
+      // Get existing feedback to check existence and retrieve data for backlog
+      const { rows: existingFeedback } = await query(
+        `SELECT "feedbackText" FROM feedback WHERE id = $1`,
+        [id]
+      );
       
-      if (!feedbackDoc.exists()) {
+      if (existingFeedback.length === 0) {
         return res.status(404).json({ error: "Feedback not found" });
       }
       
-      const updateData: any = { status };
+      const updateFields: string[] = [];
+      const updateParams: any[] = [];
+      let paramIndex = 1;
+
+      updateFields.push(`status = $${paramIndex++}`);
+      updateParams.push(status);
+
       if (notes) {
-        updateData.notes = notes;
+        updateFields.push(`notes = $${paramIndex++}`);
+        updateParams.push(notes);
       }
       
-      await updateDoc(feedbackRef, updateData);
+      updateParams.push(id); // Add ID for WHERE clause
+
+      await query(
+        `UPDATE feedback SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
+        updateParams
+      );
       
       // If status is "backlog", add to backlog collection
       if (status === "backlog") {
-        const feedbackData = feedbackDoc.data();
-        await addDoc(collection(db, "backlog"), {
-          originalId: id,
-          text: feedbackData.feedbackText,
-          createdAt: serverTimestamp(),
-          userId: userId
-        });
+        const feedbackData = existingFeedback[0];
+        const now = Date.now();
+        await query(
+          `INSERT INTO backlog ("originalId", text, "createdAt", "userId") VALUES ($1, $2, $3, $4)`,
+          [id, feedbackData.feedbackText, now, userId]
+        );
       }
       
       return res.status(200).json({ success: true });

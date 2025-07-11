@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "@/lib/firebase";
-import { firestore } from "@/lib/firebaseAdmin"; // Use admin for tasks collection
-import { collection, query, where, getDocs, QueryDocumentSnapshot } from "firebase/firestore";
+import { query } from "@/lib/neon";
 import type { Note, Task } from "@/types/app";
 
 export type SearchByTagResponse = {
@@ -38,46 +36,40 @@ export default async function handler(
     const items: (Note | Task)[] = [];
 
     // 1. Fetch Notes and Meeting Notes by tag
-    const notesQuery = query(
-      collection(db, "notes"),
-      where("userId", "==", userId),
-      where("tags", "array-contains", tag)
+    // 1. Fetch Notes and Meeting Notes by tag
+    const { rows: notesRows } = await query(
+      `SELECT id, title, content, tags, "createdAt", source, "eventId", "eventTitle", "isAdhoc", actions FROM notes WHERE "userId" = $1 AND tags @> ARRAY[$2]::text[]`,
+      [userId, tag]
     );
-    const notesSnapshot = await getDocs(notesQuery);
-    notesSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
-      const data = doc.data();
+    notesRows.forEach((row) => {
       items.push({
-        id: doc.id,
-        title: data.title || "",
-        content: data.content,
-        tags: data.tags || [],
-        createdAt: data.createdAt.toDate().toISOString(),
-        source: data.source || "notespage", // Default source for notes
-        eventId: data.eventId || undefined,
-        eventTitle: data.eventTitle || undefined,
-        isAdhoc: data.isAdhoc || undefined,
-        actions: data.actions || [],
+        id: row.id,
+        title: row.title || "",
+        content: row.content,
+        tags: row.tags || [],
+        createdAt: new Date(Number(row.createdAt)).toISOString(),
+        source: row.source || "notespage", // Default source for notes
+        eventId: row.eventId || undefined,
+        eventTitle: row.eventTitle || undefined,
+        isAdhoc: row.isAdhoc || undefined,
+        actions: row.actions || [],
       } as Note);
     });
 
     // 2. Fetch Tasks by tag
-    const tasksQuery = firestore
-      .collection("users")
-      .doc(userId)
-      .collection("tasks")
-      .where("tags", "array-contains", tag);
-
-    const tasksSnapshot = await tasksQuery.get();
-    tasksSnapshot.docs.forEach((doc) => {
-      const data = doc.data();
+    const { rows: tasksRows } = await query(
+      `SELECT id, text, done, "dueDate", "createdAt", source, tags FROM tasks WHERE "userId" = $1 AND tags @> ARRAY[$2]::text[]`,
+      [userId, tag]
+    );
+    tasksRows.forEach((row) => {
       items.push({
-        id: doc.id,
-        text: data.text as string,
-        done: data.done as boolean,
-        dueDate: data.dueDate?.toDate().toISOString() ?? null,
-        createdAt: data.createdAt?.toDate().toISOString() ?? null,
-        source: data.source as Task['source'] | undefined,
-        tags: data.tags || [],
+        id: row.id,
+        text: row.text as string,
+        done: row.done as boolean,
+        dueDate: row.dueDate ? new Date(Number(row.dueDate)).toISOString() : null,
+        createdAt: row.createdAt ? new Date(Number(row.createdAt)).toISOString() : null,
+        source: row.source as Task['source'] | undefined,
+        tags: row.tags || [],
       } as Task);
     });
 

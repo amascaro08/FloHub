@@ -1,26 +1,7 @@
 // pages/api/meetings/delete.ts
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin'; // Import admin directly
-
-// Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
-// If not, uncomment the initialization block below:
-/*
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
-  });
-}
-*/
-
-const db = getFirestore();
-const auth = getAuth();
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'OPTIONS') {
@@ -49,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     //   return res.status(403).json({ message: 'Unauthorized' });
     // }
 
-    await db.collection('notes').doc(id).delete(); // Still delete from 'notes' collection
+    await query('DELETE FROM notes WHERE id = $1', [id]);
     res.status(200).json({ message: 'Meeting note deleted successfully' }); // Updated success message
   } catch (error) {
     console.error('Error deleting meeting note:', error); // Updated error log

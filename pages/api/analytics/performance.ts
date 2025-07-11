@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
-import { firestore } from '@/lib/firebaseAdmin';
-import admin from 'firebase-admin';
+import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -21,14 +20,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dataToStore = {
       ...metrics,
       userId,
-      timestamp: admin.firestore.FieldValue.serverTimestamp()
+      timestamp: Date.now()
     };
 
-    // Store in Firestore
-    await firestore.collection('analytics')
-      .doc('performance')
-      .collection('metrics')
-      .add(dataToStore);
+    // Store in Neon
+    // Dynamically build the INSERT query based on the metrics object
+    const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
+    const values = Object.values(dataToStore);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+
+    await query(
+      `INSERT INTO "analytics_performance_metrics" (${columns}) VALUES (${placeholders})`,
+      values
+    );
 
     return res.status(200).json({ success: true });
   } catch (error) {

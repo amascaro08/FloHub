@@ -1,7 +1,7 @@
 // pages/api/notifications/subscribe.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { firestore } from '@/lib/firebaseAdmin';
+import { query } from '@/lib/neon';
 
 type Data = {
   success: boolean;
@@ -39,12 +39,16 @@ export default async function handler(
     const userEmail = token.email as string;
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
-    await firestore.collection('pushSubscriptions').doc(subscriptionId).set({
-      userEmail,
-      subscription,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    const now = Date.now();
+    await query(
+      `INSERT INTO "pushSubscriptions" (id, "userEmail", subscription, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET
+         "userEmail" = EXCLUDED."userEmail",
+         subscription = EXCLUDED.subscription,
+         "updatedAt" = EXCLUDED."updatedAt"`,
+      [subscriptionId, userEmail, subscription, now, now]
+    );
 
     return res.status(200).json({ success: true });
   } catch (error) {

@@ -1,18 +1,4 @@
-import { db } from './firebase';
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  getDoc, 
-  query, 
-  where, 
-  orderBy,
-  Timestamp,
-  serverTimestamp
-} from 'firebase/firestore';
+import { query } from './neon';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 
 // Collection names
@@ -32,25 +18,19 @@ export const getTodayFormatted = (): string => {
 // Get all habits for a user
 export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   try {
-    const habitsRef = collection(db, HABITS_COLLECTION);
-    // Remove orderBy to avoid requiring a composite index
-    const q = query(
-      habitsRef,
-      where('userId', '==', userId)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    // Sort the results in memory instead
-    const habits = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Habit));
-    
-    // Sort by createdAt in descending order
-    return habits.sort((a, b) => b.createdAt - a.createdAt);
+    const { rows } = await query('SELECT id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt" FROM habits WHERE "userId" = $1 ORDER BY "createdAt" DESC', [userId]);
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      frequency: row.frequency,
+      customDays: row.customDays,
+      userId: row.userId,
+      createdAt: Number(row.createdAt), // Assuming createdAt is stored as BIGINT (Unix milliseconds)
+      updatedAt: Number(row.updatedAt)  // Assuming updatedAt is stored as BIGINT (Unix milliseconds)
+    })) as Habit[];
   } catch (error) {
     console.error('Error getting habits:', error);
-    // Return empty array instead of throwing to prevent app from crashing
     return [];
   }
 };
@@ -59,17 +39,25 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
 export const createHabit = async (userId: string, habitData: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>): Promise<Habit> => {
   try {
     const now = Date.now();
-    const newHabit = {
-      ...habitData,
-      userId,
-      createdAt: now,
-      updatedAt: now
-    };
+    const { name, description, frequency, customDays } = habitData;
     
-    const docRef = await addDoc(collection(db, HABITS_COLLECTION), newHabit);
+    const { rows } = await query(
+      `INSERT INTO habits (name, description, frequency, "customDays", "userId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt"`,
+      [name, description, frequency, customDays, userId, now, now]
+    );
+    
+    const newHabit = rows[0];
     return {
-      id: docRef.id,
-      ...newHabit
+      id: newHabit.id,
+      name: newHabit.name,
+      description: newHabit.description,
+      frequency: newHabit.frequency,
+      customDays: newHabit.customDays,
+      userId: newHabit.userId,
+      createdAt: Number(newHabit.createdAt),
+      updatedAt: Number(newHabit.updatedAt)
     } as Habit;
   } catch (error) {
     console.error('Error creating habit:', error);
@@ -80,11 +68,33 @@ export const createHabit = async (userId: string, habitData: Omit<Habit, 'id' | 
 // Update an existing habit
 export const updateHabit = async (habitId: string, habitData: Partial<Habit>): Promise<void> => {
   try {
-    const habitRef = doc(db, HABITS_COLLECTION, habitId);
-    await updateDoc(habitRef, {
-      ...habitData,
-      updatedAt: Date.now()
-    });
+    const updates: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    for (const key in habitData) {
+      if (Object.prototype.hasOwnProperty.call(habitData, key)) {
+        // Exclude 'id', 'createdAt', 'updatedAt' from direct updates
+        if (key === 'id' || key === 'createdAt' || key === 'updatedAt') {
+          continue;
+        }
+        updates.push(`"${key}" = $${paramIndex++}`);
+        params.push((habitData as any)[key]);
+      }
+    }
+
+    updates.push(`"updatedAt" = $${paramIndex++}`);
+    params.push(Date.now());
+
+    params.push(habitId); // Add habitId as the last parameter for the WHERE clause
+
+    if (updates.length === 0) {
+      console.warn('No valid fields to update for habit:', habitId);
+      return;
+    }
+
+    const queryString = `UPDATE habits SET ${updates.join(', ')} WHERE id = $${paramIndex}`;
+    await query(queryString, params);
   } catch (error) {
     console.error('Error updating habit:', error);
     throw error;
@@ -94,28 +104,17 @@ export const updateHabit = async (habitId: string, habitData: Partial<Habit>): P
 // Delete a habit
 export const deleteHabit = async (habitId: string): Promise<void> => {
   try {
-    // First delete the habit document
-    const habitRef = doc(db, HABITS_COLLECTION, habitId);
-    await deleteDoc(habitRef);
+    // First delete the habit
+    await query('DELETE FROM habits WHERE id = $1', [habitId]);
     
     // Then delete all completions for this habit
     try {
-      const completionsRef = collection(db, COMPLETIONS_COLLECTION);
-      const q = query(completionsRef, where('habitId', '==', habitId));
-      const querySnapshot = await getDocs(q);
-      
-      // If there are completions to delete, delete them in batches
-      if (!querySnapshot.empty) {
-        const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
-      }
+      await query('DELETE FROM "habitCompletions" WHERE "habitId" = $1', [habitId]);
     } catch (completionsError) {
-      // Log the error but don't throw, as the main habit is already deleted
       console.error('Error deleting habit completions:', completionsError);
     }
   } catch (error) {
     console.error('Error deleting habit:', error);
-    // Re-throw the error so the UI can handle it
     throw error;
   }
 };
@@ -129,22 +128,12 @@ export const toggleHabitCompletion = async (
 ): Promise<HabitCompletion> => {
   try {
     // Check if there's already a completion record for this habit and date
-    const completionsRef = collection(db, COMPLETIONS_COLLECTION);
-    // Simplify query to avoid potential index issues
-    const q = query(
-      completionsRef,
-      where('habitId', '==', habitId),
-      where('userId', '==', userId)
+    const { rows: existingCompletions } = await query(
+      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "habitId" = $1 AND "userId" = $2 AND date = $3`,
+      [habitId, userId, date]
     );
-    
-    const querySnapshot = await getDocs(q);
-    // Filter for the specific date in memory
-    const matchingDocs = querySnapshot.docs.filter(doc =>
-      doc.data().date === date
-    );
-    const empty = matchingDocs.length === 0;
-    
-    if (empty) {
+
+    if (existingCompletions.length === 0) {
       // No completion record exists, create one (mark as completed)
       const newCompletion = {
         habitId,
@@ -155,29 +144,46 @@ export const toggleHabitCompletion = async (
         timestamp: Date.now()
       };
       
-      const docRef = await addDoc(collection(db, COMPLETIONS_COLLECTION), newCompletion);
+      const { rows } = await query(
+        `INSERT INTO "habitCompletions" ("habitId", "userId", date, completed, notes, timestamp)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, "habitId", "userId", date, completed, notes, timestamp`,
+        [newCompletion.habitId, newCompletion.userId, newCompletion.date, newCompletion.completed, newCompletion.notes, newCompletion.timestamp]
+      );
+      
+      const createdCompletion = rows[0];
       return {
-        id: docRef.id,
-        ...newCompletion
+        id: createdCompletion.id,
+        habitId: createdCompletion.habitId,
+        userId: createdCompletion.userId,
+        date: createdCompletion.date,
+        completed: createdCompletion.completed,
+        notes: createdCompletion.notes,
+        timestamp: Number(createdCompletion.timestamp)
       } as HabitCompletion;
     } else {
       // Completion record exists, toggle its state
-      const completionDoc = matchingDocs[0];
-      const currentCompletion = completionDoc.data() as HabitCompletion;
-      
-      await updateDoc(completionDoc.ref, {
-        completed: !currentCompletion.completed,
-        notes: notes || currentCompletion.notes || '',
-        timestamp: Date.now()
-      });
-      
+      const currentCompletion = existingCompletions[0];
+      const newCompletedStatus = !currentCompletion.completed;
+      const updatedNotes = notes || currentCompletion.notes || '';
+      const newTimestamp = Date.now();
+
+      const { rows } = await query(
+        `UPDATE "habitCompletions" SET completed = $1, notes = $2, timestamp = $3 WHERE id = $4
+         RETURNING id, "habitId", "userId", date, completed, notes, timestamp`,
+        [newCompletedStatus, updatedNotes, newTimestamp, currentCompletion.id]
+      );
+
+      const updatedCompletion = rows[0];
       return {
-        ...currentCompletion,
-        id: completionDoc.id,
-        completed: !currentCompletion.completed,
-        notes: notes || currentCompletion.notes || '',
-        timestamp: Date.now()
-      };
+        id: updatedCompletion.id,
+        habitId: updatedCompletion.habitId,
+        userId: updatedCompletion.userId,
+        date: updatedCompletion.date,
+        completed: updatedCompletion.completed,
+        notes: updatedCompletion.notes,
+        timestamp: Number(updatedCompletion.timestamp)
+      } as HabitCompletion;
     }
   } catch (error) {
     console.error('Error toggling habit completion:', error);
@@ -196,28 +202,22 @@ export const getHabitCompletionsForMonth = async (
     const startDate = formatDate(new Date(year, month, 1));
     const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of month
     
-    const completionsRef = collection(db, COMPLETIONS_COLLECTION);
-    // Simplify query to avoid requiring a composite index
-    const q = query(
-      completionsRef,
-      where('userId', '==', userId)
+    const { rows } = await query(
+      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "userId" = $1 AND date >= $2 AND date <= $3`,
+      [userId, startDate, endDate]
     );
     
-    const querySnapshot = await getDocs(q);
-    
-    // Filter results in memory for the date range
-    return querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as HabitCompletion))
-      .filter(completion =>
-        completion.date >= startDate &&
-        completion.date <= endDate
-      );
+    return rows.map(row => ({
+      id: row.id,
+      habitId: row.habitId,
+      userId: row.userId,
+      date: row.date,
+      completed: row.completed,
+      notes: row.notes,
+      timestamp: Number(row.timestamp)
+    })) as HabitCompletion[];
   } catch (error) {
     console.error('Error getting habit completions:', error);
-    // Return empty array instead of throwing to prevent app from crashing
     return [];
   }
 };
@@ -225,29 +225,30 @@ export const getHabitCompletionsForMonth = async (
 // Calculate habit statistics
 export const calculateHabitStats = async (userId: string, habitId: string): Promise<HabitStats> => {
   try {
-    const completionsRef = collection(db, COMPLETIONS_COLLECTION);
-    // Simplify query to avoid requiring a composite index
-    const q = query(
-      completionsRef,
-      where('userId', '==', userId),
-      where('habitId', '==', habitId)
+    // Get completed completions for the habit
+    const { rows: completionsRows } = await query(
+      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "userId" = $1 AND "habitId" = $2 AND completed = TRUE`,
+      [userId, habitId]
     );
     
-    const querySnapshot = await getDocs(q);
-    // Filter for completed=true in memory
-    const completions = querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as HabitCompletion))
-      .filter(completion => completion.completed === true);
+    const completions = completionsRows.map(row => ({
+      id: row.id,
+      habitId: row.habitId,
+      userId: row.userId,
+      date: row.date,
+      completed: row.completed,
+      notes: row.notes,
+      timestamp: Number(row.timestamp)
+    })) as HabitCompletion[];
     
     // Get the habit to check frequency
-    const habitRef = doc(db, HABITS_COLLECTION, habitId);
-    const habitDoc = await getDoc(habitRef);
+    const { rows: habitRows } = await query(
+      `SELECT id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt" FROM habits WHERE id = $1`,
+      [habitId]
+    );
     
-    if (!habitDoc.exists()) {
-      // Return default stats instead of throwing
+    if (habitRows.length === 0) {
+      // Return default stats if habit not found
       return {
         habitId,
         currentStreak: 0,
@@ -257,7 +258,16 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
       };
     }
     
-    const habit = { id: habitDoc.id, ...habitDoc.data() } as Habit;
+    const habit = {
+      id: habitRows[0].id,
+      name: habitRows[0].name,
+      description: habitRows[0].description,
+      frequency: habitRows[0].frequency,
+      customDays: habitRows[0].customDays,
+      userId: habitRows[0].userId,
+      createdAt: Number(habitRows[0].createdAt),
+      updatedAt: Number(habitRows[0].updatedAt)
+    } as Habit;
     
     // Calculate total completions
     const totalCompletions = completions.length;
@@ -267,7 +277,7 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
     const today = formatDate(new Date());
     
     // Sort completions by date in descending order (most recent first)
-    const sortedCompletions = [...completions].sort((a, b) => 
+    const sortedCompletions = [...completions].sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     
@@ -325,7 +335,7 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
     let lastDate: Date | null = null;
     
     // Sort completions by date in ascending order
-    const chronologicalCompletions = [...completions].sort((a, b) => 
+    const chronologicalCompletions = [...completions].sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     

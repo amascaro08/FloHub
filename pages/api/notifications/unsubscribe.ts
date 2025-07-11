@@ -1,7 +1,7 @@
 // pages/api/notifications/unsubscribe.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { firestore } from '@/lib/firebaseAdmin';
+import { query } from '@/lib/neon';
 
 type Data = {
   success: boolean;
@@ -38,7 +38,7 @@ export default async function handler(
     // Delete subscription from Firestore
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
-    await firestore.collection('pushSubscriptions').doc(subscriptionId).delete();
+    await query('DELETE FROM "pushSubscriptions" WHERE id = $1', [subscriptionId]);
 
     return res.status(200).json({ success: true });
   } catch (error) {

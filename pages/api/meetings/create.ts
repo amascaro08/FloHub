@@ -3,8 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 // Assuming Firebase will be used for data storage
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import modular Firestore functions and serverTimestamp
+import { query } from "../../../lib/neon";
 import OpenAI from "openai"; // Import OpenAI
 
 import type { Action } from "@/types/app"; // Import Action type
@@ -108,35 +107,36 @@ export default async function handler(
       }
     }
     
-    const newNoteRef = await addDoc(collection(db, "notes"), { // Still save to 'notes' collection
-      userId: userId,
-      title: title || "", // Save title, default to empty string if not provided
-      content: content,
-      tags: tags || [], // Save tags as an empty array if none provided
-      createdAt: serverTimestamp(), // Use serverTimestamp for consistency
-      // Save new fields if provided
-      ...(eventId && { eventId }),
-      ...(eventTitle && { eventTitle }),
-      ...(isAdhoc !== undefined && { isAdhoc }), // Save if explicitly provided (true or false)
-      ...(actions && { actions }), // Save actions if provided
-      ...(agenda && { agenda }), // Save agenda if provided
-      ...(aiSummary && { aiSummary }), // Save AI summary if generated
-    });
-    const noteId = newNoteRef.id;
+    const now = Date.now();
+    const { rows: noteRows } = await query(
+      `INSERT INTO notes (
+        "userId", title, content, tags, "createdAt", "eventId", "eventTitle", "isAdhoc", actions, agenda, "aiSummary"
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id`,
+      [
+        userId,
+        title || "",
+        content,
+        tags || [],
+        now,
+        eventId || null,
+        eventTitle || null,
+        isAdhoc !== undefined ? isAdhoc : null,
+        actions || [],
+        agenda || null,
+        aiSummary || null,
+      ]
+    );
+    const noteId = noteRows[0].id;
 
-    // 4) Process and save actions to the tasks collection if assigned to "Me"
+    // 4) Process and save actions to the tasks table if assigned to "Me"
     if (actions && actions.length > 0) {
       for (const action of actions) {
         if (action.assignedTo === "Me") {
-          await addDoc(collection(db, "tasks"), {
-            userId: userId,
-            text: action.description, // Use 'text' field as expected by the tasks collection
-            done: action.status === "done", // Convert status to boolean 'done' field
-            createdAt: serverTimestamp(), // Use serverTimestamp
-            source: "work", // Tag as a work task
-            // Optional: Link back to the meeting note if needed in the future
-            // meetingNoteId: noteId,
-          });
+          await query(
+            `INSERT INTO tasks ("userId", text, done, "createdAt", source) VALUES ($1, $2, $3, $4, $5)`,
+            [userId, action.description, action.status === "done", now, "work"]
+          );
         }
       }
     }

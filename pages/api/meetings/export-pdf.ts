@@ -1,24 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin'; // Import admin directly
+import { query } from '@/lib/neon';
 import PdfPrinter from 'pdfmake'; // Example using pdfmake
 import vfsFonts from 'pdfmake/build/vfs_fonts';
-
-// Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
-// If not, uncomment the initialization block below:
-/*
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
-  });
-}
-*/
-
-const db = getFirestore();
 
 interface MeetingNote {
   id: string;
@@ -56,13 +39,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Fetch the selected meeting note from Firestore
-    const meetingNoteDoc = await db.collection('meetings').doc(id).get();
+    const { rows } = await query(
+      `SELECT id, title, content, tags, "eventId", "eventTitle", "isAdhoc", actions, "createdAt" FROM meetings WHERE id = $1`,
+      [id]
+    );
 
-    if (!meetingNoteDoc.exists) {
+    if (rows.length === 0) {
       return res.status(404).json({ message: 'Meeting note not found' });
     }
 
-    const meetingNote = { id: meetingNoteDoc.id, ...meetingNoteDoc.data() } as MeetingNote;
+    const meetingNote = {
+      id: rows[0].id,
+      title: rows[0].title,
+      content: rows[0].content,
+      tags: rows[0].tags,
+      eventId: rows[0].eventId,
+      eventTitle: rows[0].eventTitle,
+      isAdhoc: rows[0].isAdhoc,
+      actions: rows[0].actions,
+      createdAt: new Date(Number(rows[0].createdAt)).toISOString()
+    } as MeetingNote;
 
     // Implement PDF generation logic here using pdfmake
     const fonts = {

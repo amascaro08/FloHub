@@ -1,7 +1,7 @@
 // lib/notificationScheduler.ts
 // Scheduler for sending notifications for upcoming meetings and tasks
 
-import { firestore } from './firebaseAdmin';
+import { query } from './neon';
 import fetch from 'node-fetch';
 
 // Time thresholds for notifications (in minutes)
@@ -63,56 +63,38 @@ export async function checkUpcomingMeetings() {
     const nowTimestamp = now.getTime();
     
     // Get all users with push subscriptions
-    const subscriptionsSnapshot = await firestore
-      .collection('pushSubscriptions')
-      .get();
+    const { rows: subscriptions } = await query(`SELECT DISTINCT "userEmail" FROM "pushSubscriptions"`);
     
-    if (subscriptionsSnapshot.empty) {
+    if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
     // Get unique user emails
-    const userEmails = new Set<string>();
-    subscriptionsSnapshot.docs.forEach(doc => {
-      userEmails.add(doc.data().userEmail);
-    });
+    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail));
     
     console.log(`Checking upcoming meetings for ${userEmails.size} users`);
     
     // For each user, check their upcoming meetings
     for (const userEmail of Array.from(userEmails)) {
-      // Get user's calendar settings
-      const userSettingsDoc = await firestore
-        .collection('users')
-        .doc(userEmail)
-        .get();
+      // Get user's calendar settings (optional, if needed for filtering/preferences)
+      // For now, we'll skip fetching user settings as it's not directly used for the core query
+      // If specific settings are needed, a SELECT from 'userSettings' table would be required.
       
-      if (!userSettingsDoc.exists) {
-        console.log(`No settings found for user ${userEmail}`);
-        continue;
-      }
+      // Get upcoming meetings from Neon
+      // Assuming 'calendarEvents' table has 'userId', 'summary', 'start_timestamp' (BIGINT)
+      const { rows: events } = await query(
+        `SELECT id, summary, start FROM "calendarEvents" WHERE "userId" = $1 AND "start"->>'dateTime' > $2 ORDER BY "start"->>'dateTime' ASC LIMIT 10`,
+        [userEmail, now.toISOString()]
+      );
       
-      // Get upcoming meetings from Firestore
-      // This assumes you have a collection of calendar events
-      // You may need to adjust this based on your actual data structure
-      const eventsSnapshot = await firestore
-        .collection('users')
-        .doc(userEmail)
-        .collection('calendarEvents')
-        .where('start.dateTime', '>', now.toISOString())
-        .orderBy('start.dateTime', 'asc')
-        .limit(10)
-        .get();
-      
-      if (eventsSnapshot.empty) {
+      if (events.length === 0) {
         console.log(`No upcoming meetings found for user ${userEmail}`);
         continue;
       }
       
       // Check each meeting for notification timing
-      for (const eventDoc of eventsSnapshot.docs) {
-        const event = eventDoc.data();
+      for (const event of events) {
         const eventStart = new Date(event.start.dateTime || event.start.date);
         const minutesUntilEvent = (eventStart.getTime() - nowTimestamp) / (1000 * 60);
         
@@ -128,11 +110,11 @@ export async function checkUpcomingMeetings() {
               `Meeting Reminder: ${event.summary}`,
               `Your meeting "${event.summary}" starts in ${Math.round(minutesUntilEvent)} minutes`,
               {
-                eventId: eventDoc.id,
-                url: `/dashboard/meetings?id=${eventDoc.id}`,
+                eventId: event.id,
+                url: `/dashboard/meetings?id=${event.id}`,
                 type: 'meeting',
               },
-              `meeting-${eventDoc.id}`,
+              `meeting-${event.id}`,
               [
                 {
                   action: 'view_meeting',
@@ -158,45 +140,35 @@ export async function checkUpcomingTasks() {
     const nowTimestamp = now.getTime();
     
     // Get all users with push subscriptions
-    const subscriptionsSnapshot = await firestore
-      .collection('pushSubscriptions')
-      .get();
+    const { rows: subscriptions } = await query(`SELECT DISTINCT "userEmail" FROM "pushSubscriptions"`);
     
-    if (subscriptionsSnapshot.empty) {
+    if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
     // Get unique user emails
-    const userEmails = new Set<string>();
-    subscriptionsSnapshot.docs.forEach(doc => {
-      userEmails.add(doc.data().userEmail);
-    });
+    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail));
     
     console.log(`Checking upcoming tasks for ${userEmails.size} users`);
     
     // For each user, check their upcoming tasks
     for (const userEmail of Array.from(userEmails)) {
-      // Get upcoming tasks from Firestore
-      const tasksSnapshot = await firestore
-        .collection('users')
-        .doc(userEmail)
-        .collection('tasks')
-        .where('done', '==', false)
-        .where('dueDate', '>', now)
-        .orderBy('dueDate', 'asc')
-        .limit(10)
-        .get();
+      // Get upcoming tasks from Neon
+      // Assuming 'tasks' table has 'userId', 'text', 'done', 'dueDate' (BIGINT)
+      const { rows: tasks } = await query(
+        `SELECT id, text, done, "dueDate" FROM tasks WHERE "userId" = $1 AND done = FALSE AND "dueDate" > $2 ORDER BY "dueDate" ASC LIMIT 10`,
+        [userEmail, nowTimestamp]
+      );
       
-      if (tasksSnapshot.empty) {
+      if (tasks.length === 0) {
         console.log(`No upcoming tasks found for user ${userEmail}`);
         continue;
       }
       
       // Check each task for notification timing
-      for (const taskDoc of tasksSnapshot.docs) {
-        const task = taskDoc.data();
-        const taskDue = task.dueDate.toDate();
+      for (const task of tasks) {
+        const taskDue = new Date(Number(task.dueDate));
         const minutesUntilDue = (taskDue.getTime() - nowTimestamp) / (1000 * 60);
         
         // Check if we should send a notification for this task
@@ -220,11 +192,11 @@ export async function checkUpcomingTasks() {
               `Task Reminder: ${task.text}`,
               `Your task "${task.text}" is ${reminderText}`,
               {
-                taskId: taskDoc.id,
-                url: `/dashboard/tasks?id=${taskDoc.id}`,
+                taskId: task.id,
+                url: `/dashboard/tasks?id=${task.id}`,
                 type: 'task',
               },
-              `task-${taskDoc.id}`,
+              `task-${task.id}`,
               [
                 {
                   action: 'view_task',

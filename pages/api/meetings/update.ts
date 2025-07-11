@@ -2,10 +2,8 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "../../../lib/firebase"; // Import db from your firebase config
-import { doc, updateDoc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import modular Firestore functions
+import { query } from "../../../lib/neon";
 import OpenAI from "openai"; // Import OpenAI
-import admin from "firebase-admin"; // Import admin for serverTimestamp
 
 import type { Action } from "@/types/app"; // Import Action type
 
@@ -79,40 +77,53 @@ export default async function handler(
 
   try {
     // 3) Check if the meeting note exists and belongs to the authenticated user
-    const noteRef = doc(db, "notes", id); // Still reference the 'notes' collection
-    const noteSnap = await getDoc(noteRef);
+    // 3) Check if the meeting note exists and belongs to the authenticated user
+    const { rows: existingNoteRows } = await query(
+      `SELECT "userId", actions, agenda, content FROM notes WHERE id = $1`,
+      [id]
+    );
 
-    if (!noteSnap.exists()) {
-        return res.status(404).json({ error: "Meeting Note not found" }); // Updated error message
+    if (existingNoteRows.length === 0) {
+        return res.status(404).json({ error: "Meeting Note not found" });
     }
 
-    const noteData = noteSnap.data();
+    const noteData = existingNoteRows[0];
     if (noteData.userId !== userId) {
-        return res.status(403).json({ error: "Unauthorized to update this meeting note" }); // Updated error message
+        return res.status(403).json({ error: "Unauthorized to update this meeting note" });
     }
 
     // 4) Prepare update data
-    const updateData: any = {};
+    const updateFields: string[] = [];
+    const updateParams: any[] = [];
+    let paramIndex = 1;
+
     if (title !== undefined) {
-        updateData.title = title;
+        updateFields.push(`title = $${paramIndex++}`);
+        updateParams.push(title);
     }
     if (content !== undefined) {
-        updateData.content = content;
+        updateFields.push(`content = $${paramIndex++}`);
+        updateParams.push(content);
     }
     if (tags !== undefined) {
-        updateData.tags = tags;
+        updateFields.push(`tags = $${paramIndex++}`);
+        updateParams.push(tags);
     }
-    if (eventId !== undefined) { // Allow setting eventId to null/undefined to disassociate
-        updateData.eventId = eventId;
+    if (eventId !== undefined) {
+        updateFields.push(`"eventId" = $${paramIndex++}`);
+        updateParams.push(eventId);
     }
-    if (eventTitle !== undefined) { // Allow setting eventTitle to null/undefined
-        updateData.eventTitle = eventTitle;
+    if (eventTitle !== undefined) {
+        updateFields.push(`"eventTitle" = $${paramIndex++}`);
+        updateParams.push(eventTitle);
     }
-    if (isAdhoc !== undefined) { // Allow setting isAdhoc to true or false
-        updateData.isAdhoc = isAdhoc;
+    if (isAdhoc !== undefined) {
+        updateFields.push(`"isAdhoc" = $${paramIndex++}`);
+        updateParams.push(isAdhoc);
     }
-    if (actions !== undefined) { // Allow updating actions
-        updateData.actions = actions;
+    if (actions !== undefined) {
+        updateFields.push(`actions = $${paramIndex++}`);
+        updateParams.push(actions);
         
         // Process actions assigned to "Me" and add them to tasks
         if (actions.length > 0) {
@@ -120,19 +131,17 @@ export default async function handler(
                 // Only process new actions that weren't in the original note
                 const existingAction = noteData.actions?.find((a: Action) => a.id === action.id);
                 if (!existingAction && action.assignedTo === "Me") {
-                    await addDoc(collection(db, "tasks"), {
-                        userId: userId,
-                        text: action.description,
-                        done: action.status === "done",
-                        createdAt: serverTimestamp(),
-                        source: "work", // Tag as a work task
-                    });
+                    await query(
+                        `INSERT INTO tasks ("userId", text, done, "createdAt", source) VALUES ($1, $2, $3, $4, $5)`,
+                        [userId, action.description, action.status === "done", Date.now(), "work"]
+                    );
                 }
             }
         }
     }
-    if (agenda !== undefined) { // Allow updating agenda
-        updateData.agenda = agenda;
+    if (agenda !== undefined) {
+        updateFields.push(`agenda = $${paramIndex++}`);
+        updateParams.push(agenda);
     }
     
     // Generate AI summary if agenda and content are provided - but do it asynchronously
@@ -225,32 +234,43 @@ export default async function handler(
 
 
     // 5) Update the meeting note in the database
-    console.log("update.ts - Updating document with data:", JSON.stringify(updateData, null, 2));
+    console.log("update.ts - Updating document with fields:", JSON.stringify(updateFields, null, 2));
+    console.log("update.ts - Updating document with params:", JSON.stringify(updateParams, null, 2));
     
     // Add a timestamp to the update data to ensure the document is actually modified
-    updateData.updatedAt = serverTimestamp();
+    updateFields.push(`"updatedAt" = $${paramIndex++}`);
+    updateParams.push(Date.now());
     
+    updateParams.push(id); // Add ID for WHERE clause
+
     try {
       // Wait for AI summary to complete and add it to updateData if available
       const aiSummary = await aiSummaryPromise;
       if (aiSummary) {
-        updateData.aiSummary = aiSummary;
+        updateFields.push(`"aiSummary" = $${paramIndex++}`);
+        updateParams.push(aiSummary);
         console.log("update.ts - AI Summary added to update data:", aiSummary);
       }
       
-      // Log the final update data being sent to Firestore
-      console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateData, null, 2));
+      // Log the final update data being sent to Neon
+      console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateFields, null, 2), JSON.stringify(updateParams, null, 2));
       
       // Perform the update
-      console.log(`update.ts - Updating document in collection 'notes' with ID '${id}'`);
-      await updateDoc(noteRef, updateData);
+      console.log(`update.ts - Updating document in table 'notes' with ID '${id}'`);
+      await query(
+        `UPDATE notes SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
+        updateParams
+      );
       console.log("update.ts - Document updated successfully");
       
       // Fetch the updated document to verify the changes
       console.log("update.ts - Fetching updated document to verify changes");
-      const updatedNoteSnap = await getDoc(noteRef);
+      const { rows: updatedNoteRows } = await query(
+        `SELECT id, title, content, tags, "eventId", "eventTitle", "isAdhoc", actions, agenda, "aiSummary", "createdAt", "updatedAt" FROM notes WHERE id = $1`,
+        [id]
+      );
       
-      if (!updatedNoteSnap.exists()) {
+      if (updatedNoteRows.length === 0) {
         console.error("update.ts - Document no longer exists after update");
         return res.status(404).json({
           success: false,
@@ -258,11 +278,11 @@ export default async function handler(
         });
       }
       
-      const updatedNoteData = updatedNoteSnap.data();
+      const updatedNoteData = updatedNoteRows[0];
       console.log("update.ts - Updated document data:", JSON.stringify(updatedNoteData, null, 2));
       
       // Check if the aiSummary was properly saved
-      if (updateData.aiSummary && !updatedNoteData.aiSummary) {
+      if (aiSummary && !updatedNoteData.aiSummary) {
         console.warn("update.ts - AI Summary was not saved properly");
       }
       
@@ -270,8 +290,18 @@ export default async function handler(
       return res.status(200).json({
         success: true,
         updatedNote: {
-          id: id,
-          ...updatedNoteData
+          id: updatedNoteData.id,
+          title: updatedNoteData.title,
+          content: updatedNoteData.content,
+          tags: updatedNoteData.tags,
+          eventId: updatedNoteData.eventId,
+          eventTitle: updatedNoteData.eventTitle,
+          isAdhoc: updatedNoteData.isAdhoc,
+          actions: updatedNoteData.actions,
+          agenda: updatedNoteData.agenda,
+          aiSummary: updatedNoteData.aiSummary,
+          createdAt: Number(updatedNoteData.createdAt),
+          updatedAt: Number(updatedNoteData.updatedAt)
         }
       });
     } catch (updateError: any) {

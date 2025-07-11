@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
-import { firestore } from '@/lib/firebaseAdmin';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { query } from '@/lib/neon';
 
 // Define types for our analytics data
 interface PageVisit {
@@ -87,10 +85,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Convert to Firestore timestamp
-    const startTimestamp = Timestamp.fromDate(startDate);
+    const startTimestampMs = startDate.getTime(); // Convert Date to Unix milliseconds
 
-    // Fetch analytics data from Firestore
-    const analyticsData = await fetchAnalyticsData(startTimestamp);
+    // Fetch analytics data from Neon
+    const analyticsData = await fetchAnalyticsData(startTimestampMs);
     
     return res.status(200).json(analyticsData);
   } catch (error) {
@@ -99,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function fetchAnalyticsData(startTimestamp: any) {
+async function fetchAnalyticsData(startTimestampMs: number) {
   // Initialize analytics data structure
   const analyticsData: AnalyticsData = {
     pageVisits: [],
@@ -113,27 +111,26 @@ async function fetchAnalyticsData(startTimestamp: any) {
 
   try {
     // Get user count
-    const usersSnapshot = await firestore.collection('users').get();
-    analyticsData.userCount = usersSnapshot.size;
+    const { rows: userCountRows } = await query('SELECT COUNT(*) FROM users');
+    analyticsData.userCount = parseInt(userCountRows[0].count, 10);
 
     // Get active users (users who have logged in since startTimestamp)
-    const activeUsersSnapshot = await firestore.collection('users')
-      .where('lastLogin', '>=', startTimestamp)
-      .get();
-    analyticsData.activeUserCount = activeUsersSnapshot.size;
+    const { rows: activeUserCountRows } = await query(
+      'SELECT COUNT(*) FROM users WHERE "lastLogin" >= $1',
+      [startTimestampMs]
+    );
+    analyticsData.activeUserCount = parseInt(activeUserCountRows[0].count, 10);
 
     // Get page visits
-    const pageVisitsSnapshot = await firestore.collection('analytics')
-      .doc('pageVisits')
-      .collection('visits')
-      .where('timestamp', '>=', startTimestamp)
-      .get();
+    const { rows: pageVisitsRows } = await query(
+      `SELECT page, timestamp FROM "analytics_pageVisits_visits" WHERE timestamp >= $1`,
+      [startTimestampMs]
+    );
 
     // Process page visits
     const pageVisitCounts: Record<string, number> = {};
-    pageVisitsSnapshot.forEach(doc => {
-      const data = doc.data();
-      const page = data.page;
+    pageVisitsRows.forEach(row => {
+      const page = row.page;
       pageVisitCounts[page] = (pageVisitCounts[page] || 0) + 1;
     });
 
@@ -150,14 +147,14 @@ async function fetchAnalyticsData(startTimestamp: any) {
     };
 
     // Get user settings to analyze FloCat styles and personalities
-    const userSettingsSnapshot = await firestore.collection('userSettings').get();
+    const { rows: userSettingsRows } = await query(
+      `SELECT "floCatStyle", "floCatPersonality" FROM "userSettings"`
+    );
     
     // Process FloCat styles and personalities
     const personalityKeywords: Record<string, number> = {};
     
-    userSettingsSnapshot.forEach(doc => {
-      const settings = doc.data();
-      
+    userSettingsRows.forEach(settings => {
       // Count FloCat styles
       if (settings.floCatStyle) {
         floCatStyleCounts[settings.floCatStyle] = (floCatStyleCounts[settings.floCatStyle] || 0) + 1;
@@ -167,7 +164,7 @@ async function fetchAnalyticsData(startTimestamp: any) {
       
       // Count personality keywords
       if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
-        settings.floCatPersonality.forEach(keyword => {
+        settings.floCatPersonality.forEach((keyword: string) => {
           personalityKeywords[keyword] = (personalityKeywords[keyword] || 0) + 1;
         });
       }
@@ -182,17 +179,15 @@ async function fetchAnalyticsData(startTimestamp: any) {
       .sort((a, b) => b.count - a.count);
 
     // Get widget usage
-    const widgetUsageSnapshot = await firestore.collection('analytics')
-      .doc('widgetUsage')
-      .collection('widgets')
-      .where('timestamp', '>=', startTimestamp)
-      .get();
+    const { rows: widgetUsageRows } = await query(
+      `SELECT widget, timestamp FROM "analytics_widgetUsage_widgets" WHERE timestamp >= $1`,
+      [startTimestampMs]
+    );
 
     // Process widget usage
     const widgetCounts: Record<string, number> = {};
-    widgetUsageSnapshot.forEach(doc => {
-      const data = doc.data();
-      const widget = data.widget;
+    widgetUsageRows.forEach(row => {
+      const widget = row.widget;
       widgetCounts[widget] = (widgetCounts[widget] || 0) + 1;
     });
 
@@ -201,11 +196,10 @@ async function fetchAnalyticsData(startTimestamp: any) {
       .sort((a, b) => b.count - a.count);
 
     // Get performance metrics
-    const performanceSnapshot = await firestore.collection('analytics')
-      .doc('performance')
-      .collection('metrics')
-      .where('timestamp', '>=', startTimestamp)
-      .get();
+    const { rows: performanceRows } = await query(
+      `SELECT fcp, lcp, fid, cls, ttfb, "loadComplete", "navStart", "sessionDuration", timestamp FROM "analytics_performance_metrics" WHERE timestamp >= $1`,
+      [startTimestampMs]
+    );
 
     // Process performance metrics
     const metricSums: Record<string, MetricSum> = {
@@ -218,9 +212,7 @@ async function fetchAnalyticsData(startTimestamp: any) {
       avgSessionDuration: { sum: 0, count: 0 }
     };
 
-    performanceSnapshot.forEach(doc => {
-      const data = doc.data();
-      
+    performanceRows.forEach(data => {
       if (data.fcp) {
         metricSums.avgFCP.sum += data.fcp;
         metricSums.avgFCP.count += 1;

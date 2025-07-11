@@ -1,19 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { db } from "../../../lib/firebase";
-import { collection, query, where, orderBy, getDocs, addDoc, Timestamp } from "firebase/firestore";
+import { query } from "../../../lib/neon";
 
 type ConversationMessage = {
   role: "system" | "user" | "assistant";
   content: string;
-  timestamp: Timestamp;
+  timestamp: number;
 };
 
 type Conversation = {
   id?: string;
   userId: string;
   messages: ConversationMessage[];
-  createdAt: Timestamp;
+  createdAt: number;
 };
 
 type GetConversationsResponse = {
@@ -34,19 +33,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   if (req.method === "GET") {
     try {
-      const conversationsRef = collection(db, "conversations");
-      const q = query(conversationsRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const conversations: Conversation[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        conversations.push({
-          id: doc.id,
-          userId: data.userId,
-          messages: data.messages,
-          createdAt: data.createdAt,
-        });
-      });
+      const { rows } = await query(
+        `SELECT id, "userId", messages, "createdAt" FROM conversations WHERE "userId" = $1 ORDER BY "createdAt" DESC`,
+        [userId]
+      );
+      const conversations: Conversation[] = rows.map((row) => ({
+        id: row.id,
+        userId: row.userId,
+        messages: row.messages, // Assuming messages are stored as JSONB
+        createdAt: Number(row.createdAt),
+      }));
       return res.status(200).json({ conversations });
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -58,14 +54,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return res.status(400).json({ error: "Invalid messages format" });
     }
     try {
-      const conversationsRef = collection(db, "conversations");
+      const now = Date.now();
       const newConversation = {
         userId,
-        messages: messages.map((m) => ({ ...m, timestamp: Timestamp.now() })),
-        createdAt: Timestamp.now(),
+        messages: messages.map((m) => ({ ...m, timestamp: now })),
+        createdAt: now,
       };
-      const docRef = await addDoc(conversationsRef, newConversation);
-      return res.status(201).json({ conversations: [{ id: docRef.id, ...newConversation }] });
+      const { rows } = await query(
+        `INSERT INTO conversations ("userId", messages, "createdAt") VALUES ($1, $2, $3) RETURNING id`,
+        [newConversation.userId, JSON.stringify(newConversation.messages), newConversation.createdAt]
+      );
+      const createdConversation = { id: rows[0].id, ...newConversation };
+      return res.status(201).json({ conversations: [createdConversation] });
     } catch (error) {
       console.error("Error saving conversation:", error);
       return res.status(500).json({ error: "Failed to save conversation" });

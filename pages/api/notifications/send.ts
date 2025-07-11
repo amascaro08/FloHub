@@ -1,7 +1,7 @@
 // pages/api/notifications/send.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
-import { firestore } from '@/lib/firebaseAdmin';
+import { query } from '@/lib/neon';
 import webpush from 'web-push';
 
 type Data = {
@@ -69,15 +69,15 @@ export default async function handler(
     }
     
     // Get user's subscriptions from Firestore
-    const subscriptionsSnapshot = await firestore
-      .collection('pushSubscriptions')
-      .where('userEmail', '==', userEmail)
-      .get();
+    const { rows: subscriptions } = await query(
+      `SELECT id, subscription FROM "pushSubscriptions" WHERE "userEmail" = $1`,
+      [userEmail]
+    );
     
-    if (subscriptionsSnapshot.empty) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'No push subscriptions found for this user' 
+    if (subscriptions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No push subscriptions found for this user'
       });
     }
 
@@ -96,31 +96,31 @@ export default async function handler(
     };
 
     // Send notification to each subscription
-    const sendPromises = subscriptionsSnapshot.docs.map(async (doc) => {
-      const subscription = doc.data().subscription;
+    const sendPromises = subscriptions.map(async (sub) => {
+      const subscription = sub.subscription; // Assuming subscription is already an object
       try {
         await webpush.sendNotification(
           subscription,
           JSON.stringify(notificationPayload)
         );
-        return { success: true, subscriptionId: doc.id };
+        return { success: true, subscriptionId: sub.id };
       } catch (error: any) {
-        console.error(`Error sending notification to subscription ${doc.id}:`, error);
+        console.error(`Error sending notification to subscription ${sub.id}:`, error);
         
         // If subscription is expired or invalid, delete it
         if (error.statusCode === 404 || error.statusCode === 410) {
-          await firestore.collection('pushSubscriptions').doc(doc.id).delete();
-          return { 
-            success: false, 
-            subscriptionId: doc.id, 
-            error: 'Subscription expired or invalid, removed from database' 
+          await query('DELETE FROM "pushSubscriptions" WHERE id = $1', [sub.id]);
+          return {
+            success: false,
+            subscriptionId: sub.id,
+            error: 'Subscription expired or invalid, removed from database'
           };
         }
         
-        return { 
-          success: false, 
-          subscriptionId: doc.id, 
-          error: error.message 
+        return {
+          success: false,
+          subscriptionId: sub.id,
+          error: error.message
         };
       }
     });
