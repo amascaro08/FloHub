@@ -114,6 +114,11 @@ export const authOptions = {
     maxAge:   30 * 24 * 60 * 60,
   },
 
+  pages: {
+    signIn: "/login",
+    error: "/auth/error",
+  },
+
   // 3) Secret for signing tokens
   secret: process.env.NEXTAUTH_SECRET,
 
@@ -145,6 +150,8 @@ export const authOptions = {
       return session;
     },
   },
+
+  debug: process.env.NODE_ENV === "development",
 };
 
 export default NextAuth(authOptions);

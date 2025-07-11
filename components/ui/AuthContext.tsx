@@ -1,14 +1,20 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
-import type { Session } from "next-auth";
+import { handleAuth } from '@/lib/neonAuth';
+
+type User = {
+  id: string;
+  email: string;
+  name: string;
+} | null;
 
 type AuthContextType = {
-  user: Session["user"] | null;
-  login: (provider?: string) => void;
+  user: User;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: () => void;
   logout: () => void;
   isLocked: boolean;
   toggleLock: () => void;
-  status: "loading" | "authenticated" | "unauthenticated"; // Add status to context type
 };
 
 const AuthContext = createContext<AuthContextType>({
