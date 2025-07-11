@@ -7,16 +7,42 @@ const withPWA = require('next-pwa')({
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
-  // Additional PWA configuration
+  // Configure caching for workbox files
   runtimeCaching: [
     {
       urlPattern: /^https?.*/,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'offlineCache',
+        cacheName: 'https-calls',
         networkTimeoutSeconds: 15,
       },
     },
+    {
+      urlPattern: /\.(?:js|css)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-resources',
+      },
+    },
+    {
+      urlPattern: /^https:\/\/flohub\.vercel\.app\/.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'vercel-resources',
+        networkTimeoutSeconds: 10,
+      },
+    }
+  ],
+  // Ensure workbox files are served from the correct location
+  swDest: 'public/sw.js',
+  fallbacks: {
+    document: '/offline.html'
+  },
+  cacheOnFrontEndNav: true,
+  reloadOnOnline: true,
+  // Add additional security headers
+  additionalManifestEntries: [
+    { url: '/offline.html', revision: '1' }
   ],
 });
 

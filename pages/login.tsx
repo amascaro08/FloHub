@@ -17,6 +17,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard');
+    }
+    console.log("LoginPage - useEffect - status:", status);
+  }, [status, router]);
+
   // If status is loading, show a loading indicator
   if (status === 'loading') {
     console.log("LoginPage: status is loading, showing loading UI.");
@@ -26,14 +34,6 @@ export default function LoginPage() {
       </div>
     );
   }
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/dashboard');
-    }
-    console.log("LoginPage - useEffect - status:", status);
-  }, [status, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
