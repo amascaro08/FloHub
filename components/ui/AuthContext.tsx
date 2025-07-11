@@ -1,44 +1,76 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-import { handleAuth } from '@/lib/neonAuth';
 
 type User = {
   id: string;
   email: string;
-  name: string;
+  name?: string;
 } | null;
 
 type AuthContextType = {
   user: User;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   isLocked: boolean;
   toggleLock: () => void;
+  status: "loading" | "authenticated" | "unauthenticated";
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: () => {},
-  logout: () => {},
+  isLoading: true,
+  isAuthenticated: false,
+  login: async () => {},
+  logout: async () => {},
   isLocked: false,
   toggleLock: () => {},
-  status: "unauthenticated", // Default status
+  status: "unauthenticated"
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated"; // Default to "unauthenticated" if hook result is undefined
+  const [user, setUser] = useState<User>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+  const [isLocked, setIsLocked] = useState(false);
 
-  // Initialize state from localStorage, default to false if not found
-  const [isLocked, setIsLocked] = useState<boolean>(false); // Default to false initially
-
-  console.log("AuthContext status:", status);
-  // Load lock state from localStorage on mount (client-side only)
-  useEffect(() => {
+  const checkSession = async () => {
     try {
-      if (typeof window !== 'undefined') { // Check if window is defined (client-side)
+      const response = await fetch('/api/auth/session');
+      if (!response.ok) {
+        throw new Error('Session check failed');
+      }
+      const data = await response.json();
+      
+      if (data.user) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setStatus("authenticated");
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        setStatus("unauthenticated");
+      }
+    } catch (error) {
+      console.error("Session check error:", error);
+      setUser(null);
+      setIsAuthenticated(false);
+      setStatus("unauthenticated");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check session on mount
+  useEffect(() => {
+    checkSession();
+    loadLockState();
+  }, []);
+
+  const loadLockState = () => {
+    try {
+      if (typeof window !== 'undefined') {
         const savedLockState = localStorage.getItem('isLocked');
         if (savedLockState !== null) {
           setIsLocked(savedLockState === 'true');
@@ -47,41 +79,91 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error reading from localStorage:", error);
     }
-  }, []);
+  };
 
-  // Save lock state to localStorage whenever it changes
-  useEffect(() => {
+  const login = async (email: string, password: string) => {
     try {
-      if (typeof window !== 'undefined') { // Check if window is defined (client-side)
-        localStorage.setItem('isLocked', String(isLocked));
+      setIsLoading(true);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      setIsAuthenticated(true);
+      setStatus("authenticated");
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      setUser(null);
+      setIsAuthenticated(false);
+      setStatus("unauthenticated");
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleLock = () => {
+    const newLockState = !isLocked;
+    setIsLocked(newLockState);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('isLocked', String(newLockState));
       }
     } catch (error) {
-      console.error("Error writing to localStorage:", error);
-    }
-  }, [isLocked]);
-
-
-  const login = (provider?: string) => {
-    if (provider === "google") {
-      signIn("google");
-    } else if (provider === "credentials") {
-      signIn("credentials");
-    } else {
-      // If no provider is specified, redirect to the login page
-      window.location.href = "/login";
+      console.error("Error saving to localStorage:", error);
     }
   };
-  const logout = () => signOut();
-  const toggleLock = () => {
-    setIsLocked(!isLocked);
+
+  const value = {
+    user,
+    isLoading,
+    isAuthenticated,
+    login,
+    logout,
+    isLocked,
+    toggleLock,
+    status
   };
-  
-  console.log("AuthContext providing value:", { user: session?.user || null, login, logout, isLocked, toggleLock, status });
+
+  console.log("AuthContext providing value:", value);
+
   return (
-    <AuthContext.Provider value={{ user: session?.user || null, login, logout, isLocked, toggleLock, status }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

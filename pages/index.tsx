@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next'
 import { getSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 
 export default function Index() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function Index() {
       <Head>
         <title>FloHub - Streamline Your Day</title>
         <meta name="description" content="FloHub is your personal productivity assistant. Organize tasks, take notes, and manage your time effectively." />
-<meta name="google-site-verification" content="R056EcryNlVQjGSUl8zdt4IoNVpfsoFAodcPhP8Mbg4" />
+        <meta name="google-site-verification" content="R056EcryNlVQjGSUl8zdt4IoNVpfsoFAodcPhP8Mbg4" />
       </Head>
 
       <main className="flex flex-col items-center justify-center w-full max-w-5xl px-4">
@@ -64,40 +65,19 @@ export default function Index() {
           </div>
         </div>
       </main>
-      
-      {/* Footer with links */}
-      <footer className="w-full py-6 px-4 mt-12 border-t border-gray-200 dark:border-gray-800">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              © {new Date().getFullYear()} FloHub. All rights reserved.
-            </p>
+
+      <footer className="w-full max-w-5xl mx-auto px-4 py-8 mt-16 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">
+            © {new Date().getFullYear()} FlowHub. All rights reserved.
           </div>
-          <div className="flex space-x-6">
-            <a
-              href="https://flohub.replit.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-            >
-              Homepage
-            </a>
-            <a
-              href="https://flohub.replit.app/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-            >
+          <div className="flex space-x-6 mt-4 md:mt-0">
+            <Link href="/privacy" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400 transition-colors">
               Privacy Policy
-            </a>
-            <a
-              href="https://flohub.replit.app/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-            >
+            </Link>
+            <Link href="/terms" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400 transition-colors">
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </footer>
