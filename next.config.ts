@@ -1,4 +1,6 @@
-/** @type {import('next').NextConfig} */
+import type { NextConfig } from 'next';
+import type { Configuration as WebpackConfig } from 'webpack';
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -17,6 +19,22 @@ const nextConfig = {
   env: {
     // Default VAPID public key for development (should be replaced in production)
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+  },
+  webpack: (config: WebpackConfig, { isServer }: { isServer: boolean }) => {
+    if (!isServer) {
+      // Don't resolve 'fs', 'dns' module on the client to prevent this error
+      config.resolve = {
+        ...config.resolve,
+        fallback: {
+          ...(config.resolve?.fallback || {}),
+          fs: false,
+          dns: false,
+          net: false,
+          tls: false,
+        }
+      };
+    }
+    return config;
   },
 };
 

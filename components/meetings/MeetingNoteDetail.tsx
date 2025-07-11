@@ -1,7 +1,6 @@
 // components/meetings/MeetingNoteDetail.tsx
 "use client";
-
-import { useState, useEffect, FormEvent, useMemo } from "react"; // Import useMemo
+import { useState, FormEvent, useEffect, useMemo } from "react"; // Import useEffect and useMemo
 import type { Note, Action } from "@/types/app"; // Import shared Note and Action types
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
