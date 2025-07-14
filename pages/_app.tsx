@@ -8,6 +8,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { usePageViewTracking } from '@/lib/analyticsTracker';
 import dynamic from 'next/dynamic';
+import { StackClientApp, StackProvider } from '@stackframe/react'; // Import StackClientApp and StackProvider from @stackframe/react
 
 const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
 
@@ -27,6 +28,13 @@ const ClientSideCheck = dynamic(
 );
 
 // Create a no-SSR version of the app for authenticated routes
+// Initialize StackClientApp outside the component to prevent re-initialization
+const stackClientApp = new StackClientApp({
+  projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID as string,
+  publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY as string,
+  tokenStore: 'cookie',
+});
+
 const App = ({
   Component,
   pageProps: { session, ...pageProps },
@@ -138,17 +146,19 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
-{/* Wrap Layout with AuthProvider and ChatProvider */}
-<AuthProvider>
-  <ChatProvider>
-    <ClientSideCheck
-      Component={Component}
-      pageProps={pageProps}
-      isLoading={isLoading}
-      showLayout={showLayout}
-    />
-  </ChatProvider>
-</AuthProvider>
+{/* Wrap Layout with AuthProvider, ChatProvider, and StackProvider */}
+<StackProvider app={stackClientApp}>
+  <AuthProvider>
+    <ChatProvider>
+      <ClientSideCheck
+        Component={Component}
+        pageProps={pageProps}
+        isLoading={isLoading}
+        showLayout={showLayout}
+      />
+    </ChatProvider>
+  </AuthProvider>
+</StackProvider>
       
     </>
   );
