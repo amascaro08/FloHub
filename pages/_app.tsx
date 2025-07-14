@@ -1,142 +1,92 @@
-import '@/styles/globals.css'                   // ← must come first
+import '@/styles/globals.css' // must come first
 import type { AppProps } from 'next/app'
 import Layout from '@/components/ui/Layout'
 import { ChatProvider } from '@/components/assistant/ChatContext'
-import { AuthProvider } from '@/components/ui/AuthContext'; // Import AuthProvider at the top
+import { AuthProvider } from '@/components/ui/AuthContext'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { usePageViewTracking } from '@/lib/analyticsTracker';
-import dynamic from 'next/dynamic';
-import { StackClientApp, StackProvider } from '@stackframe/react'; // Import StackClientApp and StackProvider from @stackframe/react
+import { usePageViewTracking } from '@/lib/analyticsTracker'
+import dynamic from 'next/dynamic'
+import { StackClientApp, StackProvider } from '@stackframe/react'
 
-const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false });
+const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false })
 
-// Create a performance monitoring component
-// Analytics and Performance Monitoring Component
 const AnalyticsMonitor = () => {
-  // Track page views
-  usePageViewTracking();
-  
-  
-  return null;
-};
+  usePageViewTracking()
+  return null
+}
 
 const ClientSideCheck = dynamic(
   () => import('../components/ClientSideCheck'),
   { ssr: false }
-);
+)
 
-// Create a no-SSR version of the app for authenticated routes
-// Initialize StackClientApp outside the component to prevent re-initialization
+// Create a StackClientApp instance
 const stackClientApp = new StackClientApp({
   projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID as string,
   publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY as string,
   tokenStore: 'cookie',
-});
+})
 
 const App = ({
   Component,
   pageProps: { session, ...pageProps },
 }: AppProps<{ session?: any }>) => {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
 
   // Determine if we should show the layout based on the current route
-  const showLayout = !router.pathname.includes('/login') && !router.pathname.includes('/register') && router.pathname !== '/';
-  console.log("showLayout:", showLayout);
-  // Handle route change loading states
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => setIsLoading(false);
+  const showLayout =
+    !router.pathname.includes('/login') &&
+    !router.pathname.includes('/register') &&
+    router.pathname !== '/'
 
-    router.events.on('routeChangeStart', handleStart);
-    router.events.on('routeChangeComplete', handleComplete);
-    router.events.on('routeChangeError', handleComplete);
+  useEffect(() => {
+    const handleStart = () => setIsLoading(true)
+    const handleComplete = () => setIsLoading(false)
+
+    router.events.on('routeChangeStart', handleStart)
+    router.events.on('routeChangeComplete', handleComplete)
+    router.events.on('routeChangeError', handleComplete)
 
     return () => {
-      router.events.off('routeChangeStart', handleStart);
-      router.events.off('routeChangeComplete', handleComplete);
-      router.events.off('routeChangeError', handleComplete);
-    };
-  }, [router]);
+      router.events.off('routeChangeStart', handleStart)
+      router.events.off('routeChangeComplete', handleComplete)
+      router.events.off('routeChangeError', handleComplete)
+    }
+  }, [router])
 
-  // Register service worker for PWA
+  // Service Worker for PWA (optional—remove if not needed)
   useEffect(() => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          // Check if running on iOS or Android
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-          const isAndroid = /Android/.test(navigator.userAgent);
-
-          console.log('Registering service worker for platform:', {
-            isIOS,
-            isAndroid,
-            userAgent: navigator.userAgent,
-            production: process.env.NODE_ENV === 'production'
-          });
-
-          // Always register in development for testing, only in production otherwise
-          if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
-            // Use different registration options for iOS
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-              // iOS Safari has issues with service worker scope, so we explicitly set it
-              scope: '/',
-              // Use update on reload for development to ensure latest service worker
-              updateViaCache: process.env.NODE_ENV === 'development' ? 'none' : 'imports'
-            });
-
-            console.log('Service Worker registration successful with scope: ', registration.scope);
-
-            // Force update for existing service workers
-            if (registration.installing) {
-              console.log('Service worker installing');
-            } else if (registration.waiting) {
-              console.log('Service worker installed and waiting');
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            } else if (registration.active) {
-              console.log('Service worker active');
-            }
-
-            // Set up service worker update handling
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-              console.log('Service worker controller changed');
-            });
-
-            // Listen for service worker messages
-            navigator.serviceWorker.addEventListener('message', (event) => {
-              if (event.data && event.data.type === 'CACHE_UPDATED') {
-                console.log('New content is available; please refresh.');
-                // You could show a notification to the user here
-              }
-            });
-          }
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: process.env.NODE_ENV === 'development' ? 'none' : 'imports',
+          })
+          // Optional: handle registration state...
         } catch (err) {
-          console.error('Service Worker registration failed: ', err);
+          console.error('Service Worker registration failed: ', err)
         }
-      } else {
-        console.warn('Service workers are not supported in this browser');
       }
-    };
-
-    // Register immediately instead of waiting for load event
-    registerSW();
-
-  }, []);
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.unregister();
-        console.log('Service worker unregistered');
-      }).catch(error => {
-        console.error('Service worker unregistration failed:', error);
-      });
     }
-  }, []);
+    registerSW()
+  }, [])
 
-  console.log("App component rendering");
+  // Optional: Unregister service worker (if you want to remove all SWs for debugging)
+  // useEffect(() => {
+  //   if ('serviceWorker' in navigator) {
+  //     navigator.serviceWorker.ready.then(registration => {
+  //       registration.unregister()
+  //       console.log('Service worker unregistered')
+  //     }).catch(error => {
+  //       console.error('Service worker unregistration failed:', error)
+  //     })
+  //   }
+  // }, [])
+
   return (
     <>
       <Head>
@@ -146,24 +96,20 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
-{/* Wrap Layout with AuthProvider, ChatProvider, and StackProvider */}
-<StackProvider app={stackClientApp}>
-  <AuthProvider>
-    <ChatProvider>
-      <ClientSideCheck
-        Component={Component}
-        pageProps={pageProps}
-        isLoading={isLoading}
-        showLayout={showLayout}
-      />
-    </ChatProvider>
-  </AuthProvider>
-</StackProvider>
-      
+      <StackProvider app={stackClientApp}>
+        <AuthProvider>
+          <ChatProvider>
+            <ClientSideCheck
+              Component={Component}
+              pageProps={pageProps}
+              isLoading={isLoading}
+              showLayout={showLayout}
+            />
+          </ChatProvider>
+        </AuthProvider>
+      </StackProvider>
     </>
-  );
-};
+  )
+}
 
-console.log("App component loaded");
-
-export default App;
+export default App
