@@ -17,6 +17,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@stackframe/react": "^2.8.20",
     "@stackframe/stack": "^2.8.20",
+    "@stackframe/stack-ui": "^2.8.20",
     "@tiptap/extension-blockquote": "^2.12.0",
     "@tiptap/extension-bullet-list": "^2.12.0",
     "@tiptap/extension-code-block": "^2.12.0",
