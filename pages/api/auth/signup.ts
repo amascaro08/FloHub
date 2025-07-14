@@ -8,7 +8,8 @@ export default async function signup(req: NextApiRequest, res: NextApiResponse) 
   try {
     const { email, password } = req.body;
 
-    const response = await fetch('https://api.stack-auth.com/api/v1/auth/signup', {
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const response = await fetch(`${stackAuthBaseUrl}/api/v1/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

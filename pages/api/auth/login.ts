@@ -10,7 +10,8 @@ export default async function login(req: NextApiRequest, res: NextApiResponse) {
 
     console.log('Login API: Attempting login with Stack Auth...');
     console.log('Login API: STACK_SECRET_SERVER_KEY:', process.env.STACK_SECRET_SERVER_KEY ? '[PRESENT]' : '[MISSING]');
-    const response = await fetch('https://api.stack-auth.com/api/v1/auth/login', {
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const response = await fetch(`${stackAuthBaseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

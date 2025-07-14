@@ -37,7 +37,8 @@ export async function middleware(request: NextRequest) {
 
   try {
     // Only verify token for protected routes
-    const response = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const response = await fetch(`${stackAuthBaseUrl}/api/v1/auth/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

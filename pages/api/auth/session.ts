@@ -16,7 +16,8 @@ export default async function session(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Session API: Verifying token with Stack Auth...');
     console.log('Session API: STACK_SECRET_SERVER_KEY:', process.env.STACK_SECRET_SERVER_KEY ? '[PRESENT]' : '[MISSING]');
-    const response = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const response = await fetch(`${stackAuthBaseUrl}/api/v1/auth/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

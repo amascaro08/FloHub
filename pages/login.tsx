@@ -51,8 +51,9 @@ export default function LoginPage() {
     setIsLoading(true);
     // Redirect to Stack Auth's Google OAuth endpoint
     // Ensure NEXT_PUBLIC_STACK_PROJECT_ID and NEXT_PUBLIC_STACK_REDIRECT_URI are set in your environment variables
-    const redirectUri = encodeURIComponent(process.env.NEXT_PUBLIC_STACK_REDIRECT_URI || 'https://flohub.vercel.app/api/auth/callback');
-    window.location.href = `https://api.stack-auth.com/api/v1/auth/google/authorize?project_id=${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}&redirect_uri=${redirectUri}`;
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const stackAuthRedirectUri = encodeURIComponent(`${stackAuthBaseUrl}/api/v1/auth/oauth/callback/google`);
+    window.location.href = `${stackAuthBaseUrl}/api/v1/auth/google/authorize?project_id=${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}&redirect_uri=${stackAuthRedirectUri}`;
   };
 
   // Don't render the login form if already authenticated
