@@ -1,9 +1,11 @@
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 
-console.log('neonAuth: Initializing JWKS with NEXT_PUBLIC_STACK_PROJECT_ID:', process.env.NEXT_PUBLIC_STACK_PROJECT_ID ? '[PRESENT]' : '[MISSING]');
-const JWKS_URL = `https://api.stack-auth.com/api/v1/projects/${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}/.well-known/jwks.json`;
+console.log('neonAuth: Initializing JWKS with NEXT_PUBLIC_STACK_PROJECT_ID:', process.env.NEXT_PUBLIC_STACK_PROJECT_ID);
+const STACK_AUTH_BASE_URL = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+const JWKS_URL = `${STACK_AUTH_BASE_URL}/api/v1/projects/${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}/.well-known/jwks.json`;
 const JWKS = createRemoteJWKSet(new URL(JWKS_URL));
 console.log('neonAuth: JWKS_URL:', JWKS_URL);
+console.log('neonAuth: STACK_AUTH_BASE_URL:', STACK_AUTH_BASE_URL);
 
 export async function verifyToken(token: string) {
   try {
