@@ -1,177 +1,31 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import AuthLayout from '@/components/ui/AuthLayout';
-import { useAuth } from '@/components/ui/AuthContext';
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { status, signup } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/dashboard');
-    }
-  }, [status, router]);
-
-  const validateForm = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      setError('All fields are required');
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setSuccess(false);
-
-    try {
-      await signup(email, password, name);
-      setSuccess(true);
-      // Redirect to login page after 2 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred during registration.');
-      console.error('Registration error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Don't render the form if already authenticated
-  if (status === 'authenticated') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Redirecting to dashboard...</p>
-      </div>
-    );
-  }
-
   return (
     <AuthLayout title="Register">
       <h2 className="mb-6 text-center text-2xl font-semibold text-[var(--fg)]">
         Create your account
       </h2>
-
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-          Registration successful! Redirecting to login...
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-[var(--fg)]"
+      <div className="mt-6">
+        <a
+          href="/api/auth/google"
+          className="flex w-full justify-center rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50"
+        >
+          {/* Google SVG Icon */}
+          <svg
+            className="mr-2 h-5 w-5"
+            aria-hidden="true"
+            fill="currentColor"
+            viewBox="0 0 24 24"
           >
-            Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-[var(--fg)]"
-          >
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-[var(--fg)]"
-          >
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium text-[var(--fg)]"
-          >
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <button
-            type="submit"
-            disabled={isLoading || success}
-            className="w-full rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            {isLoading ? 'Creating Account...' : 'Register'}
-          </button>
-        </div>
-      </form>
+            <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
+          </svg>
+          Sign up with Google
+        </a>
+      </div>
+      <p className="mt-4 text-center text-sm text-neutral-500">
+        By signing up, you agree to our <a href="/terms" className="underline">Terms of Service</a> and <a href="/privacy" className="underline">Privacy Policy</a>.
+      </p>
     </AuthLayout>
   );
 }
