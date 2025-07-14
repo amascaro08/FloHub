@@ -47,6 +47,8 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig = {
+  // Add transpilePackages to ensure @stackframe/stack is correctly processed
+  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc'],
   eslint: {
     // 🚫 Don't block the build on lint errors
     ignoreDuringBuilds: true,
@@ -80,6 +82,7 @@ const nextConfig = {
           dns: false,
           net: false,
           tls: false,
+          'pg-native': false, // Ignore pg-native module
         }
       };
     }
