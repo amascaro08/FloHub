@@ -7,6 +7,8 @@ const withPWA = require('next-pwa')({
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
+  // Log NODE_ENV for debugging PWA
+  // console.log('PWA disabled in development:', process.env.NODE_ENV === 'development');
   // Configure caching for workbox files
   runtimeCaching: [
     {

@@ -8,14 +8,18 @@ export default async function signup(req: NextApiRequest, res: NextApiResponse) 
   try {
     const { email, password } = req.body;
 
-    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
-    const response = await fetch(`${stackAuthBaseUrl}/api/v1/auth/signup`, {
+    const response = await fetch('https://console.neon.tech/api/v2/projects/auth/user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.STACK_SECRET_SERVER_KEY}`
+        'Authorization': `Bearer ${process.env.NEON_API_KEY}`, // Use NEON_API_KEY
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({
+        project_id: process.env.NEXT_PUBLIC_STACK_PROJECT_ID, // Pass project_id
+        auth_provider: 'stack', // Specify auth_provider
+        email,
+        name: req.body.name // Pass name from request body
+      })
     });
 
     const data = await response.json();
@@ -25,13 +29,15 @@ export default async function signup(req: NextApiRequest, res: NextApiResponse) 
     }
 
     // Set the auth token cookie
-    res.setHeader('Set-Cookie', [
-      `auth-token=${data.token}; Path=/; HttpOnly; Secure; SameSite=Strict`,
-    ]);
+    // Neon Auth API does not return a token directly on user creation.
+    // The client-side will handle login after successful signup.
+    // Remove setting auth-token cookie here.
 
-    return res.status(200).json({ user: data.user });
+    return res.status(200).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Signup error:', error);
-    return res.status(400).json({ error: 'Failed to create account' });
+    // Attempt to parse error from Neon API response if available
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
+    return res.status(400).json({ error: errorMessage });
   }
 }
