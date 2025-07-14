@@ -52,7 +52,7 @@ export default function RegisterPage() {
     setSuccess(false);
 
     try {
-      await signup(email, password);
+      await signup(email, password, name);
       setSuccess(true);
       // Redirect to login page after 2 seconds
       setTimeout(() => {

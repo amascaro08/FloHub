@@ -2,12 +2,10 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useAuth } from '@/components/ui/AuthContext';
 import { useRouter } from 'next/router';
 import AuthLayout from '@/components/ui/AuthLayout';
-import { useUser } from '@stackframe/stack';
 
 export default function LoginPage() {
   const router = useRouter();
   const { status, login } = useAuth();
-  const user = useUser({ or: 'redirect' }); // Initialize useUser hook with redirect
   console.log("LoginPage - status:", status);
 
   const [email, setEmail] = useState('');
@@ -51,10 +49,10 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    // Use Neon Auth's pre-configured Google OAuth flow
-    // The useUser hook with 'or: "redirect"' already handles redirection if not authenticated.
-    // Calling useConnectedAccount will trigger the OAuth flow.
-    user.useConnectedAccount('google', { or: 'redirect' });
+    // Redirect to Stack Auth's Google OAuth endpoint
+    const stackAuthBaseUrl = process.env.NEXT_PUBLIC_STACK_AUTH_BASE_URL || 'https://api.stack-auth.com';
+    const stackAuthRedirectUri = encodeURIComponent(`${stackAuthBaseUrl}/api/v1/auth/oauth/callback/google`);
+    window.location.href = `[EXACT_ENDPOINT_FROM_DOCS]?project_id=${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}&redirect_uri=${stackAuthRedirectUri}`;
   };
 
   // Don't render the login form if already authenticated

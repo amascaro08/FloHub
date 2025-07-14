@@ -12,7 +12,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>; // Add signup to AuthContextType
+  signup: (email: string, password: string, name?: string) => Promise<void>; // Add signup to AuthContextType
   isLocked: boolean;
   toggleLock: () => void;
   status: "loading" | "authenticated" | "unauthenticated";
@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => {},
   logout: async () => {},
-  signup: async () => {}, // Add signup to default context value
+  signup: async (email: string, password: string, name?: string) => {}, // Add signup to default context value
   isLocked: false,
   toggleLock: () => {},
   status: "unauthenticated"
@@ -148,13 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     login,
     logout,
-    signup: async (email: string, password: string) => {
+    signup: async (email: string, password: string, name?: string) => {
       try {
         setIsLoading(true);
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, name }),
         });
 
         if (!response.ok) {
