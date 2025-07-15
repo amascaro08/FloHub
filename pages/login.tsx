@@ -1,5 +1,11 @@
-import AuthLayout from '@/components/ui/AuthLayout'
-import { OAuthButtonGroup } from '@stackframe/react'
+import dynamic from 'next/dynamic';
+import AuthLayout from '@/components/ui/AuthLayout';
+
+// Lazy load OAuthButtonGroup to avoid SSR crash
+const OAuthButtonGroup = dynamic(
+  () => import('@stackframe/react').then(mod => mod.OAuthButtonGroup),
+  { ssr: false }
+);
 
 export default function LoginPage() {
   return (
@@ -16,5 +22,5 @@ export default function LoginPage() {
         <a href="/privacy" className="underline">Privacy Policy</a>.
       </p>
     </AuthLayout>
-  )
+  );
 }
