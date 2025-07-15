@@ -1,8 +1,7 @@
-import '@/styles/globals.css' // must come first
+import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import Layout from '@/components/ui/Layout'
 import { ChatProvider } from '@/components/assistant/ChatContext'
-import { AuthProvider } from '@/components/ui/AuthContext'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
@@ -22,7 +21,6 @@ const ClientSideCheck = dynamic(
   { ssr: false }
 )
 
-// Create a StackClientApp instance
 const stackClientApp = new StackClientApp({
   projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID as string,
   publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY as string,
@@ -36,7 +34,6 @@ const App = ({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  // Determine if we should show the layout based on the current route
   const showLayout =
     !router.pathname.includes('/login') &&
     !router.pathname.includes('/register') &&
@@ -66,7 +63,6 @@ const App = ({
             scope: '/',
             updateViaCache: process.env.NODE_ENV === 'development' ? 'none' : 'imports',
           })
-          // Optional: handle registration state...
         } catch (err) {
           console.error('Service Worker registration failed: ', err)
         }
@@ -74,18 +70,6 @@ const App = ({
     }
     registerSW()
   }, [])
-
-  // Optional: Unregister service worker (if you want to remove all SWs for debugging)
-  // useEffect(() => {
-  //   if ('serviceWorker' in navigator) {
-  //     navigator.serviceWorker.ready.then(registration => {
-  //       registration.unregister()
-  //       console.log('Service worker unregistered')
-  //     }).catch(error => {
-  //       console.error('Service worker unregistration failed:', error)
-  //     })
-  //   }
-  // }, [])
 
   return (
     <>
@@ -96,17 +80,16 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
 
+      {/* ONLY StackProvider + ChatProvider now */}
       <StackProvider app={stackClientApp}>
-        <AuthProvider>
-          <ChatProvider>
-            <ClientSideCheck
-              Component={Component}
-              pageProps={pageProps}
-              isLoading={isLoading}
-              showLayout={showLayout}
-            />
-          </ChatProvider>
-        </AuthProvider>
+        <ChatProvider>
+          <ClientSideCheck
+            Component={Component}
+            pageProps={pageProps}
+            isLoading={isLoading}
+            showLayout={showLayout}
+          />
+        </ChatProvider>
       </StackProvider>
     </>
   )
