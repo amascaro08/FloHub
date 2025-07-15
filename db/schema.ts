@@ -1,7 +1,18 @@
-import { pgTable, serial, text, timestamp, primaryKey, integer, boolean, varchar, jsonb } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  primaryKey,
+  integer,
+  boolean,
+  varchar,
+  jsonb,
+} from 'drizzle-orm/pg-core';
 import type { AdapterAccount } from '@auth/core/adapters';
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
+// USERS TABLE
 export const users = pgTable("users", {
   id: serial("id").notNull().primaryKey(),
   name: text("name"),
@@ -12,6 +23,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });
 
+// ACCOUNTS TABLE (Auth providers)
 export const accounts = pgTable(
   "accounts",
   {
@@ -36,7 +48,8 @@ export const accounts = pgTable(
   })
 );
 
-export const users = pgTable("users", {
+// SESSIONS TABLE (Not users!)
+export const sessions = pgTable("sessions", {
   userToken: text("userToken").notNull().primaryKey(),
   userId: integer("userId")
     .notNull()
@@ -44,6 +57,7 @@ export const users = pgTable("users", {
   expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
+// VERIFICATION TOKENS
 export const verificationTokens = pgTable(
   "verificationTokens",
   {
@@ -56,7 +70,7 @@ export const verificationTokens = pgTable(
   })
 );
 
-// Existing tables (from init.sql) - ensure consistency
+// TASKS TABLE
 export const tasks = pgTable("tasks", {
   id: serial("id").notNull().primaryKey(),
   userEmail: varchar("user_email", { length: 255 }).notNull(),
@@ -67,6 +81,7 @@ export const tasks = pgTable("tasks", {
   source: varchar("source", { length: 50 }),
 });
 
+// USER SETTINGS
 export const userSettings = pgTable("user_settings", {
   userEmail: varchar("user_email", { length: 255 }).notNull().primaryKey(),
   floCatStyle: varchar("flo_cat_style", { length: 50 }).default('default'),
@@ -87,6 +102,7 @@ export const userSettings = pgTable("user_settings", {
   floCatSettings: jsonb("flo_cat_settings"),
 });
 
+// NOTES TABLE
 export const notes = pgTable("notes", {
   id: serial("id").notNull().primaryKey(),
   userEmail: varchar("user_email", { length: 255 }).notNull(),
@@ -103,6 +119,7 @@ export const notes = pgTable("notes", {
   aiSummary: text("ai_summary"),
 });
 
+// DRIZZLE TYPE HELPERS
 export type SelectUser = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
 export type SelectTask = InferSelectModel<typeof tasks>;
