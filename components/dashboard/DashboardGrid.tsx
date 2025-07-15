@@ -7,13 +7,10 @@ import "/node_modules/react-resizable/css/styles.css";
 import {
   CheckSquare,
   Calendar,
-  MessageSquare,
   Clock,
   FileText,
-  // Bug - removed for debug widget
 } from 'lucide-react';
 
-// Import placeholder loading component
 const WidgetSkeleton = () => (
   <div className="animate-pulse w-full h-full flex flex-col">
     <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
@@ -31,7 +28,6 @@ const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerW
 
 import { ReactElement } from "react";
 import { useUser } from "@stackframe/react";
-
 import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -44,30 +40,29 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   calendar: <Suspense fallback={<WidgetSkeleton />}><CalendarWidget /></Suspense>,
   ataglance: <Suspense fallback={<WidgetSkeleton />}><AtAGlanceWidget /></Suspense>,
   quicknote: <Suspense fallback={<WidgetSkeleton />}><QuickNoteWidget /></Suspense>,
-  // debug entry removed
   "habit-tracker": <Suspense fallback={<WidgetSkeleton />}><HabitTrackerWidget /></Suspense>,
 };
 
 // Helper function to recursively remove undefined values from an object
 function removeUndefined(obj: any): any {
- if (obj === null || typeof obj !== 'object') {
-   return obj;
- }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
 
- if (Array.isArray(obj)) {
-   return obj.map(removeUndefined).filter(item => item !== undefined);
- }
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined).filter(item => item !== undefined);
+  }
 
- const cleanedObj: any = {};
- for (const key in obj) {
-   if (Object.prototype.hasOwnProperty.call(obj, key)) {
-     const cleanedValue = removeUndefined(obj[key]);
-     if (cleanedValue !== undefined) {
-       cleanedObj[key] = cleanedValue;
-     }
-   }
- }
- return cleanedObj;
+  const cleanedObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const cleanedValue = removeUndefined(obj[key]);
+      if (cleanedValue !== undefined) {
+        cleanedObj[key] = cleanedValue;
+      }
+    }
+  }
+  return cleanedObj;
 }
 
 // Helper function to get the appropriate icon for each widget
@@ -81,7 +76,6 @@ const getWidgetIcon = (widgetKey: string) => {
       return <Clock className="w-5 h-5" />;
     case 'quicknote':
       return <FileText className="w-5 h-5" />;
-    // debug case removed
     case 'habit-tracker':
       return <Clock className="w-5 h-5" />;
     default:
@@ -90,26 +84,23 @@ const getWidgetIcon = (widgetKey: string) => {
 };
 
 const DashboardGrid = () => {
-  // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
-  
-  // Use useSession with required: false to handle SSR
-  const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
+  // Use Stack Auth
+  const user = useUser();
+
+  // Not signed in? Show loading or redirect to login
+  if (!user) {
+    return <div>Loading...</div>;
   }
-  // Safely use useUser only on client side
-  const auth = isClient ? useUser() : null;
-  const isLocked = auth?.isLocked || false;
-  
+
+  // Locking: If you store this per user, add logic here. Otherwise, just default to false.
+  const isLocked = false;
+
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
-  
-  // Memoize widget components to prevent unnecessary re-renders
   const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
 
-  // Define a default layout for different breakpoints
+  // Default layouts
   const defaultLayouts = {
     lg: [
       { i: "tasks", x: 0, y: 0, w: 3, h: 5 },
@@ -136,52 +127,47 @@ const DashboardGrid = () => {
 
   const [layouts, setLayouts] = useState(defaultLayouts);
   const [loadedSettings, setLoadedSettings] = useState(false);
-  
+
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      if (isClient && session?.user?.email) {
+      if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${session.user.email}`);
+          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             setActiveWidgets(userSettings.activeWidgets || []);
           } else {
-            console.error("[DashboardGrid] Failed to fetch user settings, using defaults.");
             setActiveWidgets(Object.keys(memoizedWidgetComponents) as string[]);
           }
         } catch (e) {
-          console.error("[DashboardGrid] Error fetching user settings:", e);
-          // Default to standard widgets on error
           setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
         } finally {
           setLoadedSettings(true);
         }
       }
     };
-    
+
     if (isClient) {
       fetchUserSettings();
     } else {
-      // For SSR, use default widgets
       setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
       setLoadedSettings(true);
     }
-  }, [session, isClient]);
+  }, [user, isClient]);
 
   // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
-      if (isClient && session?.user?.email) {
+      if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${session.user.email}`);
+          const response = await fetch(`/api/userSettings/layouts?userId=${user.primaryEmail}`);
           if (response.ok) {
             const { layouts: savedLayouts } = await response.json();
             if (savedLayouts) {
               setLayouts(savedLayouts);
             } else {
               setLayouts(defaultLayouts);
-              // Optionally save default layouts if none exist
               await fetch('/api/userSettings/layouts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -189,12 +175,10 @@ const DashboardGrid = () => {
               });
             }
           } else {
-            console.error("[DashboardGrid] Failed to fetch layouts, using defaults.");
             setLayouts(defaultLayouts);
           }
         } catch (e) {
-          console.error("[DashboardGrid] Error fetching layout:", e);
-          setLayouts(defaultLayouts); // Fallback to default on error
+          setLayouts(defaultLayouts);
         }
       }
     };
@@ -202,86 +186,61 @@ const DashboardGrid = () => {
     if (isClient) {
       fetchLayout();
     }
-  }, [session, isClient]);
-
+  }, [user, isClient]);
 
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Ref to store the timeout ID for debouncing state updates
   const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Effect to update layouts when activeWidgets changes
   useEffect(() => {
-    // Only update if we have active widgets and layouts
     if (activeWidgets.length > 0 && Object.keys(layouts).length > 0) {
-      // Create new layouts that only include active widgets
       const newLayouts: any = {};
-      
-      // For each breakpoint (lg, md, sm)
       (Object.keys(layouts) as Array<keyof typeof layouts>).forEach(breakpoint => {
-        // Filter layouts to only include active widgets
         newLayouts[breakpoint] = layouts[breakpoint].filter(
           (item: any) => activeWidgets.includes(item.i)
         );
       });
-      
       setLayouts(newLayouts);
     }
   }, [activeWidgets]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     try {
-      // Recursively remove undefined values from the layouts object
       const cleanedLayouts = removeUndefined(allLayouts);
 
-      // Clear any existing state update timeout
       if (layoutChangeTimeoutRef.current) {
         clearTimeout(layoutChangeTimeoutRef.current);
       }
-
-      // Set a new timeout to update the state after a short delay
       layoutChangeTimeoutRef.current = setTimeout(() => {
         try {
           setLayouts(cleanedLayouts);
-          console.log("[DashboardGrid] Layout state updated after debounce.");
         } catch (err) {
-          console.error("[DashboardGrid] Error updating layout state:", err);
+          // noop
         }
-      }, 50); // Short debounce time for state update (e.g., 50ms)
+      }, 50);
 
-      // Clear any existing save timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-
-      // Set a new timeout to save the cleaned layout after a longer delay
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          console.log("[DashboardGrid] Attempting to save layout...");
-          if (isClient && session?.user?.email) {
-            const response = await fetch('/api/userSettings/layouts', {
+          if (isClient && user?.primaryEmail) {
+            await fetch('/api/userSettings/layouts', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ layouts: cleanedLayouts }),
             });
-            if (response.ok) {
-              console.log("[DashboardGrid] Layout saved successfully!");
-            } else {
-              const errorData = await response.json();
-              console.error("[DashboardGrid] Failed to save layout:", errorData.error);
-            }
           }
         } catch (e) {
-          console.error("[DashboardGrid] Error saving layout:", e);
+          // noop
         }
-      }, 500); // Debounce time for saving (e.g., 500ms)
+      }, 500);
     } catch (err) {
-      console.error("[DashboardGrid] Error in onLayoutChange:", err);
+      // noop
     }
   };
 
-  // Show loading state while settings are being fetched
   if (!loadedSettings) {
     return (
       <div className="grid-bg">

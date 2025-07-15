@@ -32,39 +32,47 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   "habit-tracker": <Suspense fallback={<WidgetSkeleton />}><HabitTrackerWidget /></Suspense>,
 };
 
-// Default widget order for mobile - putting quicknote later in the order to improve initial load time
+// Default widget order for mobile
 const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
 export default function MobileDashboard() {
-  // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
-  
-  // Use useSession with required: false to handle SSR
-  const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
 
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-  if (!session) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-  // Safely use useUser only on client side
-  const auth = isClient ? useUser() : null;
-  const isLocked = auth?.isLocked || false;
-  
+  // === LOCK STATE: local, persistent ===
+  const [isLocked, setIsLocked] = useState(false);
+  useEffect(() => {
+    if (isClient) {
+      const saved = localStorage.getItem("isLocked");
+      setIsLocked(saved === "true");
+    }
+  }, [isClient]);
+  const toggleLock = () => {
+    setIsLocked(l => {
+      localStorage.setItem("isLocked", String(!l));
+      return !l;
+    });
+  };
+
+  // Use useUser to trigger auth state, but NOT for lock
+  const user = useUser();
+
+  // ----
+  // (In your original, you had session.user.primaryEmail. If you’re now using Stack Auth, email is at user.primaryEmail)
+  // ----
+
+  // Session logic (Stack Auth: user object replaces session.user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleWidgets, setVisibleWidgets] = useState<WidgetType[]>([]);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
-  
+
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
       setIsLoading(true);
-      if (isClient && session?.user?.email) {
+      if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${session.user.email}`);
+          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
@@ -85,18 +93,17 @@ export default function MobileDashboard() {
         setIsLoading(false);
       }
     };
-    
+
     if (isClient) {
       fetchUserSettings();
     } else {
-      // For SSR, use default widgets
       setIsLoading(false);
     }
-  }, [session, isClient]);
-  
+  }, [user, isClient]);
+
   // Save widget order when it changes
   const saveWidgetOrder = async () => {
-    if (isClient && session?.user?.email) {
+    if (isClient && user?.primaryEmail) {
       try {
         const response = await fetch("/api/userSettings/update", {
           method: "POST",
@@ -115,7 +122,7 @@ export default function MobileDashboard() {
       }
     }
   };
-  
+
   // Handle widget reordering
   const moveWidgetUp = (widgetId: WidgetType) => {
     const index = activeWidgets.indexOf(widgetId);
@@ -126,7 +133,7 @@ export default function MobileDashboard() {
       saveWidgetOrder();
     }
   };
-  
+
   const moveWidgetDown = (widgetId: WidgetType) => {
     const index = activeWidgets.indexOf(widgetId);
     if (index < activeWidgets.length - 1) {
@@ -141,39 +148,25 @@ export default function MobileDashboard() {
   useEffect(() => {
     if (!isClient || isLoading || activeWidgets.length === 0) return;
 
-    // First, immediately show the first widget (usually "at a glance")
     setVisibleWidgets([activeWidgets[0]]);
-    
-    // Then progressively show the rest of the widgets, with priority
     const loadNextWidgets = () => {
       setVisibleWidgets(prev => {
         if (prev.length >= activeWidgets.length) return prev;
-        
-        // Add the next widget
         const nextIndex = prev.length;
         return [...prev, activeWidgets[nextIndex]];
       });
     };
-    
-    // Load the next widget after a short delay
     const timer = setTimeout(loadNextWidgets, 100);
-    
-    // Load the second and third widgets quickly
     const timer2 = setTimeout(loadNextWidgets, 200);
     const timer3 = setTimeout(loadNextWidgets, 300);
-    
-    // Delay loading the QuickNoteWidget (if it exists in the active widgets)
     const quicknoteIndex = activeWidgets.indexOf("quicknote");
     let quicknoteTimer: NodeJS.Timeout | null = null;
-    
     if (quicknoteIndex > 0) {
       quicknoteTimer = setTimeout(() => {
         setVisibleWidgets(prev => {
           if (prev.includes("quicknote")) return prev;
           if (prev.length < quicknoteIndex) {
-            // Make sure all widgets before quicknote are loaded
             const widgetsBeforeQuicknote = activeWidgets.slice(0, quicknoteIndex);
-            // Create a unique array without using Set
             const combinedWidgets = [...prev, ...widgetsBeforeQuicknote, "quicknote"] as WidgetType[];
             return combinedWidgets.filter((value, index, self) =>
               self.indexOf(value) === index
@@ -181,27 +174,22 @@ export default function MobileDashboard() {
           }
           return [...prev, "quicknote" as WidgetType];
         });
-      }, 500); // Delay loading QuickNoteWidget
+      }, 500);
     }
-    
-    // Set up intersection observer for lazy loading remaining widgets (client-side only)
     const observer = isClient && 'IntersectionObserver' in window ?
       new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          loadNextWidgets();
-        }
-      });
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            loadNextWidgets();
+          }
+        });
       }, { rootMargin: '200px' }) : null;
-    
-    // Observe the last visible widget (client-side only)
     if (isClient && observer) {
       const lastWidget = document.querySelector('.mobile-widget:last-child');
       if (lastWidget) {
         observer.observe(lastWidget);
       }
     }
-    
     return () => {
       clearTimeout(timer);
       clearTimeout(timer2);
@@ -210,7 +198,7 @@ export default function MobileDashboard() {
       if (observer) observer.disconnect();
     };
   }, [isLoading, activeWidgets, isClient]);
-  
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 px-2 py-4">
@@ -228,6 +216,17 @@ export default function MobileDashboard() {
 
   return (
     <div className="grid grid-cols-1 gap-4 px-2 py-4">
+      <div className="mb-2 flex justify-end">
+        {/* Lock/unlock dashboard button */}
+        <button
+          onClick={toggleLock}
+          className={`rounded-full px-4 py-2 text-xs font-bold ${
+            isLocked ? "bg-red-500 text-white" : "bg-green-500 text-white"
+          }`}
+        >
+          {isLocked ? "Unlock Dashboard" : "Lock Dashboard"}
+        </button>
+      </div>
       {activeWidgets.length === 0 ? (
         <div className="glass px-4 py-4 rounded-xl shadow-md text-center">
           <p className="text-gray-500 dark:text-gray-400">No widgets selected. Visit settings to add widgets.</p>
@@ -270,7 +269,6 @@ export default function MobileDashboard() {
           </div>
         ))
       )}
-      {/* Loading indicator for remaining widgets */}
       {visibleWidgets.length < activeWidgets.length && (
         <div className="glass px-2 py-2 rounded-xl shadow-md animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2"></div>
