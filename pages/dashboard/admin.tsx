@@ -26,7 +26,7 @@ export default function AdminPage() {
 
   // Check if user is authorized to access admin page
   // This check runs after loading is complete
-  const isAuthorized = status === 'authenticated' && session?.user?.email === 'amascaro08@gmail.com';
+  const isAuthorized = status === 'authenticated' && session?.user?.primaryEmail === 'amascaro08@gmail.com';
 
   useEffect(() => {
     // Redirect if not authorized after session is loaded

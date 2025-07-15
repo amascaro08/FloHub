@@ -332,9 +332,9 @@ export function usePerformanceMonitoring() {
   useEffect(() => {
     startPerformanceMonitoring();
     startSessionTracking();
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       try {
-        localStorage.setItem('flohub.userEmail', session.user.email);
+        localStorage.setItem('flohub.userEmail', session.user.primaryEmail);
       } catch (e) {
         console.warn('[Performance] Error storing user email:', e);
       }

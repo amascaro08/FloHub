@@ -40,7 +40,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
   // Generate calendar days for the current month using API data 
   useEffect(() => {
     const fetchCalendarData = async () => {
-      if (!session?.user?.email) return;
+      if (!session?.user?.primaryEmail) return;
       
       setIsLoading(true);
       setCalendarDays([]);
@@ -131,7 +131,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         // Check localStorage cache first
         const cachedData: {[key: string]: any} = {};
         if (typeof window !== 'undefined') {
-          const cacheKey = `journal_calendar_${year}_${month}_${session.user.email}`;
+          const cacheKey = `journal_calendar_${year}_${month}_${session.user.primaryEmail}`;
           const cachedJSON = localStorage.getItem(cacheKey);
           if (cachedJSON) {
             try {
@@ -380,7 +380,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         
         // Save to cache
         if (typeof window !== 'undefined') {
-          const cacheKey = `journal_calendar_${year}_${month}_${session.user.email}`;
+          const cacheKey = `journal_calendar_${year}_${month}_${session.user.primaryEmail}`;
           localStorage.setItem(cacheKey, JSON.stringify({
             timestamp: Date.now(),
             data: cachedData
@@ -410,7 +410,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
       }
     };
     
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       fetchCalendarData();
     }
   }, [session, currentMonth, timezone, refreshTrigger]);

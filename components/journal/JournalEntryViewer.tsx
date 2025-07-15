@@ -24,11 +24,11 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
+    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
       setLoading(true);
       
       // Load entry from localStorage
-      const storageKey = getDateStorageKey('journal_entry', session.user.email, timezone, date);
+      const storageKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, date);
       const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {

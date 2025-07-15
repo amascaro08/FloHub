@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Get session to identify user
     const session = await getSession({ req });
-    const userId = session?.user?.email || null;
+    const userId = session?.user?.primaryEmail || null;
 
     // Get performance metrics from request body
     const metrics = req.body;

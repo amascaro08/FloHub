@@ -1,10 +1,10 @@
 import React from 'react';
 import Head from 'next/head';
 import HabitCalendar from "@/components/habit-tracker/HabitCalendar";
-import { useUser } from '@/components/ui/AuthContext';
+import { useUser } from '@stackframe/react';
 
 const HabitTrackerPage = () => {
-  const { user } = useUser();
+  const user = useUser();
 
   return (
     <>
@@ -29,7 +29,7 @@ const HabitTrackerPage = () => {
               You need to be signed in to create and track your habits.
             </p>
             <button 
-              onClick={() => {}} // This will be handled by the AuthContext
+              onClick={() => {}} // 
               className="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-medium"
             >
               Sign In

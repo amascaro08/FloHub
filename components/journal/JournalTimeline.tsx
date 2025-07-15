@@ -43,7 +43,7 @@ const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Generate dates for the timeline for the current month
   useEffect(() => {
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       const fetchTimelineData = async () => {
         const entriesMap: {[key: string]: boolean} = {};
         
@@ -58,7 +58,7 @@ const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
         const showRecent = month === today.getMonth() && year === today.getFullYear();
         
         // Check localStorage cache first
-        const cacheKey = `journal_timeline_${year}_${month}_${session.user.email}`;
+        const cacheKey = `journal_timeline_${year}_${month}_${session.user.primaryEmail}`;
         let cachedData: {entries: JournalEntry[], hasEntries: {[key: string]: boolean}} | null = null;
         
         if (typeof window !== 'undefined') {

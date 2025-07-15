@@ -138,7 +138,7 @@ export default function JournalPage() {
 
   // Function to save all journal data for the selected date
   const saveAllJournalData = async () => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.primaryEmail) return;
     
     setIsSaving(true);
     

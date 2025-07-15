@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/components/ui/AuthContext';
+import { useUser } from '@stackframe/react';
 import { calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitStats as HabitStatsType } from '@/types/habit-tracker';
 import { XMarkIcon, FireIcon, TrophyIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/solid';
@@ -17,11 +17,11 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!user?.email) return;
+      if (!user?.primaryEmail) return;
       
       setLoading(true);
       try {
-        const habitStats = await calculateHabitStats(user.email, habit.id);
+        const habitStats = await calculateHabitStats(user.primaryEmail, habit.id);
         setStats(habitStats);
       } catch (error) {
         console.error('Error loading habit stats:', error);

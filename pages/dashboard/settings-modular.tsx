@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { useSession, signIn } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import { UserSettings } from "@/types/app";
-import { useUser } from "@/components/ui/AuthContext";
+import { useUser } from '@stackframe/react';
 import dynamic from 'next/dynamic';
 
 const SettingsModularPage = () => {
   const router = useRouter();
-  const { logout } = useUser();
+  const user = useUser();
 
   // State for settings
   const initialSettings: UserSettings = {
@@ -25,16 +24,18 @@ const SettingsModularPage = () => {
     notificationSettings: {
       subscribed: false,
     },
+    floCatSettings: {
+      enabledCapabilities: [],
+    },
   };
   const [settings, setSettings] = useState<UserSettings>(initialSettings);
 
-  // Session state
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
+  // Use user.email as userId
+  const userId = user?.primaryEmail || user?.id;
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(
-    session ? `/api/userSettings?userId=${session?.user?.email}` : null,
+    userId ? `/api/userSettings?userId=${userId}` : null,
     async (url: string) => {
       const response = await fetch(url);
       if (!response.ok) {
@@ -53,14 +54,14 @@ const SettingsModularPage = () => {
   // Handle settings update
   const handleSettingsChange = async (newSettings: UserSettings) => {
     setSettings(newSettings);
-    if (session) {
+    if (userId) {
       try {
         const response = await fetch("/api/userSettings/update", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(newSettings),
+          body: JSON.stringify({ ...newSettings, userId }),
         });
 
         if (!response.ok) {
@@ -74,15 +75,16 @@ const SettingsModularPage = () => {
     }
   };
 
-  if (!session) {
+  // If not authenticated
+  if (!userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <button
-          onClick={() => signIn()}
+        <a
+          href="/login"
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
         >
           Sign In
-        </button>
+        </a>
       </div>
     );
   }
@@ -103,6 +105,7 @@ const SettingsModularPage = () => {
           }
         >
           <option value="UTC">UTC</option>
+          <option value="Australia/Sydney">Australia/Sydney</option>
           <option value="America/Los_Angeles">America/Los_Angeles</option>
           {/* Add more timezones as needed */}
         </select>
@@ -115,11 +118,11 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.tags?.join(",")}
+          value={settings.tags?.join(",") || ""}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
-              tags: e.target.value.split(",")
+              tags: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
             })
           }
         />
@@ -132,11 +135,11 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.widgets?.join(",")}
+          value={settings.widgets?.join(",") || ""}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
-              widgets: e.target.value.split(",")
+              widgets: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
             })
           }
         />
@@ -149,12 +152,12 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.calendarSettings?.calendars.join(",")}
+          value={settings.calendarSettings?.calendars.join(",") || ""}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
               calendarSettings: {
-                calendars: e.target.value.split(","),
+                calendars: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
               },
             })
           }
@@ -168,12 +171,12 @@ const SettingsModularPage = () => {
         <input
           type="text"
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.floCatSettings?.enabledCapabilities?.join(",")}
+          value={settings.floCatSettings?.enabledCapabilities?.join(",") || ""}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
               floCatSettings: {
-                enabledCapabilities: e.target.value.split(",")
+                enabledCapabilities: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
               }
             })
           }
@@ -186,8 +189,8 @@ const SettingsModularPage = () => {
         </label>
         <input
           type="checkbox"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          checked={settings.notificationSettings?.subscribed}
+          className="mr-2 leading-tight"
+          checked={!!settings.notificationSettings?.subscribed}
           onChange={(e) =>
             handleSettingsChange({
               ...settings,
@@ -197,9 +200,10 @@ const SettingsModularPage = () => {
             })
           }
         />
+        <span className="text-sm text-gray-700">Subscribed</span>
       </div>
       <button
-        onClick={() => logout()}
+        onClick={() => window.location.assign('/logout')}
         className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
       >
         Sign Out

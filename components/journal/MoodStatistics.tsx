@@ -35,7 +35,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   // Load mood data and calculate statistics from API
   useEffect(() => {
     const fetchMoodData = async () => {
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         // Determine how many days to look back based on timeRange
         const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
         
@@ -132,7 +132,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
       }
     };
     
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       fetchMoodData();
     }
   }, [session, timezone, timeRange, refreshTrigger]);

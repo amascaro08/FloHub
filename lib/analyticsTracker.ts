@@ -86,12 +86,12 @@ export function usePageViewTracking() {
       }
       
       // Track the page visit
-      trackPageVisit(url, session?.user?.email || undefined);
+      trackPageVisit(url, session?.user?.primaryEmail || undefined);
     };
     
     // Track initial page load
     if (router.isReady && !router.pathname.includes('/dashboard/admin')) {
-      trackPageVisit(router.pathname, session?.user?.email || undefined);
+      trackPageVisit(router.pathname, session?.user?.primaryEmail || undefined);
     }
     
     // Set up route change tracking
@@ -110,13 +110,13 @@ export function useWidgetTracking(widgetName: string) {
   
   useEffect(() => {
     // Track widget mount
-    trackWidgetUsage(widgetName, session?.user?.email || undefined);
+    trackWidgetUsage(widgetName, session?.user?.primaryEmail || undefined);
   }, [widgetName, session]);
   
   // Return a function to track interactions with the widget
   return {
     trackInteraction: (interactionType: string) => {
-      trackFeatureUsage(`${widgetName}:${interactionType}`, session?.user?.email || undefined);
+      trackFeatureUsage(`${widgetName}:${interactionType}`, session?.user?.primaryEmail || undefined);
     }
   };
 }

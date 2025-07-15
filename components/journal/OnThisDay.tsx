@@ -23,7 +23,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
+    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
       // Create date objects with the user's timezone
       const today = new Date();
       const lastYear = new Date(today);
@@ -33,7 +33,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
       const lastYearDate = `${lastYear.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
       
       // Try to load entry from this day last year
-      const storageKey = getDateStorageKey('journal_entry', session.user.email, timezone, lastYearDate);
+      const storageKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, lastYearDate);
       const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {

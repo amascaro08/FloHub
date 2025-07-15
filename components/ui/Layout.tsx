@@ -3,20 +3,20 @@
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { signOut } from "next-auth/react";
 import { useRouter } from 'next/router';
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react' // Import icons
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
-import { useUser } from "./AuthContext";
-import { useChat } from '../assistant/ChatContext'; // Import useChat from context
+import { useUser } from '@stackframe/react';
+import { useChat } from '../assistant/ChatContext';
 
 const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
   { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-  { name: "Notes", href: "/dashboard/notes", icon: NotepadText }, // Add Notes link with icon
+  { name: "Notes", href: "/dashboard/notes", icon: NotepadText },
   { name: "Habits", href: "/habit-tracker", icon: Book },
-  { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon }, // Using Calendar icon for Journal for now
+  { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
   { name: "Feedback", href: "/feedback", icon: NotebookPen },
@@ -26,27 +26,20 @@ const nav = [
 const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
-  const isClient = typeof window !== 'undefined';
-  const auth = isClient ? useUser() : null;
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [topInput, setTopInput] = useState('');
 
-  // Safely destructure auth values with fallbacks for SSR, including status
-  const isLocked = auth?.isLocked || false;
-  const toggleLock = auth?.toggleLock || (() => {});
-  const user = auth?.user || null;
-  const authStatus = auth?.status; // Get status from useUser
-  
-  // Check if user is admin
-  const isAdmin = user?.email === 'amascaro08@gmail.com';
-  
-  // Create admin navigation item
-  const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: "Settings" };
-  
-  // Get chat state from context with error handling for SSR
-  const chatContext = isClient && useChat ? useChat() : null;
-  
-  // Safely destructure chat values with fallbacks for SSR
+  // -- AUTH --
+  const user = useUser(); // Direct, no .user
+  // For widget lock/unlock, implement these as needed, for now just dummy:
+  const isLocked = false; // If you have a lock/unlock feature, implement as state
+  const toggleLock = () => {};
+
+  const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
+  const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: Settings };
+
+  // -- CHAT --
+  const chatContext = useChat();
   const history = chatContext?.history || [];
   const send = chatContext?.send || (async () => {});
   const status = chatContext?.status || 'idle';
@@ -60,22 +53,21 @@ const Layout = ({ children }: { children: ReactNode }) => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
 
-  // Handle sending message from the top input
+  // Send from header input
   const handleTopInputSend = async () => {
     if (topInput.trim() && send) {
       try {
         await send(topInput.trim());
-        setTopInput(''); // Clear input after sending
-        setIsChatOpen(true); // Open chat widget after sending from top input
+        setTopInput('');
+        setIsChatOpen(true);
       } catch (error) {
         console.error("Error sending message:", error);
       }
     }
   };
 
-
-  // Render a loading state if authentication is still loading
-  if (authStatus === 'loading') {
+  // Loading state for user (optional, depends if you want to delay render)
+  if (user === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
         <div className="animate-pulse flex flex-col items-center">
@@ -120,7 +112,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
               className="animate-pulse-subtle"
             />
           )}
-          {/* Toggle button for desktop sidebar */}
           <button
             onClick={toggleDesktopSidebar}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors hidden md:flex items-center justify-center"
@@ -130,7 +121,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         <nav className="p-4 space-y-1">
-          {/* Regular navigation items */}
           {nav.map((x) => (
             <Link
               key={x.href}
@@ -141,7 +131,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
               onClick={(e) => {
                 e.preventDefault();
                 setMobileSidebarOpen(false);
-                // Use Next.js router for client-side navigation
                 window.location.href = x.href;
               }}
             >
@@ -155,8 +144,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
               )}
             </Link>
           ))}
-          
-          {/* Admin navigation item - only visible to admin */}
+
           {isAdmin && (
             <Link
               href={adminNavItem.href}
@@ -166,7 +154,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
               onClick={(e) => {
                 e.preventDefault();
                 setMobileSidebarOpen(false);
-                // Use Next.js router for client-side navigation
                 window.location.href = adminNavItem.href;
               }}
             >
@@ -227,7 +214,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
               className="ml-2 md:hidden"
             />
           </div>
-          
+
           {/* FloCat Chat Bubble */}
           <div className="flex-1 flex justify-center relative">
             <div className="w-full max-w-md relative">
@@ -248,7 +235,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
               </div>
             </div>
-            
             {isChatOpen && (
               <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
                 <ChatWidget
@@ -258,7 +244,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center">
             <button
               className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ml-2 relative group"

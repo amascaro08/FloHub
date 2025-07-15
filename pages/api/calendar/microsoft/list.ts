@@ -27,7 +27,7 @@ export default async function handler(
     }
 
     // Get Microsoft tokens for the user
-    const tokens = await getMicrosoftToken(session.user.email || '');
+    const tokens = await getMicrosoftToken(session.user.primaryEmail || '');
     
     if (!tokens || !tokens.access_token) {
       return res.status(401).json({ error: 'Microsoft authentication required' });

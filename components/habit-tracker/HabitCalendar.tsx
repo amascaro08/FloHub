@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // UI components and context
-import { useUser } from '@/components/ui/AuthContext';
+import { useUser } from '@stackframe/react';
 import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 // Habit tracker components
@@ -23,8 +23,7 @@ import {
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
-  const auth = useUser();
-  const user = auth?.user;
+  const user = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,15 +55,15 @@ const HabitCalendar = () => {
   // Load habits and completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.email) return;
+      if (!user?.primaryEmail) return;
       
       setLoading(true);
       try {
-        const userHabits = await getUserHabits(user.email);
+        const userHabits = await getUserHabits(user.primaryEmail);
         setHabits(userHabits);
         
         const monthCompletions = await getHabitCompletionsForMonth(
-          user.email,
+          user.primaryEmail,
           year,
           month
         );
@@ -99,12 +98,12 @@ const HabitCalendar = () => {
 
   // Handle habit completion toggle
   const handleToggleCompletion = async (habit: Habit, date: Date) => {
-    if (!user?.email) return;
+    if (!user?.primaryEmail) return;
     
     try {
       const dateStr = formatDate(date);
       const updatedCompletion = await toggleHabitCompletion(
-        user.email,
+        user.primaryEmail,
         habit.id,
         dateStr
       );

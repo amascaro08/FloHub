@@ -60,7 +60,7 @@ const AdminAnalytics: React.FC = () => {
   const isClient = typeof window !== 'undefined';
   
   useEffect(() => {
-    if (isClient && session?.user?.email !== 'amascaro08@gmail.com') {
+    if (isClient && session?.user?.primaryEmail !== 'amascaro08@gmail.com') {
       router.push('/dashboard');
     }
   }, [session, router, isClient]);
@@ -93,7 +93,7 @@ const AdminAnalytics: React.FC = () => {
       }
     };
 
-    if (isClient && session?.user?.email === 'amascaro08@gmail.com') {
+    if (isClient && session?.user?.primaryEmail === 'amascaro08@gmail.com') {
       fetchAnalytics();
     }
   }, [session, selectedTimeframe, isClient]);
@@ -108,7 +108,7 @@ const AdminAnalytics: React.FC = () => {
   }
 
   // Don't render content for unauthorized users (will redirect via useEffect)
-  if (isClient && session?.user?.email !== 'amascaro08@gmail.com') {
+  if (isClient && session?.user?.primaryEmail !== 'amascaro08@gmail.com') {
     return null;
   }
 

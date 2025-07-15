@@ -30,7 +30,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   // Load saved sleep data from API
   useEffect(() => {
     const fetchSleepData = async () => {
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         try {
           const response = await axios.get(`/api/journal/sleep?date=${today}`, {
             withCredentials: true
@@ -92,14 +92,14 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
       }
     };
     
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       fetchSleepData();
     }
   }, [session, today, timezone]);
   
   // Save sleep data to API
   const handleSaveSleep = async (quality: string, hours: number) => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.primaryEmail) return;
     
     const sleepData = { quality, hours };
     

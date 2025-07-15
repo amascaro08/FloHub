@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser } from '@/components/ui/AuthContext';
+import { useUser } from '@stackframe/react';
 import { getUserHabits, getHabitCompletionsForMonth, toggleHabitCompletion, getTodayFormatted, shouldCompleteToday, calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';
@@ -21,18 +21,18 @@ const HabitTrackerWidget = () => {
   // Load habits and today's completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.email) return;
+      if (!user?.primaryEmail) return;
       
       setLoading(true);
       try {
         // Get user habits
-        const userHabits = await getUserHabits(user.email);
+        const userHabits = await getUserHabits(user.primaryEmail);
         setHabits(userHabits);
         
         // Get current month's completions
         const today = new Date();
         const monthCompletions = await getHabitCompletionsForMonth(
-          user.email,
+          user.primaryEmail,
           today.getFullYear(),
           today.getMonth()
         );
@@ -45,7 +45,7 @@ const HabitTrackerWidget = () => {
           
           for (const habit of userHabits) {
             try {
-              const stats = await calculateHabitStats(user.email, habit.id);
+              const stats = await calculateHabitStats(user.primaryEmail, habit.id);
               if (stats.longestStreak > maxStreak) {
                 maxStreak = stats.longestStreak;
               }
@@ -112,12 +112,12 @@ const HabitTrackerWidget = () => {
 
   // Handle habit completion toggle
   const handleToggleCompletion = async (habit: Habit) => {
-    if (!user?.email) return;
+    if (!user?.primaryEmail) return;
     
     try {
       const today = getTodayFormatted();
       const updatedCompletion = await toggleHabitCompletion(
-        user.email,
+        user.primaryEmail,
         habit.id,
         today
       );

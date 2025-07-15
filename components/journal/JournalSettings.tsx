@@ -35,8 +35,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
 
   // Load saved settings from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
-      const savedSettings = localStorage.getItem(`journal_settings_${session.user.email}`);
+    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
+      const savedSettings = localStorage.getItem(`journal_settings_${session.user.primaryEmail}`);
       
       if (savedSettings) {
         try {
@@ -64,8 +64,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
     }
     
     // Save settings to localStorage
-    if (session?.user?.email) {
-      localStorage.setItem(`journal_settings_${session.user.email}`, JSON.stringify(settings));
+    if (session?.user?.primaryEmail) {
+      localStorage.setItem(`journal_settings_${session.user.primaryEmail}`, JSON.stringify(settings));
       
       // Register or unregister reminder notification
       if (settings.reminderEnabled) {
@@ -87,7 +87,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   };
 
   const handleExportData = async () => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.primaryEmail) return;
     
     setExportLoading(true);
     
@@ -107,7 +107,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         
-        if (!key || !key.includes(session.user.email)) continue;
+        if (!key || !key.includes(session.user.primaryEmail)) continue;
         
         if (key.includes('journal_entry')) {
           const dateKey = key.split('_').pop() || '';

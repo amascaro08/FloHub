@@ -48,7 +48,7 @@ const FeedbackPage: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if the user is an admin (replace with your actual admin check)
-  const isAdmin = session?.user?.email === 'amascaro08@gmail.com';
+  const isAdmin = session?.user?.primaryEmail === 'amascaro08@gmail.com';
 
   // Fetch feedback and backlog data
   const fetchData = async () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/components/ui/AuthContext';
+import { useUser } from '@stackframe/react';
 import { createHabit, updateHabit, deleteHabit } from '@/lib/habitService';
 import { Habit } from '@/types/habit-tracker';
 import { TrashIcon } from '@heroicons/react/24/solid';
@@ -58,7 +58,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.email) {
+    if (!user?.primaryEmail) {
       setError('You must be logged in to create habits');
       return;
     }
@@ -108,7 +108,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
           color
         };
         
-        savedHabit = await createHabit(user.email, habitData);
+        savedHabit = await createHabit(user.primaryEmail, habitData);
       }
       
       onSave(savedHabit);

@@ -31,7 +31,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   // Load saved entry from API on component mount
   useEffect(() => {
     const fetchEntry = async () => {
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         try {
           const response = await axios.get(`/api/journal/entry?date=${entryDate}`);
           if (response.data) {
@@ -49,7 +49,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
       }
     };
     
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       fetchEntry();
     }
   }, [session, entryDate, timezone]);
@@ -73,7 +73,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     
     // Auto-save when prompt is inserted
     setTimeout(async () => {
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         const timestamp = new Date().toISOString();
         const entry = { content: newContent, timestamp };
         
@@ -106,14 +106,14 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     const entry = { content: finalContent, timestamp };
     
     // Save to localStorage
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       // Save to both the specific date key and today's entry if it's today
-      const dateKey = getDateStorageKey('journal_entry', session.user.email, timezone, entryDate);
+      const dateKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, entryDate);
       localStorage.setItem(dateKey, JSON.stringify(entry));
       
       if (isTodayDate) {
         localStorage.setItem(
-          `journal_today_${session.user.email}`,
+          `journal_today_${session.user.primaryEmail}`,
           JSON.stringify(entry)
         );
       }
@@ -130,7 +130,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     
     // Auto-save when content changes (debounced)
     const debounceTimeout = setTimeout(async () => {
-      if (session?.user?.email && html.trim() !== savedContent.trim()) {
+      if (session?.user?.primaryEmail && html.trim() !== savedContent.trim()) {
         const timestamp = new Date().toISOString();
         const entry = { content: html, timestamp };
         

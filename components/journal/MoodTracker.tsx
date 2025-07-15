@@ -30,7 +30,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   // Load saved mood from API on component mount 
   useEffect(() => {
     const fetchMoodData = async () => {
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         // Fetch today's mood
@@ -97,7 +97,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       }
     };
     
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       fetchMoodData();
     }
   }, [session, timezone]);
@@ -110,9 +110,9 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
     };
     
     // Save to localStorage with today's date in user's timezone
-    if (session?.user?.email) {
+    if (session?.user?.primaryEmail) {
       const today = getCurrentDate(timezone);
-      const storageKey = getDateStorageKey('journal_mood', session.user.email, timezone, today);
+      const storageKey = getDateStorageKey('journal_mood', session.user.primaryEmail, timezone, today);
       localStorage.setItem(storageKey, JSON.stringify(mood));
       
       // Show save confirmation
@@ -140,7 +140,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       };
       
       // Save to API with today's date in user's timezone
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         try {
@@ -188,7 +188,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       };
       
       // Save to API with today's date in user's timezone
-      if (session?.user?.email) {
+      if (session?.user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         try {
@@ -232,7 +232,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
         };
         
         // Save to API with today's date in user's timezone
-        if (session?.user?.email) {
+        if (session?.user?.primaryEmail) {
           const today = getCurrentDate(timezone);
           
           try {

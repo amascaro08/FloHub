@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
     
     if (data.user) {
       nextResponse.headers.set('x-user-id', data.user.id);
-      nextResponse.headers.set('x-user-email', data.user.email || '');
+      nextResponse.headers.set('x-user-email', data.user.primaryEmail || '');
     }
     
     return nextResponse;

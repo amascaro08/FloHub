@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get session and verify admin access
     const session = await getSession({ req });
     
-    if (!session || session.user?.email !== 'amascaro08@gmail.com') {
+    if (!session || session.user?.primaryEmail !== 'amascaro08@gmail.com') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 

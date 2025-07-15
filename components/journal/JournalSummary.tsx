@@ -24,7 +24,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.email) {
+    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
       // Load mood data from the last 30 days
       const moodEntries: MoodData[] = [];
       const today = new Date();
@@ -36,7 +36,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
         const dateStr = date.toISOString().split('T')[0];
         
         // Try to load mood for this date
-        const savedMood = localStorage.getItem(`journal_mood_${session.user.email}_${dateStr}`);
+        const savedMood = localStorage.getItem(`journal_mood_${session.user.primaryEmail}_${dateStr}`);
         
         if (savedMood) {
           try {

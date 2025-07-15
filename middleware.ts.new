@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
     // Add user info to request headers
     if (data.user) {
       response.headers.set('x-user-id', data.user.id);
-      response.headers.set('x-user-email', data.user.email || '');
+      response.headers.set('x-user-email', data.user.primaryEmail || '');
     }
     
     return response;
