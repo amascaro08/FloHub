@@ -8,7 +8,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import { useChat } from '../assistant/ChatContext';
 
 const nav = [

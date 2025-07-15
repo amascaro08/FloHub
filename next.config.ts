@@ -50,7 +50,7 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
-  transpilePackages: ['@stackframe/stack', '@stackframe/react', '@stackframe/stack-ui'],
+  transpilePackages: ['@stackframe/stack', '@stackframe/stack', '@stackframe/stack-ui'],
   eslint: {
     // 🚫 Don't block the build on lint errors
     ignoreDuringBuilds: true,

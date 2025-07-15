@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { query } from '@/lib/neon';
 
 // Define types for our analytics data

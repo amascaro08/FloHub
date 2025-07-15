@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Task, UserSettings } from "@/types/app"; // Import UserSettings
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 
 // Define a more comprehensive Task type for the tasks page
 

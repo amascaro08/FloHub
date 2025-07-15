@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // UI components and context
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 // Habit tracker components

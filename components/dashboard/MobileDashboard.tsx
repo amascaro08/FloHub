@@ -4,7 +4,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 
 // Widget skeleton for loading state
 const WidgetSkeleton = () => (

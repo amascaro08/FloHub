@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import { createHabit, updateHabit, deleteHabit } from '@/lib/habitService';
 import { Habit } from '@/types/habit-tracker';
 import { TrashIcon } from '@heroicons/react/24/solid';

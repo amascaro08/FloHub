@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 

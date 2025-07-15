@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import { calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitStats as HabitStatsType } from '@/types/habit-tracker';
 import { XMarkIcon, FireIcon, TrophyIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/solid';

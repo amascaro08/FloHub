@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { getCurrentDate, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 

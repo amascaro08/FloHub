@@ -27,7 +27,7 @@ const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 
 import { ReactElement } from "react";
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);

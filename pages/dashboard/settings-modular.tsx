@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import { UserSettings } from "@/types/app";
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import dynamic from 'next/dynamic';
 
 const SettingsModularPage = () => {

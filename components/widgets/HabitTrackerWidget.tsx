@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 import { getUserHabits, getHabitCompletionsForMonth, toggleHabitCompletion, getTodayFormatted, shouldCompleteToday, calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';

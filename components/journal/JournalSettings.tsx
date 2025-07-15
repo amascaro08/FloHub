@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 
 interface JournalSettingsProps {
   onClose: () => void;

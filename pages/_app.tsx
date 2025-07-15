@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
-import { StackClientApp, StackProvider } from '@stackframe/react'
+import { StackClientApp, StackProvider } from '@stackframe/stack'
 
 const ClientSideCheck = dynamic(
   () => import('../components/ClientSideCheck'),

@@ -3,7 +3,7 @@ import AuthLayout from '@/components/ui/AuthLayout';
 
 // Lazy load OAuthButtonGroup to avoid SSR crash
 const OAuthButtonGroup = dynamic(
-  () => import('@stackframe/react').then(mod => mod.OAuthButtonGroup),
+  () => import('@stackframe/stack').then(mod => mod.OAuthButtonGroup),
   { ssr: false }
 );
 

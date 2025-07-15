@@ -6,7 +6,7 @@ import useSWR from "swr";
 import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
 import type { UserSettings, Note } from "@/types/app";
 import type { GetNotesResponse } from "@/pages/api/notes";
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 
 
 // Lazy load CreatableSelect to improve initial load time

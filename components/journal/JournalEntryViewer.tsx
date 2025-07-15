@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface JournalEntryViewerProps {

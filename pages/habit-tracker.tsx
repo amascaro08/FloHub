@@ -1,7 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 import HabitCalendar from "@/components/habit-tracker/HabitCalendar";
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 
 const HabitTrackerPage = () => {
   const user = useUser();

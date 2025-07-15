@@ -4,7 +4,7 @@
  */
 
 import { query } from './neon';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { useEffect } from 'react';
 
 // Interface for performance metrics

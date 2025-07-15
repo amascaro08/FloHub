@@ -1,4 +1,4 @@
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import Layout from '@/components/ui/Layout';

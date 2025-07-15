@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";
 import axios from "axios";
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";

@@ -13,7 +13,7 @@ import { parseISO } from 'date-fns'; // Import parseISO
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 
 // Define the response type for fetching meeting notes (will create this API later)
 type GetMeetingNotesResponse = {

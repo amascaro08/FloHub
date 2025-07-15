@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { Client } from '@microsoft/microsoft-graph-client';
 import { getMicrosoftToken, MicrosoftAuthProvider } from '../../../../lib/microsoftAuth';
 

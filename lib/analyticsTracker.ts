@@ -4,7 +4,7 @@
  */
 
 // No direct database import needed, will use fetch to API route
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 

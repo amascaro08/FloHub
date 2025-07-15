@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useUser } from "@stackframe/react";
+import { useUser } from "@stackframe/stack";
 
 export default function ClientSideCheck(props: any) {
   const user = useUser(); // ✅ must always be top-level

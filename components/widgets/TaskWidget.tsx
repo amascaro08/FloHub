@@ -6,7 +6,7 @@ import useSWR         from "swr";
 import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
-import { useUser } from '@stackframe/react';
+import { useUser } from '@stackframe/stack';
 
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());

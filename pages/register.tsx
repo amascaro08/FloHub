@@ -1,5 +1,5 @@
 import AuthLayout from '@/components/ui/AuthLayout'
-import { OAuthButtonGroup } from '@stackframe/react'
+import { OAuthButtonGroup } from '@stackframe/stack'
 
 export default function RegisterPage() {
   return (
