@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 // List of paths that should bypass auth check
 const PUBLIC_PATHS = [
+  '/',             // <-- add this!
   '/login',
   '/register',
   '/api/auth',
@@ -14,6 +15,7 @@ const PUBLIC_PATHS = [
   '/manifest.json',
   '/sw.js'
 ];
+
 
 export async function middleware(request: NextRequest) {
   // Check if the path is public
