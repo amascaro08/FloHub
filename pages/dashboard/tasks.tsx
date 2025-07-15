@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, FormEvent, useMemo } from "react";
-import { useSession } from "next-auth/react";
+
 import useSWR from "swr";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";

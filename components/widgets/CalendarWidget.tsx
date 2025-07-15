@@ -1,6 +1,6 @@
 import React, { useEffect, useState, memo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { useSession } from "next-auth/react"; // Import useSession
+ // Import useSession
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 

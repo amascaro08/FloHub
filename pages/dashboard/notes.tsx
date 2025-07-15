@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useSession } from "next-auth/react";
+
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component

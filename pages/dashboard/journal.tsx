@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";

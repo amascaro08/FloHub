@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useSession } from "next-auth/react";
+
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
-import { useUser } from "../ui/AuthContext";
+import { useUser } from "@stackframe/react";
 
 // Widget skeleton for loading state
 const WidgetSkeleton = () => (

@@ -1,7 +1,7 @@
 // components/widgets/TaskWidget.tsx
 "use client";
 
-import { useSession } from "next-auth/react";
+
 import useSWR         from "swr";
 import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect

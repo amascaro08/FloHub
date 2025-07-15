@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+
 import { useState, FormEvent, useMemo, memo, useEffect } from "react"; // Added useEffect
 import useSWR from "swr";
 import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
