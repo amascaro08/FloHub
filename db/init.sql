@@ -19,15 +19,15 @@ CREATE TABLE IF NOT EXISTS accounts (
     expires_at BIGINT,
     id_token TEXT,
     scope TEXT,
-    session_state TEXT,
+    user_state TEXT,
     token_type VARCHAR(255),
     CONSTRAINT "provider_account_id" UNIQUE (provider, "providerAccountId")
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "sessionToken" VARCHAR(255) NOT NULL UNIQUE,
+    "userToken" VARCHAR(255) NOT NULL UNIQUE,
     expires TIMESTAMP WITH TIME ZONE NOT NULL
 );
 

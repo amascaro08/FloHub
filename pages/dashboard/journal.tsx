@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";
 import axios from "axios";
-
+import { useUser } from "@stackframe/react";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
@@ -22,18 +22,18 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 
 export default function JournalPage() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
   // Handle loading state
-  if (status === 'loading') {
+  if (status === 'unauthenticated') {
     return <p className="text-center p-8">Loading journal...</p>;
   }
 
   // Handle unauthenticated state
-  if (status !== 'authenticated' || !session) {
+  if (status !== 'authenticated' || !user) {
     return <p className="text-center p-8">Please sign in to access your journal.</p>;
   }
 
@@ -50,7 +50,7 @@ export default function JournalPage() {
   
   // Fetch user settings to get timezone
   const { data: userSettings } = useSWR(
-    session ? "/api/userSettings" : null,
+    user ? "/api/userSettings" : null,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -138,7 +138,7 @@ export default function JournalPage() {
 
   // Function to save all journal data for the selected date
   const saveAllJournalData = async () => {
-    if (!session?.user?.primaryEmail) return;
+    if (!user?.primaryEmail) return;
     
     setIsSaving(true);
     

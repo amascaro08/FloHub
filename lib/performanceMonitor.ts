@@ -4,7 +4,7 @@
  */
 
 import { query } from './neon';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { useEffect } from 'react';
 
 // Interface for performance metrics
@@ -185,7 +185,7 @@ async function sendMetricsToAnalytics(): Promise<void> {
     let userId = null;
     if (typeof window !== 'undefined') {
       try {
-        // Try to get user email from localStorage (set during session)
+        // Try to get user email from localStorage (set during user)
         userId = localStorage.getItem('flohub.userEmail');
       } catch (e) {
         console.warn('[Performance] Error getting user ID:', e);
@@ -263,29 +263,29 @@ export function performanceFetch(
   });
 }
 
-// Track user session duration
-let sessionStartTime = Date.now();
+// Track user user duration
+let userStartTime = Date.now();
 let isTracking = false;
 
-export function startSessionTracking(): void {
+export function startuserTracking(): void {
   if (isTracking) return;
   
-  sessionStartTime = Date.now();
+  userStartTime = Date.now();
   isTracking = true;
   
-  // Set up event listeners for session end
+  // Set up event listeners for user end
   if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', trackSessionEnd);
+    window.addEventListener('beforeunload', trackuserEnd);
     
-    // Also track session when user navigates away (SPA)
-    window.addEventListener('pagehide', trackSessionEnd);
+    // Also track user when user navigates away (SPA)
+    window.addEventListener('pagehide', trackuserEnd);
   }
 }
 
-async function trackSessionEnd(): Promise<void> {
+async function trackuserEnd(): Promise<void> {
   if (!isTracking) return;
   
-  const sessionDuration = (Date.now() - sessionStartTime) / 1000 / 60; // Convert to minutes
+  const userDuration = (Date.now() - userStartTime) / 1000 / 60; // Convert to minutes
   isTracking = false;
   
   try {
@@ -296,14 +296,14 @@ async function trackSessionEnd(): Promise<void> {
         // Try to get user email from localStorage
         userId = localStorage.getItem('flohub.userEmail');
       } catch (e) {
-        console.warn('[Performance] Error getting user ID for session tracking:', e);
+        console.warn('[Performance] Error getting user ID for user tracking:', e);
       }
     }
     
-    // Send session data to Firestore
-    // Send session data to Neon
+    // Send user data to Firestore
+    // Send user data to Neon
     const dataToStore = {
-      sessionDuration,
+      userDuration,
       userId,
       timestamp: Date.now()
     };
@@ -313,43 +313,43 @@ async function trackSessionEnd(): Promise<void> {
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
     await query(
-      `INSERT INTO "analytics_sessions_durations" (${columns}) VALUES (${placeholders})`,
+      `INSERT INTO "analytics_users_durations" (${columns}) VALUES (${placeholders})`,
       values
     );
     
-    console.log(`[Performance] Session duration tracked: ${sessionDuration.toFixed(2)} minutes`);
+    console.log(`[Performance] user duration tracked: ${userDuration.toFixed(2)} minutes`);
   } catch (e) {
-    console.warn('[Performance] Error tracking session duration:', e);
+    console.warn('[Performance] Error tracking user duration:', e);
   }
 }
 
 // React hook to use performance monitoring in components
 export function usePerformanceMonitoring() {
-  // Defensive: useSession may be undefined if next-auth is not initialized or during SSR
-  const sessionHook = useSession ? useSession() : { data: undefined };
-  const session = sessionHook?.data;
+  // Defensive: useUser may be undefined if next-auth is not initialized or during SSR
+  const userHook = useUser ? useUser() : { data: undefined };
+  const user = userHook?.data;
   
   useEffect(() => {
     startPerformanceMonitoring();
-    startSessionTracking();
-    if (session?.user?.primaryEmail) {
+    startuserTracking();
+    if (user?.primaryEmail) {
       try {
-        localStorage.setItem('flohub.userEmail', session.user.primaryEmail);
+        localStorage.setItem('flohub.userEmail', user.primaryEmail);
       } catch (e) {
         console.warn('[Performance] Error storing user email:', e);
       }
     }
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('beforeunload', trackSessionEnd);
-        window.removeEventListener('pagehide', trackSessionEnd);
+        window.removeEventListener('beforeunload', trackuserEnd);
+        window.removeEventListener('pagehide', trackuserEnd);
       }
     };
-  }, [session]);
+  }, [user]);
 }
 
 // Initialize performance monitoring
 if (typeof window !== 'undefined') {
   startPerformanceMonitoring();
-  startSessionTracking();
+  startuserTracking();
 }

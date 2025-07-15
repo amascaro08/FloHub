@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-
+import { useUser } from "@stackframe/react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
@@ -20,18 +20,18 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 
 export default function NotesPage() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
   // Handle loading state
-  if (status === 'loading') {
+  if (status === 'unauthenticated') {
     return <p className="text-center p-8">Loading notes...</p>;
   }
 
   // Handle unauthenticated state
-  if (status !== 'authenticated' || !session) {
+  if (status !== 'authenticated' || !user) {
     // Redirect to login or show a message
     // For now, showing a message
     return <p className="text-center p-8">Please sign in to access your notes.</p>;

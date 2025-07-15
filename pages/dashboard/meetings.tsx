@@ -13,6 +13,7 @@ import { parseISO } from 'date-fns'; // Import parseISO
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
+import { useUser } from "@stackframe/react";
 
 // Define the response type for fetching meeting notes (will create this API later)
 type GetMeetingNotesResponse = {
@@ -31,12 +32,12 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 export default function MeetingsPage() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
@@ -285,11 +286,11 @@ export default function MeetingsPage() {
 
 
   // Show loading state if needed
-  if (!session && status === "loading") {
+  if (!user && status === 'unauthenticated') {
     return <p>Loading meeting notes, calendar events, and settings…</p>;
   }
 
-  if (!session) {
+  if (!user) {
     return <p>Please sign in to see your meeting notes.</p>;
   }
 

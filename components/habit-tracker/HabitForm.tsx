@@ -17,7 +17,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
   onDelete, 
   onCancel 
 }) => {
-  const { user } = useUser();
+  const user = useUser();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily');

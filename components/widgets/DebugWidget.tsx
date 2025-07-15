@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 
 const DebugWidget = () => {
-const sessionHookResult = useSession();
-const session = sessionHookResult?.data ? sessionHookResult.data : null;
-const status = sessionHookResult?.status || "unauthenticated";
+  const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
 const [debugInfo, setDebugInfo] = useState<any>(null);
 
-if (!session) {
+if (!user) {
   return <div>Loading...</div>; // Or any other fallback UI
 }
   const [loading, setLoading] = useState(true);
@@ -48,9 +47,9 @@ if (!session) {
       <h3 className="font-bold mb-2">Debug Information</h3>
       
       <div className="mb-4">
-        <h4 className="font-semibold">Session Status:</h4>
+        <h4 className="font-semibold">user Status:</h4>
         <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto">
-          {JSON.stringify({ status, session: session ? 'Present' : 'Missing' }, null, 2)}
+          {JSON.stringify({ status, user: user ? 'Present' : 'Missing' }, null, 2)}
         </pre>
       </div>
       

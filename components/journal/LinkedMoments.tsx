@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import useSWR from 'swr';
 import { getCurrentDate } from '@/lib/dateUtils';
 
@@ -28,10 +28,10 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const { data: session, status } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   

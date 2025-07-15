@@ -1,4 +1,4 @@
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import Layout from '@/components/ui/Layout';
@@ -6,15 +6,15 @@ import AdminAnalytics from '@/components/admin/AdminAnalytics';
 import Head from 'next/head';
 
 export default function AdminPage() {
-  const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+const user = useUser();
+const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
   const isClient = typeof window !== 'undefined';
 
   // Handle loading state
-  if (status === 'loading') {
+  if (status === 'unauthenticated') {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
@@ -26,10 +26,10 @@ export default function AdminPage() {
 
   // Check if user is authorized to access admin page
   // This check runs after loading is complete
-  const isAuthorized = status === 'authenticated' && session?.user?.primaryEmail === 'amascaro08@gmail.com';
+  const isAuthorized = status === 'authenticated' && user?.primaryEmail === 'amascaro08@gmail.com';
 
   useEffect(() => {
-    // Redirect if not authorized after session is loaded
+    // Redirect if not authorized after user is loaded
     if (!isAuthorized) {
       router.push('/dashboard');
     }

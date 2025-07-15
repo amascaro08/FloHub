@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import RichTextEditor from './RichTextEditor';
 import { getCurrentDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
@@ -17,10 +17,10 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   
@@ -31,7 +31,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   // Load saved entry from API on component mount
   useEffect(() => {
     const fetchEntry = async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         try {
           const response = await axios.get(`/api/journal/entry?date=${entryDate}`);
           if (response.data) {
@@ -49,10 +49,10 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchEntry();
     }
-  }, [session, entryDate, timezone]);
+  }, [user, entryDate, timezone]);
   
   // Journaling prompts
   const journalingPrompts = [
@@ -73,7 +73,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     
     // Auto-save when prompt is inserted
     setTimeout(async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         const timestamp = new Date().toISOString();
         const entry = { content: newContent, timestamp };
         
@@ -106,14 +106,14 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     const entry = { content: finalContent, timestamp };
     
     // Save to localStorage
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       // Save to both the specific date key and today's entry if it's today
-      const dateKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, entryDate);
+      const dateKey = getDateStorageKey('journal_entry', user.primaryEmail, timezone, entryDate);
       localStorage.setItem(dateKey, JSON.stringify(entry));
       
       if (isTodayDate) {
         localStorage.setItem(
-          `journal_today_${session.user.primaryEmail}`,
+          `journal_today_${user.primaryEmail}`,
           JSON.stringify(entry)
         );
       }
@@ -130,7 +130,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     
     // Auto-save when content changes (debounced)
     const debounceTimeout = setTimeout(async () => {
-      if (session?.user?.primaryEmail && html.trim() !== savedContent.trim()) {
+      if (user?.primaryEmail && html.trim() !== savedContent.trim()) {
         const timestamp = new Date().toISOString();
         const entry = { content: html, timestamp };
         

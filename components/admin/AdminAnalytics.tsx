@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { useRouter } from 'next/router';
 import { 
   BarChart, 
@@ -39,11 +39,10 @@ interface UserInsight {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const AdminAnalytics: React.FC = () => {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
+   const user = useUser();
   const router = useRouter();
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const [loading, setLoading] = useState(true);
@@ -60,10 +59,10 @@ const AdminAnalytics: React.FC = () => {
   const isClient = typeof window !== 'undefined';
   
   useEffect(() => {
-    if (isClient && session?.user?.primaryEmail !== 'amascaro08@gmail.com') {
+    if (isClient && user?.primaryEmail !== 'amascaro08@gmail.com') {
       router.push('/dashboard');
     }
-  }, [session, router, isClient]);
+  }, [user, router, isClient]);
 
   // Fetch analytics data (client-side only)
   useEffect(() => {
@@ -93,10 +92,10 @@ const AdminAnalytics: React.FC = () => {
       }
     };
 
-    if (isClient && session?.user?.primaryEmail === 'amascaro08@gmail.com') {
+    if (isClient && user?.primaryEmail === 'amascaro08@gmail.com') {
       fetchAnalytics();
     }
-  }, [session, selectedTimeframe, isClient]);
+  }, [user, selectedTimeframe, isClient]);
 
   // Show loading state during SSR or while fetching data
   if (loading || !isClient) {
@@ -108,7 +107,7 @@ const AdminAnalytics: React.FC = () => {
   }
 
   // Don't render content for unauthorized users (will redirect via useEffect)
-  if (isClient && session?.user?.primaryEmail !== 'amascaro08@gmail.com') {
+  if (isClient && user?.primaryEmail !== 'amascaro08@gmail.com') {
     return null;
   }
 
@@ -140,9 +139,9 @@ const AdminAnalytics: React.FC = () => {
           <p className="text-3xl font-bold">{activeUserCount}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-2">Avg. Session Duration</h3>
+          <h3 className="text-lg font-medium mb-2">Avg. user Duration</h3>
           <p className="text-3xl font-bold">
-            {performanceMetrics.find(m => m.metric === 'avgSessionDuration')?.value.toFixed(2) || 0} min
+            {performanceMetrics.find(m => m.metric === 'avguserDuration')?.value.toFixed(2) || 0} min
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">

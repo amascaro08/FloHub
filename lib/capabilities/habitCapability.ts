@@ -13,7 +13,7 @@ export const habitCapability: FloCatCapability = {
   handler: async (command: string, args: string) => {
     try {
       // Extract user email from context (this would be implemented in a real system)
-      const userEmail = 'user@example.com'; // Placeholder - in a real implementation, this would come from the session
+      const userEmail = 'user@example.com'; // Placeholder - in a real implementation, this would come from the user
       
       // Get the user's FloCat style and personality preferences
       let floCatStyle = "default";

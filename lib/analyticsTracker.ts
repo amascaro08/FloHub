@@ -4,7 +4,7 @@
  */
 
 // No direct database import needed, will use fetch to API route
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
@@ -75,7 +75,7 @@ export async function trackFeatureUsage(feature: string, userId?: string) {
 // React hook to track page views
 export function usePageViewTracking() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const user = useUser();
   
   useEffect(() => {
     // Function to handle route change complete
@@ -86,12 +86,12 @@ export function usePageViewTracking() {
       }
       
       // Track the page visit
-      trackPageVisit(url, session?.user?.primaryEmail || undefined);
+      trackPageVisit(url, user?.primaryEmail || undefined);
     };
     
     // Track initial page load
     if (router.isReady && !router.pathname.includes('/dashboard/admin')) {
-      trackPageVisit(router.pathname, session?.user?.primaryEmail || undefined);
+      trackPageVisit(router.pathname, user?.primaryEmail || undefined);
     }
     
     // Set up route change tracking
@@ -101,22 +101,22 @@ export function usePageViewTracking() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange);
     };
-  }, [router.isReady, router.pathname, session]);
+  }, [router.isReady, router.pathname, user]);
 }
 
 // React hook to track widget usage
 export function useWidgetTracking(widgetName: string) {
-  const { data: session } = useSession();
+  const user = useUser();
   
   useEffect(() => {
     // Track widget mount
-    trackWidgetUsage(widgetName, session?.user?.primaryEmail || undefined);
-  }, [widgetName, session]);
+    trackWidgetUsage(widgetName, user?.primaryEmail || undefined);
+  }, [widgetName, user]);
   
   // Return a function to track interactions with the widget
   return {
     trackInteraction: (interactionType: string) => {
-      trackFeatureUsage(`${widgetName}:${interactionType}`, session?.user?.primaryEmail || undefined);
+      trackFeatureUsage(`${widgetName}:${interactionType}`, user?.primaryEmail || undefined);
     }
   };
 }

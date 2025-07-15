@@ -22,8 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Optional: Verify user's authentication and ownership of the note
-    // const session = await auth.verifyIdToken(req.headers.authorization?.split(' ')[1]);
-    // const userId = session.uid;
+    // const user = await auth.verifyIdToken(req.headers.authorization?.split(' ')[1]);
+    // const userId = user.uid;
     // const noteRef = db.collection('notes').doc(id); // Still reference the 'notes' collection
     // const noteDoc = await noteRef.get();
     // if (!noteDoc.exists || noteDoc.data()?.userId !== userId) {

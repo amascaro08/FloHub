@@ -6,26 +6,31 @@ import useSWR         from "swr";
 import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
+import { useUser } from '@stackframe/react';
+
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function TaskWidget() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
-  
-  if (status === 'loading') {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-  const shouldFetch               = status === "authenticated";
-  const { data: tasks, mutate }   = useSWR<Task[]>(
-    shouldFetch ? "/api/tasks" : null,
+  const user = useUser(); // Just user object or null
+  const isLoggedIn = !!user;
+
+  // Only fetch tasks if logged in
+  const { data: tasks, mutate } = useSWR<Task[]>(
+    isLoggedIn ? "/api/tasks" : null,
     fetcher
   );
 
+  if (!isLoggedIn) {
+    return <div className="text-gray-400">Please sign in to view your tasks.</div>;
+  }
+  if (!tasks) {
+    return <div>Loading...</div>;
+  }
+
   // Fetch user settings to get global tags
   const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
-    shouldFetch ? "/api/userSettings" : null,
+    isLoggedIn ? "/api/userSettings" : null,
     fetcher
   );
 
@@ -172,7 +177,7 @@ function TaskWidget() {
     setSelectedTags(t.tags || []); // Set tags when editing
   };
 
-  if (!session) {
+  if (!user) {
     return <p>Please sign in to see your tasks.</p>;
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { useRouter } from 'next/router';
 import { NextPage } from 'next';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,18 +21,18 @@ interface BacklogItem {
 }
 
 const FeedbackPage: NextPage = () => {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
   // Handle loading state
-  if (status === 'loading') {
-    return <div>Loading session...</div>;
+  if (status === 'unauthenticated') {
+    return <div>Loading user...</div>;
   }
 
   // Handle unauthenticated state
-  if (status !== 'authenticated' || !session) {
+  if (status !== 'authenticated' || !user) {
     // Redirect to login or show a message
     // For now, showing a message as per original logic
     return <div>You must be signed in to view this page.</div>;
@@ -48,7 +48,7 @@ const FeedbackPage: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if the user is an admin (replace with your actual admin check)
-  const isAdmin = session?.user?.primaryEmail === 'amascaro08@gmail.com';
+  const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
 
   // Fetch feedback and backlog data
   const fetchData = async () => {

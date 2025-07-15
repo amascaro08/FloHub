@@ -27,7 +27,7 @@ export const accounts = pgTable(
     token_type: text("token_type"),
     scope: text("scope"),
     id_token: text("id_token"),
-    session_state: text("session_state"),
+    user_state: text("user_state"),
   },
   (account) => ({
     compoundKey: primaryKey({
@@ -36,8 +36,8 @@ export const accounts = pgTable(
   })
 );
 
-export const sessions = pgTable("sessions", {
-  sessionToken: text("sessionToken").notNull().primaryKey(),
+export const users = pgTable("users", {
+  userToken: text("userToken").notNull().primaryKey(),
   userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

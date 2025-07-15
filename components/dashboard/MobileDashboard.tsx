@@ -57,10 +57,10 @@ export default function MobileDashboard() {
   const user = useUser();
 
   // ----
-  // (In your original, you had session.user.primaryEmail. If you’re now using Stack Auth, email is at user.primaryEmail)
+  // (In your original, you had user.primaryEmail. If you’re now using Stack Auth, email is at user.primaryEmail)
   // ----
 
-  // Session logic (Stack Auth: user object replaces session.user)
+  // user logic (Stack Auth: user object replaces user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleWidgets, setVisibleWidgets] = useState<WidgetType[]>([]);

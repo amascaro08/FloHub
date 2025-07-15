@@ -96,9 +96,9 @@ export function prefetchData(urls: string[]): void {
         fetch(url, { method: 'GET', credentials: 'same-origin' })
           .then(response => response.json())
           .then(data => {
-            // Store in sessionStorage for quick access
+            // Store in userStorage for quick access
             try {
-              sessionStorage.setItem(`prefetch:${url}`, JSON.stringify(data));
+              userStorage.setItem(`prefetch:${url}`, JSON.stringify(data));
               console.log(`[Performance] Prefetched data for ${url}`);
             } catch (e) {
               console.warn(`[Performance] Failed to store prefetched data for ${url}`, e);
@@ -120,12 +120,12 @@ export function prefetchData(urls: string[]): void {
   }
 }
 
-// Get prefetched data from sessionStorage
+// Get prefetched data from userStorage
 export function getPrefetchedData<T>(url: string): T | null {
   if (typeof window === 'undefined') return null;
   
   try {
-    const data = sessionStorage.getItem(`prefetch:${url}`);
+    const data = userStorage.getItem(`prefetch:${url}`);
     return data ? JSON.parse(data) : null;
   } catch (e) {
     console.warn(`[Performance] Failed to get prefetched data for ${url}`, e);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface JournalEntryViewerProps {
@@ -16,19 +16,19 @@ interface JournalEntry {
 const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, timezone }) => {
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
+    if (typeof window !== 'undefined' && user?.primaryEmail) {
       setLoading(true);
       
       // Load entry from localStorage
-      const storageKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, date);
+      const storageKey = getDateStorageKey('journal_entry', user.primaryEmail, timezone, date);
       const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {
@@ -48,7 +48,7 @@ const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, t
       
       setLoading(false);
     }
-  }, [date, session, timezone]);
+  }, [date, user, timezone]);
 
   if (loading) {
     return (

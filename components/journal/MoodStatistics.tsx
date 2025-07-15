@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -25,17 +25,17 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const [moodData, setMoodData] = useState<MoodData[]>([]);
   const [activityCorrelations, setActivityCorrelations] = useState<{[key: string]: ActivityCorrelation}>({});
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days'>('30days');
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   // Load mood data and calculate statistics from API
   useEffect(() => {
     const fetchMoodData = async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         // Determine how many days to look back based on timeRange
         const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
         
@@ -132,10 +132,10 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchMoodData();
     }
-  }, [session, timezone, timeRange, refreshTrigger]);
+  }, [user, timezone, timeRange, refreshTrigger]);
 
   // Helper function to format date
   const formatDate = (date: Date): string => {

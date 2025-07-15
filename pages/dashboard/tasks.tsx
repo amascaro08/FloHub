@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Task, UserSettings } from "@/types/app"; // Import UserSettings
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
+import { useUser } from "@stackframe/react";
 
 // Define a more comprehensive Task type for the tasks page
 
@@ -25,9 +26,9 @@ const formatDate = (dateString: string | null) => {
 };
 
 export default function TasksPage() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const router = useRouter();
 
   const shouldFetch = status === "authenticated";
@@ -119,11 +120,11 @@ export default function TasksPage() {
     );
   }, [tasks, search]);
 
-  if (status === "loading") {
+  if (status === 'unauthenticated') {
     return <p>Loading tasks…</p>;
   }
 
-  if (!session) {
+  if (!user) {
     return <p>Please sign in to see your tasks.</p>;
   }
   return (

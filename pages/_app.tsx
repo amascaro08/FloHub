@@ -20,8 +20,8 @@ const stackClientApp = new StackClientApp({
 
 const App = ({
   Component,
-  pageProps: { session, ...pageProps },
-}: AppProps<{ session?: any }>) => {
+  pageProps: { user, ...pageProps },
+}: AppProps<{ user?: any }>) => {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 

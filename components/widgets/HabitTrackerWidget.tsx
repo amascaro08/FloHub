@@ -6,7 +6,7 @@ import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 const HabitTrackerWidget = () => {
-  const { user } = useUser();
+  const user = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);

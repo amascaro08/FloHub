@@ -1,6 +1,6 @@
 // components/ui/NotificationManager.tsx
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { 
   isPushNotificationSupported, 
   getNotificationPermission,
@@ -19,10 +19,9 @@ type NotificationState = {
 };
 
 const NotificationManager: React.FC = () => {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
+   const user = useUser();
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const [state, setState] = useState<NotificationState>({
@@ -35,7 +34,7 @@ const NotificationManager: React.FC = () => {
 
   // Check if the browser supports push notifications
   useEffect(() => {
-    if (!session) return;
+    if (!user) return;
 
     const isSupported = isPushNotificationSupported();
     const permission = getNotificationPermission();
@@ -53,7 +52,7 @@ const NotificationManager: React.FC = () => {
     } else {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [session]);
+  }, [user]);
 
   // Check if the user is already subscribed
   const checkSubscriptionStatus = async () => {
@@ -192,7 +191,7 @@ const NotificationManager: React.FC = () => {
     }
   };
 
-  if (!session) {
+  if (!user) {
     return <p className="text-sm text-gray-500">Sign in to manage notifications</p>;
   }
 

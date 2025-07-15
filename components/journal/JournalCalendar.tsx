@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -30,17 +30,17 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
   const [calendarDays, setCalendarDays] = useState<DayData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   // Generate calendar days for the current month using API data 
   useEffect(() => {
     const fetchCalendarData = async () => {
-      if (!session?.user?.primaryEmail) return;
+      if (!user?.primaryEmail) return;
       
       setIsLoading(true);
       setCalendarDays([]);
@@ -131,7 +131,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         // Check localStorage cache first
         const cachedData: {[key: string]: any} = {};
         if (typeof window !== 'undefined') {
-          const cacheKey = `journal_calendar_${year}_${month}_${session.user.primaryEmail}`;
+          const cacheKey = `journal_calendar_${year}_${month}_${user.primaryEmail}`;
           const cachedJSON = localStorage.getItem(cacheKey);
           if (cachedJSON) {
             try {
@@ -380,7 +380,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         
         // Save to cache
         if (typeof window !== 'undefined') {
-          const cacheKey = `journal_calendar_${year}_${month}_${session.user.primaryEmail}`;
+          const cacheKey = `journal_calendar_${year}_${month}_${user.primaryEmail}`;
           localStorage.setItem(cacheKey, JSON.stringify({
             timestamp: Date.now(),
             data: cachedData
@@ -410,10 +410,10 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchCalendarData();
     }
-  }, [session, currentMonth, timezone, refreshTrigger]);
+  }, [user, currentMonth, timezone, refreshTrigger]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);

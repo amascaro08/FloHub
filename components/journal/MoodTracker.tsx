@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -16,10 +16,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [moodData, setMoodData] = useState<{date: string, emoji: string, label: string}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
@@ -30,7 +30,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   // Load saved mood from API on component mount 
   useEffect(() => {
     const fetchMoodData = async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         // Fetch today's mood
@@ -97,10 +97,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchMoodData();
     }
-  }, [session, timezone]);
+  }, [user, timezone]);
 
   const handleSave = () => {
     const mood = {
@@ -110,9 +110,9 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
     };
     
     // Save to localStorage with today's date in user's timezone
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       const today = getCurrentDate(timezone);
-      const storageKey = getDateStorageKey('journal_mood', session.user.primaryEmail, timezone, today);
+      const storageKey = getDateStorageKey('journal_mood', user.primaryEmail, timezone, today);
       localStorage.setItem(storageKey, JSON.stringify(mood));
       
       // Show save confirmation
@@ -140,7 +140,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       };
       
       // Save to API with today's date in user's timezone
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         try {
@@ -188,7 +188,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       };
       
       // Save to API with today's date in user's timezone
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         const today = getCurrentDate(timezone);
         
         try {
@@ -232,7 +232,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
         };
         
         // Save to API with today's date in user's timezone
-        if (session?.user?.primaryEmail) {
+        if (user?.primaryEmail) {
           const today = getCurrentDate(timezone);
           
           try {

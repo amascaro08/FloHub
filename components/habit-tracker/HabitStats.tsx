@@ -10,7 +10,7 @@ interface HabitStatsProps {
 }
 
 const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
-  const { user } = useUser();
+  const user = useUser();
   const [stats, setStats] = useState<HabitStatsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

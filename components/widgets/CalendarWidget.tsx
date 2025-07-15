@@ -1,6 +1,6 @@
 import React, { useEffect, useState, memo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
- // Import useSession
+import { useUser } from '@stackframe/react';
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 
@@ -53,18 +53,16 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 function CalendarWidget() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+  const user = useUser();
   const { mutate } = useSWRConfig();
 
-  if (status === 'loading') { // Correctly check for loading status
+  if (status === 'unauthenticated') { // Correctly check for loading status
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   // Fetch persistent user settings via SWR
   const { data: loadedSettings, error: settingsError } =
-    useSWR<CalendarSettings>(session ? "/api/userSettings" : null, fetcher);
+    useSWR<CalendarSettings>(user ? "/api/userSettings" : null, fetcher);
 
   // Local state derived from loadedSettings or defaults
   const [selectedCals, setSelectedCals] = useState<string[]>(['primary']);

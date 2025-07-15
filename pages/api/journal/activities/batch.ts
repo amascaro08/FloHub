@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Use getToken instead of getSession for better compatibility with API routes
+  // Use getToken instead of getuser for better compatibility with API routes
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,

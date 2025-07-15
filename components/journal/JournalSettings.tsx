@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 
 interface JournalSettingsProps {
   onClose: () => void;
@@ -26,17 +26,17 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   const [pinError, setPinError] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   // Load saved settings from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
-      const savedSettings = localStorage.getItem(`journal_settings_${session.user.primaryEmail}`);
+    if (typeof window !== 'undefined' && user?.primaryEmail) {
+      const savedSettings = localStorage.getItem(`journal_settings_${user.primaryEmail}`);
       
       if (savedSettings) {
         try {
@@ -47,7 +47,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
         }
       }
     }
-  }, [session]);
+  }, [user]);
 
   const handleSaveSettings = () => {
     // Validate PIN if PIN protection is enabled
@@ -64,8 +64,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
     }
     
     // Save settings to localStorage
-    if (session?.user?.primaryEmail) {
-      localStorage.setItem(`journal_settings_${session.user.primaryEmail}`, JSON.stringify(settings));
+    if (user?.primaryEmail) {
+      localStorage.setItem(`journal_settings_${user.primaryEmail}`, JSON.stringify(settings));
       
       // Register or unregister reminder notification
       if (settings.reminderEnabled) {
@@ -87,7 +87,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   };
 
   const handleExportData = async () => {
-    if (!session?.user?.primaryEmail) return;
+    if (!user?.primaryEmail) return;
     
     setExportLoading(true);
     
@@ -107,7 +107,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         
-        if (!key || !key.includes(session.user.primaryEmail)) continue;
+        if (!key || !key.includes(user.primaryEmail)) continue;
         
         if (key.includes('journal_entry')) {
           const dateKey = key.split('_').pop() || '';

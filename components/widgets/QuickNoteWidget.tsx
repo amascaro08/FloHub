@@ -6,6 +6,8 @@ import useSWR from "swr";
 import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
 import type { UserSettings, Note } from "@/types/app";
 import type { GetNotesResponse } from "@/pages/api/notes";
+import { useUser } from '@stackframe/react';
+
 
 // Lazy load CreatableSelect to improve initial load time
 const CreatableSelect = dynamic(() => import('react-select/creatable'), {
@@ -16,11 +18,10 @@ const CreatableSelect = dynamic(() => import('react-select/creatable'), {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+  const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const [content, setContent] = useState("");
@@ -107,7 +108,7 @@ function QuickNoteWidget() {
 
 
   // Simplified loading state
-  if (!session) return <p>Please sign in to add notes.</p>;
+  if (!user) return <p>Please sign in to add notes.</p>;
 
   if (settingsError) {
     console.error("Error loading settings:", settingsError);

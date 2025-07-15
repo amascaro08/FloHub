@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next'
-import { getSession } from 'next-auth/react'
+import { useUser } from "@stackframe/react";
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -87,10 +87,10 @@ export default function Index() {
 
 // Server-side authentication check
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const session = await getSession(ctx);
+  const user = useUser();
   
   // If user is already authenticated, redirect to the dashboard
-  if (session) {
+  if (user) {
     return {
       redirect: {
         destination: '/dashboard',

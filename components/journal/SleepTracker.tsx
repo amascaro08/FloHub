@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -18,10 +18,10 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   const [sleepHours, setSleepHours] = useState<number>(7);
   const [sleepData, setSleepData] = useState<{date: string, quality: string, hours: number}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   
@@ -30,7 +30,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   // Load saved sleep data from API
   useEffect(() => {
     const fetchSleepData = async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         try {
           const response = await axios.get(`/api/journal/sleep?date=${today}`, {
             withCredentials: true
@@ -92,14 +92,14 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchSleepData();
     }
-  }, [session, today, timezone]);
+  }, [user, today, timezone]);
   
   // Save sleep data to API
   const handleSaveSleep = async (quality: string, hours: number) => {
-    if (!session?.user?.primaryEmail) return;
+    if (!user?.primaryEmail) return;
     
     const sleepData = { quality, hours };
     

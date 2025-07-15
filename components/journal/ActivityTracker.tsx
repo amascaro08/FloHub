@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -16,10 +16,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const [userActivities, setUserActivities] = useState<string[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   
@@ -54,10 +54,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Load saved activities and user's custom activities from API
   useEffect(() => {
     const fetchActivitiesData = async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         // Load user's custom activities
         try {
-          const customActivitiesKey = `journal_custom_activities_${session.user.primaryEmail}`;
+          const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
           const savedCustomActivities = localStorage.getItem(customActivitiesKey);
           
           if (savedCustomActivities) {
@@ -120,15 +120,15 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       }
     };
     
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       fetchActivitiesData();
     }
-  }, [session, entryDate, timezone]);
+  }, [user, entryDate, timezone]);
 
   const handleSave = () => {
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       // Save selected activities for this date
-      const activitiesKey = getDateStorageKey('journal_activities', session.user.primaryEmail, timezone, entryDate);
+      const activitiesKey = getDateStorageKey('journal_activities', user.primaryEmail, timezone, entryDate);
       localStorage.setItem(activitiesKey, JSON.stringify(selectedActivities));
       
       // Show save confirmation
@@ -144,7 +144,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     // Recalculate activity stats after saving
     setTimeout(() => {
       const calculateActivityStats = () => {
-        if (session?.user?.primaryEmail) {
+        if (user?.primaryEmail) {
           const stats: {[key: string]: number} = {};
           const last30Days = [];
           
@@ -159,7 +159,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           
           // Count activities for each day
           last30Days.forEach(dateStr => {
-            const key = getDateStorageKey('journal_activities', session.user.primaryEmail || '', timezone || '', dateStr);
+            const key = getDateStorageKey('journal_activities', user.primaryEmail || '', timezone || '', dateStr);
             const savedActivities = localStorage.getItem(key);
             
             if (savedActivities) {
@@ -208,7 +208,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     
     // Auto-save when activities are updated
     setTimeout(async () => {
-      if (session?.user?.primaryEmail) {
+      if (user?.primaryEmail) {
         try {
           console.log("Saving activities:", newActivities);
           
@@ -249,8 +249,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       setUserActivities(newUserActivities);
       
       // Save custom activities to localStorage
-      if (session?.user?.primaryEmail) {
-        const customActivitiesKey = `journal_custom_activities_${session.user.primaryEmail}`;
+      if (user?.primaryEmail) {
+        const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
         localStorage.setItem(customActivitiesKey, JSON.stringify(newUserActivities));
       }
       
@@ -270,7 +270,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       // Auto-save when custom activity is added
       setTimeout(async () => {
-        if (session?.user?.primaryEmail) {
+        if (user?.primaryEmail) {
           try {
             // Save selected activities for this date
             await axios.post('/api/journal/activities', {
@@ -302,7 +302,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       // Auto-save when existing activity is selected
       setTimeout(async () => {
-        if (session?.user?.primaryEmail) {
+        if (user?.primaryEmail) {
           try {
             // Save selected activities for this date
             await axios.post('/api/journal/activities', {

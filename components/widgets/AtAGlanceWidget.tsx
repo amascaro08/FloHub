@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { marked } from 'marked';
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
@@ -44,13 +44,13 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-  const sessionHookResult = useSession({ required: false });
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
+  const userHookResult = useUser({ required: false });
+  const user = userHookResult?.data ? userHookResult.data : null;
   
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
-  const userName = session?.user?.name || "User";
+  const userName = user?.name || "User";
   
   // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
@@ -73,7 +73,7 @@ const AtAGlanceWidget = () => {
 
   // Fetch user settings with SWR for caching
   const { data: loadedSettings, error: settingsError } = useSWR(
-    session ? "/api/userSettings" : null,
+    user ? "/api/userSettings" : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60000 } // Cache for 1 minute
   );
@@ -117,7 +117,7 @@ const AtAGlanceWidget = () => {
 
   // Skip cache and always fetch fresh data
   useEffect(() => {
-    if (!session || dataFetchStarted) return;
+    if (!user || dataFetchStarted) return;
     
     try {
       // Clear any existing cache
@@ -132,11 +132,11 @@ const AtAGlanceWidget = () => {
       console.error("Error accessing localStorage:", err);
       setDataFetchStarted(true);
     }
-  }, [session, dataFetchStarted]);
+  }, [user, dataFetchStarted]);
 
   // Main data fetching effect
   useEffect(() => {
-    if (!session || !loadedSettings || !dataFetchStarted) return;
+    if (!user || !loadedSettings || !dataFetchStarted) return;
     
     let isMounted = true; // Flag to prevent state updates after unmount
     
@@ -535,25 +535,25 @@ Have a purr-fect day!`;
       }
     };
 
-    // Fetch data when session and loadedSettings are available
+    // Fetch data when user and loadedSettings are available
     fetchData();
     
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
     };
-  }, [session, loadedSettings, parseMarkdown, dataFetchStarted]); 
+  }, [user, loadedSettings, parseMarkdown, dataFetchStarted]); 
 
   let loadingMessage = "Planning your day...";
   if (loading) {
     // Determine a more specific loading message based on what's being fetched
     if (!loadedSettings) {
       loadingMessage = "Loading settings...";
-    } else if (session && loadedSettings && !upcomingEvents.length && !tasks.length && !notes.length && !meetings.length) {
+    } else if (user && loadedSettings && !upcomingEvents.length && !tasks.length && !notes.length && !meetings.length) {
        loadingMessage = "Gathering your day's information...";
-    } else if (session && loadedSettings && upcomingEvents.length > 0 && tasks.length === 0 && notes.length === 0 && meetings.length === 0) {
+    } else if (user && loadedSettings && upcomingEvents.length > 0 && tasks.length === 0 && notes.length === 0 && meetings.length === 0) {
         loadingMessage = "Checking for tasks, notes, and meetings...";
-    } else if (session && loadedSettings && upcomingEvents.length === 0 && tasks.length > 0 && notes.length === 0 && meetings.length === 0) {
+    } else if (user && loadedSettings && upcomingEvents.length === 0 && tasks.length > 0 && notes.length === 0 && meetings.length === 0) {
         loadingMessage = "Checking for events, notes, and meetings...";
     } else {
         loadingMessage = "Compiling your daily summary...";

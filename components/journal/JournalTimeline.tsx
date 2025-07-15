@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -33,17 +33,17 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Generate dates for the timeline for the current month
   useEffect(() => {
-    if (session?.user?.primaryEmail) {
+    if (user?.primaryEmail) {
       const fetchTimelineData = async () => {
         const entriesMap: {[key: string]: boolean} = {};
         
@@ -58,7 +58,7 @@ const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
         const showRecent = month === today.getMonth() && year === today.getFullYear();
         
         // Check localStorage cache first
-        const cacheKey = `journal_timeline_${year}_${month}_${session.user.primaryEmail}`;
+        const cacheKey = `journal_timeline_${year}_${month}_${user.primaryEmail}`;
         let cachedData: {entries: JournalEntry[], hasEntries: {[key: string]: boolean}} | null = null;
         
         if (typeof window !== 'undefined') {
@@ -365,7 +365,7 @@ const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
       fetchTimelineData();
       
     }
-  }, [session, currentMonth, timezone, refreshTrigger, autoScrollToLatest]);
+  }, [user, currentMonth, timezone, refreshTrigger, autoScrollToLatest]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);

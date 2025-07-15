@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";
 import { query } from '@/lib/neon';
 
 // Define types for our analytics data
@@ -57,10 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get session and verify admin access
-    const session = await getSession({ req });
+    // Get user and verify admin access
+    const user = useUser();
     
-    if (!session || session.user?.primaryEmail !== 'amascaro08@gmail.com') {
+    if (!user || user?.primaryEmail !== 'amascaro08@gmail.com') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
@@ -197,7 +197,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
 
     // Get performance metrics
     const { rows: performanceRows } = await query(
-      `SELECT fcp, lcp, fid, cls, ttfb, "loadComplete", "navStart", "sessionDuration", timestamp FROM "analytics_performance_metrics" WHERE timestamp >= $1`,
+      `SELECT fcp, lcp, fid, cls, ttfb, "loadComplete", "navStart", "userDuration", timestamp FROM "analytics_performance_metrics" WHERE timestamp >= $1`,
       [startTimestampMs]
     );
 
@@ -209,7 +209,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
       avgCLS: { sum: 0, count: 0 },
       avgTTFB: { sum: 0, count: 0 },
       avgPageLoadTime: { sum: 0, count: 0 },
-      avgSessionDuration: { sum: 0, count: 0 }
+      avguserDuration: { sum: 0, count: 0 }
     };
 
     performanceRows.forEach(data => {
@@ -244,9 +244,9 @@ async function fetchAnalyticsData(startTimestampMs: number) {
         metricSums.avgPageLoadTime.count += 1;
       }
       
-      if (data.sessionDuration) {
-        metricSums.avgSessionDuration.sum += data.sessionDuration;
-        metricSums.avgSessionDuration.count += 1;
+      if (data.userDuration) {
+        metricSums.avguserDuration.sum += data.userDuration;
+        metricSums.avguserDuration.count += 1;
       }
     });
 
@@ -315,7 +315,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
         { metric: 'avgCLS', value: 0.15 },
         { metric: 'avgTTFB', value: 320 },
         { metric: 'avgPageLoadTime', value: 1800 },
-        { metric: 'avgSessionDuration', value: 8.5 },
+        { metric: 'avguserDuration', value: 8.5 },
       ];
     }
 

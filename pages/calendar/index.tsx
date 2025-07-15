@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
   // Check if we have a cached response that's less than 5 minutes old
-  const cachedData = sessionStorage.getItem(url);
+  const cachedData = localStorage.getItem(url);
   if (cachedData) {
     try {
       const { data, timestamp } = JSON.parse(cachedData);
@@ -33,7 +33,7 @@ const fetcher = async (url: string) => {
   
   // Cache the response
   try {
-    sessionStorage.setItem(url, JSON.stringify({
+    localStorage.setItem(url, JSON.stringify({
       data,
       timestamp: Date.now()
     }));
@@ -46,22 +46,22 @@ const fetcher = async (url: string) => {
 
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
-  const sessionHookResult = useSession();
-  const session = sessionHookResult?.data ? sessionHookResult.data : null;
-  const status = sessionHookResult?.status || "unauthenticated";
+   const user = useUser();
+  const status = user ? "authenticated" : "unauthenticated";
+
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
-    session ? '/api/userSettings' : null,
+    user ? '/api/userSettings' : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
   );
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<any[]>(
-    session ? '/api/calendar/list' : null,
+    user ? '/api/calendar/list' : null,
     fetcher
   );
 
@@ -74,14 +74,14 @@ const CalendarPage = () => {
 
   // Memoize the API URL to prevent unnecessary re-fetching
   const calendarApiUrl = useMemo(() => {
-    if (!session || !settings?.selectedCals) return null;
+    if (!user || !settings?.selectedCals) return null;
     
     const now = new Date();
     const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
     
     return `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true`;
-  }, [session, settings?.selectedCals]);
+  }, [user, settings?.selectedCals]);
   
   // Use SWR for calendar data with optimized settings
   const { data: calendarData, error: calendarError } = useSWR(
@@ -266,13 +266,13 @@ const CalendarPage = () => {
   }, []);
 
   const handleViewEvent = useCallback((event: CalendarEvent) => {
-    if (session) {
+    if (user) {
       setSelectedEvent(event);
     }
-  }, [session]);
+  }, [user]);
   
   // Handle authentication and loading states with better UI
-  if (!session || isLoading) {
+  if (!user || isLoading) {
     return (
       <div className="container mx-auto py-10">
         <h1 className="text-2xl font-bold mb-5">Calendar</h1>

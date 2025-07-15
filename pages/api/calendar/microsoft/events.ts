@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";
 import { Client } from '@microsoft/microsoft-graph-client';
 import { getMicrosoftToken, MicrosoftAuthProvider } from '../../../../lib/microsoftAuth';
 import { CalendarEvent } from '../../calendar';
@@ -19,15 +19,16 @@ export default async function handler(
   }
 
   try {
-    // Get the current user session
-    const session = await getSession({ req });
+    // Get the current user user
+    const user = useUser();
+
     
-    if (!session || !session.user) {
+    if (!user || !user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get Microsoft tokens for the user
-    const tokens = await getMicrosoftToken(session.user.primaryEmail || '');
+    const tokens = await getMicrosoftToken(user.primaryEmail || '');
     
     if (!tokens || !tokens.access_token) {
       return res.status(401).json({ error: 'Microsoft authentication required' });

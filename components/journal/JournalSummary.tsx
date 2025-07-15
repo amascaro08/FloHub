@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 
 interface JournalSummaryProps {
   refreshTrigger?: number; // Trigger to refresh the summary 
@@ -16,15 +16,15 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
   const [topThemes, setTopThemes] = useState<{theme: string, count: number}[]>([]);
   const [floCatsSummary, setFloCatsSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
+    if (typeof window !== 'undefined' && user?.primaryEmail) {
       // Load mood data from the last 30 days
       const moodEntries: MoodData[] = [];
       const today = new Date();
@@ -36,7 +36,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
         const dateStr = date.toISOString().split('T')[0];
         
         // Try to load mood for this date
-        const savedMood = localStorage.getItem(`journal_mood_${session.user.primaryEmail}_${dateStr}`);
+        const savedMood = localStorage.getItem(`journal_mood_${user.primaryEmail}_${dateStr}`);
         
         if (savedMood) {
           try {
@@ -168,7 +168,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
       
       setFloCatsSummary(generateFloCatsSummary());
     }
-  }, [session, refreshTrigger]);
+  }, [user, refreshTrigger]);
 
 
   return (

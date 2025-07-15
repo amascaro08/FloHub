@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/react";;
 import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface OnThisDayProps {
@@ -15,15 +15,15 @@ interface HistoricalEntry {
 
 const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   const [historicalEntry, setHistoricalEntry] = useState<HistoricalEntry | null>(null);
-  const { data: session } = useSession();
-  const sessionData = session ? session : null;
+ const user = useUser();
+  const userData = user ? user : null;
 
-  if (!session) {
+  if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && session?.user?.primaryEmail) {
+    if (typeof window !== 'undefined' && user?.primaryEmail) {
       // Create date objects with the user's timezone
       const today = new Date();
       const lastYear = new Date(today);
@@ -33,7 +33,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
       const lastYearDate = `${lastYear.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
       
       // Try to load entry from this day last year
-      const storageKey = getDateStorageKey('journal_entry', session.user.primaryEmail, timezone, lastYearDate);
+      const storageKey = getDateStorageKey('journal_entry', user.primaryEmail, timezone, lastYearDate);
       const savedEntry = localStorage.getItem(storageKey);
       
       if (savedEntry) {
@@ -49,7 +49,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
         }
       }
     }
-  }, [session, timezone]);
+  }, [user, timezone]);
 
   const formatDateDisplay = (dateStr: string) => {
     return formatDate(dateStr, timezone, {
