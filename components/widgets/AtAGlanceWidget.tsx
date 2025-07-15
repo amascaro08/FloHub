@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
-import { useUser } from "@stackframe/react";;
+import { useUser } from "@stackframe/react";
 import { marked } from 'marked';
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
