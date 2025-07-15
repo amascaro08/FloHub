@@ -326,8 +326,7 @@ async function trackuserEnd(): Promise<void> {
 // React hook to use performance monitoring in components
 export function usePerformanceMonitoring() {
   // Defensive: useUser may be undefined if next-auth is not initialized or during SSR
-  const userHook = useUser ? useUser() : { data: undefined };
-  const user = userHook?.data;
+  const user = useUser()
   
   useEffect(() => {
     startPerformanceMonitoring();

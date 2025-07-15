@@ -44,13 +44,12 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-  const userHookResult = useUser({ required: false });
-  const user = userHookResult?.data ? userHookResult.data : null;
+const user = useUser()
   
   if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
-  const userName = user?.name || "User";
+  const userName = useUser() || "User";
   
   // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
