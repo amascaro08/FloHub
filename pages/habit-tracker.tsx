@@ -1,10 +1,10 @@
 import React from 'react';
 import Head from 'next/head';
 import HabitCalendar from "@/components/habit-tracker/HabitCalendar";
-import { useAuth } from '@/components/ui/AuthContext';
+import { useUser } from '@/components/ui/AuthContext';
 
 const HabitTrackerPage = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
 
   return (
     <>

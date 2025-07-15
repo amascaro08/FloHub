@@ -3,12 +3,12 @@ import { useSession, signIn } from "next-auth/react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import { UserSettings } from "@/types/app";
-import { useAuth } from "@/components/ui/AuthContext";
+import { useUser } from "@/components/ui/AuthContext";
 import dynamic from 'next/dynamic';
 
 const SettingsModularPage = () => {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout } = useUser();
 
   // State for settings
   const initialSettings: UserSettings = {

@@ -1,20 +1,11 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
-import Layout from '@/components/ui/Layout'
 import { ChatProvider } from '@/components/assistant/ChatContext'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { usePageViewTracking } from '@/lib/analyticsTracker'
 import dynamic from 'next/dynamic'
 import { StackClientApp, StackProvider } from '@stackframe/react'
-
-const DynamicComponent = dynamic(() => import('../pages/index'), { ssr: false })
-
-const AnalyticsMonitor = () => {
-  usePageViewTracking()
-  return null
-}
 
 const ClientSideCheck = dynamic(
   () => import('../components/ClientSideCheck'),
@@ -34,11 +25,6 @@ const App = ({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const showLayout =
-    !router.pathname.includes('/login') &&
-    !router.pathname.includes('/register') &&
-    router.pathname !== '/'
-
   useEffect(() => {
     const handleStart = () => setIsLoading(true)
     const handleComplete = () => setIsLoading(false)
@@ -54,17 +40,14 @@ const App = ({
     }
   }, [router])
 
-  // Service Worker for PWA (optional—remove if not needed)
+  // Service Worker registration (optional)
   useEffect(() => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-            updateViaCache: process.env.NODE_ENV === 'development' ? 'none' : 'imports',
-          })
+          await navigator.serviceWorker.register('/sw.js', { scope: '/' })
         } catch (err) {
-          console.error('Service Worker registration failed: ', err)
+          // Silent fail
         }
       }
     }
@@ -79,15 +62,12 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-
-      {/* ONLY StackProvider + ChatProvider now */}
       <StackProvider app={stackClientApp}>
         <ChatProvider>
           <ClientSideCheck
             Component={Component}
             pageProps={pageProps}
             isLoading={isLoading}
-            showLayout={showLayout}
           />
         </ChatProvider>
       </StackProvider>

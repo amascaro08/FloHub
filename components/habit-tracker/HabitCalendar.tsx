@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // UI components and context
-import { useAuth } from '@/components/ui/AuthContext';
+import { useUser } from '@/components/ui/AuthContext';
 import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 // Habit tracker components
@@ -23,7 +23,7 @@ import {
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
-  const auth = useAuth();
+  const auth = useUser();
   const user = auth?.user;
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);

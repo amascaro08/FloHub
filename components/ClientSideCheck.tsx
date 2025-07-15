@@ -1,38 +1,10 @@
-import { useAuth } from '@/components/ui/AuthContext';
-import Layout from '@/components/ui/Layout';
-import { NextPage } from 'next';
+import { useUser } from '@stackframe/react'
 
-interface ClientSideCheckProps {
-  Component: NextPage;
-  pageProps: any;
-  isLoading: boolean;
-  showLayout: boolean;
+export default function ClientSideCheck({ Component, pageProps, isLoading }: any) {
+  const user = useUser()
+
+  // Redirect or render based on user auth state, e.g.:
+  if (isLoading) return <div>Loading...</div>
+  // You can adjust this to fit your actual logic
+  return <Component {...pageProps} />
 }
-
-const ClientSideCheck: React.FC<ClientSideCheckProps> = ({ Component, pageProps, isLoading, showLayout }) => {
-  const { status } = useAuth();
-  console.log("ClientSideCheck status:", status);
-  return (
-    <>
-      {status === "authenticated" ? (
-        <Layout>
-          {isLoading ? (
-            console.log("Layout component rendered"),
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-pulse flex flex-col items-center">
-                <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-16 w-16 mb-4"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-              </div>
-            </div>
-          ) : (
-            <Component {...pageProps} />
-          )}
-        </Layout>
-      ) : (
-        <Component {...pageProps} />
-      )}
-    </>
-  );
-};
-
-export default ClientSideCheck;

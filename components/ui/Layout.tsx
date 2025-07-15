@@ -8,7 +8,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
-import { useAuth } from "./AuthContext";
+import { useUser } from "./AuthContext";
 import { useChat } from '../assistant/ChatContext'; // Import useChat from context
 
 const nav = [
@@ -28,14 +28,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false); // State for desktop sidebar collapse
   const isClient = typeof window !== 'undefined';
-  const auth = isClient ? useAuth() : null;
+  const auth = isClient ? useUser() : null;
   const [topInput, setTopInput] = useState('');
 
   // Safely destructure auth values with fallbacks for SSR, including status
   const isLocked = auth?.isLocked || false;
   const toggleLock = auth?.toggleLock || (() => {});
   const user = auth?.user || null;
-  const authStatus = auth?.status; // Get status from useAuth
+  const authStatus = auth?.status; // Get status from useUser
   
   // Check if user is admin
   const isAdmin = user?.email === 'amascaro08@gmail.com';

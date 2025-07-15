@@ -1,5 +1,5 @@
-import AuthLayout from '@/components/ui/AuthLayout';
-import { OAuthButtonGroup } from '@stackframe/react';
+import AuthLayout from '@/components/ui/AuthLayout'
+import { OAuthButtonGroup } from '@stackframe/react'
 
 export default function LoginPage() {
   return (
@@ -16,5 +16,5 @@ export default function LoginPage() {
         <a href="/privacy" className="underline">Privacy Policy</a>.
       </p>
     </AuthLayout>
-  );
+  )
 }

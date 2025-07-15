@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useUser } from '@/components/ui/AuthContext';
 import { calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitStats as HabitStatsType } from '@/types/habit-tracker';
 import { XMarkIcon, FireIcon, TrophyIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/solid';
@@ -10,7 +10,7 @@ interface HabitStatsProps {
 }
 
 const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [stats, setStats] = useState<HabitStatsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

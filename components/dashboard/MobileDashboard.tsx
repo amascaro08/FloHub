@@ -4,7 +4,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
-import { useAuth } from "../ui/AuthContext";
+import { useUser } from "../ui/AuthContext";
 
 // Widget skeleton for loading state
 const WidgetSkeleton = () => (
@@ -49,8 +49,8 @@ export default function MobileDashboard() {
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
-  // Safely use useAuth only on client side
-  const auth = isClient ? useAuth() : null;
+  // Safely use useUser only on client side
+  const auth = isClient ? useUser() : null;
   const isLocked = auth?.isLocked || false;
   
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);

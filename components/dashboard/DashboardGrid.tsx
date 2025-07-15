@@ -30,7 +30,7 @@ const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 
 import { ReactElement } from "react";
-import { useAuth } from "../ui/AuthContext";
+import { useUser } from "../ui/AuthContext";
 import { useSession } from "next-auth/react";
 import { UserSettings } from "@/types/app";
 
@@ -100,8 +100,8 @@ const DashboardGrid = () => {
   if (!session) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
-  // Safely use useAuth only on client side
-  const auth = isClient ? useAuth() : null;
+  // Safely use useUser only on client side
+  const auth = isClient ? useUser() : null;
   const isLocked = auth?.isLocked || false;
   
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
