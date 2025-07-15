@@ -1,10 +1,21 @@
-import { useUser } from '@stackframe/react'
+import { useEffect, useState } from "react";
+import type { ComponentType } from "react";
+import { useUser } from "@stackframe/react";
 
-export default function ClientSideCheck({ Component, pageProps, isLoading }: any) {
-  const user = useUser()
+// Accepts { Component, pageProps, isLoading }
+export default function ClientSideCheck(props: any) {
+  const [mounted, setMounted] = useState(false);
 
-  // Redirect or render based on user auth state, e.g.:
-  if (isLoading) return <div>Loading...</div>
-  // You can adjust this to fit your actual logic
-  return <Component {...pageProps} />
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only call useUser after mount, on client
+  // (avoids server-side rendering error)
+  const user = mounted ? useUser() : undefined;
+
+  if (props.isLoading) return <div>Loading...</div>;
+
+  // Optionally: You can check user status here, or just pass down
+  return <props.Component {...props.pageProps} />;
 }
