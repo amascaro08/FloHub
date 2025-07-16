@@ -87,7 +87,6 @@ const nextConfig = {
         },
         alias: {
           ...(config.resolve?.alias || {}),
-          '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
           'react/jsx-runtime': require.resolve('react/jsx-runtime'),
           'react/jsx-dev-runtime': require.resolve('react/jsx-dev-runtime'),
         }
