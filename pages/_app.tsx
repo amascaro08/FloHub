@@ -5,8 +5,11 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
-import { StackProvider } from '@stackframe/stack'
-import { stackClientApp } from '@/stack/client'
+
+const ClientStackProvider = dynamic(
+  () => import('../components/ClientStackProvider'),
+  { ssr: false }
+)
 
 const ClientSideCheck = dynamic(
   () => import('../components/ClientSideCheck'),
@@ -58,7 +61,7 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      <StackProvider app={stackClientApp}>
+      <ClientStackProvider>
         <ChatProvider>
           <ClientSideCheck
             Component={Component}
@@ -66,7 +69,7 @@ const App = ({
             isLoading={isLoading}
           />
         </ChatProvider>
-      </StackProvider>
+      </ClientStackProvider>
     </>
   )
 }

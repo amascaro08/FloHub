@@ -9,7 +9,6 @@ import {
   varchar,
   jsonb,
 } from 'drizzle-orm/pg-core';
-import type { AdapterAccount } from '@auth/core/adapters';
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
 // USERS TABLE
@@ -30,7 +29,7 @@ export const accounts = pgTable(
     userId: integer("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<AdapterAccount["type"]>().notNull(),
+    type: text("type").notNull(),
     provider: text("provider").notNull(),
     providerAccountId: text("providerAccountId").notNull(),
     refresh_token: text("refresh_token"),

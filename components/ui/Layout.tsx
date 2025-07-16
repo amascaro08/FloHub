@@ -1,7 +1,6 @@
 'use client'
 
 import { ReactNode, useState, useEffect, memo } from 'react'
-import { stackClientApp } from '@/stack/client';
 import { useRouter } from 'next/router';
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
 import Link from 'next/link'
