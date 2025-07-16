@@ -50,7 +50,7 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
-  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui', 'react', 'react-dom'],
+  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui'],
   eslint: {
     // 🚫 Don't block the build on lint errors
     ignoreDuringBuilds: true,
@@ -74,27 +74,28 @@ const nextConfig = {
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
   },
   webpack: (config: WebpackConfig, { isServer }: { isServer: boolean }) => {
-    if (!isServer) {
-      // Don't resolve 'fs', 'dns' module on the client to prevent this error
-      config.resolve = {
-        ...config.resolve,
-        fallback: {
-          ...(config.resolve?.fallback || {}),
-          fs: false,
-          dns: false,
-          net: false,
-          tls: false,
-          'pg-native': false, // Ignore pg-native module
-        },
-        alias: {
-          ...(config.resolve?.alias || {}),
-          '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
-          'react': require.resolve('react'),
-          'react-dom': require.resolve('react-dom'),
-          'react/jsx-runtime': require.resolve('react/jsx-runtime'),
-        }
-      };
-    }
+    // Ensure React always resolves to the root version for both server and client builds
+    config.resolve = {
+      ...config.resolve,
+      alias: {
+        ...(config.resolve?.alias || {}),
+        '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
+      },
+      ...(isServer
+        ? {}
+        : {
+            // Prevent client bundles from trying to include Node built-ins
+            fallback: {
+              ...(config.resolve?.fallback || {}),
+              fs: false,
+              dns: false,
+              net: false,
+              tls: false,
+              'pg-native': false,
+            },
+          }),
+    };
+
     return config;
   },
 };
