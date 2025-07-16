@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "@/lib/neon";
 
 // Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
@@ -28,11 +28,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ message: "Not signed in" });
   }
-  const userEmail = token.email as string;
+  const userEmail = user.email as string;
 
   const { ids } = req.body; // Assuming an array of note IDs is sent in the request body
 

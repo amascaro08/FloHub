@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "@/lib/neon";
 // You might need a PDF generation library here, e.g., 'pdfmake' or 'html-pdf'
 // import PdfPrinter from 'pdfmake'; // Example using pdfmake
@@ -36,11 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ message: "Not signed in" });
   }
-  const userEmail = token.email as string;
+  const userEmail = user.email as string;
 
   const { ids } = req.body; // Expecting an array of note IDs
 

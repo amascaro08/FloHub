@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "@/lib/neon";
 
 export default async function handler(
@@ -11,12 +11,9 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const user = await auth(req);
 
-  const userEmail = token?.email as string | undefined; // User email can be undefined for anonymous tracking
+  const userEmail = user?.email as string | undefined; // User email can be undefined for anonymous tracking
   const { eventType, eventData } = req.body;
 
   if (!eventType) {

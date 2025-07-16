@@ -1,6 +1,6 @@
 // pages/api/notifications/unsubscribe.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 
 type Data = {
@@ -19,12 +19,9 @@ export default async function handler(
 
   try {
     // Get user token
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const user = await auth(req);
     
-    if (!token?.email) {
+    if (!user?.email) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 

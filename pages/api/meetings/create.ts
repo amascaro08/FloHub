@@ -1,7 +1,7 @@
 // pages/api/meetings/create.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 // Assuming Firebase will be used for data storage
 import { query } from "../../../lib/neon";
 import OpenAI from "openai"; // Import OpenAI
@@ -35,14 +35,11 @@ export default async function handler(
   }
 
   // 1) Authenticate via JWT
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = token.email as string; // Using email as a simple user identifier
+  const userId = user.email as string; // Using email as a simple user identifier
 
   // 2) Validate input
   const { title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda } = req.body as CreateMeetingNoteRequest; // Include new fields

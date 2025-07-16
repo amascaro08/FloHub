@@ -1,6 +1,6 @@
 // pages/api/notifications/test.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 import webpush from 'web-push';
 
@@ -39,16 +39,13 @@ export default async function handler(
 
   try {
     // Get user token
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const user = await auth(req);
     
-    if (!token?.email) {
+    if (!user?.email) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const userEmail = token.email as string;
+    const userEmail = user.email as string;
     
     // Get user's subscriptions from Firestore
     const { rows: subscriptions } = await query(

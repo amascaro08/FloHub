@@ -1,6 +1,6 @@
 // pages/api/notifications/send.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 import webpush from 'web-push';
 
@@ -28,15 +28,12 @@ export default async function handler(
 
   try {
     // Get user token for authentication
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const user = await auth(req);
     
     // Check if request is from an authorized source (either a logged-in user or an internal API)
     const isInternalRequest = req.headers['x-api-key'] === process.env.INTERNAL_API_KEY;
     
-    if (!token?.email && !isInternalRequest) {
+    if (!user?.email && !isInternalRequest) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -61,10 +58,10 @@ export default async function handler(
     }
 
     // If it's a user request, ensure they can only send to themselves
-    if (token?.email && token.email !== userEmail && !isInternalRequest) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You can only send notifications to yourself' 
+    if (user?.email && user.email !== userEmail && !isInternalRequest) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only send notifications to yourself'
       });
     }
     

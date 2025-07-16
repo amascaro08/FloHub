@@ -1,7 +1,7 @@
 // pages/api/assistant/event.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken }                            from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
 type EventRequest  = { eventId: string };
 type EventResponse = { success: boolean; error?: string };
@@ -16,14 +16,11 @@ export default async function handler(
   }
 
   // ── 1) Authenticate ───────────────────────────────────────────────────
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ success: false, error: "Not signed in" });
   }
-  const email = token.email as string;
+  const email = user.email as string;
 
   // ── 2) Validate payload ─────────────────────────────────────────────
   const { eventId } = req.body as EventRequest;

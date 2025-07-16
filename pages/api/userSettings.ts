@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "../../lib/neon";
 import { UserSettings } from "../../types/app"; // Import UserSettings from types
 
@@ -11,12 +11,12 @@ export default async function handler(
 ) {
   // Disable caching to always return freshest data
   res.setHeader('Cache-Control', 'no-store');
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const userEmail = token.email;
+  const userEmail = user.email;
   // Use a more general settings document instead of just "calendar"
 
   if (req.method === "GET") {

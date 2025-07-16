@@ -1,7 +1,7 @@
 // pages/api/meetings/index.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "../../../lib/neon";
 import type { Note } from "@/types/app"; // Import shared Note type
 
@@ -20,14 +20,11 @@ export default async function handler(
   }
 
   // 1) Authenticate via JWT
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = token.email as string; // Using email as a simple user identifier
+  const userId = user.email as string; // Using email as a simple user identifier
 
   try {
     // 2) Fetch meeting notes for the authenticated user from the database

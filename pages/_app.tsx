@@ -5,20 +5,14 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
-import { StackClientApp, StackProvider } from '@stackframe/stack'
+import { StackProvider } from '@stackframe/stack'
+import { stackClientApp } from '@/stack/client'
 
 const ClientSideCheck = dynamic(
   () => import('../components/ClientSideCheck'),
   { ssr: false }
 )
 
-const isServer = typeof window === 'undefined';
-
-const stackClientApp = new StackClientApp({
-  projectId: process.env.NEXT_PUBLIC_STACK_PROJECT_ID as string,
-  publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY as string,
-  tokenStore: isServer ? 'memory' : 'cookie',
-})
 
 const App = ({
   Component,

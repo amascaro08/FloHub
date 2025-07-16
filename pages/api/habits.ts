@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { getUserHabits } from '@/lib/habitService';
 
 export default async function handler(
@@ -7,16 +7,13 @@ export default async function handler(
   res: NextApiResponse
 ) {
   // Check authentication
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const user = await auth(req);
   
-  if (!token?.email) {
+  if (!user?.email) {
     return res.status(401).json({ error: 'Not signed in' });
   }
   
-  const userId = token.email as string;
+  const userId = user.email as string;
 
   // Handle GET request to fetch habits
   if (req.method === 'GET') {

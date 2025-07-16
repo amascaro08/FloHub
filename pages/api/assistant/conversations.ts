@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "../../../lib/neon";
 
 type ConversationMessage = {
@@ -25,11 +25,11 @@ type SaveConversationRequest = {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<GetConversationsResponse>) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = token.email as string;
+  const userId = user.email as string;
 
   if (req.method === "GET") {
     try {

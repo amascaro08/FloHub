@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import OpenAI from "openai";
 import { query } from "../../lib/neon";
 import {
@@ -81,16 +81,13 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const user = await auth(req);
 
-  if (!token?.email || !token.accessToken) {
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const email = token.email as string;
+  const email = user.email as string;
   const { history = [], prompt, message } = req.body as ChatRequest;
 
   // Use either prompt or message, with message taking precedence

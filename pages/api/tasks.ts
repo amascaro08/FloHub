@@ -1,7 +1,7 @@
 // pages/api/tasks.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken }                            from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "@/lib/neon";
 
 type Task = {
@@ -18,14 +18,11 @@ export default async function handler(
   res: NextApiResponse<Task[] | Task | { id: string; done?: boolean; source?: string } | { error: string }>
 ) {
   // ── 1) Authenticate via JWT
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const email = token.email as string;
+  const email = user.email as string;
 
 
   try {

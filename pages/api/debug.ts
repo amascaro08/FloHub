@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,15 +10,14 @@ export default async function handler(
   
   try {
     // Get the token
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const user = await auth(req);
     
     // Return debug information
     return res.status(200).json({
-      authenticated: !!token,
-      token: token ? {
-        email: token.email,
-        name: token.name,
-        picture: token.picture,
+      authenticated: !!user,
+      user: user ? {
+        email: user.email,
+        name: user.name,
         // Don't include sensitive information
       } : null,
       headers: {

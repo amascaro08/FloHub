@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { query } from "@/lib/neon";
 import type { Note, Task } from "@/types/app";
 
@@ -17,14 +17,11 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  if (!token?.email) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = token.email as string;
+  const userId = user.email as string;
 
   const { tag } = req.query;
 

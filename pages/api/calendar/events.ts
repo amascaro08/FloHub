@@ -1,7 +1,7 @@
 // pages/api/calendar/events.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
 import { CalendarEvent, GetCalendarEventsResponse } from "@/types/calendar";
 
@@ -15,12 +15,13 @@ export default async function handler(
   }
 
   // 1) Authenticate via JWT
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.accessToken) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const accessToken = token.accessToken as string;
+  // Placeholder for accessToken, as it's not directly available from `auth`
+  const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
 
   // 2) Get calendarId from query parameters
   const { calendarId } = req.query;

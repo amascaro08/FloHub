@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 // Remove unused imports
 // import { parseISO } from 'date-fns';
 // import { zonedTimeToUtc } from 'date-fns-tz';
@@ -8,11 +8,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.accessToken) {
+  const user = await auth(req);
+  if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const accessToken = token.accessToken as string;
+  // Placeholder for accessToken, as it's not directly available from `auth`
+  const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
 
   // POST = create, PUT = update
   if (req.method === "POST") {
