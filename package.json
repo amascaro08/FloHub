@@ -15,6 +15,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@heroicons/react": "^2.2.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@stackframe/js": "^2.8.21",
     "@stackframe/stack": "^2.8.21",
     "@stackframe/stack-sc": "^2.8.21",
     "@stackframe/stack-ui": "^2.8.20",
