@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = user.email as string;
+  const userEmail = user.id;
   
   // Get dates from request body
   const { dates } = req.body;

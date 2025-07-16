@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = user.email as string;
+  const userId = user.id;
 
   if (req.method === "GET") {
     try {

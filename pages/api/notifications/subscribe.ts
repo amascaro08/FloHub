@@ -33,7 +33,7 @@ export default async function handler(
     }
     
     // Save subscription to Firestore
-    const userEmail = user.email as string;
+    const userEmail = user.id;
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
     const now = Date.now();

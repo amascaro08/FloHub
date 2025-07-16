@@ -20,7 +20,7 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ success: false, error: "Not signed in" });
   }
-  const email = user.email as string;
+  const email = user.id;
 
   // ── 2) Validate payload ─────────────────────────────────────────────
   const { eventId } = req.body as EventRequest;

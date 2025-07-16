@@ -87,7 +87,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const email = user.email as string;
+  const email = user.id;
   const { history = [], prompt, message } = req.body as ChatRequest;
 
   // Use either prompt or message, with message taking precedence

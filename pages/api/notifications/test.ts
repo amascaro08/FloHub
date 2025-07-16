@@ -45,7 +45,7 @@ export default async function handler(
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const userEmail = user.email as string;
+    const userEmail = user.id;
     
     // Get user's subscriptions from Firestore
     const { rows: subscriptions } = await query(

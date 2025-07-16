@@ -12,7 +12,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const userEmail = user.email as string;
+  const userEmail = user.id;
 
   if (req.method === "GET") {
     try {

@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ message: "Not signed in" });
   }
-  const userEmail = user.email as string;
+  const userEmail = user.id;
 
   const { ids } = req.body; // Assuming an array of note IDs is sent in the request body
 
