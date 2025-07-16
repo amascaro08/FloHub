@@ -1,5 +1,5 @@
 import AuthLayout from '@/components/ui/AuthLayout'
-// import { OAuthButtonGroup } from '@stackframe/stack'
+import RegisterForm from '@/components/ui/RegisterForm'
 
 export default function RegisterPage() {
   return (
@@ -8,7 +8,7 @@ export default function RegisterPage() {
         Create your account
       </h2>
       <div className="mt-6 px-4">
-        <></>
+        <RegisterForm />
       </div>
       <p className="mt-4 text-center text-sm text-neutral-500">
         By signing up, you agree to our{' '}
