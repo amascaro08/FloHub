@@ -2,8 +2,8 @@ import React from 'react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - FlowHub',
-  description: 'Privacy Policy for FlowHub - Learn how we collect, use, and protect your data.',
+  title: 'Privacy Policy - FloHub',
+  description: 'Privacy Policy for FloHub - Learn how we collect, use, and protect your data.',
 };
 
 export default function PrivacyPolicy() {
@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
           <p className="mb-4">
-            Welcome to FlowHub's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
+            Welcome to FloHub's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
           </p>
         </section>
 
@@ -84,7 +84,7 @@ export default function PrivacyPolicy() {
           <p className="mb-4">
             If you have questions about this Privacy Policy or your data, please contact us at:
             <br />
-            Email: privacy@flowhub.app
+            Email: flohubofficial@gmail.com
           </p>
         </section>
 

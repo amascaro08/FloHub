@@ -2,8 +2,8 @@ import React from 'react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service - FlowHub',
-  description: 'Terms of Service for FlowHub - Understand our terms and conditions of use.',
+  title: 'Terms of Service - FloHub',
+  description: 'Terms of Service for FloHub - Understand our terms and conditions of use.',
 };
 
 export default function TermsOfService() {
@@ -15,7 +15,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">1. Agreement to Terms</h2>
           <p className="mb-4">
-            By accessing or using FlowHub, you agree to be bound by these Terms of Service and all applicable laws and regulations.
+            By accessing or using FloHub, you agree to be bound by these Terms of Service and all applicable laws and regulations.
             If you do not agree with any part of these terms, you may not use our services.
           </p>
         </section>
@@ -45,7 +45,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">4. Intellectual Property</h2>
           <p className="mb-4">
-            FlowHub and its original content, features, and functionality are owned by us and are protected by international copyright, trademark, and other intellectual property laws.
+            FloHub and its original content, features, and functionality are owned by us and are protected by international copyright, trademark, and other intellectual property laws.
           </p>
         </section>
 
@@ -74,7 +74,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">7. Limitation of Liability</h2>
           <p className="mb-4">
-            FlowHub is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of our service.
+            FloHub is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of our service.
           </p>
         </section>
 
@@ -90,7 +90,7 @@ export default function TermsOfService() {
           <p className="mb-4">
             For any questions about these Terms of Service, please contact us at:
             <br />
-            Email: legal@flowhub.app
+            Email: flohubofficial@gmail.com
           </p>
         </section>
 

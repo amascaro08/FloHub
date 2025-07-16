@@ -15,7 +15,7 @@ const features = [
     title: "AI Assistant: FloCat",
     description: "Let FloCat organize, suggest, and keep you on track. Your personal AI, always one step ahead.",
     icon: (
-      <Image src="/flocat-sidepeek.png" alt="FloCat" width={32} height={32} className="rounded-full bg-white/60 p-1" />
+      <Image src="/flocat_flohub.png" alt="FloCat" width={32} height={32} className="rounded-full bg-white/60 p-1" />
     )
   },
   {
@@ -94,17 +94,14 @@ export default function LandingPage() {
             </h1>
             <p className="mb-8 text-xl md:text-2xl text-neutral-700 dark:text-neutral-200">
               The all-in-one, AI-powered productivity platform.<br />
-              <span className="text-primary-500 font-medium">Meet FloCat.</span> Organize everything. <span className="italic">Finally, for real.</span>
+              <span className="text-primary-500 font-medium">Organise everything.</span>  <span className="italic">Finally, for real.</span>
             </p>
             <Link href="/login" passHref>
               <button className="px-8 py-4 rounded-2xl text-lg font-bold bg-primary-600 hover:bg-primary-700 shadow-xl text-white transition-colors duration-150 mb-6 w-full md:w-auto">
                 Login to FloHub
               </button>
             </Link>
-            <div className="flex items-center gap-4 mt-4">
-              <Image src="/flohub_flocat.png" alt="FloCat" width={48} height={48} className="rounded-full" />
-              <span className="text-neutral-600 dark:text-neutral-300 text-sm italic">FloCat: Your AI-powered assistant</span>
-            </div>
+          
           </div>
           {/* Hero Right - FloCat illustration */}
           <div className="w-full md:w-1/2 flex justify-center mb-12 md:mb-0">
@@ -113,7 +110,7 @@ export default function LandingPage() {
               alt="FloCat Mascot"
               width={300}
               height={300}
-              className="rounded-3xl shadow-2xl bg-white/80 dark:bg-[#24243c]/70"
+              className="rounded-3xl shadow-2xl"
               priority
             />
           </div>
