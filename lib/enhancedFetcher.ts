@@ -74,6 +74,9 @@ async function refreshCache<T>(
   timeKey?: string
 ): Promise<T> {
   const res = await fetch(url, { ...options, credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`HTTP error! Status: ${res.status}`);
+  }
   
   if (!res.ok) {
     throw new Error(`HTTP error! Status: ${res.status}`);

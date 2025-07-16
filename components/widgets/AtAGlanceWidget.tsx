@@ -443,6 +443,7 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ history: [], prompt }),
+              credentials: 'include',
             });
 
             if (!aiRes.ok) {
