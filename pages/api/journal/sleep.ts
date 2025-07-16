@@ -1,19 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getuser for better compatibility with API routes
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const user = await auth(req);
   
-  if (!token?.email) {
+  if (!user?.email) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = token.email as string;
+  const userEmail = user.email as string;
   
   // Handle GET request - retrieve sleep data
   if (req.method === 'GET') {
