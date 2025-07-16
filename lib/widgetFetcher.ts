@@ -16,41 +16,65 @@ interface ApiResponse<T> {
 
 // Typed fetcher for UserSettings
 export const fetchUserSettings = async (url: string): Promise<CalendarSettings> => {
-  return enhancedFetcher<CalendarSettings>(url, { credentials: 'include' }, undefined, 60000); // 1 minute cache
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
 
 // Typed fetcher for calendar events
 export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promise<CalendarEvent[]> => {
-  const response = await enhancedFetcher<{ events?: CalendarEvent[] }>(url, { credentials: 'include' }, cacheKey);
-  return response.events || [];
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not signed in');
+  }
+  const data = await res.json();
+  return data.events || [];
 };
 
 // Typed fetcher for tasks
 export const fetchTasks = async () => {
-  return enhancedFetcher<{ tasks: any[] }>('/api/tasks', { credentials: 'include' }, 'flohub:tasks');
+  const res = await fetch('/api/tasks', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
 
 // Typed fetcher for notes
 export const fetchNotes = async () => {
-  return enhancedFetcher<{ notes: any[] }>('/api/notes', { credentials: 'include' }, 'flohub:notes');
+  const res = await fetch('/api/notes', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
 
 // Typed fetcher for meetings
 export const fetchMeetings = async () => {
-  return enhancedFetcher<{ meetings: any[] }>('/api/meetings', { credentials: 'include' }, 'flohub:meetings');
+  const res = await fetch('/api/meetings', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
 
 // Typed fetcher for habits
 export const fetchHabits = async () => {
-  return enhancedFetcher<{ habits: any[] }>('/api/habits', { credentials: 'include' }, 'flohub:habits');
+  const res = await fetch('/api/habits', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
 
 // Typed fetcher for habit completions
 export const fetchHabitCompletions = async (year: number, month: number) => {
   const completionsUrl = `/api/habits/completions?year=${year}&month=${month}`;
-  return enhancedFetcher<{ completions: any[] }>(
-    completionsUrl,
-    { credentials: 'include' },
-    `flohub:habitCompletions:${year}-${month}`
-  );
+  const res = await fetch(completionsUrl, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error('Not authorized');
+  }
+  return res.json();
 };
