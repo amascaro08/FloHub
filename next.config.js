@@ -1,53 +1,4 @@
-import type { NextConfig } from 'next';
-import type { Configuration as WebpackConfig } from 'webpack';
-
-// const withPWA = require('next-pwa')({
-//   dest: 'public',
-//   register: true,
-//   skipWaiting: true,
-//   disable: process.env.NODE_ENV === 'development',
-//   buildExcludes: [/dynamic-css-manifest\.json$/],
-//   // Log NODE_ENV for debugging PWA
-//   // console.log('PWA disabled in development:', process.env.NODE_ENV === 'development');
-//   // Configure caching for workbox files
-//   runtimeCaching: [
-//     {
-//       urlPattern: /^https?.*/,
-//       handler: 'NetworkFirst',
-//       options: {
-//         cacheName: 'https-calls',
-//         networkTimeoutSeconds: 15,
-//       },
-//     },
-//     {
-//       urlPattern: /\.(?:js|css)$/i,
-//       handler: 'StaleWhileRevalidate',
-//       options: {
-//         cacheName: 'static-resources',
-//       },
-//     },
-//     {
-//       urlPattern: /^https:\/\/flohub\.vercel\.app\/.*$/,
-//       handler: 'NetworkFirst',
-//       options: {
-//         cacheName: 'vercel-resources',
-//         networkTimeoutSeconds: 10,
-//       },
-//     }
-//   ],
-//   // Ensure workbox files are served from the correct location
-//   swDest: 'public/sw.js',
-//   fallbacks: {
-//     document: '/offline.html'
-//   },
-//   cacheOnFrontEndNav: true,
-//   reloadOnOnline: true,
-//   // Add additional security headers
-//   additionalManifestEntries: [
-//     { url: '/offline.html', revision: '1' }
-//   ],
-// });
-
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui', '@stackframe/js'],
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
@@ -73,13 +24,12 @@ const nextConfig = {
     // Default VAPID public key for development (should be replaced in production)
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
   },
-  webpack: (config: WebpackConfig, { isServer }: { isServer: boolean }) => {
+  webpack: (config, { isServer }) => {
     // Ensure resolve and alias objects exist
     config.resolve = config.resolve || {};
     config.resolve.alias = config.resolve.alias || {};
 
-    // The alias type can be complex, so we cast to a simple key-value pair object
-    const alias = config.resolve.alias as { [key: string]: string | false };
+    const alias = config.resolve.alias;
 
     if (isServer) {
         // This alias is required for @stackframe/stack-sc on the server
@@ -104,5 +54,4 @@ const nextConfig = {
   },
 };
 
-// module.exports = withPWA(nextConfig);
 module.exports = nextConfig;
