@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -30,7 +30,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
   const [calendarDays, setCalendarDays] = useState<DayData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [isLoading, setIsLoading] = useState<boolean>(false);
- const user = useUser();
+ const { user, isLoading: isUserLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, memo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 
@@ -53,10 +53,10 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 function CalendarWidget() {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const { mutate } = useSWRConfig();
 
-  if (status === 'unauthenticated') { // Correctly check for loading status
+  if (isLoading) { // Correctly check for loading status
     return <div>Loading...</div>; // Or any other fallback UI
   }
 

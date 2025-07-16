@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { useUser } from "@stackframe/stack";
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 
 // Define types for our analytics data
@@ -58,9 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user and verify admin access
-    const user = useUser();
+    const user = await auth(req);
     
-    if (!user || user?.primaryEmail !== 'amascaro08@gmail.com') {
+    if (!user || user?.email !== 'amascaro08@gmail.com') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 

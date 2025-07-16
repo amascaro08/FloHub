@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -18,7 +18,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   const [sleepHours, setSleepHours] = useState<number>(7);
   const [sleepData, setSleepData] = useState<{date: string, quality: string, hours: number}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

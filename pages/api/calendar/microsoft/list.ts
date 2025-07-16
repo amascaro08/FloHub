@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { useUser } from "@stackframe/stack";
+import { auth } from '@/lib/auth';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { getMicrosoftToken, MicrosoftAuthProvider } from '../../../../lib/microsoftAuth';
 
@@ -20,7 +20,7 @@ export default async function handler(
 
   try {
     // Get the current user user
-    const user = useUser();
+    const user = await auth(req);
 
     
     if (!user || !user) {
@@ -28,7 +28,7 @@ export default async function handler(
     }
 
     // Get Microsoft tokens for the user
-    const tokens = await getMicrosoftToken(user.primaryEmail || '');
+    const tokens = await getMicrosoftToken(user.email || '');
     
     if (!tokens || !tokens.access_token) {
       return res.status(401).json({ error: 'Microsoft authentication required' });

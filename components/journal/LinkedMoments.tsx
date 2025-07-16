@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import useSWR from 'swr';
 import { getCurrentDate } from '@/lib/dateUtils';
 
@@ -28,7 +28,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

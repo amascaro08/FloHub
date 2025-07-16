@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 interface JournalSettingsProps {
   onClose: () => void;
@@ -26,7 +26,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   const [pinError, setPinError] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

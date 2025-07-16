@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { useRouter } from 'next/router';
 import { NextPage } from 'next';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,14 +21,14 @@ interface BacklogItem {
 }
 
 const FeedbackPage: NextPage = () => {
-   const user = useUser();
+   const { user, isLoading: isUserLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();
 
   // Handle loading state
-  if (status === 'unauthenticated') {
-    return <div>Loading user...</div>;
+  if (isUserLoading) {
+    return <div>Loading...</div>;
   }
 
   // Handle unauthenticated state

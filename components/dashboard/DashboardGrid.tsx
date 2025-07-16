@@ -27,7 +27,7 @@ const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 
 import { ReactElement } from "react";
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { UserSettings } from "@/types/app";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -87,10 +87,10 @@ const DashboardGrid = () => {
   const isClient = typeof window !== 'undefined';
 
   // Use Stack Auth
-  const user = useUser();
+  const { user, isLoading } = useUser();
 
   // Not signed in? Show loading or redirect to login
-  if (!user) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 

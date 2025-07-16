@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface OnThisDayProps {
@@ -15,7 +15,7 @@ interface HistoricalEntry {
 
 const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   const [historicalEntry, setHistoricalEntry] = useState<HistoricalEntry | null>(null);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

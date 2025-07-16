@@ -1,6 +1,6 @@
 // components/ui/NotificationManager.tsx
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { 
   isPushNotificationSupported, 
   getNotificationPermission,
@@ -19,7 +19,7 @@ type NotificationState = {
 };
 
 const NotificationManager: React.FC = () => {
-   const user = useUser();
+   const { user, isLoading } = useUser();
 
   if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI

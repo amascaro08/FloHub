@@ -4,17 +4,7 @@ import { ChatProvider } from '@/components/assistant/ChatContext'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import dynamic from 'next/dynamic'
-
-const ClientStackProvider = dynamic(
-  () => import('../components/ClientStackProvider'),
-  { ssr: false }
-)
-
-const ClientSideCheck = dynamic(
-  () => import('../components/ClientSideCheck'),
-  { ssr: false }
-)
+import AuthCheck from '@/components/AuthCheck';
 
 
 const App = ({
@@ -61,9 +51,11 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      <ChatProvider>
-        <Component {...pageProps} />
-      </ChatProvider>
+      <AuthCheck>
+        <ChatProvider>
+          <Component {...pageProps} />
+        </ChatProvider>
+      </AuthCheck>
     </>
   )
 }

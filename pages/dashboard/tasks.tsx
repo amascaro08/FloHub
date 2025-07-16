@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Task, UserSettings } from "@/types/app"; // Import UserSettings
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 // Define a more comprehensive Task type for the tasks page
 
@@ -26,7 +26,7 @@ const formatDate = (dateString: string | null) => {
 };
 
 export default function TasksPage() {
-   const user = useUser();
+   const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();

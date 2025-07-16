@@ -1,4 +1,4 @@
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import Layout from '@/components/ui/Layout';
@@ -6,7 +6,7 @@ import AdminAnalytics from '@/components/admin/AdminAnalytics';
 import Head from 'next/head';
 
 export default function AdminPage() {
-const user = useUser();
+const { user, isLoading } = useUser();
 const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();

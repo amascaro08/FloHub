@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { getCurrentDate } from "@/lib/dateUtils";
 import axios from "axios";
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
@@ -22,7 +22,7 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 
 export default function JournalPage() {
-   const user = useUser();
+   const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 const DebugWidget = () => {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 const [debugInfo, setDebugInfo] = useState<any>(null);
 

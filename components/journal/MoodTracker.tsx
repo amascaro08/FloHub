@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -16,7 +16,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [moodData, setMoodData] = useState<{date: string, emoji: string, label: string}[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

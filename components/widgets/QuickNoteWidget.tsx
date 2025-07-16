@@ -6,7 +6,7 @@ import useSWR from "swr";
 import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
 import type { UserSettings, Note } from "@/types/app";
 import type { GetNotesResponse } from "@/pages/api/notes";
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 
 
 // Lazy load CreatableSelect to improve initial load time
@@ -18,7 +18,7 @@ const CreatableSelect = dynamic(() => import('react-select/creatable'), {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function QuickNoteWidget() {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   if (!user) {

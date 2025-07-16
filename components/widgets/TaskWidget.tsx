@@ -6,13 +6,13 @@ import useSWR         from "swr";
 import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
 import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function TaskWidget() {
-  const user = useUser(); // Just user object or null
+  const { user, isLoading } = useUser(); // Just user object or null
   const isLoggedIn = !!user;
 
   // Only fetch tasks if logged in
@@ -24,7 +24,7 @@ function TaskWidget() {
   if (!isLoggedIn) {
     return <div className="text-gray-400">Please sign in to view your tasks.</div>;
   }
-  if (!tasks) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 

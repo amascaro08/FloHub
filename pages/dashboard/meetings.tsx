@@ -13,7 +13,7 @@ import { parseISO } from 'date-fns'; // Import parseISO
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 // Define the response type for fetching meeting notes (will create this API later)
 type GetMeetingNotesResponse = {
@@ -32,7 +32,7 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 export default function MeetingsPage() {
-   const user = useUser();
+   const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();

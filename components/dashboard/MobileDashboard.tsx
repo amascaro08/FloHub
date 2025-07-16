@@ -4,7 +4,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 
 import { UserSettings } from "@/types/app";
 import { ReactElement } from "react";
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 // Widget skeleton for loading state
 const WidgetSkeleton = () => (
@@ -54,7 +54,7 @@ export default function MobileDashboard() {
   };
 
   // Use useUser to trigger auth state, but NOT for lock
-  const user = useUser();
+  const { user, isLoading: isUserLoading } = useUser();
 
   // ----
   // (In your original, you had user.primaryEmail. If you’re now using Stack Auth, email is at user.primaryEmail)
@@ -199,7 +199,7 @@ export default function MobileDashboard() {
     };
   }, [isLoading, activeWidgets, isClient]);
 
-  if (isLoading) {
+  if (isUserLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 px-2 py-4">
         <div className="glass px-2 py-2 rounded-xl shadow-md animate-pulse">

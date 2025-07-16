@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { useUser } from "@stackframe/stack";
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/neon';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,8 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user to identify user
-    const user = useUser();
-    const userId = user?.primaryEmail || null;
+    const user = await auth(req);
+    const userId = user?.email || null;
 
     // Get performance metrics from request body
     const metrics = req.body;

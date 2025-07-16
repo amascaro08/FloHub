@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import { getUserHabits, getHabitCompletionsForMonth, toggleHabitCompletion, getTodayFormatted, shouldCompleteToday, calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 const HabitTrackerWidget = () => {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);

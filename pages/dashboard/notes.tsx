@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
@@ -20,7 +20,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 
 export default function NotesPage() {
-   const user = useUser();
+   const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const router = useRouter();

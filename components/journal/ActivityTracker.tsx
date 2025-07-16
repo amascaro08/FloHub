@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -16,7 +16,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const [userActivities, setUserActivities] = useState<string[]>([]);
   const [showInsights, setShowInsights] = useState<boolean>(false);
   const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

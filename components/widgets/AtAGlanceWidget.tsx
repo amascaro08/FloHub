@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { marked } from 'marked';
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
@@ -44,9 +44,9 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-const user = useUser()
+const { user, isLoading } = useUser()
   
-  if (!user) {
+  if (isLoading) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const userName = useUser() || "User";

@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import { UserSettings } from "@/types/app";
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import dynamic from 'next/dynamic';
 
 const SettingsModularPage = () => {
   const router = useRouter();
-  const user = useUser();
+  const { user, isLoading } = useUser();
 
   // State for settings
   const initialSettings: UserSettings = {
@@ -32,6 +32,10 @@ const SettingsModularPage = () => {
 
   // Use user.email as userId
   const userId = user?.primaryEmail || user?.id;
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -25,7 +25,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const [moodData, setMoodData] = useState<MoodData[]>([]);
   const [activityCorrelations, setActivityCorrelations] = useState<{[key: string]: ActivityCorrelation}>({});
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days'>('30days');
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

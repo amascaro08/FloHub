@@ -2,10 +2,6 @@ import dynamic from 'next/dynamic';
 import AuthLayout from '@/components/ui/AuthLayout';
 
 // Lazy load OAuthButtonGroup to avoid SSR crash
-const OAuthButtonGroup = dynamic(
-  () => import('@stackframe/stack').then(mod => mod.OAuthButtonGroup),
-  { ssr: false }
-);
 
 export default function LoginPage() {
   return (
@@ -14,7 +10,6 @@ export default function LoginPage() {
         Login to your account
       </h2>
       <div className="mt-6 px-4">
-        <OAuthButtonGroup type="sign-in" />
       </div>
       <p className="mt-4 text-center text-sm text-neutral-500">
         By signing in, you agree to our{' '}

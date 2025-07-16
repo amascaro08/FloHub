@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import { createHabit, updateHabit, deleteHabit } from '@/lib/habitService';
 import { Habit } from '@/types/habit-tracker';
 import { TrashIcon } from '@heroicons/react/24/solid';
@@ -17,7 +17,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
   onDelete, 
   onCancel 
 }) => {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily');

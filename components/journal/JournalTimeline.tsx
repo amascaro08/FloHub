@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, formatDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
@@ -33,7 +33,7 @@ const JournalTimeline: React.FC<JournalTimelineProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDate(timezone));
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [hasEntries, setHasEntries] = useState<{[key: string]: boolean}>({});
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

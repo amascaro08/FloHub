@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 
@@ -46,7 +46,7 @@ const fetcher = async (url: string) => {
 
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
-   const user = useUser();
+   const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);

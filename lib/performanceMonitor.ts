@@ -4,7 +4,7 @@
  */
 
 import { query } from './neon';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { useEffect } from 'react';
 
 // Interface for performance metrics
@@ -326,7 +326,7 @@ async function trackuserEnd(): Promise<void> {
 // React hook to use performance monitoring in components
 export function usePerformanceMonitoring() {
   // Defensive: useUser may be undefined if next-auth is not initialized or during SSR
-  const user = useUser()
+  const { user } = useUser()
   
   useEffect(() => {
     startPerformanceMonitoring();

@@ -1,10 +1,10 @@
 import React from 'react';
 import Head from 'next/head';
 import HabitCalendar from "@/components/habit-tracker/HabitCalendar";
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 
 const HabitTrackerPage = () => {
-  const user = useUser();
+  const { user, isLoading } = useUser();
 
   return (
     <>

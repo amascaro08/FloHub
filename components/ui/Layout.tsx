@@ -7,7 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
 import ThemeToggle from './ThemeToggle'
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
 
 const nav = [
@@ -29,7 +29,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const [topInput, setTopInput] = useState('');
 
   // -- AUTH --
-  const user = useUser(); // Direct, no .user
+  const { user } = useUser();
   // For widget lock/unlock, implement these as needed, for now just dummy:
   const isLocked = false; // If you have a lock/unlock feature, implement as state
   const toggleLock = () => {};
@@ -173,7 +173,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             } group mt-4`}
             onClick={() => {
               setMobileSidebarOpen(false);
-              user?.signOut();
+              // Implement sign out
             }}
           >
             <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${

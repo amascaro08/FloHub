@@ -4,7 +4,7 @@
  */
 
 // No direct database import needed, will use fetch to API route
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
@@ -75,7 +75,7 @@ export async function trackFeatureUsage(feature: string, userId?: string) {
 // React hook to track page views
 export function usePageViewTracking() {
   const router = useRouter();
-  const user = useUser();
+  const { user } = useUser();
   
   useEffect(() => {
     // Function to handle route change complete
@@ -106,7 +106,7 @@ export function usePageViewTracking() {
 
 // React hook to track widget usage
 export function useWidgetTracking(widgetName: string) {
-  const user = useUser();
+  const { user } = useUser();
   
   useEffect(() => {
     // Track widget mount

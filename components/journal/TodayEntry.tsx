@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import RichTextEditor from './RichTextEditor';
 import { getCurrentDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
@@ -17,7 +17,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

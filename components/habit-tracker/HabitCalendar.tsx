@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // UI components and context
-import { useUser } from '@stackframe/stack';
+import { useUser } from '@/lib/hooks/useUser';
 import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
 // Habit tracker components
@@ -23,7 +23,7 @@ import {
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
-  const user = useUser();
+  const { user, isLoading } = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);

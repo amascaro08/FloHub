@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { formatDate, getDateStorageKey } from '@/lib/dateUtils';
 
 interface JournalEntryViewerProps {
@@ -16,7 +16,7 @@ interface JournalEntry {
 const JournalEntryViewer: React.FC<JournalEntryViewerProps> = ({ date, onEdit, timezone }) => {
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

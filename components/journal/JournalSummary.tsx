@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 
 interface JournalSummaryProps {
   refreshTrigger?: number; // Trigger to refresh the summary 
@@ -16,7 +16,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
   const [topThemes, setTopThemes] = useState<{theme: string, count: number}[]>([]);
   const [floCatsSummary, setFloCatsSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
- const user = useUser();
+ const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {

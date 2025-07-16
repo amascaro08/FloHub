@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from "@stackframe/stack";
+import { useUser } from "@/lib/hooks/useUser";
 import { useRouter } from 'next/router';
 import { 
   BarChart, 
@@ -39,7 +39,7 @@ interface UserInsight {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const AdminAnalytics: React.FC = () => {
-   const user = useUser();
+   const { user, isLoading } = useUser();
   const router = useRouter();
 
   if (!user) {
