@@ -73,28 +73,26 @@ const nextConfig = {
     // Default VAPID public key for development (should be replaced in production)
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
   },
-  webpack: (config: WebpackConfig, { isServer }: { isServer: boolean }) => {
-    if (!isServer) {
-      // Don't resolve 'fs', 'dns' module on the client to prevent this error
-      config.resolve = {
-        ...config.resolve,
-        fallback: {
-          ...(config.resolve?.fallback || {}),
-          fs: false,
-          dns: false,
-          net: false,
-          tls: false,
-          'pg-native': false, // Ignore pg-native module
-        },
-        alias: {
-          ...(config.resolve?.alias || {}),
-          '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
-          'react': require.resolve('react'),
-          'react-dom': require.resolve('react-dom'),
-          'react/jsx-runtime': require.resolve('react/jsx-runtime'),
-        }
-      };
-    }
+  webpack: (config: WebpackConfig) => {
+    config.resolve = {
+      ...config.resolve,
+      fallback: {
+        ...(config.resolve?.fallback || {}),
+        fs: false,
+        dns: false,
+        net: false,
+        tls: false,
+        'pg-native': false, // Ignore pg-native module
+      },
+      alias: {
+        ...(config.resolve?.alias || {}),
+        '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
+        react: require.resolve('react'),
+        'react-dom': require.resolve('react-dom'),
+        'react/jsx-runtime': require.resolve('react/jsx-runtime'),
+        'react/jsx-dev-runtime': require.resolve('react/jsx-dev-runtime'),
+      }
+    };
     return config;
   },
 };
