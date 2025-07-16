@@ -1,56 +1,55 @@
 import type { NextConfig } from 'next';
 import type { Configuration as WebpackConfig } from 'webpack';
 
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  buildExcludes: [/dynamic-css-manifest\.json$/],
-  // Log NODE_ENV for debugging PWA
-  // console.log('PWA disabled in development:', process.env.NODE_ENV === 'development');
-  // Configure caching for workbox files
-  runtimeCaching: [
-    {
-      urlPattern: /^https?.*/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'https-calls',
-        networkTimeoutSeconds: 15,
-      },
-    },
-    {
-      urlPattern: /\.(?:js|css)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-resources',
-      },
-    },
-    {
-      urlPattern: /^https:\/\/flohub\.vercel\.app\/.*$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'vercel-resources',
-        networkTimeoutSeconds: 10,
-      },
-    }
-  ],
-  // Ensure workbox files are served from the correct location
-  swDest: 'public/sw.js',
-  fallbacks: {
-    document: '/offline.html'
-  },
-  cacheOnFrontEndNav: true,
-  reloadOnOnline: true,
-  // Add additional security headers
-  additionalManifestEntries: [
-    { url: '/offline.html', revision: '1' }
-  ],
-});
+// const withPWA = require('next-pwa')({
+//   dest: 'public',
+//   register: true,
+//   skipWaiting: true,
+//   disable: process.env.NODE_ENV === 'development',
+//   buildExcludes: [/dynamic-css-manifest\.json$/],
+//   // Log NODE_ENV for debugging PWA
+//   // console.log('PWA disabled in development:', process.env.NODE_ENV === 'development');
+//   // Configure caching for workbox files
+//   runtimeCaching: [
+//     {
+//       urlPattern: /^https?.*/,
+//       handler: 'NetworkFirst',
+//       options: {
+//         cacheName: 'https-calls',
+//         networkTimeoutSeconds: 15,
+//       },
+//     },
+//     {
+//       urlPattern: /\.(?:js|css)$/i,
+//       handler: 'StaleWhileRevalidate',
+//       options: {
+//         cacheName: 'static-resources',
+//       },
+//     },
+//     {
+//       urlPattern: /^https:\/\/flohub\.vercel\.app\/.*$/,
+//       handler: 'NetworkFirst',
+//       options: {
+//         cacheName: 'vercel-resources',
+//         networkTimeoutSeconds: 10,
+//       },
+//     }
+//   ],
+//   // Ensure workbox files are served from the correct location
+//   swDest: 'public/sw.js',
+//   fallbacks: {
+//     document: '/offline.html'
+//   },
+//   cacheOnFrontEndNav: true,
+//   reloadOnOnline: true,
+//   // Add additional security headers
+//   additionalManifestEntries: [
+//     { url: '/offline.html', revision: '1' }
+//   ],
+// });
 
 const nextConfig = {
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
-  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui', 'react', 'react-dom'],
   eslint: {
     // 🚫 Don't block the build on lint errors
     ignoreDuringBuilds: true,
@@ -98,4 +97,5 @@ const nextConfig = {
   },
 };
 
-module.exports = withPWA(nextConfig);
+// module.exports = withPWA(nextConfig);
+module.exports = nextConfig;
