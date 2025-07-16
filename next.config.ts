@@ -91,6 +91,7 @@ const nextConfig = {
           '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
           'react': require.resolve('react'),
           'react-dom': require.resolve('react-dom'),
+          'react/jsx-runtime': require.resolve('react/jsx-runtime'),
         }
       };
     }
