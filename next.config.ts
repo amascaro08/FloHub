@@ -50,7 +50,7 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
-  transpilePackages: ['@stackframe/stack', '@stackframe/stack', '@stackframe/stack-ui'],
+  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui'],
   eslint: {
     // 🚫 Don't block the build on lint errors
     ignoreDuringBuilds: true,
@@ -85,6 +85,10 @@ const nextConfig = {
           net: false,
           tls: false,
           'pg-native': false, // Ignore pg-native module
+        },
+        alias: {
+          ...(config.resolve?.alias || {}),
+          '@stackframe/stack-sc/dist/next-static-analysis-workaround': require.resolve('next/headers'),
         }
       };
     }
