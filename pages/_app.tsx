@@ -61,15 +61,9 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      <ClientStackProvider>
-        <ChatProvider>
-          <ClientSideCheck
-            Component={Component}
-            pageProps={pageProps}
-            isLoading={isLoading}
-          />
-        </ChatProvider>
-      </ClientStackProvider>
+      <ChatProvider>
+        <Component {...pageProps} />
+      </ChatProvider>
     </>
   )
 }
