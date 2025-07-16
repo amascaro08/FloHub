@@ -49,6 +49,7 @@ import type { Configuration as WebpackConfig } from 'webpack';
 // });
 
 const nextConfig = {
+  transpilePackages: ['@stackframe/stack', '@stackframe/stack-sc', '@stackframe/stack-ui', '@stackframe/js'],
   // Add transpilePackages to ensure @stackframe/stack is correctly processed
   eslint: {
     // 🚫 Don't block the build on lint errors
@@ -73,24 +74,31 @@ const nextConfig = {
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
   },
   webpack: (config: WebpackConfig, { isServer }: { isServer: boolean }) => {
+    // Ensure resolve and alias objects exist
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+
+    // The alias type can be complex, so we cast to a simple key-value pair object
+    const alias = config.resolve.alias as { [key: string]: string | false };
+
+    if (isServer) {
+        // This alias is required for @stackframe/stack-sc on the server
+        alias['@stackframe/stack-sc/dist/next-static-analysis-workaround'] = require.resolve('next/headers');
+    }
+    
     if (!isServer) {
-      // Don't resolve 'fs', 'dns' module on the client to prevent this error
-      config.resolve = {
-        ...config.resolve,
-        fallback: {
-          ...(config.resolve?.fallback || {}),
-          fs: false,
-          dns: false,
-          net: false,
-          tls: false,
-          'pg-native': false, // Ignore pg-native module
-        },
-        alias: {
-          ...(config.resolve?.alias || {}),
-          'react/jsx-runtime': require.resolve('react/jsx-runtime'),
-          'react/jsx-dev-runtime': require.resolve('react/jsx-dev-runtime'),
-        }
+      // Don't resolve 'fs', 'dns' etc. module on the client
+      config.resolve.fallback = {
+        ...(config.resolve.fallback || {}),
+        fs: false,
+        dns: false,
+        net: false,
+        tls: false,
+        'pg-native': false, // Ignore pg-native module
       };
+      // Add react aliases for client
+      alias['react/jsx-runtime'] = require.resolve('react/jsx-runtime');
+      alias['react/jsx-dev-runtime'] = require.resolve('react/jsx-dev-runtime');
     }
     return config;
   },
