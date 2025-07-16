@@ -40,7 +40,12 @@ const createMarkdownParser = () => {
 
 // Memoized fetcher function for SWR
 const fetcher = async (url: string) => {
-  return fetchUserSettings(url);
+  return fetch(url, { credentials: 'include' }).then((res) => {
+    if (!res.ok) {
+      throw new Error('Not authorized');
+    }
+    return res.json();
+  });
 };
 
 const AtAGlanceWidget = () => {

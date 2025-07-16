@@ -6,42 +6,12 @@ import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
-  // Check if we have a cached response that's less than 5 minutes old
-  const cachedData = localStorage.getItem(url);
-  if (cachedData) {
-    try {
-      const { data, timestamp } = JSON.parse(cachedData);
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      if (timestamp > fiveMinutesAgo) {
-        console.log('Using cached data for:', url);
-        return data;
-      }
-    } catch (e) {
-      console.error('Error parsing cached data:', e);
-    }
-  }
-  
-  // If no valid cache, fetch from API
-  console.log('Fetching fresh data for:', url);
-  const res = await fetch(url);
-  if (!res.ok) {
-    const errorInfo = await res.text();
-    throw new Error(`HTTP ${res.status}: ${errorInfo}`);
-  }
-  
-  const data = await res.json();
-  
-  // Cache the response
-  try {
-    localStorage.setItem(url, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-  } catch (e) {
-    console.error('Error caching data:', e);
-  }
-  
-  return data;
+const res = await fetch(url, { credentials: 'include' });
+if (!res.ok) {
+  const errorInfo = await res.text();
+  throw new Error(`HTTP ${res.status}: ${errorInfo}`);
+}
+return res.json();
 };
 
 // Memoized calendar component to prevent unnecessary re-renders

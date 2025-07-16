@@ -27,7 +27,7 @@ type CustomRange = { start: string; end: string };
 
 // Generic fetcher for SWR
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) {
     const errorInfo = await res.text();
     throw new Error(`HTTP ${res.status}: ${errorInfo}`);

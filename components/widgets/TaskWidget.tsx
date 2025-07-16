@@ -9,7 +9,7 @@ import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSe
 import { useUser } from '@/lib/hooks/useUser';
 
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r) => r.json());
 
 function TaskWidget() {
   const { user, isLoading } = useUser(); // Just user object or null
