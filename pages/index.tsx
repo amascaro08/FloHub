@@ -110,7 +110,6 @@ export default function LandingPage() {
               alt="FloCat Mascot"
               width={300}
               height={300}
-              className="rounded-3xl shadow-2xl"
               priority
             />
           </div>
