@@ -1,40 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 🌊 FloHub
 
-## Getting Started
+**FloHub** is your all-in-one, AI-powered productivity hub — built for busy humans who want more flow and less chaos. Seamlessly track tasks, manage calendars, capture ideas, and chat with your AI assistant **FloCat** — all from one sleek, responsive dashboard.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🧠 What is FloHub?
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+FloHub brings together your day-to-day tools into a single modular workspace:
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+- ✅ **Task Manager** with due dates, completion tracking, and real-time sync  
+- 📅 **Calendar Integration** with Google Calendar (via OAuth)  
+- 💬 **AI Assistant FloCat** powered by OpenAI for summaries, Q&A, and planning help  
+- 🧱 **Customizable Widgets** for a dashboard that works your way  
+- 🔐 **Secure Auth + DB** via [Neon](https://neon.tech) and [Stack Auth](https://stackframe.dev)  
+- 📱 Fully responsive: use it on desktop, tablet, or mobile  
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+---
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## ⚙️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Layer         | Tooling                                                                 |
+|---------------|------------------------------------------------------------------------|
+| **Frontend**  | Next.js 14, React 19, Tailwind CSS                                      |
+| **Backend**   | Neon (PostgreSQL), Firebase (legacy), Express (for service endpoints)  |
+| **Auth**      | Stack Auth + Neon integration (user DB + auth in sync)                 |
+| **AI**        | OpenAI GPT-4o                                                           |
+| **Scheduling**| Google Calendar API via OAuth 2.0                                      |
+| **Deployment**| Vercel (Frontend) + Replit (Future backend memory persistence)         |
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🔐 Neon + Stack Auth Integration
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+FloHub uses [Neon](https://neon.tech) as the **PostgreSQL database** for all core user and widget data, including real-time sync across sessions. Authentication is handled via **Stack Auth**, with seamless linkage between Neon DB and frontend session management.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### What This Means:
 
-## Deploy on Vercel
+- Full access control per user  
+- Fast, serverless DB performance  
+- Simplified role-based access and persistent memory for FloCat  
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## 🧩 Features (Built & Upcoming)
+
+| Feature              | Status     | Notes                                                                |
+|----------------------|------------|----------------------------------------------------------------------|
+| Task Management      | ✅ Done     | Create, edit, delete, mark complete. Uses Firestore + SWR           |
+| Calendar Integration | ✅ Done     | View today/tomorrow/week/month events from Google Calendar          |
+| FloCat Chatbot       | ✅ Done     | Personalized AI assistant with memory and greeting summaries        |
+| Dashboard Layout     | 🔄 In Dev  | dnd-kit-based layout system for resizable and draggable widgets     |
+| Neon Auth/DB         | ✅ Live     | Replaces Firebase for secure, scalable user data handling           |
+| Persistent Memory    | 🔄 In Dev  | Assistant context via Neon + Google Sheets hybrid                   |
+| Voice Interface      | 🧪 Testing  | Web speech + GPT voice pipeline under early testing                 |
+
+---
+
+## 🚀 Getting Started
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/yourusername/FloHub.git
+   cd FloHub
