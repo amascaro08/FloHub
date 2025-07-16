@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useState, useEffect, memo } from 'react'
-import { signOut } from "next-auth/react";
+import { stackClientApp } from '@/stack/client';
 import { useRouter } from 'next/router';
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
 import Link from 'next/link'
@@ -174,7 +174,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             } group mt-4`}
             onClick={() => {
               setMobileSidebarOpen(false);
-              signOut({ callbackUrl: '/' });
+              user?.signOut();
             }}
           >
             <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
