@@ -32,27 +32,57 @@ export default async function handler(
       // Update existing settings
       await query(
         `UPDATE user_settings SET
-          flo_cat_style = $1,
-          flo_cat_personality = $2,
-          preferred_name = $3
-        WHERE user_email = $4`,
+          selected_cals = $1,
+          default_view = $2,
+          custom_range = $3,
+          power_automate_url = $4,
+          global_tags = $5,
+          active_widgets = $6,
+          flo_cat_style = $7,
+          flo_cat_personality = $8,
+          preferred_name = $9,
+          tags = $10,
+          widgets = $11,
+          calendar_settings = $12,
+          notification_settings = $13
+        WHERE user_email = $14`,
         [
+          newSettings.selectedCals || [],
+          newSettings.defaultView || 'month',
+          newSettings.customRange || { start: '', end: '' },
+          newSettings.powerAutomateUrl || '',
+          newSettings.globalTags || [],
+          newSettings.activeWidgets || [],
           newSettings.floCatStyle || 'default',
           newSettings.floCatPersonality || [],
           newSettings.preferredName || '',
+          newSettings.tags || [],
+          newSettings.widgets || [],
+          newSettings.calendarSettings || { calendars: [] },
+          newSettings.notificationSettings || { subscribed: false },
           userEmail,
         ]
       );
     } else {
       // Insert new settings
       await query(
-        `INSERT INTO user_settings (user_email, flo_cat_style, flo_cat_personality, preferred_name)
-        VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           userEmail,
+          newSettings.selectedCals || [],
+          newSettings.defaultView || 'month',
+          newSettings.customRange || { start: '', end: '' },
+          newSettings.powerAutomateUrl || '',
+          newSettings.globalTags || [],
+          newSettings.activeWidgets || [],
           newSettings.floCatStyle || 'default',
           newSettings.floCatPersonality || [],
           newSettings.preferredName || '',
+          newSettings.tags || [],
+          newSettings.widgets || [],
+          newSettings.calendarSettings || { calendars: [] },
+          newSettings.notificationSettings || { subscribed: false },
         ]
       );
     }

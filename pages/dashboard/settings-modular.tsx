@@ -46,7 +46,7 @@ const SettingsModularPage = () => {
 
 
   // Use user.email as userId
-  const userId = user?.primaryEmail || user?.id;
+  const userId = user?.email;
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(
