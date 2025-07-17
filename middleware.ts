@@ -4,6 +4,11 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Skip middleware for static files and other assets.
+  if (pathname.includes('.')) {
+    return NextResponse.next();
+  }
+
   // Allow root path to be public, bypassing all checks.
   if (pathname === '/') {
     return NextResponse.next();

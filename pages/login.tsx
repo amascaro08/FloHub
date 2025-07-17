@@ -4,7 +4,7 @@ import LoginForm from '@/components/ui/LoginForm';
 
 // Lazy load OAuthButtonGroup to avoid SSR crash
 
-export default function LoginPage() {
+function LoginPage() {
   return (
     <AuthLayout title="Login">
       <h2 className="mb-6 text-center text-2xl font-semibold text-[var(--fg)]">
@@ -21,3 +21,6 @@ export default function LoginPage() {
     </AuthLayout>
   );
 }
+
+LoginPage.auth = false;
+export default LoginPage;

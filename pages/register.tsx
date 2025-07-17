@@ -1,7 +1,7 @@
 import AuthLayout from '@/components/ui/AuthLayout'
 import RegisterForm from '@/components/ui/RegisterForm'
 
-export default function RegisterPage() {
+function RegisterPage() {
   return (
     <AuthLayout title="Register">
       <h2 className="mb-6 text-center text-2xl font-semibold text-[var(--fg)]">
@@ -18,3 +18,6 @@ export default function RegisterPage() {
     </AuthLayout>
   )
 }
+
+RegisterPage.auth = false;
+export default RegisterPage;
