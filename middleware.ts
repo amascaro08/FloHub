@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  const { pathname } = request.nextUrl;
 
-  // Skip middleware for public paths
+  // Allow root path to be public, bypassing all checks.
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
+  // Skip middleware for other public paths.
   const publicPaths = ['/login', '/register', '/api/auth'];
-  if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
-    return response;
+  if (publicPaths.some(path => pathname.startsWith(path))) {
+    return NextResponse.next();
   }
 
   try {
@@ -19,7 +24,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Verify the token
-    const response = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
+    const verifyResponse = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -28,11 +33,12 @@ export async function middleware(request: NextRequest) {
       body: JSON.stringify({ token })
     });
 
-    if (!response.ok) {
+    if (!verifyResponse.ok) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    const data = await response.json();
+    const data = await verifyResponse.json();
+    const response = NextResponse.next(); // Create response object after successful verification
     
     // Add user info to request headers
     if (data.user) {

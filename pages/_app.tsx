@@ -7,41 +7,47 @@ import { useRouter } from 'next/router'
 import AuthCheck from '@/components/AuthCheck';
 
 
+// Define a type for pages that may have an 'auth' property.
+type ComponentWithAuth = AppProps['Component'] & { auth?: boolean };
+
 const App = ({
   Component,
-  pageProps: { user, ...pageProps },
-}: AppProps<{ user?: any }>) => {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  pageProps,
+}: AppProps) => {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const handleStart = () => setIsLoading(true)
-    const handleComplete = () => setIsLoading(false)
+    const handleStart = () => setIsLoading(true);
+    const handleComplete = () => setIsLoading(false);
 
-    router.events.on('routeChangeStart', handleStart)
-    router.events.on('routeChangeComplete', handleComplete)
-    router.events.on('routeChangeError', handleComplete)
+    router.events.on('routeChangeStart', handleStart);
+    router.events.on('routeChangeComplete', handleComplete);
+    router.events.on('routeChangeError', handleComplete);
 
     return () => {
-      router.events.off('routeChangeStart', handleStart)
-      router.events.off('routeChangeComplete', handleComplete)
-      router.events.off('routeChangeError', handleComplete)
-    }
-  }, [router])
+      router.events.off('routeChangeStart', handleStart);
+      router.events.off('routeChangeComplete', handleComplete);
+      router.events.off('routeChangeError', handleComplete);
+    };
+  }, [router]);
 
   // Service Worker registration (optional)
   useEffect(() => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         } catch (err) {
           // Silent fail
         }
       }
-    }
-    registerSW()
-  }, [])
+    };
+    registerSW();
+  }, []);
+
+  // Cast Component to our new type to access the 'auth' property.
+  const AuthedComponent = Component as ComponentWithAuth;
 
   return (
     <>
@@ -51,13 +57,14 @@ const App = ({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      <AuthCheck>
-        <ChatProvider>
+      <ChatProvider>
+        {/* Pass the 'auth' property to AuthCheck, defaulting to true for protection. */}
+        <AuthCheck auth={AuthedComponent.auth ?? true}>
           <Component {...pageProps} />
-        </ChatProvider>
-      </AuthCheck>
+        </AuthCheck>
+      </ChatProvider>
     </>
-  )
-}
+  );
+};
 
 export default App

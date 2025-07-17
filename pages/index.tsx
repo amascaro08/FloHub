@@ -62,7 +62,7 @@ const features = [
   }
 ];
 
-export default function LandingPage() {
+function LandingPage() {
   return (
     <>
       <Head>
@@ -165,3 +165,6 @@ export default function LandingPage() {
     </>
   );
 }
+
+LandingPage.auth = false;
+export default LandingPage;
