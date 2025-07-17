@@ -12,7 +12,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const userEmail = user.id;
+  const userEmail = user.email;
 
   if (req.method === "GET") {
     try {
@@ -53,7 +53,7 @@ export default async function handler(
         );
       }
 
-      return res.status(200).json({ message: "Layouts saved successfully" });
+      return res.status(204).end();
     } catch (error: any) {
       console.error("Error saving user layouts:", error);
       return res.status(500).json({ error: error.message || "Internal server error" });

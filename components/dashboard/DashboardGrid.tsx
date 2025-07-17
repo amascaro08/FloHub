@@ -1,4 +1,3 @@
-"use client";
 
 import { useState, useEffect, useRef, memo, useMemo, lazy, Suspense } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
@@ -133,7 +132,7 @@ const DashboardGrid = () => {
     const fetchUserSettings = async () => {
       if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
+          const response = await fetch(`/api/userSettings?userId=${user.email}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             setActiveWidgets(userSettings.activeWidgets || []);
@@ -161,7 +160,7 @@ const DashboardGrid = () => {
     const fetchLayout = async () => {
       if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${user.primaryEmail}`);
+          const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
           if (response.ok) {
             const { layouts: savedLayouts } = await response.json();
             if (savedLayouts) {
@@ -225,7 +224,7 @@ const DashboardGrid = () => {
       }
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          if (isClient && user?.primaryEmail) {
+          if (isClient && user?.email) {
             await fetch('/api/userSettings/layouts', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

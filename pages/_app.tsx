@@ -1,20 +1,12 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { ChatProvider } from '@/components/assistant/ChatContext'
-import { useEffect, useState } from 'react'
-import Head from 'next/head'
-import { useRouter } from 'next/router'
-import AuthCheck from '@/components/AuthCheck';
-import Layout from '@/components/ui/Layout';
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import MainLayout from '@/components/ui/MainLayout';
 
-
-// Define a type for pages that may have an 'auth' property.
-type ComponentWithAuth = AppProps['Component'] & { auth?: boolean };
-
-const App = ({
-  Component,
-  pageProps,
-}: AppProps) => {
+const App = ({ Component, pageProps }: AppProps) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,7 +25,6 @@ const App = ({
     };
   }, [router]);
 
-  // Service Worker registration (optional)
   useEffect(() => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
@@ -47,9 +38,6 @@ const App = ({
     registerSW();
   }, []);
 
-  // Cast Component to our new type to access the 'auth' property.
-  const AuthedComponent = Component as ComponentWithAuth;
-
   return (
     <>
       <Head>
@@ -59,16 +47,9 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
       <ChatProvider>
-        {/* Wrap the component in the Layout if auth is required */}
-        {AuthedComponent.auth ? (
-          <AuthCheck auth>
-            <Layout>
-              <Component {...pageProps} />
-            </Layout>
-          </AuthCheck>
-        ) : (
+        <MainLayout>
           <Component {...pageProps} />
-        )}
+        </MainLayout>
       </ChatProvider>
     </>
   );

@@ -24,7 +24,7 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = user.id;
+  const userId = user.email;
 
   try {
     // 2) Fetch meeting notes for the authenticated user from the database

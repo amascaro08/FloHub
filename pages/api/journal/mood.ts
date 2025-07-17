@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = user.id;
+  const userEmail = user.email;
   
   // Handle GET request - retrieve mood data
   if (req.method === 'GET') {

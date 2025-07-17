@@ -1,5 +1,4 @@
 // pages/dashboard/tasks.tsx
-"use client";
 
 import { useState, FormEvent, useMemo } from "react";
 

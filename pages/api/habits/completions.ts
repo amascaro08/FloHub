@@ -13,7 +13,7 @@ export default async function handler(
     return res.status(401).json({ error: 'Not signed in' });
   }
   
-  const userId = user.id;
+  const userId = user.email;
 
   // Handle GET request to fetch habit completions
   if (req.method === 'GET') {

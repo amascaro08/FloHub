@@ -1,13 +1,10 @@
 // pages/dashboard/index.tsx
-"use client";
-
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import MobileDashboard from "@/components/dashboard/MobileDashboard";
-import Layout from "@/components/ui/Layout";
 
 export default function DashboardPage() {
   return (
-    <Layout>
+    <>
       {/* Show MobileDashboard on small screens, hide on medium and larger */}
       <div className="md:hidden">
         <MobileDashboard />
@@ -16,6 +13,6 @@ export default function DashboardPage() {
       <div className="hidden md:block">
         <DashboardGrid />
       </div>
-    </Layout>
+    </>
   );
 }

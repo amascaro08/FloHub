@@ -12,16 +12,16 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const user = await auth(req);
-
-  if (!user?.email) {
-    return res.status(401).json({ error: "Not signed in" });
-  }
-
-  const userEmail = user.id;
-  const newSettings: UserSettings = req.body;
-
   try {
+    const user = await auth(req);
+
+    if (!user?.email) {
+      return res.status(401).json({ error: "Not signed in" });
+    }
+
+    const userEmail = user.email;
+    const newSettings: UserSettings = req.body;
+
     // Check if settings exist for the user
     const { rows: existingSettings } = await query(
       'SELECT * FROM user_settings WHERE user_email = $1',
@@ -57,7 +57,7 @@ export default async function handler(
       );
     }
 
-    return res.status(200).json({ message: "Settings updated successfully" });
+    return res.status(204).end();
   } catch (error: any) {
     console.error("Error updating user settings:", error);
     return res.status(500).json({ error: error.message || "Internal server error" });

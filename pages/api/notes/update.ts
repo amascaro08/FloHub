@@ -31,7 +31,7 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = user.id;
+  const userId = user.email;
 
   // 2) Validate input
   const { id, title, content, tags, eventId, eventTitle, isAdhoc } = req.body as UpdateNoteRequest; // Include new fields
