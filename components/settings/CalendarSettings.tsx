@@ -76,13 +76,11 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                         type="checkbox"
                         checked={source.isEnabled}
                         onChange={() => {
-                          setSettings(s => {
-                            const updatedSources = [...(s.calendarSources || [])];
-                            updatedSources[index] = {
-                              ...updatedSources[index],
-                              isEnabled: !updatedSources[index].isEnabled
-                            };
-                            return { ...s, calendarSources: updatedSources };
+                          onSettingsChange({
+                            ...settings,
+                            calendarSources: settings.calendarSources?.map((source, i) => 
+                              i === index ? { ...source, isEnabled: !source.isEnabled } : source
+                            )
                           });
                         }}
                         className="sr-only peer"
@@ -104,10 +102,9 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     <button
                       onClick={() => {
                         if (confirm(`Are you sure you want to remove "${source.name}"?`)) {
-                          setSettings(s => {
-                            const updatedSources = [...(s.calendarSources || [])];
-                            updatedSources.splice(index, 1);
-                            return { ...s, calendarSources: updatedSources };
+                          onSettingsChange({
+                            ...settings,
+                            calendarSources: settings.calendarSources?.filter((_, i) => i !== index)
                           });
                         }
                       }}
@@ -149,10 +146,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         <select
           value={settings.defaultView}
           onChange={(e) =>
-            setSettings((s) => ({
-              ...s,
-              defaultView: e.target.value as any,
-            }))
+            onSettingsChange({ ...settings, defaultView: e.target.value as any })
           }
           className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full md:w-auto"
         >
@@ -171,10 +165,10 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 type="date"
                 value={settings.customRange?.start || ''}
                 onChange={(e) =>
-                  setSettings((s) => ({
-                    ...s,
-                    customRange: { ...s.customRange, start: e.target.value, end: s.customRange?.end || '' },
-                  }))
+                  onSettingsChange({
+                    ...settings,
+                    customRange: { ...settings.customRange, start: e.target.value, end: settings.customRange?.end || '' },
+                  })
                 }
                 className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
