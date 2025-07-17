@@ -54,7 +54,7 @@ const { user, isLoading } = useUser()
   if (isLoading) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
-  const userName = useUser() || "User";
+  const userName = user?.name || "User";
   
   // Check if we're on the client side
   const isClient = typeof window !== 'undefined';

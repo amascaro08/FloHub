@@ -137,10 +137,10 @@ const DashboardGrid = () => {
             const userSettings = await response.json() as UserSettings;
             setActiveWidgets(userSettings.activeWidgets || []);
           } else {
-            setActiveWidgets(Object.keys(memoizedWidgetComponents) as string[]);
+            setActiveWidgets([]);
           }
         } catch (e) {
-          setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+          setActiveWidgets([]);
         } finally {
           setLoadedSettings(true);
         }
@@ -150,7 +150,7 @@ const DashboardGrid = () => {
     if (isClient) {
       fetchUserSettings();
     } else {
-      setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+      setActiveWidgets([]);
       setLoadedSettings(true);
     }
   }, [user, isClient]);

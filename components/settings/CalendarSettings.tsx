@@ -37,15 +37,31 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-hidden">
         <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
           <h2 className="text-lg font-medium">Calendar Sources</h2>
-          <button
-            onClick={() => {
-              const googleAuthUrl = `/api/calendar/connect?provider=google`;
-              window.location.href = googleAuthUrl;
-            }}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
-          >
-            Add New Calendar
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const googleAuthUrl = `/api/calendar/connect?provider=google`;
+                window.location.href = googleAuthUrl;
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+            >
+              Add Google Calendar
+            </button>
+            <button
+              onClick={() => {
+                const powerAutomateUrl = prompt("Please enter your Power Automate URL");
+                if (powerAutomateUrl) {
+                  onSettingsChange({
+                    ...settings,
+                    powerAutomateUrl: powerAutomateUrl,
+                  });
+                }
+              }}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+            >
+              Add Power Automate URL
+            </button>
+          </div>
         </div>
         
         {/* Calendar Sources List */}
