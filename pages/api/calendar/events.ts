@@ -21,7 +21,7 @@ export default async function handler(
   }
 
   // Placeholder for accessToken, as it's not directly available from `auth`
-  const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
+  const accessToken = user.accessToken;
 
   // 2) Get calendarId from query parameters
   const { calendarId } = req.query;

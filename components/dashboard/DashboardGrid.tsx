@@ -130,7 +130,7 @@ const DashboardGrid = () => {
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      if (isClient && user?.primaryEmail) {
+      if (isClient && user?.email) {
         try {
           const response = await fetch(`/api/userSettings?userId=${user.email}`);
           if (response.ok) {
@@ -158,7 +158,7 @@ const DashboardGrid = () => {
   // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
-      if (isClient && user?.primaryEmail) {
+      if (isClient && user?.email) {
         try {
           const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
           if (response.ok) {

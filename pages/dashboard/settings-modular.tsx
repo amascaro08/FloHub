@@ -91,13 +91,12 @@ const SettingsModularPage = () => {
   };
 
   if (isLoading) {
-    return <Layout><div>Loading...</div></Layout>;
+    return <div>Loading...</div>;
   }
 
   // If not authenticated
   if (!userId) {
     return (
-        <Layout>
       <div className="flex items-center justify-center min-h-screen">
         <a
           href="/login"
@@ -106,12 +105,10 @@ const SettingsModularPage = () => {
           Sign In
         </a>
       </div>
-        </Layout>
     );
   }
 
   return (
-    <Layout>
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Settings</h1>
         <CalendarSettings
@@ -144,7 +141,6 @@ const SettingsModularPage = () => {
         Sign Out
       </button>
     </div>
-    </Layout>
   );
 };
 

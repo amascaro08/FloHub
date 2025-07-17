@@ -13,7 +13,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
   // Placeholder for accessToken, as it's not directly available from `auth`
-  const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
+  const accessToken = user.accessToken;
 
   // POST = create, PUT = update
   if (req.method === "POST") {

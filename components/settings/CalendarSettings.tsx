@@ -39,16 +39,8 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
           <h2 className="text-lg font-medium">Calendar Sources</h2>
           <button
             onClick={() => {
-              setNewCalendarSource({
-                name: "",
-                type: "google",
-                sourceId: "",
-                connectionData: "",
-                tags: [],
-                isEnabled: true,
-              });
-              setEditingCalendarSourceIndex(null);
-              setShowCalendarForm(true); // Show the form when button is clicked
+              const googleAuthUrl = `/api/calendar/connect?provider=google`;
+              window.location.href = googleAuthUrl;
             }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
           >
