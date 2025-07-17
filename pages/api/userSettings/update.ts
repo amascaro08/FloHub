@@ -45,8 +45,11 @@ export default async function handler(
           widgets = $11,
           calendar_settings = $12,
           notification_settings = $13,
-          layouts = $14
-        WHERE user_email = $15`,
+          layouts = $14,
+          calendar_sources = $15,
+          timezone = $16,
+          flo_cat_settings = $17
+        WHERE user_email = $18`,
         [
           newSettings.selectedCals || [],
           newSettings.defaultView || 'month',
@@ -62,14 +65,17 @@ export default async function handler(
           newSettings.calendarSettings || { calendars: [] },
           newSettings.notificationSettings || { subscribed: false },
           newSettings.layouts || {},
+          newSettings.calendarSources || [],
+          newSettings.timezone || 'UTC',
+          newSettings.floCatSettings || { enabledCapabilities: [] },
           userEmail,
         ]
       );
     } else {
       // Insert new settings
       await query(
-        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, layouts)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, layouts, calendar_sources, timezone, flo_cat_settings)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           userEmail,
           newSettings.selectedCals || [],
@@ -86,6 +92,9 @@ export default async function handler(
           newSettings.calendarSettings || { calendars: [] },
           newSettings.notificationSettings || { subscribed: false },
           newSettings.layouts || {},
+          newSettings.calendarSources || [],
+          newSettings.timezone || 'UTC',
+          newSettings.floCatSettings || { enabledCapabilities: [] },
         ]
       );
     }
