@@ -19,7 +19,7 @@ const nav = [
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
   { name: "Feedback", href: "/feedback", icon: NotebookPen },
-  { name: "Settings", href: "/dashboard/settings-modular", icon: Settings },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {

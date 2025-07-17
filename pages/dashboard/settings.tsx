@@ -10,7 +10,26 @@ import WidgetsSettings from "@/components/settings/WidgetsSettings";
 
 const SettingsPage = () => {
   const { user } = useUser();
-  const [settings, setSettings] = useState<UserSettings>({});
+  const [settings, setSettings] = useState<UserSettings>({
+    selectedCals: [],
+    defaultView: "today",
+    customRange: { start: "", end: "" },
+    globalTags: [],
+    timezone: "UTC",
+    tags: [],
+    widgets: [],
+    calendarSources: [],
+    activeWidgets: [],
+    calendarSettings: {
+      calendars: [],
+    },
+    notificationSettings: {
+      subscribed: false,
+    },
+    floCatSettings: {
+      enabledCapabilities: [],
+    },
+  });
   const [activeTab, setActiveTab] = useState("general");
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState("");
 
