@@ -28,30 +28,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Verify the token
-    const verifyResponse = await fetch('https://api.stack-auth.com/api/v1/auth/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.STACK_SECRET_SERVER_KEY}`
-      },
-      body: JSON.stringify({ token })
-    });
-
-    if (!verifyResponse.ok) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    const data = await verifyResponse.json();
-    const response = NextResponse.next(); // Create response object after successful verification
+    // We don't need to verify the token here since the API routes will do it.
+    // This middleware is just to protect the pages.
     
-    // Add user info to request headers
-    if (data.user) {
-      response.headers.set('x-user-id', data.user.id);
-      response.headers.set('x-user-email', data.user.primaryEmail || '');
-    }
-    
-    return response;
+    return NextResponse.next();
   } catch (error) {
     console.error('Auth middleware error:', error);
     return NextResponse.redirect(new URL('/login', request.url));

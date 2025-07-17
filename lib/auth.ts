@@ -1,24 +1,21 @@
 import { NextApiRequest } from 'next';
-import { handleAuth } from './neonAuth';
+import jwt from 'jsonwebtoken';
+import { query } from './neon';
 
 export async function auth(req: NextApiRequest) {
-  let token: string | undefined;
-
-  // Check for token in Authorization header
-  if (req.headers.authorization?.startsWith('Bearer ')) {
-    token = req.headers.authorization.substring(7);
-  }
-
-  // Check for token in cookies (assuming a cookie named 'token' or similar)
-  // You might need to adjust the cookie name based on your actual implementation
-  if (!token && req.cookies.token) {
-    token = req.cookies.token;
-  }
+  const token = req.cookies['auth-token'];
 
   if (!token) {
     return null;
   }
 
-  const user = await handleAuth(token);
-  return user;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    const { rows } = await query('SELECT id, email FROM users WHERE id = $1', [decoded.userId]);
+    const user = rows[0];
+
+    return user || null;
+  } catch (error) {
+    return null;
+  }
 }
