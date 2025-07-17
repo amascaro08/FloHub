@@ -3,14 +3,14 @@ import { UserSettings } from '../../types/app';
 
 interface FloCatSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
   newPersonalityKeyword: string;
   setNewPersonalityKeyword: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const FloCatSettings: React.FC<FloCatSettingsProps> = ({
   settings,
-  setSettings,
+  onSettingsChange,
   newPersonalityKeyword,
   setNewPersonalityKeyword
 }) => {
@@ -31,7 +31,7 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
                 name="floCatStyle"
                 value="default"
                 checked={settings.floCatStyle === "default"}
-                onChange={() => setSettings(s => ({ ...s, floCatStyle: "default" }))}
+                onChange={() => onSettingsChange({ ...settings, floCatStyle: "default" })}
                 className="h-4 w-4 text-blue-500"
               />
               <div>
@@ -46,7 +46,7 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
                 name="floCatStyle"
                 value="more_catty"
                 checked={settings.floCatStyle === "more_catty"}
-                onChange={() => setSettings(s => ({ ...s, floCatStyle: "more_catty" }))}
+                onChange={() => onSettingsChange({ ...settings, floCatStyle: "more_catty" })}
                 className="h-4 w-4 text-blue-500"
               />
               <div>
@@ -61,7 +61,7 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
                 name="floCatStyle"
                 value="less_catty"
                 checked={settings.floCatStyle === "less_catty"}
-                onChange={() => setSettings(s => ({ ...s, floCatStyle: "less_catty" }))}
+                onChange={() => onSettingsChange({ ...settings, floCatStyle: "less_catty" })}
                 className="h-4 w-4 text-blue-500"
               />
               <div>
@@ -76,7 +76,7 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
                 name="floCatStyle"
                 value="professional"
                 checked={settings.floCatStyle === "professional"}
-                onChange={() => setSettings(s => ({ ...s, floCatStyle: "professional" }))}
+                onChange={() => onSettingsChange({ ...settings, floCatStyle: "professional" })}
                 className="h-4 w-4 text-blue-500"
               />
               <div>
@@ -105,10 +105,10 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
             onKeyPress={(e) => {
               if (e.key === 'Enter' && newPersonalityKeyword.trim()) {
                 if (!settings.floCatPersonality?.includes(newPersonalityKeyword.trim())) {
-                  setSettings(s => ({
-                    ...s,
-                    floCatPersonality: [...(s.floCatPersonality || []), newPersonalityKeyword.trim()]
-                  }));
+                  onSettingsChange({
+                    ...settings,
+                    floCatPersonality: [...(settings.floCatPersonality || []), newPersonalityKeyword.trim()]
+                  });
                 }
                 setNewPersonalityKeyword("");
               }
@@ -117,10 +117,10 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
           <button
             onClick={() => {
               if (newPersonalityKeyword.trim() && !settings.floCatPersonality?.includes(newPersonalityKeyword.trim())) {
-                setSettings(s => ({
-                  ...s,
-                  floCatPersonality: [...(s.floCatPersonality || []), newPersonalityKeyword.trim()]
-                }));
+                onSettingsChange({
+                  ...settings,
+                  floCatPersonality: [...(settings.floCatPersonality || []), newPersonalityKeyword.trim()]
+                });
                 setNewPersonalityKeyword("");
               }
             }}
@@ -136,10 +136,10 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
               <span key={keyword} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full flex items-center gap-1">
                 {keyword}
                 <button
-                  onClick={() => setSettings(s => ({
-                    ...s,
-                    floCatPersonality: (s.floCatPersonality || []).filter(k => k !== keyword)
-                  }))}
+                  onClick={() => onSettingsChange({
+                    ...settings,
+                    floCatPersonality: (settings.floCatPersonality || []).filter(k => k !== keyword)
+                  })}
                   className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-1"
                   aria-label={`Remove ${keyword} keyword`}
                 >
@@ -165,7 +165,7 @@ const FloCatSettings: React.FC<FloCatSettingsProps> = ({
           <input
             type="text"
             value={settings.preferredName || ""}
-            onChange={(e) => setSettings(s => ({ ...s, preferredName: e.target.value }))}
+            onChange={(e) => onSettingsChange({ ...settings, preferredName: e.target.value })}
             className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             placeholder="Enter your preferred name"
           />

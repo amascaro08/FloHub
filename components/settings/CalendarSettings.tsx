@@ -6,7 +6,7 @@ type CalendarSourceType = "google" | "o365" | "apple" | "other";
 
 interface CalendarSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
   calendars: CalItem[];
   newCalendarSource: Partial<CalendarSource>;
   setNewCalendarSource: React.Dispatch<React.SetStateAction<Partial<CalendarSource>>>;
@@ -20,7 +20,7 @@ interface CalendarSettingsProps {
 
 const CalendarSettings: React.FC<CalendarSettingsProps> = ({
   settings,
-  setSettings,
+  onSettingsChange,
   calendars,
   newCalendarSource,
   setNewCalendarSource,
@@ -185,10 +185,10 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 type="date"
                 value={settings.customRange?.end || ''}
                 onChange={(e) =>
-                  setSettings((s) => ({
-                    ...s,
-                    customRange: { ...s.customRange, start: s.customRange?.start || '', end: e.target.value },
-                  }))
+                  onSettingsChange({
+                    ...settings,
+                    customRange: { ...settings.customRange, start: settings.customRange?.start || '', end: e.target.value },
+                  })
                 }
                 className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />

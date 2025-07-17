@@ -3,12 +3,12 @@ import { UserSettings } from '../../types/app';
 
 interface TagsSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
 }
 
 const TagsSettings: React.FC<TagsSettingsProps> = ({
   settings,
-  setSettings
+  onSettingsChange
 }) => {
   return (
     <div className="space-y-6">
@@ -25,10 +25,10 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
                 const input = e.target as HTMLInputElement;
                 const newTag = input.value.trim();
                 if (newTag && !(settings.globalTags || []).includes(newTag)) {
-                  setSettings(s => ({
-                    ...s,
-                    globalTags: [...(s.globalTags || []), newTag]
-                  }));
+                  onSettingsChange({
+                    ...settings,
+                    globalTags: [...(settings.globalTags || []), newTag]
+                  });
                   input.value = ''; // Clear input
                 }
               }
@@ -39,10 +39,10 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
               const input = document.getElementById('newTagInput') as HTMLInputElement;
               const newTag = input.value.trim();
               if (newTag && !(settings.globalTags || []).includes(newTag)) {
-                setSettings(s => ({
-                  ...s,
-                  globalTags: [...(s.globalTags || []), newTag]
-                }));
+                onSettingsChange({
+                  ...settings,
+                  globalTags: [...(settings.globalTags || []), newTag]
+                });
                 input.value = ''; // Clear input
               }
             }}
@@ -56,10 +56,10 @@ const TagsSettings: React.FC<TagsSettingsProps> = ({
             <span key={tag} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full flex items-center gap-1">
               {tag}
               <button
-                onClick={() => setSettings(s => ({
-                  ...s,
-                  globalTags: (s.globalTags || []).filter(t => t !== tag)
-                }))}
+                onClick={() => onSettingsChange({
+                  ...settings,
+                  globalTags: (settings.globalTags || []).filter(t => t !== tag)
+                })}
                 className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-1"
                 aria-label={`Remove ${tag} tag`}
               >

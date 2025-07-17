@@ -4,12 +4,12 @@ import WidgetManager from '@/components/ui/WidgetManager';
 
 interface WidgetsSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
 }
 
 const WidgetsSettings: React.FC<WidgetsSettingsProps> = ({
   settings,
-  setSettings
+  onSettingsChange
 }) => {
   return (
     <div className="space-y-6">
@@ -17,7 +17,7 @@ const WidgetsSettings: React.FC<WidgetsSettingsProps> = ({
         <h2 className="text-lg font-medium mb-4">Dashboard Widgets</h2>
         <WidgetManager
           settings={settings}
-          onSettingsChange={setSettings}
+          onSettingsChange={onSettingsChange}
         />
       </section>
     </div>

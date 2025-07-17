@@ -4,12 +4,12 @@ import NotificationManager from '@/components/ui/NotificationManager';
 
 interface NotificationsSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
 }
 
 const NotificationsSettings: React.FC<NotificationsSettingsProps> = ({
   settings,
-  setSettings
+  onSettingsChange
 }) => {
   return (
     <div className="space-y-6">

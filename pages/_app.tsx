@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import AuthCheck from '@/components/AuthCheck';
+import Layout from '@/components/ui/Layout';
 
 
 // Define a type for pages that may have an 'auth' property.
@@ -58,10 +59,16 @@ const App = ({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
       <ChatProvider>
-        {/* Pass the 'auth' property to AuthCheck, defaulting to true for protection. */}
-        <AuthCheck auth={AuthedComponent.auth ?? true}>
+        {/* Wrap the component in the Layout if auth is required */}
+        {AuthedComponent.auth ? (
+          <AuthCheck auth>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          </AuthCheck>
+        ) : (
           <Component {...pageProps} />
-        </AuthCheck>
+        )}
       </ChatProvider>
     </>
   );

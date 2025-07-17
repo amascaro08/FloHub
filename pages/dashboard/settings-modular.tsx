@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
-import { UserSettings } from "@/types/app";
+import { UserSettings, CalendarSource } from "@/types/app";
 import { useUser } from '@/lib/hooks/useUser';
 import dynamic from 'next/dynamic';
+import Layout from "@/components/ui/Layout";
+import CalendarSettings from "@/components/settings/CalendarSettings";
+import WidgetsSettings from "@/components/settings/WidgetsSettings";
+import TimezoneSettings from "@/components/settings/TimezoneSettings";
+import TagsSettings from "@/components/settings/TagsSettings";
+import FloCatSettings from "@/components/settings/FloCatSettings";
+import NotificationsSettings from "@/components/settings/NotificationsSettings";
 
 const SettingsModularPage = () => {
   const router = useRouter();
@@ -18,6 +25,8 @@ const SettingsModularPage = () => {
     timezone: "UTC",
     tags: [],
     widgets: [],
+    calendarSources: [],
+    activeWidgets: [],
     calendarSettings: {
       calendars: [],
     },
@@ -29,13 +38,15 @@ const SettingsModularPage = () => {
     },
   };
   const [settings, setSettings] = useState<UserSettings>(initialSettings);
+  const [showCalendarForm, setShowCalendarForm] = useState(false);
+  const [newCalendarSource, setNewCalendarSource] = useState<Partial<CalendarSource>>({});
+  const [editingCalendarSourceIndex, setEditingCalendarSourceIndex] = useState<number | null>(null);
+  const [newCalendarTag, setNewCalendarTag] = useState('');
+  const [newPersonalityKeyword, setNewPersonalityKeyword] = useState('');
+
 
   // Use user.email as userId
   const userId = user?.primaryEmail || user?.id;
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(
@@ -79,9 +90,14 @@ const SettingsModularPage = () => {
     }
   };
 
+  if (isLoading) {
+    return <Layout><div>Loading...</div></Layout>;
+  }
+
   // If not authenticated
   if (!userId) {
     return (
+        <Layout>
       <div className="flex items-center justify-center min-h-screen">
         <a
           href="/login"
@@ -90,122 +106,37 @@ const SettingsModularPage = () => {
           Sign In
         </a>
       </div>
+        </Layout>
     );
   }
 
   return (
+    <Layout>
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Settings</h1>
-      {/* Timezone Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Timezone
-        </label>
-        <select
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.timezone}
-          onChange={(e) =>
-            handleSettingsChange({ ...settings, timezone: e.target.value })
-          }
-        >
-          <option value="UTC">UTC</option>
-          <option value="Australia/Sydney">Australia/Sydney</option>
-          <option value="America/Los_Angeles">America/Los_Angeles</option>
-          {/* Add more timezones as needed */}
-        </select>
-      </div>
-      {/* Tags Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Tags
-        </label>
-        <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.tags?.join(",") || ""}
-          onChange={(e) =>
-            handleSettingsChange({
-              ...settings,
-              tags: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-            })
-          }
+        <CalendarSettings
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            calendars={[]}
+            newCalendarSource={newCalendarSource}
+            setNewCalendarSource={setNewCalendarSource}
+            editingCalendarSourceIndex={editingCalendarSourceIndex}
+            setEditingCalendarSourceIndex={setEditingCalendarSourceIndex}
+            showCalendarForm={showCalendarForm}
+            setShowCalendarForm={setShowCalendarForm}
+            newCalendarTag={newCalendarTag}
+            setNewCalendarTag={setNewCalendarTag}
         />
-      </div>
-      {/* Widgets Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Widgets
-        </label>
-        <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.widgets?.join(",") || ""}
-          onChange={(e) =>
-            handleSettingsChange({
-              ...settings,
-              widgets: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-            })
-          }
+        <WidgetsSettings settings={settings} onSettingsChange={handleSettingsChange} />
+        <TimezoneSettings settings={settings} onSettingsChange={handleSettingsChange} />
+        <TagsSettings settings={settings} onSettingsChange={handleSettingsChange} />
+        <FloCatSettings
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            newPersonalityKeyword={newPersonalityKeyword}
+            setNewPersonalityKeyword={setNewPersonalityKeyword}
         />
-      </div>
-      {/* Calendar Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Calendar Settings
-        </label>
-        <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.calendarSettings?.calendars.join(",") || ""}
-          onChange={(e) =>
-            handleSettingsChange({
-              ...settings,
-              calendarSettings: {
-                calendars: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
-              },
-            })
-          }
-        />
-      </div>
-      {/* FloCat Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          FloCat Settings
-        </label>
-        <input
-          type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          value={settings.floCatSettings?.enabledCapabilities?.join(",") || ""}
-          onChange={(e) =>
-            handleSettingsChange({
-              ...settings,
-              floCatSettings: {
-                enabledCapabilities: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-              }
-            })
-          }
-        />
-      </div>
-      {/* Notification Settings */}
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Notification Settings
-        </label>
-        <input
-          type="checkbox"
-          className="mr-2 leading-tight"
-          checked={!!settings.notificationSettings?.subscribed}
-          onChange={(e) =>
-            handleSettingsChange({
-              ...settings,
-              notificationSettings: {
-                subscribed: e.target.checked,
-              },
-            })
-          }
-        />
-        <span className="text-sm text-gray-700">Subscribed</span>
-      </div>
+        <NotificationsSettings settings={settings} onSettingsChange={handleSettingsChange} />
       <button
         onClick={() => window.location.assign('/logout')}
         className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
@@ -213,6 +144,7 @@ const SettingsModularPage = () => {
         Sign Out
       </button>
     </div>
+    </Layout>
   );
 };
 

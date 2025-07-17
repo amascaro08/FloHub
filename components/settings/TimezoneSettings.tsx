@@ -3,12 +3,12 @@ import { UserSettings } from '../../types/app';
 
 interface TimezoneSettingsProps {
   settings: UserSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  onSettingsChange: (newSettings: UserSettings) => void;
 }
 
 const TimezoneSettings: React.FC<TimezoneSettingsProps> = ({
   settings,
-  setSettings
+  onSettingsChange
 }) => {
   return (
     <div className="space-y-6">
@@ -21,10 +21,7 @@ const TimezoneSettings: React.FC<TimezoneSettingsProps> = ({
           <select
             value={settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
             onChange={(e) =>
-              setSettings((s) => ({
-                ...s,
-                timezone: e.target.value,
-              }))
+              onSettingsChange({ ...settings, timezone: e.target.value })
             }
             className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full"
           >
