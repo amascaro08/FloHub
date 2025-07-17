@@ -16,7 +16,10 @@ export const GOOGLE_OAUTH_CONFIG = {
     return process.env.GOOGLE_OAUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET || '';
   },
   get redirectUri() {
-    return process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/google-additional` : '';
+    if (process.env.NODE_ENV === 'production') {
+      return 'https://flohub.vercel.app/api/auth/callback/google-additional';
+    }
+    return 'http://localhost:3000/api/auth/callback/google-additional';
   }
 };
 

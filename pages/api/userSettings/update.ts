@@ -13,13 +13,15 @@ export default async function handler(
   }
 
   try {
-    const user = await auth(req);
+    const { userId } = req.query;
+    const userEmail = Array.isArray(userId) ? userId[0] : userId;
 
-    if (!user?.email) {
-      return res.status(401).json({ error: "Not signed in" });
+    if (!userEmail) {
+      const user = await auth(req);
+      if (!user?.email) {
+        return res.status(401).json({ error: "Not signed in" });
+      }
     }
-
-    const userEmail = user.email;
     const newSettings: UserSettings = req.body;
 
     // Check if settings exist for the user
