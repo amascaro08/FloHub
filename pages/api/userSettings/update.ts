@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { userSettings } from "@/db/schema";
 import { UserSettings } from "@/types/app";
+import { eq } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,82 +26,36 @@ export default async function handler(
     }
     const newSettings: UserSettings = req.body;
 
-    // Check if settings exist for the user
-    const { rows: existingSettings } = await query(
-      'SELECT * FROM user_settings WHERE user_email = $1',
-      [userEmail]
-    );
+    const settingsData = {
+      selectedCals: newSettings.selectedCals || [],
+      defaultView: newSettings.defaultView || 'month',
+      customRange: newSettings.customRange || { start: '', end: '' },
+      powerAutomateUrl: newSettings.powerAutomateUrl || '',
+      globalTags: newSettings.globalTags || [],
+      activeWidgets: newSettings.activeWidgets || [],
+      floCatStyle: newSettings.floCatStyle || 'default',
+      floCatPersonality: newSettings.floCatPersonality || [],
+      preferredName: newSettings.preferredName || '',
+      tags: newSettings.tags || [],
+      widgets: newSettings.widgets || [],
+      calendarSettings: newSettings.calendarSettings || { calendars: [] },
+      notificationSettings: newSettings.notificationSettings || { subscribed: false },
+      layouts: newSettings.layouts || {},
+      calendarSources: newSettings.calendarSources || [],
+      timezone: newSettings.timezone || 'UTC',
+      floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
+    };
 
-    if (existingSettings.length > 0) {
-      // Update existing settings
-      await query(
-        `UPDATE user_settings SET
-          selected_cals = $1,
-          default_view = $2,
-          custom_range = $3,
-          power_automate_url = $4,
-          global_tags = $5,
-          active_widgets = $6,
-          flo_cat_style = $7,
-          flo_cat_personality = $8,
-          preferred_name = $9,
-          tags = $10,
-          widgets = $11,
-          calendar_settings = $12,
-          notification_settings = $13,
-          layouts = $14,
-          calendar_sources = $15,
-          timezone = $16,
-          flo_cat_settings = $17
-        WHERE user_email = $18`,
-        [
-          newSettings.selectedCals || [],
-          newSettings.defaultView || 'month',
-          newSettings.customRange || { start: '', end: '' },
-          newSettings.powerAutomateUrl || '',
-          newSettings.globalTags || [],
-          newSettings.activeWidgets || [],
-          newSettings.floCatStyle || 'default',
-          newSettings.floCatPersonality || [],
-          newSettings.preferredName || '',
-          newSettings.tags || [],
-          newSettings.widgets || [],
-          newSettings.calendarSettings || { calendars: [] },
-          newSettings.notificationSettings || { subscribed: false },
-          newSettings.layouts || {},
-          newSettings.calendarSources || [],
-          newSettings.timezone || 'UTC',
-          newSettings.floCatSettings || { enabledCapabilities: [] },
-          userEmail,
-        ]
-      );
-    } else {
-      // Insert new settings
-      await query(
-        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, layouts, calendar_sources, timezone, flo_cat_settings)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-        [
-          userEmail,
-          newSettings.selectedCals || [],
-          newSettings.defaultView || 'month',
-          newSettings.customRange || { start: '', end: '' },
-          newSettings.powerAutomateUrl || '',
-          newSettings.globalTags || [],
-          newSettings.activeWidgets || [],
-          newSettings.floCatStyle || 'default',
-          newSettings.floCatPersonality || [],
-          newSettings.preferredName || '',
-          newSettings.tags || [],
-          newSettings.widgets || [],
-          newSettings.calendarSettings || { calendars: [] },
-          newSettings.notificationSettings || { subscribed: false },
-          newSettings.layouts || {},
-          newSettings.calendarSources || [],
-          newSettings.timezone || 'UTC',
-          newSettings.floCatSettings || { enabledCapabilities: [] },
-        ]
-      );
-    }
+    await db
+      .insert(userSettings)
+      .values({
+        userEmail: userEmail as string,
+        ...settingsData,
+      })
+      .onConflictDoUpdate({
+        target: userSettings.userEmail,
+        set: settingsData,
+      });
 
     return res.status(204).end();
   } catch (error: any) {
