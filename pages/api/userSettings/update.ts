@@ -44,8 +44,9 @@ export default async function handler(
           tags = $10,
           widgets = $11,
           calendar_settings = $12,
-          notification_settings = $13
-        WHERE user_email = $14`,
+          notification_settings = $13,
+          layouts = $14
+        WHERE user_email = $15`,
         [
           newSettings.selectedCals || [],
           newSettings.defaultView || 'month',
@@ -60,14 +61,15 @@ export default async function handler(
           newSettings.widgets || [],
           newSettings.calendarSettings || { calendars: [] },
           newSettings.notificationSettings || { subscribed: false },
+          newSettings.layouts || {},
           userEmail,
         ]
       );
     } else {
       // Insert new settings
       await query(
-        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        `INSERT INTO user_settings (user_email, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, layouts)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           userEmail,
           newSettings.selectedCals || [],
@@ -83,6 +85,7 @@ export default async function handler(
           newSettings.widgets || [],
           newSettings.calendarSettings || { calendars: [] },
           newSettings.notificationSettings || { subscribed: false },
+          newSettings.layouts || {},
         ]
       );
     }

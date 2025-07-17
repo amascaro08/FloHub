@@ -48,8 +48,8 @@ export default async function handler(
       } else {
         // Insert new settings with layouts
         await query(
-          'INSERT INTO user_settings (user_email, layouts) VALUES ($1, $2)',
-          [userEmail, layouts]
+          'INSERT INTO user_settings (user_email, layouts, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, flo_cat_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)',
+          [userEmail, layouts, [], 'month', { start: '', end: '' }, '', [], [], 'default', [], '', [], [], { calendars: [] }, { subscribed: false }, { enabledCapabilities: [] }]
         );
       }
 

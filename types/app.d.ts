@@ -26,6 +26,7 @@ export type UserSettings = {
   floCatSettings?: {
     enabledCapabilities: string[];
   };
+  layouts?: { [key: string]: any };
 };
 
 // Define a type for calendar sources

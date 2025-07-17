@@ -99,6 +99,7 @@ export const userSettings = pgTable("user_settings", {
   calendarSettings: jsonb("calendar_settings"),
   notificationSettings: jsonb("notification_settings"),
   floCatSettings: jsonb("flo_cat_settings"),
+  layouts: jsonb("layouts"),
 });
 
 // NOTES TABLE
