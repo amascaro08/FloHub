@@ -12,17 +12,26 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<UserSettings | ErrorRes>
 ) {
-  // Disable caching to always return freshest data
-  res.setHeader('Cache-Control', 'no-store');
-  const decoded = auth(req);
-  if (!decoded) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  const user = await getUserById(decoded.userId);
-  if (!user?.email) {
-    return res.status(401).json({ error: "User not found" });
-  }
-  const user_email = user.email;
+  try {
+    // Disable caching to always return freshest data
+    res.setHeader('Cache-Control', 'no-store');
+    console.log('UserSettings API called, method:', req.method);
+    
+    const decoded = auth(req);
+    if (!decoded) {
+      console.log('Authentication failed in userSettings API');
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    console.log('Auth successful, userId:', decoded.userId);
+    const user = await getUserById(decoded.userId);
+    if (!user?.email) {
+      console.log('User not found for userId:', decoded.userId);
+      return res.status(401).json({ error: "User not found" });
+    }
+    
+    console.log('User found:', user.email);
+    const user_email = user.email;
   // Use a more general settings document instead of just "calendar"
 
   if (req.method === "GET") {
@@ -80,5 +89,9 @@ export default async function handler(
   } else {
     res.setHeader("Allow", ["GET"]);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  }
+  } catch (error) {
+    console.error('Error in userSettings API:', error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

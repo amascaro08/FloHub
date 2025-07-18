@@ -18,7 +18,9 @@ interface ApiResponse<T> {
 export const fetchUserSettings = async (url: string): Promise<CalendarSettings> => {
   const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) {
-    throw new Error('Not authorized');
+    const errorText = await res.text();
+    console.error(`Failed to fetch user settings (${res.status}):`, errorText);
+    throw new Error(`Failed to fetch user settings: ${res.status} ${res.statusText}`);
   }
   return res.json();
 };
@@ -37,7 +39,9 @@ export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promi
 export const fetchTasks = async () => {
   const res = await fetch('/api/tasks', { credentials: 'include' });
   if (!res.ok) {
-    throw new Error('Not authorized');
+    const errorText = await res.text();
+    console.error(`Failed to fetch tasks (${res.status}):`, errorText);
+    throw new Error(`Failed to fetch tasks: ${res.status} ${res.statusText}`);
   }
   return res.json();
 };
