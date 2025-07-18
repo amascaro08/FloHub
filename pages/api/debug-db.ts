@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { sql } from 'drizzle-orm';
 
 export default async function handler(
   req: NextApiRequest,
@@ -32,7 +33,7 @@ export default async function handler(
       try {
         const { db } = await import('../../lib/drizzle');
         // Simple query to test connection
-        const result = await db.execute({ sql: 'SELECT 1 as test' });
+        const result = await db.execute(sql`SELECT 1 as test`);
         queryResult = 'Query successful';
       } catch (error) {
         queryError = error instanceof Error ? error.message : 'Unknown query error';
