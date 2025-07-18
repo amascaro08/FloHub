@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
-import { getHabitCompletionsForMonth } from '@/lib/habitService';
+import { db } from '@/lib/drizzle';
+import { habitCompletions } from '@/db/schema';
+import { and, eq, gte, lte } from 'drizzle-orm';
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,7 +39,26 @@ export default async function handler(
       }
       
       // Fetch completions for the specified month
-      const completions = await getHabitCompletionsForMonth(userId, yearNum, monthNum);
+      const startDate = new Date(yearNum, monthNum, 1);
+      const endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59);
+      
+      const rows = await db
+        .select()
+        .from(habitCompletions)
+        .where(
+          and(
+            eq(habitCompletions.userId, userId),
+            gte(habitCompletions.date, startDate.toISOString().split('T')[0]),
+            lte(habitCompletions.date, endDate.toISOString().split('T')[0])
+          )
+        );
+        
+      const completions = rows.map(row => ({
+        ...row,
+        habitId: String(row.habitId),
+        timestamp: row.timestamp ? Number(row.timestamp) : Date.now()
+      }));
+      
       return res.status(200).json(completions);
     } catch (error) {
       console.error('Error fetching habit completions:', error);

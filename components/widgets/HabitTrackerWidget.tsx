@@ -1,9 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/lib/hooks/useUser';
-import { getUserHabits, getHabitCompletionsForMonth, toggleHabitCompletion, getTodayFormatted, shouldCompleteToday, calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
 import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';
+
+// Helper functions moved from habitService
+const formatDate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const getTodayFormatted = (): string => {
+  return formatDate(new Date());
+};
+
+const shouldCompleteToday = (habit: Habit): boolean => {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  
+  if (habit.frequency === 'daily') {
+    return true;
+  } else if (habit.frequency === 'weekly') {
+    // For weekly habits, check if today matches the target day
+    // This is a simplified implementation - you may need to adjust based on your schema
+    return dayOfWeek === 1; // Monday for example
+  } else if (habit.frequency === 'custom' && habit.customDays) {
+    return habit.customDays.includes(dayOfWeek);
+  }
+  return false;
+};
+
+const shouldCompleteOnDate = (habit: Habit, date: Date): boolean => {
+  const dayOfWeek = date.getDay();
+  
+  if (habit.frequency === 'daily') {
+    return true;
+  } else if (habit.frequency === 'weekly') {
+    return dayOfWeek === 1; // Simplified - adjust as needed
+  } else if (habit.frequency === 'custom' && habit.customDays) {
+    return habit.customDays.includes(dayOfWeek);
+  }
+  return false;
+};
 
 const HabitTrackerWidget = () => {
   const { user, isLoading } = useUser();
@@ -25,17 +62,23 @@ const HabitTrackerWidget = () => {
       
       setLoading(true);
       try {
-        // Get user habits
-        const userHabits = await getUserHabits(user.primaryEmail);
+        // Get user habits via API
+        const habitsResponse = await fetch('/api/habits');
+        if (!habitsResponse.ok) {
+          throw new Error('Failed to fetch habits');
+        }
+        const userHabits = await habitsResponse.json();
         setHabits(userHabits);
         
-        // Get current month's completions
+        // Get current month's completions via API
         const today = new Date();
-        const monthCompletions = await getHabitCompletionsForMonth(
-          user.primaryEmail,
-          today.getFullYear(),
-          today.getMonth()
+        const completionsResponse = await fetch(
+          `/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`
         );
+        if (!completionsResponse.ok) {
+          throw new Error('Failed to fetch habit completions');
+        }
+        const monthCompletions = await completionsResponse.json();
         setCompletions(monthCompletions);
         
         // Calculate overall stats
@@ -45,9 +88,12 @@ const HabitTrackerWidget = () => {
           
           for (const habit of userHabits) {
             try {
-              const stats = await calculateHabitStats(user.primaryEmail, habit.id);
-              if (stats.longestStreak > maxStreak) {
-                maxStreak = stats.longestStreak;
+              const statsResponse = await fetch(`/api/habits/stats?habitId=${habit.id}`);
+              if (statsResponse.ok) {
+                const stats = await statsResponse.json();
+                if (stats.longestStreak > maxStreak) {
+                  maxStreak = stats.longestStreak;
+                }
               }
             } catch (error) {
               console.error(`Error calculating stats for habit ${habit.id}:`, error);
@@ -57,11 +103,11 @@ const HabitTrackerWidget = () => {
           // Calculate weekly completion rate
           const oneWeekAgo = new Date();
           oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-          const weeklyCompletions = monthCompletions.filter(c =>
+          const weeklyCompletions = monthCompletions.filter((c: HabitCompletion) =>
             new Date(c.date) >= oneWeekAgo && c.completed
           );
           
-          const weeklyTotal = userHabits.reduce((total, habit) => {
+          const weeklyTotal = userHabits.reduce((total: number, habit: Habit) => {
             // Count how many days in the past week this habit should have been completed
             let daysCount = 0;
             for (let i = 0; i < 7; i++) {
@@ -77,7 +123,7 @@ const HabitTrackerWidget = () => {
           const weeklyRate = weeklyTotal > 0 ? (weeklyCompletions.length / weeklyTotal) * 100 : 0;
           
           // Calculate monthly completion rate
-          const monthlyTotal = userHabits.reduce((total, habit) => {
+          const monthlyTotal = userHabits.reduce((total: number, habit: Habit) => {
             // Simplified: assume 30 days per month
             let daysCount = 0;
             for (let i = 0; i < 30; i++) {
@@ -90,7 +136,7 @@ const HabitTrackerWidget = () => {
             return total + daysCount;
           }, 0);
           
-          const monthlyRate = monthlyTotal > 0 ? (monthCompletions.filter(c => c.completed).length / monthlyTotal) * 100 : 0;
+          const monthlyRate = monthlyTotal > 0 ? (monthCompletions.filter((c: HabitCompletion) => c.completed).length / monthlyTotal) * 100 : 0;
           
           setOverallStats({
             totalHabits: userHabits.length,
@@ -116,11 +162,22 @@ const HabitTrackerWidget = () => {
     
     try {
       const today = getTodayFormatted();
-      const updatedCompletion = await toggleHabitCompletion(
-        user.primaryEmail,
-        habit.id,
-        today
-      );
+      const toggleResponse = await fetch('/api/habits/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          habitId: habit.id,
+          date: today
+        })
+      });
+      
+      if (!toggleResponse.ok) {
+        throw new Error('Failed to toggle habit completion');
+      }
+      
+      const updatedCompletion = await toggleResponse.json();
       
       // Update local state
       setCompletions(prev => {
@@ -288,7 +345,7 @@ const HabitTrackerWidget = () => {
                       <span className="text-sm text-gray-800 dark:text-white truncate flex-grow transition-colors">{habit.name}</span>
                       <div 
                         className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: habit.color || '#4fd1c5' }}
+                        style={{ backgroundColor: '#4fd1c5' }}
                       ></div>
                     </div>
                   );

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
-import { calculateHabitStats } from '@/lib/habitService';
 import { Habit, HabitStats as HabitStatsType } from '@/types/habit-tracker';
 import { XMarkIcon, FireIcon, TrophyIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 
@@ -21,7 +20,11 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
       
       setLoading(true);
       try {
-        const habitStats = await calculateHabitStats(user.primaryEmail, habit.id);
+        const statsResponse = await fetch(`/api/habits/stats?habitId=${habit.id}`);
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch habit stats');
+        }
+        const habitStats = await statsResponse.json();
         setStats(habitStats);
       } catch (error) {
         console.error('Error loading habit stats:', error);

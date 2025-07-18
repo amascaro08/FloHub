@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
-import { createHabit, updateHabit, deleteHabit } from '@/lib/habitService';
 import { Habit } from '@/types/habit-tracker';
 import { TrashIcon } from '@heroicons/react/24/solid';
 
@@ -33,7 +32,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
       setDescription(habit.description || '');
       setFrequency(habit.frequency);
       setCustomDays(habit.customDays || []);
-      setColor(habit.color || '#4fd1c5');
+      setColor('#4fd1c5');
     }
   }, [habit]);
 
@@ -81,13 +80,22 @@ const HabitForm: React.FC<HabitFormProps> = ({
       
       if (habit) {
         // Update existing habit
-        await updateHabit(habit.id, {
-          name,
-          description: description || '',
-          frequency,
-          customDays: frequency === 'custom' ? customDays : [],
-          color
+        const updateResponse = await fetch(`/api/habits/${habit.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            description: description || '',
+            frequency,
+            customDays: frequency === 'custom' ? customDays : []
+          })
         });
+        
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update habit');
+        }
         
         savedHabit = {
           ...habit,
@@ -95,20 +103,28 @@ const HabitForm: React.FC<HabitFormProps> = ({
           description: description || '',
           frequency,
           customDays: frequency === 'custom' ? customDays : [],
-          color,
           updatedAt: Date.now()
         };
       } else {
         // Create new habit
-        const habitData = {
-          name,
-          description: description || '',
-          frequency,
-          customDays: frequency === 'custom' ? customDays : [],
-          color
-        };
+        const createResponse = await fetch('/api/habits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            description: description || '',
+            frequency,
+            customDays: frequency === 'custom' ? customDays : []
+          })
+        });
         
-        savedHabit = await createHabit(user.primaryEmail, habitData);
+        if (!createResponse.ok) {
+          throw new Error('Failed to create habit');
+        }
+        
+        savedHabit = await createResponse.json();
       }
       
       onSave(savedHabit);
@@ -127,7 +143,14 @@ const HabitForm: React.FC<HabitFormProps> = ({
       setIsSubmitting(true);
       
       try {
-        await deleteHabit(habit.id);
+        const deleteResponse = await fetch(`/api/habits/${habit.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!deleteResponse.ok) {
+          throw new Error('Failed to delete habit');
+        }
+        
         onDelete(habit.id);
       } catch (error) {
         console.error('Error deleting habit:', error);
