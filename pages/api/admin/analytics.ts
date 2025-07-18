@@ -116,9 +116,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
     const [userCountResult] = await db.select({ value: count() }).from(users);
     analyticsData.userCount = userCountResult.value;
 
-    // Get active users (users who have logged in since startTimestamp)
-    const [activeUserCountResult] = await db.select({ value: count() }).from(users).where(gte(users.lastLogin, new Date(startTimestampMs)));
-    analyticsData.activeUserCount = activeUserCountResult.value;
+    // The "active users" metric has been removed as it's no longer possible to calculate it without the `lastLogin` column.
 
     // Get page visits
     const pageVisitsRows = await db.select().from(analyticsPageVisits).where(gte(analyticsPageVisits.timestamp, new Date(startTimestampMs)));
