@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<{ message: string } | { error: string }>
+  res: NextApiResponse<any>
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -16,13 +16,14 @@ export default async function handler(
 
   try {
     const { userId } = req.query;
-    const userEmail = Array.isArray(userId) ? userId[0] : userId;
+    let userEmail = Array.isArray(userId) ? userId[0] : userId;
 
     if (!userEmail) {
       const user = await auth(req);
       if (!user?.email) {
         return res.status(401).json({ error: "Not signed in" });
       }
+      userEmail = user.email;
     }
     const newSettings: UserSettings = req.body;
 
@@ -60,6 +61,10 @@ export default async function handler(
     return res.status(204).end();
   } catch (error: any) {
     console.error("Error updating user settings:", error);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res.status(500).json({
+        message: "Internal server error during settings update.",
+        error: error.message,
+        stack: error.stack,
+    });
   }
 }
