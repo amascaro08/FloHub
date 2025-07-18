@@ -63,7 +63,8 @@ All API endpoints have been refactored to use the new, centralized Drizzle clien
 
 ## Bug Fixes and Other Improvements
 
-*   **Console Errors on Hub:** Resolved a critical issue causing console errors on the Hub due to the database client being imported into client-side components. This was fixed by refactoring the authentication logic to separate database queries from token verification, preventing server-side code from being bundled with the client.
+*   **Console Errors on Hub:** Resolved a critical issue causing console errors on the Hub due to the database client being imported into client-side components. This was fixed by refactoring the authentication and context logic to separate database queries from token verification, preventing server-side code from being bundled with the client.
+*   **Database Query Failures:** Fixed a series of "Failed query" errors that were occurring in various API routes. These errors were caused by incorrect database queries and have been resolved by updating the queries to match the current database schema.
 *   **Login Regression:** A critical regression that was preventing users from logging in has been resolved. The issue was caused by a schema mismatch and has been fixed by updating the Drizzle schema.
 *   **Type Safety:** Numerous type errors throughout the application have been resolved, resulting in a more stable and maintainable codebase.
 *   **Dependency Management:** The `bcryptjs` package and its types have been reinstalled to ensure they are correctly installed and compatible with the rest of the application.

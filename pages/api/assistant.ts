@@ -6,11 +6,13 @@ import { db } from "@/lib/drizzle";
 import { userSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
+  findRelevantContextSemantic as findRelevantContext,
+} from "@/lib/context";
+import {
   fetchUserNotes,
   fetchUserMeetingNotes,
   fetchUserConversations,
-  findRelevantContextSemantic as findRelevantContext,
-} from "@/lib/context";
+} from "@/lib/contextService";
 import { ChatCompletionMessageParam } from "openai/resources";
 
 // Types
