@@ -38,17 +38,17 @@ export default async function handler(
     }
     
     // Save subscription to Firestore
-    const userEmail = user.email;
+    const user_email = user.email;
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
     await db.insert(pushSubscriptions).values({
       id: subscriptionId,
-      userEmail,
+      user_email,
       subscription,
     }).onConflictDoUpdate({
       target: pushSubscriptions.id,
       set: {
-        userEmail,
+        user_email,
         subscription,
       },
     });

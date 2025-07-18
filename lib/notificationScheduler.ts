@@ -12,7 +12,7 @@ const TASK_REMINDERS = [60 * 24, 60]; // Remind 24 hours and 1 hour before task 
 
 /**
  * Send a notification to a user
- * @param userEmail - User's email
+ * @param user_email - User's email
  * @param title - Notification title
  * @param body - Notification body
  * @param data - Additional data for the notification
@@ -20,7 +20,7 @@ const TASK_REMINDERS = [60 * 24, 60]; // Remind 24 hours and 1 hour before task 
  * @param actions - Notification actions
  */
 async function sendNotification(
-  userEmail: string,
+  user_email: string,
   title: string,
   body: string,
   data: any = {},
@@ -35,7 +35,7 @@ async function sendNotification(
         'x-api-key': process.env.INTERNAL_API_KEY || '',
       },
       body: JSON.stringify({
-        userEmail,
+        user_email,
         title,
         body,
         data,
@@ -63,27 +63,27 @@ export async function checkUpcomingMeetings() {
   try {
     const now = new Date();
     
-    const subscriptions = await db.selectDistinct({ userEmail: pushSubscriptions.userEmail }).from(pushSubscriptions);
+    const subscriptions = await db.selectDistinct({ user_email: pushSubscriptions.user_email }).from(pushSubscriptions);
     
     if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
-    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail!));
+    const user_emails = new Set<string>(subscriptions.map(row => row.user_email!));
     
-    console.log(`Checking upcoming meetings for ${userEmails.size} users`);
+    console.log(`Checking upcoming meetings for ${user_emails.size} users`);
     
-    for (const userEmail of Array.from(userEmails)) {
+    for (const user_email of Array.from(user_emails)) {
       const events = await db
         .select()
         .from(calendarEvents)
-        .where(and(eq(calendarEvents.userId, userEmail), gt(sql`"start"->>'dateTime'`, now.toISOString())))
+        .where(and(eq(calendarEvents.userId, user_email), gt(sql`"start"->>'dateTime'`, now.toISOString())))
         .orderBy(sql`"start"->>'dateTime' ASC`)
         .limit(10);
       
       if (events.length === 0) {
-        console.log(`No upcoming meetings found for user ${userEmail}`);
+        console.log(`No upcoming meetings found for user ${user_email}`);
         continue;
       }
       
@@ -93,10 +93,10 @@ export async function checkUpcomingMeetings() {
         
         for (const reminderMinutes of MEETING_REMINDERS) {
           if (minutesUntilEvent > reminderMinutes - 1 && minutesUntilEvent <= reminderMinutes) {
-            console.log(`Sending notification for meeting ${event.summary} to ${userEmail}`);
+            console.log(`Sending notification for meeting ${event.summary} to ${user_email}`);
             
             await sendNotification(
-              userEmail,
+              user_email,
               `Meeting Reminder: ${event.summary}`,
               `Your meeting "${event.summary}" starts in ${Math.round(minutesUntilEvent)} minutes`,
               {
@@ -128,27 +128,27 @@ export async function checkUpcomingTasks() {
   try {
     const now = new Date();
     
-    const subscriptions = await db.selectDistinct({ userEmail: pushSubscriptions.userEmail }).from(pushSubscriptions);
+    const subscriptions = await db.selectDistinct({ user_email: pushSubscriptions.user_email }).from(pushSubscriptions);
     
     if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
-    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail!));
+    const user_emails = new Set<string>(subscriptions.map(row => row.user_email!));
     
-    console.log(`Checking upcoming tasks for ${userEmails.size} users`);
+    console.log(`Checking upcoming tasks for ${user_emails.size} users`);
     
-    for (const userEmail of Array.from(userEmails)) {
+    for (const user_email of Array.from(user_emails)) {
       const userTasks = await db
         .select()
         .from(tasks)
-        .where(and(eq(tasks.userEmail, userEmail), eq(tasks.done, false), gt(tasks.dueDate, now)))
+        .where(and(eq(tasks.user_email, user_email), eq(tasks.done, false), gt(tasks.dueDate, now)))
         .orderBy(tasks.dueDate)
         .limit(10);
       
       if (userTasks.length === 0) {
-        console.log(`No upcoming tasks found for user ${userEmail}`);
+        console.log(`No upcoming tasks found for user ${user_email}`);
         continue;
       }
       
@@ -158,7 +158,7 @@ export async function checkUpcomingTasks() {
         
         for (const reminderMinutes of TASK_REMINDERS) {
           if (minutesUntilDue > reminderMinutes - 5 && minutesUntilDue <= reminderMinutes) {
-            console.log(`Sending notification for task ${task.text} to ${userEmail}`);
+            console.log(`Sending notification for task ${task.text} to ${user_email}`);
             
             let reminderText = '';
             if (reminderMinutes >= 60) {
@@ -169,7 +169,7 @@ export async function checkUpcomingTasks() {
             }
             
             await sendNotification(
-              userEmail,
+              user_email,
               `Task Reminder: ${task.text}`,
               `Your task "${task.text}" is ${reminderText}`,
               {

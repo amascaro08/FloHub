@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ error: 'User not found' });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
   
   // Handle GET request - retrieve journal entry
   if (req.method === 'GET') {
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       const entry = await db.query.journalEntries.findFirst({
-        where: and(eq(journalEntries.userEmail, userEmail), eq(journalEntries.date, date)),
+        where: and(eq(journalEntries.user_email, user_email), eq(journalEntries.date, date)),
       });
       
       if (!entry) {
@@ -51,11 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       await db.insert(journalEntries).values({
-        userEmail,
+        user_email,
         date,
         content,
       }).onConflictDoUpdate({
-        target: [journalEntries.userEmail, journalEntries.date],
+        target: [journalEntries.user_email, journalEntries.date],
         set: {
           content,
           updatedAt: new Date(),

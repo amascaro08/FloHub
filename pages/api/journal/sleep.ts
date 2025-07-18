@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ error: 'User not found' });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
   
   // Handle GET request - retrieve sleep data
   if (req.method === 'GET') {
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       const sleep = await db.query.journalSleep.findFirst({
-        where: and(eq(journalSleep.userEmail, userEmail), eq(journalSleep.date, date)),
+        where: and(eq(journalSleep.user_email, user_email), eq(journalSleep.date, date)),
       });
       
       if (!sleep) {
@@ -51,12 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       await db.insert(journalSleep).values({
-        userEmail,
+        user_email,
         date,
         quality,
         hours,
       }).onConflictDoUpdate({
-        target: [journalSleep.userEmail, journalSleep.date],
+        target: [journalSleep.user_email, journalSleep.date],
         set: {
           quality,
           hours,

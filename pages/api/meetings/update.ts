@@ -88,7 +88,7 @@ export default async function handler(
         return res.status(404).json({ error: "Meeting Note not found" });
     }
 
-    if (noteData.userEmail !== userId) {
+    if (noteData.user_email !== userId) {
         return res.status(403).json({ error: "Unauthorized to update this meeting note" });
     }
 
@@ -132,7 +132,7 @@ export default async function handler(
                 const existingAction = (noteData.actions as Action[])?.find((a: Action) => a.id === action.id);
                 if (!existingAction && action.assignedTo === "Me") {
                     await db.insert(tasks).values({
-                        userEmail: userId,
+                        user_email: userId,
                         text: action.description,
                         done: action.status === "done",
                         createdAt: new Date(),

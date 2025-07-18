@@ -20,7 +20,7 @@ export async function fetchUserNotes(userId: string): Promise<Note[]> {
   const rows = await db
     .select()
     .from(notesTable)
-    .where(eq(notesTable.userEmail, userId))
+    .where(eq(notesTable.user_email, userId))
     .orderBy(desc(notesTable.createdAt));
 
   const notes: Note[] = rows.map((row) => ({
@@ -46,7 +46,7 @@ export async function fetchUserMeetingNotes(userId: string): Promise<Note[]> {
     .from(notesTable)
     .where(
       and(
-        eq(notesTable.userEmail, userId),
+        eq(notesTable.user_email, userId),
         or(isNotNull(notesTable.eventId), eq(notesTable.isAdhoc, true))
       )
     )

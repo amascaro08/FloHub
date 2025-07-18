@@ -85,7 +85,7 @@ export const verificationTokens = pgTable(
 // TASKS TABLE
 export const tasks = pgTable("tasks", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   text: text("text").notNull(),
   done: boolean("done").default(false),
   dueDate: timestamp("due_date", { mode: "date" }),
@@ -96,7 +96,7 @@ export const tasks = pgTable("tasks", {
 
 // USER SETTINGS
 export const userSettings = pgTable("user_settings", {
-  userEmail: varchar("user_email", { length: 255 }).notNull().primaryKey(),
+  user_email: varchar("user_email", { length: 255 }).notNull().primaryKey(),
   floCatStyle: varchar("flo_cat_style", { length: 50 }).default('default'),
   floCatPersonality: text("flo_cat_personality").array(),
   preferredName: varchar("preferred_name", { length: 255 }),
@@ -119,7 +119,7 @@ export const userSettings = pgTable("user_settings", {
 // NOTES TABLE
 export const notes = pgTable("notes", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   title: varchar("title", { length: 255 }),
   content: text("content").notNull(),
   tags: text("tags").array(),
@@ -180,7 +180,7 @@ export const habitCompletions = pgTable("habitCompletions", {
 // PUSH SUBSCRIPTIONS TABLE
 export const pushSubscriptions = pgTable("pushSubscriptions", {
   id: text("id").notNull().primaryKey(),
-  userEmail: varchar("userEmail", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   subscription: jsonb("subscription").notNull(),
 });
 
@@ -235,7 +235,7 @@ export const analyticsWidgetUsage = pgTable("analytics_widgetUsage_widgets", {
 // ANALYTICS TABLE
 export const analytics = pgTable("analytics", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }),
+  user_email: varchar("user_email", { length: 255 }),
   eventType: varchar("event_type", { length: 255 }).notNull(),
   eventData: jsonb("event_data"),
   timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
@@ -264,7 +264,7 @@ export const backlog = pgTable("backlog", {
 // JOURNAL ACTIVITIES TABLE
 export const journalActivities = pgTable("journal_activities", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   date: text("date").notNull(),
   activities: jsonb("activities"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
@@ -274,7 +274,7 @@ export const journalActivities = pgTable("journal_activities", {
 // JOURNAL ENTRIES TABLE
 export const journalEntries = pgTable("journal_entries", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   date: text("date").notNull(),
   content: text("content"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
@@ -284,7 +284,7 @@ export const journalEntries = pgTable("journal_entries", {
 // JOURNAL MOODS TABLE
 export const journalMoods = pgTable("journal_moods", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   date: text("date").notNull(),
   emoji: text("emoji"),
   label: text("label"),
@@ -296,7 +296,7 @@ export const journalMoods = pgTable("journal_moods", {
 // JOURNAL SLEEP TABLE
 export const journalSleep = pgTable("journal_sleep", {
   id: serial("id").notNull().primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   date: text("date").notNull(),
   quality: text("quality"),
   hours: integer("hours"),

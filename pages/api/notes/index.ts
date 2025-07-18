@@ -33,7 +33,7 @@ export default async function handler(
 
   try {
     // 2) Fetch notes for the authenticated user from the database
-    const notesData = await db.select().from(notes).where(eq(notes.userEmail, userId)).orderBy(desc(notes.createdAt));
+    const notesData = await db.select().from(notes).where(eq(notes.user_email, userId)).orderBy(desc(notes.createdAt));
 
     const notesResult: Note[] = notesData.map((row) => ({
       id: String(row.id),

@@ -17,13 +17,13 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "User not found" });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
   try {
-    const rows = await db.select().from(userSettings).where(eq(userSettings.userEmail, userEmail));
-    const docs = rows.map(row => ({ id: row.userEmail, data: row }));
+    const rows = await db.select().from(userSettings).where(eq(userSettings.user_email, user_email));
+    const docs = rows.map(row => ({ id: row.user_email, data: row }));
     return res.status(200).json({ documents: docs });
   } catch (error) {
-    console.error("Error listing user settings documents for", userEmail, error);
+    console.error("Error listing user settings documents for", user_email, error);
     return res.status(500).json({ error: "Failed to list user settings documents" });
   }
 }

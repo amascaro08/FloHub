@@ -13,7 +13,7 @@ export const habitCapability: FloCatCapability = {
   handler: async (command: string, args: string) => {
     try {
       // Extract user email from context (this would be implemented in a real system)
-      const userEmail = 'user@example.com'; // Placeholder - in a real implementation, this would come from the user
+      const user_email = 'user@example.com'; // Placeholder - in a real implementation, this would come from the user
       
       // Get the user's FloCat style and personality preferences
       let floCatStyle = "default";
@@ -21,7 +21,7 @@ export const habitCapability: FloCatCapability = {
       let preferredName = "";
       
       try {
-        const response = await fetch(`/api/userSettings?userId=${userEmail}`);
+        const response = await fetch(`/api/userSettings?userId=${user_email}`);
         if (response.ok) {
           const userSettings = await response.json();
           floCatStyle = userSettings?.floCatStyle || "default";
@@ -66,7 +66,7 @@ export const habitCapability: FloCatCapability = {
       };
       
       if (command === 'list') {
-        const habits = await getUserHabits(userEmail);
+        const habits = await getUserHabits(user_email);
         if (habits.length === 0) {
           return getStyledResponse(
             "You don't have any habits tracked yet. Try saying 'create habit [name]' to get started!",
@@ -102,7 +102,7 @@ export const habitCapability: FloCatCapability = {
           color: '#4fd1c5'
         };
         
-        await createHabit(userEmail, habitData);
+        await createHabit(user_email, habitData);
         
         return getStyledResponse(
           `Great! I've created a new daily habit: "${habitData.name}". You can track it in your Habit Tracker.`,
@@ -118,7 +118,7 @@ export const habitCapability: FloCatCapability = {
         }
         
         // Find the habit by name (case-insensitive)
-        const habits = await getUserHabits(userEmail);
+        const habits = await getUserHabits(user_email);
         const habitName = args.trim().toLowerCase();
         const habit = habits.find(h => h.name.toLowerCase().includes(habitName));
         
@@ -133,7 +133,7 @@ export const habitCapability: FloCatCapability = {
         
         // Mark the habit as complete for today
         const today = getTodayFormatted();
-        await toggleHabitCompletion(userEmail, habit.id, today);
+        await toggleHabitCompletion(user_email, habit.id, today);
         
         return getStyledResponse(
           `✅ Marked "${habit.name}" as complete for today. Keep up the good work!`,
@@ -144,7 +144,7 @@ export const habitCapability: FloCatCapability = {
       }
       
       else if (command === 'status') {
-        const habits = await getUserHabits(userEmail);
+        const habits = await getUserHabits(user_email);
         if (habits.length === 0) {
           return getStyledResponse(
             "You don't have any habits tracked yet. Try saying 'create habit [name]' to get started!",

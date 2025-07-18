@@ -50,10 +50,10 @@ export default async function handler(
     if (!user?.email) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
-    const userEmail = user.email;
+    const user_email = user.email;
     
     // Get user's subscriptions from Firestore
-    const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userEmail, userEmail));
+    const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.user_email, user_email));
     
     if (subscriptions.length === 0) {
       return res.status(404).json({

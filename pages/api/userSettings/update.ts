@@ -17,9 +17,9 @@ export default async function handler(
 
   try {
     const { userId } = req.query;
-    let userEmail = Array.isArray(userId) ? userId[0] : userId;
+    let user_email = Array.isArray(userId) ? userId[0] : userId;
 
-    if (!userEmail) {
+    if (!user_email) {
       const decoded = auth(req);
       if (!decoded) {
         return res.status(401).json({ error: "Not signed in" });
@@ -28,7 +28,7 @@ export default async function handler(
       if (!user?.email) {
         return res.status(401).json({ error: "User not found" });
       }
-      userEmail = user.email;
+      user_email = user.email;
     }
     const newSettings: UserSettings = req.body;
 
@@ -55,11 +55,11 @@ export default async function handler(
     await db
       .insert(userSettings)
       .values({
-        userEmail: userEmail as string,
+        user_email: user_email as string,
         ...settingsData,
       })
       .onConflictDoUpdate({
-        target: userSettings.userEmail,
+        target: userSettings.user_email,
         set: settingsData,
       });
 

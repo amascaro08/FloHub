@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ message: "User not found" });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
 
   const { ids } = req.body; // Expecting an array of note IDs
 
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Fetch the selected notes from Firestore
-    const notesData = await db.select().from(notesTable).where(and(inArray(notesTable.id, ids), eq(notesTable.userEmail, userEmail)));
+    const notesData = await db.select().from(notesTable).where(and(inArray(notesTable.id, ids), eq(notesTable.user_email, user_email)));
     const notes: Note[] = notesData.map(row => ({ id: String(row.id), title: row.title || undefined, content: row.content || undefined }));
 
     if (notes.length === 0) {

@@ -35,7 +35,7 @@ export default async function handler(
   try {
     // ── GET: list tasks ──────────────────────────────────────────
     if (req.method === "GET") {
-      const rows = await db.select().from(tasks).where(eq(tasks.userEmail, email)).orderBy(desc(tasks.createdAt));
+      const rows = await db.select().from(tasks).where(eq(tasks.user_email, email)).orderBy(desc(tasks.createdAt));
       const tasksData: Task[] = rows.map((row) => ({
         id: String(row.id),
         text: row.text,
@@ -64,7 +64,7 @@ export default async function handler(
         newTaskData.source = source;
       }
       const [newTask] = await db.insert(tasks).values({
-        userEmail: email,
+        user_email: email,
         text: text.trim(),
         done: false,
         dueDate: due,

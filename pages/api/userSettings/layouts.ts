@@ -17,12 +17,12 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "User not found" });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
 
   if (req.method === "GET") {
     try {
       const settings = await db.query.userSettings.findFirst({
-        where: eq(userSettings.userEmail, userEmail),
+        where: eq(userSettings.user_email, user_email),
       });
       return res.status(200).json({ layouts: settings?.layouts || null });
     } catch (error: any) {
@@ -39,11 +39,11 @@ export default async function handler(
       await db
         .insert(userSettings)
         .values({
-          userEmail: userEmail,
+          user_email: user_email,
           layouts: layouts,
         })
         .onConflictDoUpdate({
-          target: userSettings.userEmail,
+          target: userSettings.user_email,
           set: {
             layouts: layouts,
           },

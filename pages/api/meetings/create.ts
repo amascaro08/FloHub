@@ -111,7 +111,7 @@ export default async function handler(
     
     const now = Date.now();
     const [newNote] = await db.insert(notes).values({
-      userEmail: userId,
+      user_email: userId,
       title: title || "",
       content,
       tags: tags || [],
@@ -130,7 +130,7 @@ export default async function handler(
       for (const action of actions) {
         if (action.assignedTo === "Me") {
           await db.insert(tasks).values({
-            userEmail: userId,
+            user_email: userId,
             text: action.description,
             done: action.status === "done",
             createdAt: new Date(now),

@@ -46,7 +46,7 @@ export default async function handler(
 
     // Get notification data from request body
     const { 
-      userEmail, 
+      user_email, 
       title, 
       body, 
       icon = '/icons/icon-192x192.png',
@@ -57,15 +57,15 @@ export default async function handler(
     } = req.body;
     
     // Validate required fields
-    if (!userEmail || !title || !body) {
+    if (!user_email || !title || !body) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Missing required fields: userEmail, title, body' 
+        message: 'Missing required fields: user_email, title, body' 
       });
     }
 
     // If it's a user request, ensure they can only send to themselves
-    if (user?.email && user.email !== userEmail && !isInternalRequest) {
+    if (user?.email && user.email !== user_email && !isInternalRequest) {
       return res.status(403).json({
         success: false,
         message: 'You can only send notifications to yourself'
@@ -73,7 +73,7 @@ export default async function handler(
     }
     
     // Get user's subscriptions from Firestore
-    const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userEmail, userEmail));
+    const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.user_email, user_email));
     
     if (subscriptions.length === 0) {
       return res.status(404).json({

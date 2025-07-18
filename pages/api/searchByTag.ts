@@ -41,7 +41,7 @@ export default async function handler(
 
     // 1. Fetch Notes and Meeting Notes by tag
     // 1. Fetch Notes and Meeting Notes by tag
-    const notesRows = await db.select().from(notes).where(and(eq(notes.userEmail, userId), sql`tags @> ARRAY[${tag}]::text[]`));
+    const notesRows = await db.select().from(notes).where(and(eq(notes.user_email, userId), sql`tags @> ARRAY[${tag}]::text[]`));
     notesRows.forEach((row) => {
       items.push({
         id: String(row.id),
@@ -58,7 +58,7 @@ export default async function handler(
     });
 
     // 2. Fetch Tasks by tag
-    const tasksRows = await db.select().from(tasks).where(and(eq(tasks.userEmail, userId), sql`tags @> ARRAY[${tag}]::text[]`));
+    const tasksRows = await db.select().from(tasks).where(and(eq(tasks.user_email, userId), sql`tags @> ARRAY[${tag}]::text[]`));
     tasksRows.forEach((row) => {
       items.push({
         id: String(row.id),

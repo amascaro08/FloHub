@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ message: "User not found" });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
 
   const { ids } = req.body; // Assuming an array of note IDs is sent in the request body
 
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // This would involve checking each note's ownership before deleting
     // For simplicity, this is omitted in this example but recommended for production
 
-    await db.delete(notes).where(and(inArray(notes.id, ids), eq(notes.userEmail, userEmail)));
+    await db.delete(notes).where(and(inArray(notes.id, ids), eq(notes.user_email, user_email)));
 
     res.status(200).json({ message: `${ids.length} notes deleted successfully` });
   } catch (error) {

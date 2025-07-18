@@ -178,7 +178,7 @@ export default async function handler(
     
     // Fetch user settings to get FloCat style preference
     const userSettingsData = await db.query.userSettings.findFirst({
-      where: eq(userSettings.userEmail, email),
+      where: eq(userSettings.user_email, email),
       columns: {
         floCatStyle: true,
         floCatPersonality: true,

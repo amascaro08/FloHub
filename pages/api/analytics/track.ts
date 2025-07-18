@@ -14,10 +14,10 @@ export default async function handler(
   }
 
   const decoded = auth(req);
-  let userEmail: string | undefined;
+  let user_email: string | undefined;
   if (decoded) {
     const user = await getUserById(decoded.userId);
-    userEmail = user?.email;
+    user_email = user?.email;
   }
   const { eventType, eventData } = req.body;
 
@@ -27,7 +27,7 @@ export default async function handler(
 
   try {
     await db.insert(analytics).values({
-      userEmail,
+      user_email,
       eventType,
       eventData: eventData || {},
     });

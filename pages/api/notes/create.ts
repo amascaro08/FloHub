@@ -53,7 +53,7 @@ export default async function handler(
   try {
     // 3) Save the note to the database
     const [newNote] = await db.insert(notes).values({
-      userEmail: userId,
+      user_email: userId,
       title: title ?? "",
       content,
       tags: tags ?? [],

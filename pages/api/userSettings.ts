@@ -22,13 +22,13 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "User not found" });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
   // Use a more general settings document instead of just "calendar"
 
   if (req.method === "GET") {
     try {
       const data = await db.query.userSettings.findFirst({
-        where: eq(userSettings.userEmail, userEmail),
+        where: eq(userSettings.user_email, user_email),
       });
 
       if (!data) {
@@ -51,7 +51,7 @@ export default async function handler(
             subscribed: false,
           },
         };
-        console.log("User settings not found for", userEmail, "- returning default settings");
+        console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
       }
 
@@ -71,10 +71,10 @@ export default async function handler(
         notificationSettings: (data.notificationSettings as any) || { subscribed: false },
       };
 
-      console.log("User settings loaded for", userEmail, settings);
+      console.log("User settings loaded for", user_email, settings);
       return res.status(200).json(settings);
     } catch (error) {
-      console.error("Error fetching user settings for", userEmail, error);
+      console.error("Error fetching user settings for", user_email, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
   } else {

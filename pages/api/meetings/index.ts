@@ -38,7 +38,7 @@ export default async function handler(
     const meetingNotesRows = await db
       .select()
       .from(notes)
-      .where(and(eq(notes.userEmail, userId), or(isNotNull(notes.eventId), eq(notes.isAdhoc, true))))
+      .where(and(eq(notes.user_email, userId), or(isNotNull(notes.eventId), eq(notes.isAdhoc, true))))
       .orderBy(desc(notes.createdAt));
 
     const meetingNotes: Note[] = meetingNotesRows.map((row) => ({

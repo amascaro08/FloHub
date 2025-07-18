@@ -187,7 +187,7 @@ async function sendMetricsToAnalytics(): Promise<void> {
     if (typeof window !== 'undefined') {
       try {
         // Try to get user email from localStorage (set during user)
-        userId = localStorage.getItem('flohub.userEmail');
+        userId = localStorage.getItem('flohub.user_email');
       } catch (e) {
         console.warn('[Performance] Error getting user ID:', e);
       }
@@ -292,7 +292,7 @@ async function trackuserEnd(): Promise<void> {
     if (typeof window !== 'undefined') {
       try {
         // Try to get user email from localStorage
-        userId = localStorage.getItem('flohub.userEmail');
+        userId = localStorage.getItem('flohub.user_email');
       } catch (e) {
         console.warn('[Performance] Error getting user ID for user tracking:', e);
       }
@@ -328,7 +328,7 @@ export function usePerformanceMonitoring() {
     startuserTracking();
     if (user?.primaryEmail) {
       try {
-        localStorage.setItem('flohub.userEmail', user.primaryEmail);
+        localStorage.setItem('flohub.user_email', user.primaryEmail);
       } catch (e) {
         console.warn('[Performance] Error storing user email:', e);
       }

@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ error: 'User not found' });
   }
-  const userEmail = user.email;
+  const user_email = user.email;
   
   // Get dates from request body
   const { dates } = req.body;
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rows = await db
       .select()
       .from(journalEntries)
-      .where(and(eq(journalEntries.userEmail, userEmail), inArray(journalEntries.date, dates)));
+      .where(and(eq(journalEntries.user_email, user_email), inArray(journalEntries.date, dates)));
       
     // Update entries that have content
     rows.forEach(row => {
