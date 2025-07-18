@@ -23,9 +23,6 @@ export default async function handler(
     try {
       const settings = await db.query.userSettings.findFirst({
         where: eq(userSettings.userEmail, userEmail),
-        columns: {
-          layouts: true,
-        },
       });
       return res.status(200).json({ layouts: settings?.layouts || null });
     } catch (error: any) {
