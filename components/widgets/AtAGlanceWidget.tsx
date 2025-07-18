@@ -10,9 +10,11 @@ import {
   fetchTasks,
   fetchNotes,
   fetchMeetings,
+} from '@/lib/widgetFetcher';
+import {
   fetchHabits,
   fetchHabitCompletions
-} from '@/lib/widgetFetcher';
+} from '@/lib/habitServiceAPI';
 // Initialize marked with GFM options and ensure it doesn't return promises
 marked.setOptions({
   gfm: true,
@@ -22,7 +24,8 @@ import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { isSameDay } from 'date-fns';
 import useSWR from 'swr';
 import type { UserSettings } from '../../types/app';
-import type { CalendarEvent, Task, Note, Habit, HabitCompletion } from '../../types/calendar';
+import type { CalendarEvent, Task, Note } from '../../types/calendar';
+import type { Habit, HabitCompletion } from '../../types/habit-tracker';
 
 // Create a memoized markdown parser
 const createMarkdownParser = () => {
@@ -256,7 +259,7 @@ const { user, isLoading } = useUser()
         try {
           // Use enhanced fetcher for habits
           const habitsData = await fetchHabits();
-          if (isMounted) setHabits(habitsData.habits || []);
+          if (isMounted) setHabits(habitsData || []);
           
           // Fetch habit completions for the current month
           const today = new Date();
@@ -264,7 +267,7 @@ const { user, isLoading } = useUser()
             today.getFullYear(),
             today.getMonth()
           );
-          if (isMounted) setHabitCompletions(completionsData.completions || []);
+          if (isMounted) setHabitCompletions(completionsData || []);
         } catch (err) {
           console.log("Error fetching habits:", err);
           // Don't fail the whole widget if habits can't be fetched

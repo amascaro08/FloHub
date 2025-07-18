@@ -1,7 +1,7 @@
 import { db } from './drizzle';
-import { habits, habitCompletions } from '@/db/schema';
+import { habits, habitCompletions } from '../db/schema';
 import { and, eq, desc, gte, lte } from 'drizzle-orm';
-import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
+import { Habit, HabitCompletion, HabitStats } from '../types/habit-tracker';
 
 // Helper to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
