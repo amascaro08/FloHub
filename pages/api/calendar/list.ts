@@ -21,7 +21,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
   // Placeholder for accessToken, as it's not directly available from `auth`
-  const accessToken = user.accessToken;
+  const accessToken = user.accounts[0]?.access_token;
 
   // Call Google Calendar API
   const resp = await fetch(

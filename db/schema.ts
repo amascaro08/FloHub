@@ -8,48 +8,61 @@ import {
   boolean,
   varchar,
   jsonb,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import { InferSelectModel, InferInsertModel, relations } from 'drizzle-orm';
 
 // USERS TABLE
 export const users = pgTable("users", {
   id: serial("id").notNull().primaryKey(),
-  name: text("name"),
-  email: text("email").notNull().unique(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
-  image: text("image"),
-  password: text("password"), // Added for credentials provider
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+	accounts: many(accounts),
+}));
 
 // ACCOUNTS TABLE (Auth providers)
 export const accounts = pgTable(
   "accounts",
   {
+    id: serial("id").notNull().primaryKey(),
     userId: integer("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("providerAccountId").notNull(),
+    type: varchar("type", { length: 255 }).notNull(),
+    provider: varchar("provider", { length: 255 }).notNull(),
+    providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
     refresh_token: text("refresh_token"),
     access_token: text("access_token"),
     expires_at: integer("expires_at"),
-    token_type: text("token_type"),
+    token_type: varchar("token_type", { length: 255 }),
     scope: text("scope"),
     id_token: text("id_token"),
-    user_state: text("user_state"),
+    session_state: text("session_state"),
   },
   (account) => ({
-    compoundKey: primaryKey({
-      columns: [account.provider, account.providerAccountId],
-    }),
+    uniqueConstraint: uniqueIndex("provider_account_id").on(
+      account.provider,
+      account.providerAccountId
+    ),
   })
 );
 
+export const accountsRelations = relations(accounts, ({ one }) => ({
+	user: one(users, {
+		fields: [accounts.userId],
+		references: [users.id],
+	}),
+}));
+
 // SESSIONS TABLE (Not users!)
 export const sessions = pgTable("sessions", {
-  userToken: text("userToken").notNull().primaryKey(),
+  id: serial("id").notNull().primaryKey(),
+  sessionToken: varchar("sessionToken", { length: 255 }).notNull().unique(),
   userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -58,10 +71,10 @@ export const sessions = pgTable("sessions", {
 
 // VERIFICATION TOKENS
 export const verificationTokens = pgTable(
-  "verificationTokens",
+  "verification_tokens",
   {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
+    identifier: varchar("identifier", { length: 255 }).notNull(),
+    token: varchar("token", { length: 255 }).notNull().unique(),
     expires: timestamp("expires", { mode: "date" }).notNull(),
   },
   (vt) => ({

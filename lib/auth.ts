@@ -1,6 +1,8 @@
 import { NextApiRequest } from 'next';
 import jwt from 'jsonwebtoken';
-import { query } from './neon';
+import { db } from './drizzle';
+import { users } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function auth(req: NextApiRequest) {
   const token = req.cookies['auth-token'];
@@ -10,9 +12,22 @@ export async function auth(req: NextApiRequest) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-    const { rows } = await query('SELECT id, email FROM users WHERE id = $1', [decoded.userId]);
-    const user = rows[0];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number };
+    
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, decoded.userId),
+      columns: {
+        id: true,
+        email: true,
+      },
+      with: {
+        accounts: {
+          columns: {
+            access_token: true,
+          },
+        },
+      },
+    });
 
     return user || null;
   } catch (error) {

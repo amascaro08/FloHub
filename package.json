@@ -15,6 +15,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@heroicons/react": "^2.2.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@neondatabase/serverless": "^1.0.1",
     "@tiptap/extension-blockquote": "^2.12.0",
     "@tiptap/extension-bullet-list": "^2.12.0",
     "@tiptap/extension-code-block": "^2.12.0",
