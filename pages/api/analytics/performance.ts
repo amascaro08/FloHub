@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { analyticsPerformanceMetrics } from '@/db/schema';
 
@@ -11,8 +12,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user to identify user
-    const user = await auth(req);
-    const userId = user?.email || null;
+    const decoded = auth(req);
+    let userId = null;
+    if (decoded) {
+      const user = await getUserById(decoded.userId);
+      userId = user?.email || null;
+    }
 
     // Get performance metrics from request body
     const metrics = req.body;

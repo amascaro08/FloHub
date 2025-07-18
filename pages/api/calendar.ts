@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 import { CalendarSource } from '../../types/app'; // Import CalendarSource type
@@ -23,9 +24,13 @@ export default async function handler(
   res: NextApiResponse<CalendarEvent[] | ErrorRes>
 ) {
   if (req.method === "GET") {
-    const user = await auth(req);
-    if (!user?.email) {
+    const decoded = auth(req);
+    if (!decoded) {
       return res.status(401).json({ error: "Not signed in" });
+    }
+    const user = await getUserById(decoded.userId);
+    if (!user?.email) {
+      return res.status(401).json({ error: "User not found" });
     }
 
     // In a real scenario, you would get the access token from the user object
@@ -416,9 +421,13 @@ export default async function handler(
     return res.status(200).json(allEvents);
   } else if (req.method === "POST") {
     // Handle event creation
-    const user = await auth(req);
-    if (!user?.email) {
+    const decodedPOST = auth(req);
+    if (!decodedPOST) {
       return res.status(401).json({ error: "Not signed in" });
+    }
+    const user = await getUserById(decodedPOST.userId);
+    if (!user?.email) {
+      return res.status(401).json({ error: "User not found" });
     }
     // Placeholder for accessToken, as it's not directly available from `auth`
     const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";

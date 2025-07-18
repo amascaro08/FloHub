@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { conversations } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -27,9 +28,13 @@ type SaveConversationRequest = {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<GetConversationsResponse>) {
-  const user = await auth(req);
-  if (!user?.email) {
+  const decoded = auth(req);
+  if (!decoded) {
     return res.status(401).json({ error: "Not signed in" });
+  }
+  const user = await getUserById(decoded.userId);
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
   }
   const userId = user.id;
 

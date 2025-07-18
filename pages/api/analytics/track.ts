@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { analytics } from "@/db/schema";
 
@@ -12,9 +13,12 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const user = await auth(req);
-
-  const userEmail = user?.email as string | undefined; // User email can be undefined for anonymous tracking
+  const decoded = auth(req);
+  let userEmail: string | undefined;
+  if (decoded) {
+    const user = await getUserById(decoded.userId);
+    userEmail = user?.email;
+  }
   const { eventType, eventData } = req.body;
 
   if (!eventType) {

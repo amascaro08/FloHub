@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { users, analyticsPageVisits, userSettings, analyticsWidgetUsage, analyticsPerformanceMetrics } from '@/db/schema';
 import { count, gte } from 'drizzle-orm';
@@ -60,9 +61,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user and verify admin access
-    const user = await auth(req);
-    
-    if (!user || user?.email !== 'amascaro08@gmail.com') {
+    const decoded = auth(req);
+    if (!decoded) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const user = await getUserById(decoded.userId);
+    if (!user || user.email !== 'amascaro08@gmail.com') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 

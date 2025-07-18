@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { feedback, backlog } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -9,11 +10,15 @@ export default async function handler(
   res: NextApiResponse
 ) {
   // Authenticate via JWT for all requests
-  const user = await auth(req);
-  if (!user?.email) {
+  const decoded = auth(req);
+  if (!decoded) {
     return res.status(401).json({ error: "Not signed in" });
   }
-  const userId = user?.email as string;
+  const user = await getUserById(decoded.userId);
+  if (!user?.email) {
+    return res.status(401).json({ error: "User not found" });
+  }
+  const userId = user.email;
 
   // Handle different HTTP methods
   if (req.method === "GET") {

@@ -1,6 +1,7 @@
 // pages/api/notifications/send.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { pushSubscriptions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -30,7 +31,11 @@ export default async function handler(
 
   try {
     // Get user token for authentication
-    const user = await auth(req);
+    const decoded = auth(req);
+    let user = null;
+    if (decoded) {
+      user = await getUserById(decoded.userId);
+    }
     
     // Check if request is from an authorized source (either a logged-in user or an internal API)
     const isInternalRequest = req.headers['x-api-key'] === process.env.INTERNAL_API_KEY;

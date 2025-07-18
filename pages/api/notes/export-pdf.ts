@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes as notesTable } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
@@ -38,9 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const user = await auth(req);
-  if (!user?.email) {
+  const decoded = auth(req);
+  if (!decoded) {
     return res.status(401).json({ message: "Not signed in" });
+  }
+  const user = await getUserById(decoded.userId);
+  if (!user?.email) {
+    return res.status(401).json({ message: "User not found" });
   }
   const userEmail = user.email;
 

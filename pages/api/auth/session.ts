@@ -1,32 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
-import { db } from '@/lib/drizzle';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const token = req.cookies['auth-token'];
+  const decoded = auth(req);
 
-  if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
+  if (!decoded) {
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number };
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, decoded.userId),
-      columns: {
-        id: true,
-        email: true,
-      },
-    });
+  const user = await getUserById(decoded.userId);
 
-    if (!user) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(401).json({ message: 'Unauthorized' });
+  if (!user) {
+    return res.status(401).json({ error: 'User not found' });
   }
+
+  res.status(200).json(user);
 }

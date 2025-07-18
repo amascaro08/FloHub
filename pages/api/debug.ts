@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,7 +11,11 @@ export default async function handler(
   
   try {
     // Get the token
-    const user = await auth(req);
+    const decoded = auth(req);
+    let user = null;
+    if (decoded) {
+      user = await getUserById(decoded.userId);
+    }
     
     // Return debug information
     return res.status(200).json({

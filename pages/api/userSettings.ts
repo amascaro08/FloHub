@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "../../lib/auth";
+import { getUserById } from "../../lib/user";
 import { db } from "../../lib/drizzle";
 import { userSettings } from "../../db/schema";
 import { eq } from "drizzle-orm";
@@ -13,11 +14,14 @@ export default async function handler(
 ) {
   // Disable caching to always return freshest data
   res.setHeader('Cache-Control', 'no-store');
-  const user = await auth(req);
-  if (!user?.email) {
+  const decoded = auth(req);
+  if (!decoded) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-
+  const user = await getUserById(decoded.userId);
+  if (!user?.email) {
+    return res.status(401).json({ error: "User not found" });
+  }
   const userEmail = user.email;
   // Use a more general settings document instead of just "calendar"
 
