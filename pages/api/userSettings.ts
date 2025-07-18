@@ -3,7 +3,7 @@ import { auth } from "../../lib/auth";
 import { db } from "../../lib/drizzle";
 import { userSettings } from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { UserSettings } from "../../types/app"; // Import UserSettings from types
+import { UserSettings } from "../../types/app"; // Import UserSettings from typese
 
 type ErrorRes = { error: string };
 
