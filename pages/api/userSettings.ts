@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "../../lib/auth";
-import { db } from "../../lib/drizzle";
-import { userSettings, users } from "../../db/schema";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/drizzle";
+import { userSettings, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { UserSettings } from "../../types/app"; // Import UserSettings from typese
+import { UserSettings } from "@/types/app"; // Import UserSettings from types
 
 // Move getUserById function here to avoid shared import issues
 async function getUserById(userId: number) {
