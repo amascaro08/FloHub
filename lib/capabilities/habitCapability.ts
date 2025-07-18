@@ -1,6 +1,12 @@
 import { FloCatCapability } from '../floCatCapabilities';
-import { getUserHabits, toggleHabitCompletion, createHabit, getTodayFormatted } from '../habitService';
-// No direct database import needed, will use fetch to API route
+import { db } from '../drizzle';
+import { habits, habitCompletions } from '../../db/schema';
+import { eq, desc, and } from 'drizzle-orm';
+
+// Helper function
+const getTodayFormatted = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
 
 /**
  * FloCat capability for managing habits
@@ -66,8 +72,22 @@ export const habitCapability: FloCatCapability = {
       };
       
       if (command === 'list') {
-        const habits = await getUserHabits(user_email);
-        if (habits.length === 0) {
+        const rows = await db
+          .select()
+          .from(habits)
+          .where(eq(habits.userId, user_email))
+          .orderBy(desc(habits.createdAt));
+          
+        const userHabits = rows.map(row => ({
+          ...row,
+          id: String(row.id),
+          description: row.description || undefined,
+          customDays: (row.customDays as number[]) || [],
+          frequency: row.frequency as 'daily' | 'weekly' | 'custom',
+          createdAt: row.createdAt ? Number(row.createdAt) : Date.now(),
+          updatedAt: row.updatedAt ? Number(row.updatedAt) : Date.now()
+        }));
+        if (userHabits.length === 0) {
           return getStyledResponse(
             "You don't have any habits tracked yet. Try saying 'create habit [name]' to get started!",
             "Meow! Your habit list is as empty as my food bowl at dinner time! 😿 Try saying 'create habit [name]' to start filling it up, paw-lease!",
@@ -76,7 +96,7 @@ export const habitCapability: FloCatCapability = {
           );
         }
         
-        const habitsList = habits.map(habit =>
+        const habitsList = userHabits.map(habit =>
           `- **${habit.name}**: ${habit.frequency === 'daily' ? 'Daily' :
             habit.frequency === 'weekly' ? 'Weekly' : 'Custom days'}`
         ).join('\n');
@@ -98,11 +118,16 @@ export const habitCapability: FloCatCapability = {
         const habitData = {
           name: args.trim(),
           description: '',
-          frequency: 'daily' as const,
-          color: '#4fd1c5'
+          frequency: 'daily' as const
         };
         
-        await createHabit(user_email, habitData);
+        await db.insert(habits).values({
+          userId: user_email,
+          name: habitData.name,
+          description: habitData.description,
+          frequency: habitData.frequency,
+          customDays: []
+        });
         
         return getStyledResponse(
           `Great! I've created a new daily habit: "${habitData.name}". You can track it in your Habit Tracker.`,
@@ -118,9 +143,24 @@ export const habitCapability: FloCatCapability = {
         }
         
         // Find the habit by name (case-insensitive)
-        const habits = await getUserHabits(user_email);
+        const rows = await db
+          .select()
+          .from(habits)
+          .where(eq(habits.userId, user_email))
+          .orderBy(desc(habits.createdAt));
+          
+        const userHabits = rows.map(row => ({
+          ...row,
+          id: String(row.id),
+          description: row.description || undefined,
+          customDays: (row.customDays as number[]) || [],
+          frequency: row.frequency as 'daily' | 'weekly' | 'custom',
+          createdAt: row.createdAt ? Number(row.createdAt) : Date.now(),
+          updatedAt: row.updatedAt ? Number(row.updatedAt) : Date.now()
+        }));
+        
         const habitName = args.trim().toLowerCase();
-        const habit = habits.find(h => h.name.toLowerCase().includes(habitName));
+        const habit = userHabits.find(h => h.name.toLowerCase().includes(habitName));
         
         if (!habit) {
           return getStyledResponse(
@@ -133,7 +173,44 @@ export const habitCapability: FloCatCapability = {
         
         // Mark the habit as complete for today
         const today = getTodayFormatted();
-        await toggleHabitCompletion(user_email, habit.id, today);
+        
+        // Check if completion already exists
+        const existingCompletion = await db
+          .select()
+          .from(habitCompletions)
+          .where(
+            and(
+              eq(habitCompletions.userId, user_email),
+              eq(habitCompletions.habitId, parseInt(habit.id)),
+              eq(habitCompletions.date, today)
+            )
+          );
+        
+        if (existingCompletion.length > 0) {
+          // Update existing completion (toggle)
+          await db
+            .update(habitCompletions)
+            .set({
+              completed: !existingCompletion[0].completed
+            })
+            .where(
+              and(
+                eq(habitCompletions.userId, user_email),
+                eq(habitCompletions.habitId, parseInt(habit.id)),
+                eq(habitCompletions.date, today)
+              )
+            );
+        } else {
+          // Create new completion
+          await db
+            .insert(habitCompletions)
+            .values({
+              userId: user_email,
+              habitId: parseInt(habit.id),
+              date: today,
+              completed: true
+            });
+        }
         
         return getStyledResponse(
           `✅ Marked "${habit.name}" as complete for today. Keep up the good work!`,
@@ -144,8 +221,23 @@ export const habitCapability: FloCatCapability = {
       }
       
       else if (command === 'status') {
-        const habits = await getUserHabits(user_email);
-        if (habits.length === 0) {
+        const rows = await db
+          .select()
+          .from(habits)
+          .where(eq(habits.userId, user_email))
+          .orderBy(desc(habits.createdAt));
+          
+        const userHabits = rows.map(row => ({
+          ...row,
+          id: String(row.id),
+          description: row.description || undefined,
+          customDays: (row.customDays as number[]) || [],
+          frequency: row.frequency as 'daily' | 'weekly' | 'custom',
+          createdAt: row.createdAt ? Number(row.createdAt) : Date.now(),
+          updatedAt: row.updatedAt ? Number(row.updatedAt) : Date.now()
+        }));
+        
+        if (userHabits.length === 0) {
           return getStyledResponse(
             "You don't have any habits tracked yet. Try saying 'create habit [name]' to get started!",
             "Meow! Your habit list is as empty as my food bowl at dinner time! 😿 Try saying 'create habit [name]' to start filling it up, paw-lease!",
@@ -157,10 +249,10 @@ export const habitCapability: FloCatCapability = {
         // In a real implementation, you would check which habits are completed for today
         // This is a simplified version
         return getStyledResponse(
-          `You have ${habits.length} habits tracked. Check your Habit Tracker widget for detailed progress!`,
-          `You're tracking ${habits.length} purr-fect habits! 😺 Paw on over to your Habit Tracker widget for all the meow-velous details!`,
-          `You have ${habits.length} habits tracked. Check your Habit Tracker widget for detailed progress.`,
-          `Currently tracking ${habits.length} habit(s). For detailed progress metrics, please refer to the Habit Tracker widget.`
+          `You have ${userHabits.length} habits tracked. Check your Habit Tracker widget for detailed progress!`,
+          `You're tracking ${userHabits.length} purr-fect habits! 😺 Paw on over to your Habit Tracker widget for all the meow-velous details!`,
+          `You have ${userHabits.length} habits tracked. Check your Habit Tracker widget for detailed progress.`,
+          `Currently tracking ${userHabits.length} habit(s). For detailed progress metrics, please refer to the Habit Tracker widget.`
         );
       }
       

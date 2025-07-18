@@ -9,15 +9,28 @@ import { PlusIcon, CheckIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/2
 import HabitForm from '@/components/habit-tracker/HabitForm';
 import HabitStats from '@/components/habit-tracker/HabitStats';
 
-// Habit service functions
-import {
-  getUserHabits,
-  getHabitCompletionsForMonth,
-  toggleHabitCompletion,
-  formatDate,
-  getTodayFormatted,
-  shouldCompleteToday
-} from '@/lib/habitService';
+// Helper functions moved from habitService
+const formatDate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const getTodayFormatted = (): string => {
+  return formatDate(new Date());
+};
+
+const shouldCompleteToday = (habit: Habit): boolean => {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  
+  if (habit.frequency === 'daily') {
+    return true;
+  } else if (habit.frequency === 'weekly') {
+    return dayOfWeek === 1; // Monday for example - adjust as needed
+  } else if (habit.frequency === 'custom' && habit.customDays) {
+    return habit.customDays.includes(dayOfWeek);
+  }
+  return false;
+};
 
 // Types
 import { Habit, HabitCompletion } from '@/types/habit-tracker';
@@ -59,15 +72,21 @@ const HabitCalendar = () => {
       
       setLoading(true);
       try {
-        const userHabits = await getUserHabits(user.primaryEmail);
-        setHabits(userHabits);
+        // Get user habits via API
+        const habitsResponse = await fetch('/api/habits');
+        if (habitsResponse.ok) {
+          const userHabits = await habitsResponse.json();
+          setHabits(userHabits);
+        }
         
-        const monthCompletions = await getHabitCompletionsForMonth(
-          user.primaryEmail,
-          year,
-          month
+        // Get month completions via API
+        const completionsResponse = await fetch(
+          `/api/habits/completions?year=${year}&month=${month}`
         );
-        setCompletions(monthCompletions);
+        if (completionsResponse.ok) {
+          const monthCompletions = await completionsResponse.json();
+          setCompletions(monthCompletions);
+        }
       } catch (error) {
         console.error('Error loading habit data:', error);
       } finally {
@@ -102,11 +121,22 @@ const HabitCalendar = () => {
     
     try {
       const dateStr = formatDate(date);
-      const updatedCompletion = await toggleHabitCompletion(
-        user.primaryEmail,
-        habit.id,
-        dateStr
-      );
+      const toggleResponse = await fetch('/api/habits/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          habitId: habit.id,
+          date: dateStr
+        })
+      });
+      
+      if (!toggleResponse.ok) {
+        throw new Error('Failed to toggle habit completion');
+      }
+      
+      const updatedCompletion = await toggleResponse.json();
       
       // Update local state
       setCompletions(prev => {
@@ -405,7 +435,7 @@ const HabitCalendar = () => {
                   <h4 className="font-medium text-gray-800 dark:text-white">{habit.name}</h4>
                   <div 
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: habit.color || '#4fd1c5' }}
+                                              style={{ backgroundColor: '#4fd1c5' }}
                   ></div>
                 </div>
                 
