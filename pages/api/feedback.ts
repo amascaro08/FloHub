@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { feedback, backlog } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,27 +23,19 @@ export default async function handler(
     try {
       if (type === "backlog") {
         // Retrieve backlog items
-        const { rows: backlogItems } = await query(
-          `SELECT id, text, "userId", "createdAt" FROM backlog ORDER BY "createdAt" DESC`
-        );
+        const backlogItems = await db.select().from(backlog).orderBy(desc(backlog.createdAt));
         return res.status(200).json(backlogItems.map(item => ({
-          id: item.id,
-          text: item.text,
-          userId: item.userId,
-          createdAt: Number(item.createdAt)
+          ...item,
+          id: String(item.id),
+          createdAt: new Date(item.createdAt!).getTime()
         })));
       } else {
         // Retrieve feedback items
-        const { rows: feedbackItems } = await query(
-          `SELECT id, "userId", "feedbackType", "feedbackText", status, "createdAt" FROM feedback ORDER BY "createdAt" DESC`
-        );
+        const feedbackItems = await db.select().from(feedback).orderBy(desc(feedback.createdAt));
         return res.status(200).json(feedbackItems.map(item => ({
-          id: item.id,
-          userId: item.userId,
-          feedbackType: item.feedbackType,
-          feedbackText: item.feedbackText,
-          status: item.status,
-          createdAt: Number(item.createdAt)
+          ...item,
+          id: String(item.id),
+          createdAt: new Date(item.createdAt!).getTime()
         })));
       }
     } catch (err: any) {
@@ -57,15 +51,11 @@ export default async function handler(
     }
     
     try {
-      const now = Date.now();
-      const { rows } = await query(
-        `INSERT INTO backlog (text, "userId", "createdAt") VALUES ($1, $2, $3) RETURNING id`,
-        [text, userId, now]
-      );
+      const [newBacklogItem] = await db.insert(backlog).values({ text, userId, createdAt: new Date() }).returning();
       
       return res.status(201).json({
         success: true,
-        backlogId: rows[0].id
+        backlogId: newBacklogItem.id
       });
     } catch (err: any) {
       console.error("Create backlog error:", err);
@@ -79,12 +69,8 @@ export default async function handler(
     }
 
     try {
-      const now = Date.now();
-      const { rows } = await query(
-        `INSERT INTO feedback ("userId", "feedbackType", "feedbackText", status, "createdAt") VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [userId, feedbackType || "general", feedbackText, "open", now]
-      );
-      const feedbackId = rows[0].id;
+      const [newFeedbackItem] = await db.insert(feedback).values({ userId, feedbackType: feedbackType || "general", feedbackText, status: "open", createdAt: new Date() }).returning();
+      const feedbackId = newFeedbackItem.id;
 
       return res.status(201).json({ success: true, feedbackId });
     } catch (err: any) {
@@ -104,43 +90,17 @@ export default async function handler(
     }
 
     try {
-      // Get existing feedback to check existence and retrieve data for backlog
-      const { rows: existingFeedback } = await query(
-        `SELECT "feedbackText" FROM feedback WHERE id = $1`,
-        [id]
-      );
+      const [existingFeedback] = await db.select().from(feedback).where(eq(feedback.id, id));
       
-      if (existingFeedback.length === 0) {
+      if (!existingFeedback) {
         return res.status(404).json({ error: "Feedback not found" });
       }
       
-      const updateFields: string[] = [];
-      const updateParams: any[] = [];
-      let paramIndex = 1;
-
-      updateFields.push(`status = $${paramIndex++}`);
-      updateParams.push(status);
-
-      if (notes) {
-        updateFields.push(`notes = $${paramIndex++}`);
-        updateParams.push(notes);
-      }
-      
-      updateParams.push(id); // Add ID for WHERE clause
-
-      await query(
-        `UPDATE feedback SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
-        updateParams
-      );
+      await db.update(feedback).set({ status, notes }).where(eq(feedback.id, id));
       
       // If status is "backlog", add to backlog collection
       if (status === "backlog") {
-        const feedbackData = existingFeedback[0];
-        const now = Date.now();
-        await query(
-          `INSERT INTO backlog ("originalId", text, "createdAt", "userId") VALUES ($1, $2, $3, $4)`,
-          [id, feedbackData.feedbackText, now, userId]
-        );
+        await db.insert(backlog).values({ originalId: id, text: existingFeedback.feedbackText, createdAt: new Date(), userId });
       }
       
       return res.status(200).json({ success: true });

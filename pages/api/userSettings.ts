@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "@/lib/auth";
-import { query } from "../../lib/neon";
+import { auth } from "../../lib/auth";
+import { db } from "../../lib/drizzle";
+import { userSettings } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import { UserSettings } from "../../types/app"; // Import UserSettings from types
 
 type ErrorRes = { error: string };
@@ -21,9 +23,11 @@ export default async function handler(
 
   if (req.method === "GET") {
     try {
-      const { rows } = await query('SELECT * FROM user_settings WHERE user_email = $1', [userEmail]);
+      const data = await db.query.userSettings.findFirst({
+        where: eq(userSettings.userEmail, userEmail),
+      });
 
-      if (rows.length === 0) {
+      if (!data) {
         const defaultSettings: UserSettings = {
           selectedCals: ["primary"],
           defaultView: "month",
@@ -47,25 +51,24 @@ export default async function handler(
         return res.status(200).json(defaultSettings);
       }
 
-      const data = rows[0];
-      const userSettings: UserSettings = {
-        selectedCals: data.selected_cals || [], // Ensure it's an array
-        defaultView: data.default_view || "month",
-        customRange: data.custom_range || { start: "", end: "" }, // Ensure it's an object
-        powerAutomateUrl: data.power_automate_url || "",
-        globalTags: data.global_tags || [],
-        activeWidgets: data.active_widgets || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
-        floCatStyle: data.flo_cat_style || "default",
-        floCatPersonality: data.flo_cat_personality || [],
-        preferredName: data.preferred_name || "",
-        tags: data.tags || [],
-        widgets: data.widgets || [],
-        calendarSettings: data.calendar_settings || { calendars: [] },
-        notificationSettings: data.notification_settings || { subscribed: false },
+      const settings: UserSettings = {
+        selectedCals: (data.selectedCals as string[]) || [], // Ensure it's an array
+        defaultView: data.defaultView as UserSettings['defaultView'] || "month",
+        customRange: (data.customRange as any) || { start: "", end: "" }, // Ensure it's an object
+        powerAutomateUrl: data.powerAutomateUrl || "",
+        globalTags: (data.globalTags as string[]) || [],
+        activeWidgets: (data.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        floCatStyle: data.floCatStyle as UserSettings['floCatStyle'] || "default",
+        floCatPersonality: (data.floCatPersonality as string[]) || [],
+        preferredName: data.preferredName || "",
+        tags: (data.tags as string[]) || [],
+        widgets: (data.widgets as string[]) || [],
+        calendarSettings: (data.calendarSettings as any) || { calendars: [] },
+        notificationSettings: (data.notificationSettings as any) || { subscribed: false },
       };
 
-      console.log("User settings loaded for", userEmail, userSettings);
-      return res.status(200).json(userSettings);
+      console.log("User settings loaded for", userEmail, settings);
+      return res.status(200).json(settings);
     } catch (error) {
       console.error("Error fetching user settings for", userEmail, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });

@@ -1,9 +1,7 @@
-import { query } from './neon';
+import { db } from './drizzle';
+import { habits, habitCompletions } from '@/db/schema';
+import { and, eq, desc, gte, lte } from 'drizzle-orm';
 import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
-
-// Collection names
-const HABITS_COLLECTION = 'habits';
-const COMPLETIONS_COLLECTION = 'habitCompletions';
 
 // Helper to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
@@ -18,17 +16,21 @@ export const getTodayFormatted = (): string => {
 // Get all habits for a user
 export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   try {
-    const { rows } = await query('SELECT id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt" FROM habits WHERE "userId" = $1 ORDER BY "createdAt" DESC', [userId]);
+    const rows = await db
+      .select()
+      .from(habits)
+      .where(eq(habits.userId, userId))
+      .orderBy(desc(habits.createdAt));
+      
     return rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      frequency: row.frequency,
-      customDays: row.customDays,
-      userId: row.userId,
-      createdAt: Number(row.createdAt), // Assuming createdAt is stored as BIGINT (Unix milliseconds)
-      updatedAt: Number(row.updatedAt)  // Assuming updatedAt is stored as BIGINT (Unix milliseconds)
-    })) as Habit[];
+      ...row,
+      id: String(row.id),
+      description: row.description || undefined,
+      customDays: (row.customDays as number[]) || [],
+      frequency: row.frequency as 'daily' | 'weekly' | 'custom',
+      createdAt: row.createdAt ? new Date(row.createdAt).getTime() : 0,
+      updatedAt: row.updatedAt ? new Date(row.updatedAt).getTime() : 0,
+    }));
   } catch (error) {
     console.error('Error getting habits:', error);
     return [];
@@ -38,27 +40,31 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
 // Create a new habit
 export const createHabit = async (userId: string, habitData: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>): Promise<Habit> => {
   try {
-    const now = Date.now();
+    const now = new Date();
     const { name, description, frequency, customDays } = habitData;
     
-    const { rows } = await query(
-      `INSERT INTO habits (name, description, frequency, "customDays", "userId", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt"`,
-      [name, description, frequency, customDays, userId, now, now]
-    );
+    const [newHabit] = await db
+      .insert(habits)
+      .values({
+        name,
+        description,
+        frequency,
+        customDays,
+        userId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
     
-    const newHabit = rows[0];
     return {
-      id: newHabit.id,
-      name: newHabit.name,
-      description: newHabit.description,
-      frequency: newHabit.frequency,
-      customDays: newHabit.customDays,
-      userId: newHabit.userId,
-      createdAt: Number(newHabit.createdAt),
-      updatedAt: Number(newHabit.updatedAt)
-    } as Habit;
+      ...newHabit,
+      id: String(newHabit.id),
+      description: newHabit.description || undefined,
+      customDays: (newHabit.customDays as number[]) || [],
+      frequency: newHabit.frequency as 'daily' | 'weekly' | 'custom',
+      createdAt: newHabit.createdAt ? new Date(newHabit.createdAt).getTime() : 0,
+      updatedAt: newHabit.updatedAt ? new Date(newHabit.updatedAt).getTime() : 0,
+    };
   } catch (error) {
     console.error('Error creating habit:', error);
     throw error;
@@ -68,33 +74,11 @@ export const createHabit = async (userId: string, habitData: Omit<Habit, 'id' | 
 // Update an existing habit
 export const updateHabit = async (habitId: string, habitData: Partial<Habit>): Promise<void> => {
   try {
-    const updates: string[] = [];
-    const params: any[] = [];
-    let paramIndex = 1;
-
-    for (const key in habitData) {
-      if (Object.prototype.hasOwnProperty.call(habitData, key)) {
-        // Exclude 'id', 'createdAt', 'updatedAt' from direct updates
-        if (key === 'id' || key === 'createdAt' || key === 'updatedAt') {
-          continue;
-        }
-        updates.push(`"${key}" = $${paramIndex++}`);
-        params.push((habitData as any)[key]);
-      }
-    }
-
-    updates.push(`"updatedAt" = $${paramIndex++}`);
-    params.push(Date.now());
-
-    params.push(habitId); // Add habitId as the last parameter for the WHERE clause
-
-    if (updates.length === 0) {
-      console.warn('No valid fields to update for habit:', habitId);
-      return;
-    }
-
-    const queryString = `UPDATE habits SET ${updates.join(', ')} WHERE id = $${paramIndex}`;
-    await query(queryString, params);
+    const { id, createdAt, updatedAt, ...dataToUpdate } = habitData;
+    await db
+      .update(habits)
+      .set({ ...dataToUpdate, updatedAt: new Date() })
+      .where(eq(habits.id, Number(habitId)));
   } catch (error) {
     console.error('Error updating habit:', error);
     throw error;
@@ -104,15 +88,8 @@ export const updateHabit = async (habitId: string, habitData: Partial<Habit>): P
 // Delete a habit
 export const deleteHabit = async (habitId: string): Promise<void> => {
   try {
-    // First delete the habit
-    await query('DELETE FROM habits WHERE id = $1', [habitId]);
-    
-    // Then delete all completions for this habit
-    try {
-      await query('DELETE FROM "habitCompletions" WHERE "habitId" = $1', [habitId]);
-    } catch (completionsError) {
-      console.error('Error deleting habit completions:', completionsError);
-    }
+    await db.delete(habits).where(eq(habits.id, Number(habitId)));
+    await db.delete(habitCompletions).where(eq(habitCompletions.habitId, Number(habitId)));
   } catch (error) {
     console.error('Error deleting habit:', error);
     throw error;
@@ -127,63 +104,38 @@ export const toggleHabitCompletion = async (
   notes?: string
 ): Promise<HabitCompletion> => {
   try {
-    // Check if there's already a completion record for this habit and date
-    const { rows: existingCompletions } = await query(
-      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "habitId" = $1 AND "userId" = $2 AND date = $3`,
-      [habitId, userId, date]
-    );
+    const existingCompletion = await db.query.habitCompletions.findFirst({
+      where: and(
+        eq(habitCompletions.habitId, Number(habitId)),
+        eq(habitCompletions.userId, userId),
+        eq(habitCompletions.date, date)
+      ),
+    });
 
-    if (existingCompletions.length === 0) {
-      // No completion record exists, create one (mark as completed)
-      const newCompletion = {
-        habitId,
-        userId,
-        date,
-        completed: true,
-        notes: notes || '',
-        timestamp: Date.now()
-      };
-      
-      const { rows } = await query(
-        `INSERT INTO "habitCompletions" ("habitId", "userId", date, completed, notes, timestamp)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, "habitId", "userId", date, completed, notes, timestamp`,
-        [newCompletion.habitId, newCompletion.userId, newCompletion.date, newCompletion.completed, newCompletion.notes, newCompletion.timestamp]
-      );
-      
-      const createdCompletion = rows[0];
-      return {
-        id: createdCompletion.id,
-        habitId: createdCompletion.habitId,
-        userId: createdCompletion.userId,
-        date: createdCompletion.date,
-        completed: createdCompletion.completed,
-        notes: createdCompletion.notes,
-        timestamp: Number(createdCompletion.timestamp)
-      } as HabitCompletion;
+    if (!existingCompletion) {
+      const [newCompletion] = await db
+        .insert(habitCompletions)
+        .values({
+          habitId: Number(habitId),
+          userId,
+          date,
+          completed: true,
+          notes: notes || '',
+          timestamp: new Date(),
+        })
+        .returning();
+      return { ...newCompletion, id: String(newCompletion.id), habitId: String(newCompletion.habitId), completed: newCompletion.completed ?? false, notes: newCompletion.notes || undefined, timestamp: new Date(newCompletion.timestamp!).getTime() };
     } else {
-      // Completion record exists, toggle its state
-      const currentCompletion = existingCompletions[0];
-      const newCompletedStatus = !currentCompletion.completed;
-      const updatedNotes = notes || currentCompletion.notes || '';
-      const newTimestamp = Date.now();
-
-      const { rows } = await query(
-        `UPDATE "habitCompletions" SET completed = $1, notes = $2, timestamp = $3 WHERE id = $4
-         RETURNING id, "habitId", "userId", date, completed, notes, timestamp`,
-        [newCompletedStatus, updatedNotes, newTimestamp, currentCompletion.id]
-      );
-
-      const updatedCompletion = rows[0];
-      return {
-        id: updatedCompletion.id,
-        habitId: updatedCompletion.habitId,
-        userId: updatedCompletion.userId,
-        date: updatedCompletion.date,
-        completed: updatedCompletion.completed,
-        notes: updatedCompletion.notes,
-        timestamp: Number(updatedCompletion.timestamp)
-      } as HabitCompletion;
+      const [updatedCompletion] = await db
+        .update(habitCompletions)
+        .set({
+          completed: !existingCompletion.completed,
+          notes: notes || existingCompletion.notes || '',
+          timestamp: new Date(),
+        })
+        .where(eq(habitCompletions.id, existingCompletion.id))
+        .returning();
+      return { ...updatedCompletion, id: String(updatedCompletion.id), habitId: String(updatedCompletion.habitId), completed: updatedCompletion.completed ?? false, notes: updatedCompletion.notes || undefined, timestamp: new Date(updatedCompletion.timestamp!).getTime() };
     }
   } catch (error) {
     console.error('Error toggling habit completion:', error);
@@ -198,24 +150,21 @@ export const getHabitCompletionsForMonth = async (
   month: number // 0-11 (JavaScript months)
 ): Promise<HabitCompletion[]> => {
   try {
-    // Create date range for the month
     const startDate = formatDate(new Date(year, month, 1));
-    const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of month
+    const endDate = formatDate(new Date(year, month + 1, 0));
     
-    const { rows } = await query(
-      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "userId" = $1 AND date >= $2 AND date <= $3`,
-      [userId, startDate, endDate]
-    );
+    const rows = await db
+      .select()
+      .from(habitCompletions)
+      .where(
+        and(
+          eq(habitCompletions.userId, userId),
+          gte(habitCompletions.date, startDate),
+          lte(habitCompletions.date, endDate)
+        )
+      );
     
-    return rows.map(row => ({
-      id: row.id,
-      habitId: row.habitId,
-      userId: row.userId,
-      date: row.date,
-      completed: row.completed,
-      notes: row.notes,
-      timestamp: Number(row.timestamp)
-    })) as HabitCompletion[];
+    return rows.map(row => ({ ...row, id: String(row.id), habitId: String(row.habitId), completed: row.completed ?? false, notes: row.notes || undefined, timestamp: new Date(row.timestamp!).getTime() }));
   } catch (error) {
     console.error('Error getting habit completions:', error);
     return [];
@@ -225,30 +174,19 @@ export const getHabitCompletionsForMonth = async (
 // Calculate habit statistics
 export const calculateHabitStats = async (userId: string, habitId: string): Promise<HabitStats> => {
   try {
-    // Get completed completions for the habit
-    const { rows: completionsRows } = await query(
-      `SELECT id, "habitId", "userId", date, completed, notes, timestamp FROM "habitCompletions" WHERE "userId" = $1 AND "habitId" = $2 AND completed = TRUE`,
-      [userId, habitId]
-    );
+    const completions = await db.query.habitCompletions.findMany({
+      where: and(
+        eq(habitCompletions.userId, userId),
+        eq(habitCompletions.habitId, Number(habitId)),
+        eq(habitCompletions.completed, true)
+      ),
+    });
     
-    const completions = completionsRows.map(row => ({
-      id: row.id,
-      habitId: row.habitId,
-      userId: row.userId,
-      date: row.date,
-      completed: row.completed,
-      notes: row.notes,
-      timestamp: Number(row.timestamp)
-    })) as HabitCompletion[];
+    const habit = await db.query.habits.findFirst({
+      where: eq(habits.id, Number(habitId)),
+    });
     
-    // Get the habit to check frequency
-    const { rows: habitRows } = await query(
-      `SELECT id, name, description, frequency, "customDays", "userId", "createdAt", "updatedAt" FROM habits WHERE id = $1`,
-      [habitId]
-    );
-    
-    if (habitRows.length === 0) {
-      // Return default stats if habit not found
+    if (!habit) {
       return {
         habitId,
         currentStreak: 0,
@@ -258,36 +196,19 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
       };
     }
     
-    const habit = {
-      id: habitRows[0].id,
-      name: habitRows[0].name,
-      description: habitRows[0].description,
-      frequency: habitRows[0].frequency,
-      customDays: habitRows[0].customDays,
-      userId: habitRows[0].userId,
-      createdAt: Number(habitRows[0].createdAt),
-      updatedAt: Number(habitRows[0].updatedAt)
-    } as Habit;
-    
-    // Calculate total completions
     const totalCompletions = completions.length;
     
-    // Calculate current streak
     let currentStreak = 0;
     const today = formatDate(new Date());
     
-    // Sort completions by date in descending order (most recent first)
     const sortedCompletions = [...completions].sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     
-    // Check if the habit was completed today
     const completedToday = sortedCompletions.some(c => c.date === today);
     
     if (completedToday) {
       currentStreak = 1;
-      
-      // Check previous days
       let checkDate = new Date();
       checkDate.setDate(checkDate.getDate() - 1);
       
@@ -303,15 +224,12 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
         }
       }
     } else {
-      // Check if completed yesterday to maintain streak
       let yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayFormatted = formatDate(yesterday);
       
       if (sortedCompletions.some(c => c.date === yesterdayFormatted)) {
         currentStreak = 1;
-        
-        // Check previous days
         let checkDate = new Date();
         checkDate.setDate(checkDate.getDate() - 2);
         
@@ -329,12 +247,10 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
       }
     }
     
-    // Calculate longest streak
     let longestStreak = 0;
     let currentLongestStreak = 0;
     let lastDate: Date | null = null;
     
-    // Sort completions by date in ascending order
     const chronologicalCompletions = [...completions].sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
@@ -343,20 +259,16 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
       const completionDate = new Date(completion.date);
       
       if (!lastDate) {
-        // First completion
         currentLongestStreak = 1;
         lastDate = completionDate;
       } else {
-        // Check if this completion is consecutive to the last one
         const dayDifference = Math.floor(
           (completionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
         );
         
         if (dayDifference === 1) {
-          // Consecutive day
           currentLongestStreak++;
         } else if (dayDifference > 1) {
-          // Streak broken
           if (currentLongestStreak > longestStreak) {
             longestStreak = currentLongestStreak;
           }
@@ -367,17 +279,14 @@ export const calculateHabitStats = async (userId: string, habitId: string): Prom
       }
     }
     
-    // Check if the current streak is the longest
     if (currentLongestStreak > longestStreak) {
       longestStreak = currentLongestStreak;
     }
     
-    // Calculate completion rate
-    // For simplicity, we'll calculate based on days since habit creation
-    const habitCreationDate = new Date(habit.createdAt);
+    const habitCreationDate = new Date(habit.createdAt!);
     const daysSinceCreation = Math.floor(
       (new Date().getTime() - habitCreationDate.getTime()) / (1000 * 60 * 60 * 24)
-    ) + 1; // +1 to include today
+    ) + 1;
     
     const completionRate = Math.round((totalCompletions / daysSinceCreation) * 100);
     

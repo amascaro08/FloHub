@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { users, analyticsPageVisits, userSettings, analyticsWidgetUsage, analyticsPerformanceMetrics } from '@/db/schema';
+import { count, gte } from 'drizzle-orm';
 
 // Define types for our analytics data
 interface PageVisit {
@@ -111,21 +113,15 @@ async function fetchAnalyticsData(startTimestampMs: number) {
 
   try {
     // Get user count
-    const { rows: userCountRows } = await query('SELECT COUNT(*) FROM users');
-    analyticsData.userCount = parseInt(userCountRows[0].count, 10);
+    const [userCountResult] = await db.select({ value: count() }).from(users);
+    analyticsData.userCount = userCountResult.value;
 
     // Get active users (users who have logged in since startTimestamp)
-    const { rows: activeUserCountRows } = await query(
-      'SELECT COUNT(*) FROM users WHERE "lastLogin" >= $1',
-      [startTimestampMs]
-    );
-    analyticsData.activeUserCount = parseInt(activeUserCountRows[0].count, 10);
+    const [activeUserCountResult] = await db.select({ value: count() }).from(users).where(gte(users.lastLogin, new Date(startTimestampMs)));
+    analyticsData.activeUserCount = activeUserCountResult.value;
 
     // Get page visits
-    const { rows: pageVisitsRows } = await query(
-      `SELECT page, timestamp FROM "analytics_pageVisits_visits" WHERE timestamp >= $1`,
-      [startTimestampMs]
-    );
+    const pageVisitsRows = await db.select().from(analyticsPageVisits).where(gte(analyticsPageVisits.timestamp, new Date(startTimestampMs)));
 
     // Process page visits
     const pageVisitCounts: Record<string, number> = {};
@@ -147,9 +143,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
     };
 
     // Get user settings to analyze FloCat styles and personalities
-    const { rows: userSettingsRows } = await query(
-      `SELECT "floCatStyle", "floCatPersonality" FROM "userSettings"`
-    );
+    const userSettingsRows = await db.select({ floCatStyle: userSettings.floCatStyle, floCatPersonality: userSettings.floCatPersonality }).from(userSettings);
     
     // Process FloCat styles and personalities
     const personalityKeywords: Record<string, number> = {};
@@ -179,10 +173,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
       .sort((a, b) => b.count - a.count);
 
     // Get widget usage
-    const { rows: widgetUsageRows } = await query(
-      `SELECT widget, timestamp FROM "analytics_widgetUsage_widgets" WHERE timestamp >= $1`,
-      [startTimestampMs]
-    );
+    const widgetUsageRows = await db.select().from(analyticsWidgetUsage).where(gte(analyticsWidgetUsage.timestamp, new Date(startTimestampMs)));
 
     // Process widget usage
     const widgetCounts: Record<string, number> = {};
@@ -196,10 +187,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
       .sort((a, b) => b.count - a.count);
 
     // Get performance metrics
-    const { rows: performanceRows } = await query(
-      `SELECT fcp, lcp, fid, cls, ttfb, "loadComplete", "navStart", "userDuration", timestamp FROM "analytics_performance_metrics" WHERE timestamp >= $1`,
-      [startTimestampMs]
-    );
+    const performanceRows = await db.select().from(analyticsPerformanceMetrics).where(gte(analyticsPerformanceMetrics.timestamp, new Date(startTimestampMs)));
 
     // Process performance metrics
     const metricSums: Record<string, MetricSum> = {

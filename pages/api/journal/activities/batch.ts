@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalActivities } from '@/db/schema';
+import { and, eq, inArray } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -15,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = user.id;
+  const userEmail = user.email;
   
   // Get dates from request body
   const { dates } = req.body;
@@ -28,24 +30,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create a map of date to activities array
     const activities: Record<string, string[]> = {};
     
-    // Firestore 'in' operator can only handle up to 10 values
-    // Process dates in chunks of 10
-    const chunkSize = 10;
-    for (let i = 0; i < dates.length; i += chunkSize) {
-      const chunk = dates.slice(i, i + chunkSize);
+    const rows = await db
+      .select()
+      .from(journalActivities)
+      .where(and(eq(journalActivities.userEmail, userEmail), inArray(journalActivities.date, dates)));
       
-      const { rows } = await query(
-        'SELECT date, activities FROM journal_activities WHERE user_email = $1 AND date = ANY($2::date[])',
-        [userEmail, chunk]
-      );
-      
-      // Add activities for each date
-      rows.forEach(row => {
-        if (row.date && Array.isArray(row.activities) && row.activities.length > 0) {
-          activities[row.date] = row.activities;
-        }
-      });
-    }
+    // Add activities for each date
+    rows.forEach(row => {
+      if (row.date && Array.isArray(row.activities) && (row.activities as string[]).length > 0) {
+        activities[row.date] = row.activities as string[];
+      }
+    });
     
     return res.status(200).json({ activities });
   } catch (error) {

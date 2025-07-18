@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { analytics } from "@/db/schema";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,11 +22,11 @@ export default async function handler(
   }
 
   try {
-    await query(
-      `INSERT INTO analytics (user_email, event_type, event_data, timestamp)
-       VALUES ($1, $2, $3, NOW())`,
-      [userEmail, eventType, eventData || {}]
-    );
+    await db.insert(analytics).values({
+      userEmail,
+      eventType,
+      eventData: eventData || {},
+    });
     return res.status(200).json({ message: "Analytics event tracked successfully" });
   } catch (error: any) {
     console.error("Error tracking analytics event:", error);

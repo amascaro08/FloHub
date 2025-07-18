@@ -17,7 +17,7 @@ export default async function handler(
       authenticated: !!user,
       user: user ? {
         email: user.email,
-        name: user.name,
+        name: user.name || '',
         // Don't include sensitive information
       } : null,
       headers: {

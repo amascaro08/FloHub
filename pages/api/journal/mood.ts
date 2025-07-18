@@ -1,9 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalMoods } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use getToken instead of getuser for better compatibility with API routes 
+  // Use getToken instead of getuser for better compatibility with API routes
   const user = await auth(req);
   
   if (!user?.email) {
@@ -21,16 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const { rows } = await query(
-        'SELECT emoji, label, tags FROM journal_moods WHERE user_email = $1 AND date = $2',
-        [userEmail, date]
-      );
+      const mood = await db.query.journalMoods.findFirst({
+        where: and(eq(journalMoods.userEmail, userEmail), eq(journalMoods.date, date)),
+      });
       
-      if (rows.length === 0) {
+      if (!mood) {
         return res.status(200).json({ emoji: '', label: '', tags: [] });
       }
       
-      return res.status(200).json(rows[0]);
+      return res.status(200).json(mood);
     } catch (error) {
       console.error('Error retrieving mood data:', error);
       return res.status(500).json({ error: 'Failed to retrieve mood data' });
@@ -46,17 +47,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      // Check if mood data already exists for this date
-      await query(
-        `INSERT INTO journal_moods (user_email, date, emoji, label, tags, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-         ON CONFLICT (user_email, date) DO UPDATE SET
-           emoji = EXCLUDED.emoji,
-           label = EXCLUDED.label,
-           tags = EXCLUDED.tags,
-           updated_at = NOW()`,
-        [userEmail, date, emoji, label, tags || []]
-      );
+      await db.insert(journalMoods).values({
+        userEmail,
+        date,
+        emoji,
+        label,
+        tags: tags || [],
+      }).onConflictDoUpdate({
+        target: [journalMoods.userEmail, journalMoods.date],
+        set: {
+          emoji,
+          label,
+          tags: tags || [],
+          updatedAt: new Date(),
+        },
+      });
       
       return res.status(200).json({ success: true });
     } catch (error) {

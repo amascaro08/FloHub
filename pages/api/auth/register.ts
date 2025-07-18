@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,18 +16,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
-    if (rows.length > 0) {
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (existingUser) {
       return res.status(409).json({ message: 'User already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await query('INSERT INTO users (name, email, password) VALUES ($1, $2, $3)', [
+    await db.insert(users).values({
       name,
       email,
-      hashedPassword,
-    ]);
+      password: hashedPassword,
+    });
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {

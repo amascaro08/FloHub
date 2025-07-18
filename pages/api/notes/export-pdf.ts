@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes as notesTable } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 // You might need a PDF generation library here, e.g., 'pdfmake' or 'html-pdf'
 // import PdfPrinter from 'pdfmake'; // Example using pdfmake
 
@@ -40,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user?.email) {
     return res.status(401).json({ message: "Not signed in" });
   }
-  const userEmail = user.id;
+  const userEmail = user.email;
 
   const { ids } = req.body; // Expecting an array of note IDs
 
@@ -50,8 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Fetch the selected notes from Firestore
-    const { rows } = await query('SELECT id, title, content FROM notes WHERE id = ANY($1::int[]) AND user_email = $2', [ids, userEmail]);
-    const notes: Note[] = rows.map(row => ({ id: row.id, title: row.title, content: row.content }));
+    const notesData = await db.select().from(notesTable).where(and(inArray(notesTable.id, ids), eq(notesTable.userEmail, userEmail)));
+    const notes: Note[] = notesData.map(row => ({ id: String(row.id), title: row.title || undefined, content: row.content || undefined }));
 
     if (notes.length === 0) {
       return res.status(404).json({ message: 'No notes found for the provided IDs' });

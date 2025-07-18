@@ -1,9 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalEntries } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use getToken instead of getuser for better compatibility with API routes 
+  // Use getToken instead of getuser for better compatibility with API routes
   const user = await auth(req);
   
   if (!user?.email) {
@@ -21,16 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const { rows } = await query(
-        'SELECT content, created_at AS "timestamp" FROM journal_entries WHERE user_email = $1 AND date = $2',
-        [userEmail, date]
-      );
+      const entry = await db.query.journalEntries.findFirst({
+        where: and(eq(journalEntries.userEmail, userEmail), eq(journalEntries.date, date)),
+      });
       
-      if (rows.length === 0) {
+      if (!entry) {
         return res.status(200).json({ content: '', timestamp: new Date().toISOString() });
       }
       
-      return res.status(200).json({ content: rows[0].content, timestamp: rows[0].timestamp ? new Date(rows[0].timestamp).toISOString() : new Date().toISOString() });
+      return res.status(200).json({ content: entry.content, timestamp: entry.createdAt ? new Date(entry.createdAt).toISOString() : new Date().toISOString() });
     } catch (error) {
       console.error('Error retrieving journal entry:', error);
       return res.status(500).json({ error: 'Failed to retrieve journal entry' });
@@ -39,22 +40,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Handle POST request - save journal entry
   if (req.method === 'POST') {
-    const { date, content, timestamp } = req.body;
+    const { date, content } = req.body;
     
     if (!date || !content) {
       return res.status(400).json({ error: 'Date and content are required' });
     }
     
     try {
-      // Check if entry already exists
-      await query(
-        `INSERT INTO journal_entries (user_email, date, content, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (user_email, date) DO UPDATE SET
-           content = EXCLUDED.content,
-           updated_at = NOW()`,
-        [userEmail, date, content]
-      );
+      await db.insert(journalEntries).values({
+        userEmail,
+        date,
+        content,
+      }).onConflictDoUpdate({
+        target: [journalEntries.userEmail, journalEntries.date],
+        set: {
+          content,
+          updatedAt: new Date(),
+        },
+      });
       
       return res.status(200).json({ success: true });
     } catch (error) {

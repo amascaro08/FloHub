@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { userSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,12 +18,13 @@ export default async function handler(
 
   if (req.method === "GET") {
     try {
-      const { rows } = await query('SELECT layouts FROM user_settings WHERE user_email = $1', [userEmail]);
-      if (rows.length > 0 && rows[0].layouts) {
-        return res.status(200).json({ layouts: rows[0].layouts });
-      } else {
-        return res.status(200).json({ layouts: null });
-      }
+      const settings = await db.query.userSettings.findFirst({
+        where: eq(userSettings.userEmail, userEmail),
+        columns: {
+          layouts: true,
+        },
+      });
+      return res.status(200).json({ layouts: settings?.layouts || null });
     } catch (error: any) {
       console.error("Error fetching user layouts:", error);
       return res.status(500).json({ error: error.message || "Internal server error" });
@@ -33,25 +36,18 @@ export default async function handler(
     }
 
     try {
-      // Check if settings exist for the user
-      const { rows: existingSettings } = await query(
-        'SELECT user_email FROM user_settings WHERE user_email = $1',
-        [userEmail]
-      );
-
-      if (existingSettings.length > 0) {
-        // Update existing settings
-        await query(
-          'UPDATE user_settings SET layouts = $1 WHERE user_email = $2',
-          [layouts, userEmail]
-        );
-      } else {
-        // Insert new settings with layouts
-        await query(
-          'INSERT INTO user_settings (user_email, layouts, selected_cals, default_view, custom_range, power_automate_url, global_tags, active_widgets, flo_cat_style, flo_cat_personality, preferred_name, tags, widgets, calendar_settings, notification_settings, flo_cat_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)',
-          [userEmail, layouts, [], 'month', { start: '', end: '' }, '', [], [], 'default', [], '', [], [], { calendars: [] }, { subscribed: false }, { enabledCapabilities: [] }]
-        );
-      }
+      await db
+        .insert(userSettings)
+        .values({
+          userEmail: userEmail,
+          layouts: layouts,
+        })
+        .onConflictDoUpdate({
+          target: userSettings.userEmail,
+          set: {
+            layouts: layouts,
+          },
+        });
 
       return res.status(204).end();
     } catch (error: any) {

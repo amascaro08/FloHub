@@ -1,7 +1,8 @@
 // pages/api/notifications/subscribe.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { pushSubscriptions } from '@/db/schema';
 
 type Data = {
   success: boolean;
@@ -33,19 +34,20 @@ export default async function handler(
     }
     
     // Save subscription to Firestore
-    const userEmail = user.id;
+    const userEmail = user.email;
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
-    const now = Date.now();
-    await query(
-      `INSERT INTO "pushSubscriptions" (id, "userEmail", subscription, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (id) DO UPDATE SET
-         "userEmail" = EXCLUDED."userEmail",
-         subscription = EXCLUDED.subscription,
-         "updatedAt" = EXCLUDED."updatedAt"`,
-      [subscriptionId, userEmail, subscription, now, now]
-    );
+    await db.insert(pushSubscriptions).values({
+      id: subscriptionId,
+      userEmail,
+      subscription,
+    }).onConflictDoUpdate({
+      target: pushSubscriptions.id,
+      set: {
+        userEmail,
+        subscription,
+      },
+    });
 
     return res.status(200).json({ success: true });
   } catch (error) {

@@ -2,7 +2,9 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "../../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes } from "@/db/schema";
+import { and, eq, or, isNotNull, desc } from "drizzle-orm";
 import type { Note } from "@/types/app"; // Import shared Note type
 
 export type GetMeetingNotesResponse = { // Export the type
@@ -28,26 +30,22 @@ export default async function handler(
 
   try {
     // 2) Fetch meeting notes for the authenticated user from the database
-    // We need to use a different approach since Firestore has limitations with OR queries
-    // First, get all notes for the user
-    const { rows: meetingNotesRows } = await query(
-      `SELECT id, title, content, tags, "createdAt", "eventId", "eventTitle", "isAdhoc", actions, agenda, "aiSummary"
-       FROM notes
-       WHERE "userId" = $1 AND ("eventId" IS NOT NULL OR "isAdhoc" = TRUE)
-       ORDER BY "createdAt" DESC`,
-      [userId]
-    );
+    const meetingNotesRows = await db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.userEmail, userId), or(isNotNull(notes.eventId), eq(notes.isAdhoc, true))))
+      .orderBy(desc(notes.createdAt));
 
     const meetingNotes: Note[] = meetingNotesRows.map((row) => ({
-      id: row.id,
+      id: String(row.id),
       title: row.title || "",
       content: row.content,
-      tags: row.tags || [],
-      createdAt: new Date(Number(row.createdAt)).toISOString(),
+      tags: (row.tags as string[]) || [],
+      createdAt: new Date(row.createdAt!).toISOString(),
       eventId: row.eventId || undefined,
       eventTitle: row.eventTitle || undefined,
       isAdhoc: row.isAdhoc || undefined,
-      actions: row.actions || [],
+      actions: (row.actions as any) || [],
       agenda: row.agenda || undefined,
       aiSummary: row.aiSummary || undefined,
     }));

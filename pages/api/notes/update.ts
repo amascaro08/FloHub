@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "../../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 type UpdateNoteRequest = {
   id: string;
@@ -60,13 +62,13 @@ export default async function handler(
 
   try {
     // 3) Check if the note exists and belongs to the authenticated user
-    const { rows: existingNotes } = await query('SELECT user_email FROM notes WHERE id = $1', [id]);
+    const [existingNote] = await db.select().from(notes).where(eq(notes.id, Number(id)));
 
-    if (existingNotes.length === 0) {
+    if (!existingNote) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (existingNotes[0].user_email !== userId) {
+    if (existingNote.userEmail !== userId) {
       return res.status(403).json({ error: "Unauthorized to update this note" });
     }
 
@@ -95,41 +97,7 @@ export default async function handler(
 
 
     // 5) Update the note in the database
-    const updateFields = [];
-    const updateValues = [];
-    let paramIndex = 1;
-
-    if (title !== undefined) {
-      updateFields.push(`title = $${paramIndex++}`);
-      updateValues.push(title);
-    }
-    if (content !== undefined) {
-      updateFields.push(`content = $${paramIndex++}`);
-      updateValues.push(content);
-    }
-    if (tags !== undefined) {
-      updateFields.push(`tags = $${paramIndex++}`);
-      updateValues.push(tags);
-    }
-    if (eventId !== undefined) {
-      updateFields.push(`event_id = $${paramIndex++}`);
-      updateValues.push(eventId);
-    }
-    if (eventTitle !== undefined) {
-      updateFields.push(`event_title = $${paramIndex++}`);
-      updateValues.push(eventTitle);
-    }
-    if (isAdhoc !== undefined) {
-      updateFields.push(`is_adhoc = $${paramIndex++}`);
-      updateValues.push(isAdhoc);
-    }
-
-    if (updateFields.length > 0) {
-      await query(
-        `UPDATE notes SET ${updateFields.join(', ')} WHERE id = $${paramIndex++} AND user_email = $${paramIndex++}`,
-        [...updateValues, id, userId]
-      );
-    }
+    await db.update(notes).set(updateData).where(eq(notes.id, Number(id)));
 
     return res.status(200).json({ success: true });
 

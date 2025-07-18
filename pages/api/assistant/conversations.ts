@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "../../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { conversations } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 type ConversationMessage = {
   role: "system" | "user" | "assistant";
@@ -33,17 +35,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   if (req.method === "GET") {
     try {
-      const { rows } = await query(
-        `SELECT id, "userId", messages, "createdAt" FROM conversations WHERE "userId" = $1 ORDER BY "createdAt" DESC`,
-        [userId]
-      );
-      const conversations: Conversation[] = rows.map((row) => ({
-        id: row.id,
+      const rows = await db.select().from(conversations).where(eq(conversations.userId, String(userId))).orderBy(desc(conversations.createdAt));
+      const conversationsData: Conversation[] = rows.map((row) => ({
+        id: String(row.id),
         userId: row.userId,
-        messages: row.messages, // Assuming messages are stored as JSONB
-        createdAt: Number(row.createdAt),
+        messages: (row.messages as any) || [],
+        createdAt: new Date(row.createdAt!).getTime(),
       }));
-      return res.status(200).json({ conversations });
+      return res.status(200).json({ conversations: conversationsData });
     } catch (error) {
       console.error("Error fetching conversations:", error);
       return res.status(500).json({ error: "Failed to fetch conversations" });
@@ -54,18 +53,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return res.status(400).json({ error: "Invalid messages format" });
     }
     try {
-      const now = Date.now();
+      const now = new Date();
       const newConversation = {
-        userId,
-        messages: messages.map((m) => ({ ...m, timestamp: now })),
+        userId: String(userId),
+        messages: messages.map((m) => ({ ...m, timestamp: now.getTime() })),
         createdAt: now,
       };
-      const { rows } = await query(
-        `INSERT INTO conversations ("userId", messages, "createdAt") VALUES ($1, $2, $3) RETURNING id`,
-        [newConversation.userId, JSON.stringify(newConversation.messages), newConversation.createdAt]
-      );
-      const createdConversation = { id: rows[0].id, ...newConversation };
-      return res.status(201).json({ conversations: [createdConversation] });
+      const [createdConversation] = await db.insert(conversations).values(newConversation).returning();
+      const conversationData = { ...createdConversation, id: String(createdConversation.id), userId: String(createdConversation.userId), messages: (createdConversation.messages as any) || [], createdAt: new Date(createdConversation.createdAt!).getTime() };
+      return res.status(201).json({ conversations: [conversationData] });
     } catch (error) {
       console.error("Error saving conversation:", error);
       return res.status(500).json({ error: "Failed to save conversation" });

@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
 import OpenAI from "openai";
-import { query } from "../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { userSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import {
   fetchUserNotes,
   fetchUserMeetingNotes,
@@ -87,7 +89,7 @@ export default async function handler(
     return res.status(401).json({ error: "Not signed in" });
   }
 
-  const email = user.id;
+  const email = user.email;
   const { history = [], prompt, message } = req.body as ChatRequest;
 
   // Use either prompt or message, with message taking precedence
@@ -170,11 +172,17 @@ export default async function handler(
     ]);
     
     // Fetch user settings to get FloCat style preference
-    const { rows } = await query('SELECT flo_cat_style AS "floCatStyle", flo_cat_personality AS "floCatPersonality", preferred_name AS "preferredName" FROM user_settings WHERE user_email = $1', [email]);
-    const userSettings = rows.length > 0 ? rows[0] : { floCatStyle: "default", floCatPersonality: [], preferredName: "" };
-    const floCatStyle = userSettings?.floCatStyle || "default";
-    const floCatPersonality = userSettings?.floCatPersonality || [];
-    const preferredName = userSettings?.preferredName || "";
+    const userSettingsData = await db.query.userSettings.findFirst({
+      where: eq(userSettings.userEmail, email),
+      columns: {
+        floCatStyle: true,
+        floCatPersonality: true,
+        preferredName: true,
+      },
+    });
+    const floCatStyle = userSettingsData?.floCatStyle || "default";
+    const floCatPersonality = userSettingsData?.floCatPersonality || [];
+    const preferredName = userSettingsData?.preferredName || "";
     
     // Start context processing
     const relevantContextPromise = findRelevantContext(userInput, notes, meetings, conversations);

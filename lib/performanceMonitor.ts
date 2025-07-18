@@ -3,7 +3,8 @@
  * This file contains functions to monitor and report performance metrics
  */
 
-import { query } from './neon';
+import { db } from './drizzle';
+import { analyticsPerformanceMetrics, analyticsUsersDurations } from '@/db/schema';
 import { useUser } from "@/lib/hooks/useUser";
 import { useEffect } from 'react';
 
@@ -197,17 +198,14 @@ async function sendMetricsToAnalytics(): Promise<void> {
     const dataToStore = {
       ...metrics,
       userId,
-      timestamp: Date.now()
+      timestamp: new Date()
     };
 
     const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
     const values = Object.values(dataToStore);
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
-    await query(
-      `INSERT INTO "analytics_performance_metrics" (${columns}) VALUES (${placeholders})`,
-      values
-    );
+    await db.insert(analyticsPerformanceMetrics).values(dataToStore);
     
     console.log('[Performance] Metrics sent to Neon successfully');
   } catch (e) {
@@ -305,17 +303,14 @@ async function trackuserEnd(): Promise<void> {
     const dataToStore = {
       userDuration,
       userId,
-      timestamp: Date.now()
+      timestamp: new Date()
     };
 
     const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
     const values = Object.values(dataToStore);
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
-    await query(
-      `INSERT INTO "analytics_users_durations" (${columns}) VALUES (${placeholders})`,
-      values
-    );
+    await db.insert(analyticsUsersDurations).values(dataToStore);
     
     console.log(`[Performance] user duration tracked: ${userDuration.toFixed(2)} minutes`);
   } catch (e) {

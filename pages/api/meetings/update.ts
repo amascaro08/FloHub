@@ -2,7 +2,9 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "../../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes, tasks } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import OpenAI from "openai"; // Import OpenAI
 
 import type { Action } from "@/types/app"; // Import Action type
@@ -75,17 +77,13 @@ export default async function handler(
   try {
     // 3) Check if the meeting note exists and belongs to the authenticated user
     // 3) Check if the meeting note exists and belongs to the authenticated user
-    const { rows: existingNoteRows } = await query(
-      `SELECT "userId", actions, agenda, content FROM notes WHERE id = $1`,
-      [id]
-    );
+    const [noteData] = await db.select().from(notes).where(eq(notes.id, Number(id)));
 
-    if (existingNoteRows.length === 0) {
+    if (!noteData) {
         return res.status(404).json({ error: "Meeting Note not found" });
     }
 
-    const noteData = existingNoteRows[0];
-    if (noteData.userId !== userId) {
+    if (noteData.userEmail !== userId) {
         return res.status(403).json({ error: "Unauthorized to update this meeting note" });
     }
 
@@ -126,12 +124,15 @@ export default async function handler(
         if (actions.length > 0) {
             for (const action of actions) {
                 // Only process new actions that weren't in the original note
-                const existingAction = noteData.actions?.find((a: Action) => a.id === action.id);
+                const existingAction = (noteData.actions as Action[])?.find((a: Action) => a.id === action.id);
                 if (!existingAction && action.assignedTo === "Me") {
-                    await query(
-                        `INSERT INTO tasks ("userId", text, done, "createdAt", source) VALUES ($1, $2, $3, $4, $5)`,
-                        [userId, action.description, action.status === "done", Date.now(), "work"]
-                    );
+                    await db.insert(tasks).values({
+                        userEmail: userId,
+                        text: action.description,
+                        done: action.status === "done",
+                        createdAt: new Date(),
+                        source: "work",
+                    });
                 }
             }
         }
@@ -156,7 +157,7 @@ export default async function handler(
       // Use the updated values or fall back to existing values
       const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
       const currentContent = content !== undefined ? content : noteData.content;
-      const currentActions = actions !== undefined ? actions : noteData.actions || [];
+      const currentActions = actions !== undefined ? actions : (noteData.actions as Action[]) || [];
       
       console.log("update.ts - Current agenda:", currentAgenda);
       console.log("update.ts - Current content length:", currentContent?.length);
@@ -254,20 +255,25 @@ export default async function handler(
       
       // Perform the update
       console.log(`update.ts - Updating document in table 'notes' with ID '${id}'`);
-      await query(
-        `UPDATE notes SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
-        updateParams
-      );
+      const updateData: any = {};
+      if (title !== undefined) updateData.title = title;
+      if (content !== undefined) updateData.content = content;
+      if (tags !== undefined) updateData.tags = tags;
+      if (eventId !== undefined) updateData.eventId = eventId;
+      if (eventTitle !== undefined) updateData.eventTitle = eventTitle;
+      if (isAdhoc !== undefined) updateData.isAdhoc = isAdhoc;
+      if (actions !== undefined) updateData.actions = actions;
+      if (agenda !== undefined) updateData.agenda = agenda;
+      if (aiSummary) updateData.aiSummary = aiSummary;
+      updateData.updatedAt = new Date();
+      await db.update(notes).set(updateData).where(eq(notes.id, Number(id)));
       console.log("update.ts - Document updated successfully");
       
       // Fetch the updated document to verify the changes
       console.log("update.ts - Fetching updated document to verify changes");
-      const { rows: updatedNoteRows } = await query(
-        `SELECT id, title, content, tags, "eventId", "eventTitle", "isAdhoc", actions, agenda, "aiSummary", "createdAt", "updatedAt" FROM notes WHERE id = $1`,
-        [id]
-      );
+      const [updatedNote] = await db.select().from(notes).where(eq(notes.id, Number(id)));
       
-      if (updatedNoteRows.length === 0) {
+      if (!updatedNote) {
         console.error("update.ts - Document no longer exists after update");
         return res.status(404).json({
           success: false,
@@ -275,7 +281,7 @@ export default async function handler(
         });
       }
       
-      const updatedNoteData = updatedNoteRows[0];
+      const updatedNoteData = updatedNote;
       console.log("update.ts - Updated document data:", JSON.stringify(updatedNoteData, null, 2));
       
       // Check if the aiSummary was properly saved
@@ -287,7 +293,7 @@ export default async function handler(
       return res.status(200).json({
         success: true,
         updatedNote: {
-          id: updatedNoteData.id,
+          id: String(updatedNoteData.id),
           title: updatedNoteData.title,
           content: updatedNoteData.content,
           tags: updatedNoteData.tags,
@@ -298,7 +304,7 @@ export default async function handler(
           agenda: updatedNoteData.agenda,
           aiSummary: updatedNoteData.aiSummary,
           createdAt: Number(updatedNoteData.createdAt),
-          updatedAt: Number(updatedNoteData.updatedAt)
+          updatedAt: updatedNoteData.updatedAt ? new Date(updatedNoteData.updatedAt).getTime() : 0
         }
       });
     } catch (updateError: any) {

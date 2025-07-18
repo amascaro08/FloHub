@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { userSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,8 +15,8 @@ export default async function handler(
 
   const userEmail = user.email;
   try {
-    const { rows } = await query('SELECT * FROM user_settings WHERE user_email = $1', [userEmail]);
-    const docs = rows.map(row => ({ id: row.user_email, data: row }));
+    const rows = await db.select().from(userSettings).where(eq(userSettings.userEmail, userEmail));
+    const docs = rows.map(row => ({ id: row.userEmail, data: row }));
     return res.status(200).json({ documents: docs });
   } catch (error) {
     console.error("Error listing user settings documents for", userEmail, error);

@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 // Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
 // If not, uncomment the initialization block below:
@@ -45,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // This would involve checking each note's ownership before deleting
     // For simplicity, this is omitted in this example but recommended for production
 
-    await query('DELETE FROM notes WHERE id = ANY($1::int[]) AND user_email = $2', [ids, userEmail]);
+    await db.delete(notes).where(and(inArray(notes.id, ids), eq(notes.userEmail, userEmail)));
 
     res.status(200).json({ message: `${ids.length} notes deleted successfully` });
   } catch (error) {

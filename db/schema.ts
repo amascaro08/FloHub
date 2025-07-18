@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  lastLogin: timestamp("lastLogin", { mode: "date" }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -91,6 +92,7 @@ export const tasks = pgTable("tasks", {
   dueDate: timestamp("due_date", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   source: varchar("source", { length: 50 }),
+  tags: jsonb("tags"),
 });
 
 // USER SETTINGS
@@ -130,6 +132,15 @@ export const notes = pgTable("notes", {
   actions: jsonb("actions"),
   agenda: text("agenda"),
   aiSummary: text("ai_summary"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow(),
+});
+
+// CONVERSATIONS TABLE
+export const conversations = pgTable("conversations", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  messages: jsonb("messages").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });
 
 // DRIZZLE TYPE HELPERS
@@ -141,3 +152,169 @@ export type SelectNote = InferSelectModel<typeof notes>;
 export type InsertNote = InferInsertModel<typeof notes>;
 export type SelectUserSettings = InferSelectModel<typeof userSettings>;
 export type InsertUserSettings = InferInsertModel<typeof userSettings>;
+export type SelectConversation = InferSelectModel<typeof conversations>;
+export type InsertConversation = InferInsertModel<typeof conversations>;
+
+// HABITS TABLE
+export const habits = pgTable("habits", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  frequency: text("frequency").notNull(),
+  customDays: jsonb("customDays"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow(),
+});
+
+// HABIT COMPLETIONS TABLE
+export const habitCompletions = pgTable("habitCompletions", {
+  id: serial("id").notNull().primaryKey(),
+  habitId: integer("habitId").notNull().references(() => habits.id, { onDelete: "cascade" }),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  date: text("date").notNull(),
+  completed: boolean("completed").default(false),
+  notes: text("notes"),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+});
+
+// PUSH SUBSCRIPTIONS TABLE
+export const pushSubscriptions = pgTable("pushSubscriptions", {
+  id: text("id").notNull().primaryKey(),
+  userEmail: varchar("userEmail", { length: 255 }).notNull(),
+  subscription: jsonb("subscription").notNull(),
+});
+
+// CALENDAR EVENTS TABLE
+export const calendarEvents = pgTable("calendarEvents", {
+  id: text("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  summary: text("summary").notNull(),
+  start: jsonb("start").notNull(),
+  end: jsonb("end").notNull(),
+});
+
+// ANALYTICS PERFORMANCE METRICS TABLE
+export const analyticsPerformanceMetrics = pgTable("analytics_performance_metrics", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }),
+  fcp: integer("fcp"),
+  lcp: integer("lcp"),
+  fid: integer("fid"),
+  cls: integer("cls"),
+  ttfb: integer("ttfb"),
+  navStart: integer("navStart"),
+  loadComplete: integer("loadComplete"),
+  apiCalls: jsonb("apiCalls"),
+  componentRenders: jsonb("componentRenders"),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+  userDuration: integer("userDuration"),
+});
+
+// ANALYTICS USERS DURATIONS TABLE
+export const analyticsUsersDurations = pgTable("analytics_users_durations", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }),
+  userDuration: integer("userDuration"),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+});
+
+// ANALYTICS PAGE VISITS TABLE
+export const analyticsPageVisits = pgTable("analytics_pageVisits_visits", {
+  id: serial("id").notNull().primaryKey(),
+  page: text("page").notNull(),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+});
+
+// ANALYTICS WIDGET USAGE TABLE
+export const analyticsWidgetUsage = pgTable("analytics_widgetUsage_widgets", {
+  id: serial("id").notNull().primaryKey(),
+  widget: text("widget").notNull(),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+});
+
+// ANALYTICS TABLE
+export const analytics = pgTable("analytics", {
+  id: serial("id").notNull().primaryKey(),
+  userEmail: varchar("user_email", { length: 255 }),
+  eventType: varchar("event_type", { length: 255 }).notNull(),
+  eventData: jsonb("event_data"),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow(),
+});
+
+// FEEDBACK TABLE
+export const feedback = pgTable("feedback", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  feedbackType: text("feedbackType"),
+  feedbackText: text("feedbackText").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
+  notes: text("notes"),
+});
+
+// BACKLOG TABLE
+export const backlog = pgTable("backlog", {
+  id: serial("id").notNull().primaryKey(),
+  originalId: integer("originalId"),
+  text: text("text").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+});
+
+// JOURNAL ACTIVITIES TABLE
+export const journalActivities = pgTable("journal_activities", {
+  id: serial("id").notNull().primaryKey(),
+  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  date: text("date").notNull(),
+  activities: jsonb("activities"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+// JOURNAL ENTRIES TABLE
+export const journalEntries = pgTable("journal_entries", {
+  id: serial("id").notNull().primaryKey(),
+  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  date: text("date").notNull(),
+  content: text("content"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+// JOURNAL MOODS TABLE
+export const journalMoods = pgTable("journal_moods", {
+  id: serial("id").notNull().primaryKey(),
+  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  date: text("date").notNull(),
+  emoji: text("emoji"),
+  label: text("label"),
+  tags: jsonb("tags"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+// JOURNAL SLEEP TABLE
+export const journalSleep = pgTable("journal_sleep", {
+  id: serial("id").notNull().primaryKey(),
+  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  date: text("date").notNull(),
+  quality: text("quality"),
+  hours: integer("hours"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+// MEETINGS TABLE
+export const meetings = pgTable("meetings", {
+  id: serial("id").notNull().primaryKey(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  title: text("title"),
+  content: text("content"),
+  tags: jsonb("tags"),
+  eventId: text("eventId"),
+  eventTitle: text("eventTitle"),
+  isAdhoc: boolean("isAdhoc"),
+  actions: jsonb("actions"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
+});

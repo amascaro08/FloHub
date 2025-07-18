@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalMoods } from '@/db/schema';
+import { and, eq, inArray } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -15,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = user.id;
+  const userEmail = user.email;
   
   // Get dates from request body
   const { dates } = req.body;
@@ -28,28 +30,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create a map of date to mood data
     const moods: Record<string, any> = {};
     
-    // Firestore 'in' operator can only handle up to 10 values
-    // Process dates in chunks of 10
-    const chunkSize = 10;
-    for (let i = 0; i < dates.length; i += chunkSize) {
-      const chunk = dates.slice(i, i + chunkSize);
+    const rows = await db
+      .select()
+      .from(journalMoods)
+      .where(and(eq(journalMoods.userEmail, userEmail), inArray(journalMoods.date, dates)));
       
-      const { rows } = await query(
-        'SELECT date, emoji, label, tags FROM journal_moods WHERE user_email = $1 AND date = ANY($2::date[])',
-        [userEmail, chunk]
-      );
-      
-      // Add mood data for each date
-      rows.forEach(row => {
-        if (row.date && row.emoji && row.label) {
-          moods[row.date] = {
-            emoji: row.emoji,
-            label: row.label,
-            tags: row.tags || []
-          };
-        }
-      });
-    }
+    // Add mood data for each date
+    rows.forEach(row => {
+      if (row.date && row.emoji && row.label) {
+        moods[row.date] = {
+          emoji: row.emoji,
+          label: row.label,
+          tags: row.tags || []
+        };
+      }
+    });
     
     return res.status(200).json({ moods });
   } catch (error) {

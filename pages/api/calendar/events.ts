@@ -21,7 +21,7 @@ export default async function handler(
   }
 
   // Placeholder for accessToken, as it's not directly available from `auth`
-  const accessToken = user.accessToken;
+  const accessToken = user.accounts[0]?.access_token;
 
   // 2) Get calendarId from query parameters
   const { calendarId } = req.query;

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-// Assuming Firebase will be used for data storage
-import { query } from "../../../lib/neon";
+import { db } from "@/lib/drizzle";
+import { notes } from "@/db/schema";
 
 type CreateNoteRequest = {
   title?: string; // Add optional title field
@@ -47,20 +47,16 @@ export default async function handler(
 
   try {
     // 3) Save the note to the database
-    const { rows } = await query(
-      `INSERT INTO notes (user_email, title, content, tags, created_at, event_id, event_title, is_adhoc)
-       VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7) RETURNING id`,
-      [
-        userId,
-        title ?? "",
-        content,
-        tags ?? [],
-        eventId ?? null,
-        eventTitle ?? null,
-        isAdhoc ?? false,
-      ]
-    );
-    return res.status(201).json({ success: true, noteId: rows[0].id });
+    const [newNote] = await db.insert(notes).values({
+      userEmail: userId,
+      title: title ?? "",
+      content,
+      tags: tags ?? [],
+      eventId: eventId ?? null,
+      eventTitle: eventTitle ?? null,
+      isAdhoc: isAdhoc ?? false,
+    }).returning();
+    return res.status(201).json({ success: true, noteId: String(newNote.id) });
 
   } catch (err: any) {
     console.error("Create note error:", err);

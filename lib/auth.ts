@@ -19,6 +19,7 @@ export async function auth(req: NextApiRequest) {
       columns: {
         id: true,
         email: true,
+        name: true,
       },
       with: {
         accounts: {

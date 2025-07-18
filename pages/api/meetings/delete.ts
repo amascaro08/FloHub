@@ -1,7 +1,9 @@
 // pages/api/meetings/delete.ts
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { notes } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'OPTIONS') {
@@ -30,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     //   return res.status(403).json({ message: 'Unauthorized' });
     // }
 
-    await query('DELETE FROM notes WHERE id = $1', [id]);
+    await db.delete(notes).where(eq(notes.id, id));
     res.status(200).json({ message: 'Meeting note deleted successfully' }); // Updated success message
   } catch (error) {
     console.error('Error deleting meeting note:', error); // Updated error log

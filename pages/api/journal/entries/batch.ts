@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalEntries } from '@/db/schema';
+import { and, eq, inArray } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -15,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  const userEmail = user.id;
+  const userEmail = user.email;
   
   // Get dates from request body
   const { dates } = req.body;
@@ -33,24 +35,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entries[date] = false;
     });
     
-    // Firestore 'in' operator can only handle up to 10 values
-    // Process dates in chunks of 10
-    const chunkSize = 10;
-    for (let i = 0; i < dates.length; i += chunkSize) {
-      const chunk = dates.slice(i, i + chunkSize);
+    const rows = await db
+      .select()
+      .from(journalEntries)
+      .where(and(eq(journalEntries.userEmail, userEmail), inArray(journalEntries.date, dates)));
       
-      const { rows } = await query(
-        'SELECT date, content FROM journal_entries WHERE user_email = $1 AND date = ANY($2::date[])',
-        [userEmail, chunk]
-      );
-      
-      // Update entries that have content
-      rows.forEach(row => {
-        if (row.date && row.content && row.content.trim() !== '') {
-          entries[row.date] = true;
-        }
-      });
-    }
+    // Update entries that have content
+    rows.forEach(row => {
+      if (row.date && row.content && row.content.trim() !== '') {
+        entries[row.date] = true;
+      }
+    });
     
     return res.status(200).json({ entries });
   } catch (error) {

@@ -1,7 +1,9 @@
 // pages/api/notifications/send.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { pushSubscriptions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import webpush from 'web-push';
 
 type Data = {
@@ -66,10 +68,7 @@ export default async function handler(
     }
     
     // Get user's subscriptions from Firestore
-    const { rows: subscriptions } = await query(
-      `SELECT id, subscription FROM "pushSubscriptions" WHERE "userEmail" = $1`,
-      [userEmail]
-    );
+    const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userEmail, userEmail));
     
     if (subscriptions.length === 0) {
       return res.status(404).json({
@@ -94,7 +93,7 @@ export default async function handler(
 
     // Send notification to each subscription
     const sendPromises = subscriptions.map(async (sub) => {
-      const subscription = sub.subscription; // Assuming subscription is already an object
+      const subscription = sub.subscription as webpush.PushSubscription; // Assuming subscription is already an object
       try {
         await webpush.sendNotification(
           subscription,
@@ -106,7 +105,7 @@ export default async function handler(
         
         // If subscription is expired or invalid, delete it
         if (error.statusCode === 404 || error.statusCode === 410) {
-          await query('DELETE FROM "pushSubscriptions" WHERE id = $1', [sub.id]);
+          await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
           return {
             success: false,
             subscriptionId: sub.id,

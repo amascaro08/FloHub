@@ -2,7 +2,9 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/neon";
+import { db } from "@/lib/drizzle";
+import { tasks } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 type Task = {
   id:        string;
@@ -28,19 +30,16 @@ export default async function handler(
   try {
     // ── GET: list tasks ──────────────────────────────────────────
     if (req.method === "GET") {
-      const { rows } = await query(
-        'SELECT id, text, done, due_date AS "dueDate", created_at AS "createdAt", source FROM tasks WHERE user_email = $1 ORDER BY created_at DESC',
-        [email]
-      );
-      const tasks: Task[] = rows.map((row) => ({
-        id: row.id,
+      const rows = await db.select().from(tasks).where(eq(tasks.userEmail, email)).orderBy(desc(tasks.createdAt));
+      const tasksData: Task[] = rows.map((row) => ({
+        id: String(row.id),
         text: row.text,
-        done: row.done,
+        done: row.done!,
         dueDate: row.dueDate ? new Date(row.dueDate).toISOString() : null,
         createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null,
-        source: row.source,
+        source: row.source as "personal" | "work" | undefined,
       }));
-      return res.status(200).json(tasks);
+      return res.status(200).json(tasksData);
     }
 
     // ── POST: create new task ────────────────────────────────────
@@ -59,17 +58,20 @@ export default async function handler(
       if (source) {
         newTaskData.source = source;
       }
-      const { rows: insertedRows } = await query(
-        'INSERT INTO tasks (user_email, text, done, due_date, source) VALUES ($1, $2, $3, $4, $5) RETURNING id, text, done, due_date, created_at, source',
-        [email, text.trim(), false, due, source]
-      );
+      const [newTask] = await db.insert(tasks).values({
+        userEmail: email,
+        text: text.trim(),
+        done: false,
+        dueDate: due,
+        source,
+      }).returning();
       const task: Task = {
-        id: insertedRows[0].id,
-        text: insertedRows[0].text,
-        done: insertedRows[0].done,
-        dueDate: insertedRows[0].due_date ? new Date(insertedRows[0].due_date).toISOString() : null,
-        createdAt: insertedRows[0].created_at ? new Date(insertedRows[0].created_at).toISOString() : null,
-        source: insertedRows[0].source,
+        id: String(newTask.id),
+        text: newTask.text,
+        done: newTask.done!,
+        dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : null,
+        createdAt: newTask.createdAt ? new Date(newTask.createdAt).toISOString() : null,
+        source: newTask.source as "personal" | "work" | undefined,
       };
       return res.status(201).json(task);
     }
@@ -101,10 +103,7 @@ export default async function handler(
       }
 
       if (updateFields.length > 0) {
-        await query(
-          `UPDATE tasks SET ${updateFields.join(', ')} WHERE id = $${paramIndex++} AND user_email = $${paramIndex++}`,
-          [...updateValues, id, email]
-        );
+        await db.update(tasks).set(updateData).where(eq(tasks.id, Number(id)));
       }
       return res.status(200).json({ id, ...updateData });
     }
@@ -115,7 +114,7 @@ export default async function handler(
       if (!id) {
         return res.status(400).json({ error: "Missing id" });
       }
-      await query('DELETE FROM tasks WHERE id = $1 AND user_email = $2', [id, email]);
+      await db.delete(tasks).where(eq(tasks.id, Number(id)));
       return res.status(204).end();
     }
 

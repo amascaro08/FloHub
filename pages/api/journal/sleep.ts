@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalSleep } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getuser for better compatibility with API routes
@@ -21,16 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const { rows } = await query(
-        'SELECT quality, hours FROM journal_sleep WHERE user_email = $1 AND date = $2',
-        [userEmail, date]
-      );
+      const sleep = await db.query.journalSleep.findFirst({
+        where: and(eq(journalSleep.userEmail, userEmail), eq(journalSleep.date, date)),
+      });
       
-      if (rows.length === 0) {
+      if (!sleep) {
         return res.status(200).json({ quality: '', hours: 7 });
       }
       
-      return res.status(200).json(rows[0]);
+      return res.status(200).json(sleep);
     } catch (error) {
       console.error('Error retrieving sleep data:', error);
       return res.status(500).json({ error: 'Failed to retrieve sleep data' });
@@ -46,16 +47,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      // Check if sleep data already exists for this date
-      await query(
-        `INSERT INTO journal_sleep (user_email, date, quality, hours, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
-         ON CONFLICT (user_email, date) DO UPDATE SET
-           quality = EXCLUDED.quality,
-           hours = EXCLUDED.hours,
-           updated_at = NOW()`,
-        [userEmail, date, quality, hours]
-      );
+      await db.insert(journalSleep).values({
+        userEmail,
+        date,
+        quality,
+        hours,
+      }).onConflictDoUpdate({
+        target: [journalSleep.userEmail, journalSleep.date],
+        set: {
+          quality,
+          hours,
+          updatedAt: new Date(),
+        },
+      });
       
       return res.status(200).json({ success: true });
     } catch (error) {

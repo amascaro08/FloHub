@@ -1,4 +1,6 @@
-import { query } from "./neon";
+import { db } from "./drizzle";
+import { notes as notesTable, conversations as conversationsTable } from "@/db/schema";
+import { eq, and, or, isNotNull, desc } from "drizzle-orm";
 import type { Note } from "@/types/app";
 import type { CalendarEvent } from "@/types/calendar";
 type ConversationMessage = {
@@ -20,12 +22,14 @@ const openai = new OpenAI({
 });
 
 export async function fetchUserNotes(userId: string): Promise<Note[]> {
-  const { rows } = await query(
-    'SELECT id, title, content, tags, created_at AS "createdAt", source, event_id AS "eventId", event_title AS "eventTitle", is_adhoc AS "isAdhoc", actions, agenda, ai_summary AS "aiSummary" FROM notes WHERE user_email = $1 ORDER BY created_at DESC',
-    [userId]
-  );
+  const rows = await db
+    .select()
+    .from(notesTable)
+    .where(eq(notesTable.userEmail, userId))
+    .orderBy(desc(notesTable.createdAt));
+
   const notes: Note[] = rows.map((row) => ({
-    id: row.id,
+    id: String(row.id),
     title: row.title || "",
     content: row.content,
     tags: row.tags || [],
@@ -34,7 +38,7 @@ export async function fetchUserNotes(userId: string): Promise<Note[]> {
     eventId: row.eventId || undefined,
     eventTitle: row.eventTitle || undefined,
     isAdhoc: row.isAdhoc || false,
-    actions: row.actions || undefined,
+    actions: (row.actions as any) || undefined,
     agenda: row.agenda || undefined,
     aiSummary: row.aiSummary || undefined,
   }));
@@ -42,12 +46,19 @@ export async function fetchUserNotes(userId: string): Promise<Note[]> {
 }
 
 export async function fetchUserMeetingNotes(userId: string): Promise<Note[]> {
-  const { rows } = await query(
-    'SELECT id, title, content, tags, created_at AS "createdAt", source, event_id AS "eventId", event_title AS "eventTitle", is_adhoc AS "isAdhoc", actions, agenda, ai_summary AS "aiSummary" FROM notes WHERE user_email = $1 AND (event_id IS NOT NULL OR is_adhoc = TRUE) ORDER BY created_at DESC',
-    [userId]
-  );
+  const rows = await db
+    .select()
+    .from(notesTable)
+    .where(
+      and(
+        eq(notesTable.userEmail, userId),
+        or(isNotNull(notesTable.eventId), eq(notesTable.isAdhoc, true))
+      )
+    )
+    .orderBy(desc(notesTable.createdAt));
+
   const meetingNotes: Note[] = rows.map((row) => ({
-    id: row.id,
+    id: String(row.id),
     title: row.title || "",
     content: row.content,
     tags: row.tags || [],
@@ -56,7 +67,7 @@ export async function fetchUserMeetingNotes(userId: string): Promise<Note[]> {
     eventId: row.eventId || undefined,
     eventTitle: row.eventTitle || undefined,
     isAdhoc: row.isAdhoc || false,
-    actions: row.actions || undefined,
+    actions: (row.actions as any) || undefined,
     agenda: row.agenda || undefined,
     aiSummary: row.aiSummary || undefined,
   }));
@@ -64,14 +75,16 @@ export async function fetchUserMeetingNotes(userId: string): Promise<Note[]> {
 }
 
 export async function fetchUserConversations(userId: string): Promise<Conversation[]> {
-  const { rows } = await query(
-    'SELECT id, user_id AS "userId", messages, created_at AS "createdAt" FROM conversations WHERE user_id = $1 ORDER BY created_at DESC',
-    [userId]
-  );
+  const rows = await db
+    .select()
+    .from(conversationsTable)
+    .where(eq(conversationsTable.userId, userId))
+    .orderBy(desc(conversationsTable.createdAt));
+
   const conversations: Conversation[] = rows.map((row) => ({
-    id: row.id,
+    id: String(row.id),
     userId: row.userId,
-    messages: row.messages,
+    messages: (row.messages as any) || [],
     createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
   }));
   return conversations;

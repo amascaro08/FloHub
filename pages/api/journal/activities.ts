@@ -1,9 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { journalActivities } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use getToken instead of getuser for better compatibility with API routes 
+  // Use getToken instead of getuser for better compatibility with API routes
   const user = await auth(req);
   
   if (!user?.email) {
@@ -21,16 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const { rows } = await query(
-        'SELECT activities FROM journal_activities WHERE user_email = $1 AND date = $2',
-        [userEmail, date]
-      );
+      const activities = await db.query.journalActivities.findFirst({
+        where: and(eq(journalActivities.userEmail, userEmail), eq(journalActivities.date, date)),
+      });
       
-      if (rows.length === 0) {
+      if (!activities) {
         return res.status(200).json({ activities: [] });
       }
       
-      return res.status(200).json({ activities: rows[0].activities });
+      return res.status(200).json({ activities: activities.activities });
     } catch (error) {
       console.error('Error retrieving activities data:', error);
       return res.status(500).json({ error: 'Failed to retrieve activities data' });
@@ -50,15 +51,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Received ${activities.length} activities, ${uniqueActivities.length} unique`);
     
     try {
-      // Check if activities data already exists for this date
-      await query(
-        `INSERT INTO journal_activities (user_email, date, activities, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (user_email, date) DO UPDATE SET
-           activities = EXCLUDED.activities,
-           updated_at = NOW()`,
-        [userEmail, date, uniqueActivities]
-      );
+      await db.insert(journalActivities).values({
+        userEmail,
+        date,
+        activities: uniqueActivities,
+      }).onConflictDoUpdate({
+        target: [journalActivities.userEmail, journalActivities.date],
+        set: {
+          activities: uniqueActivities,
+          updatedAt: new Date(),
+        },
+      });
       
       return res.status(200).json({ success: true });
     } catch (error) {

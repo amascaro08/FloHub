@@ -1,7 +1,9 @@
 // lib/notificationScheduler.ts
 // Scheduler for sending notifications for upcoming meetings and tasks
 
-import { query } from './neon';
+import { db } from './drizzle';
+import { pushSubscriptions, calendarEvents, tasks } from '@/db/schema';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import fetch from 'node-fetch';
 
 // Time thresholds for notifications (in minutes)
@@ -60,51 +62,39 @@ async function sendNotification(
 export async function checkUpcomingMeetings() {
   try {
     const now = new Date();
-    const nowTimestamp = now.getTime();
     
-    // Get all users with push subscriptions
-    const { rows: subscriptions } = await query(`SELECT DISTINCT "userEmail" FROM "pushSubscriptions"`);
+    const subscriptions = await db.selectDistinct({ userEmail: pushSubscriptions.userEmail }).from(pushSubscriptions);
     
     if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
-    // Get unique user emails
-    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail));
+    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail!));
     
     console.log(`Checking upcoming meetings for ${userEmails.size} users`);
     
-    // For each user, check their upcoming meetings
     for (const userEmail of Array.from(userEmails)) {
-      // Get user's calendar settings (optional, if needed for filtering/preferences)
-      // For now, we'll skip fetching user settings as it's not directly used for the core query
-      // If specific settings are needed, a SELECT from 'userSettings' table would be required.
-      
-      // Get upcoming meetings from Neon
-      // Assuming 'calendarEvents' table has 'userId', 'summary', 'start_timestamp' (BIGINT)
-      const { rows: events } = await query(
-        `SELECT id, summary, start FROM "calendarEvents" WHERE "userId" = $1 AND "start"->>'dateTime' > $2 ORDER BY "start"->>'dateTime' ASC LIMIT 10`,
-        [userEmail, now.toISOString()]
-      );
+      const events = await db
+        .select()
+        .from(calendarEvents)
+        .where(and(eq(calendarEvents.userId, userEmail), gt(sql`"start"->>'dateTime'`, now.toISOString())))
+        .orderBy(sql`"start"->>'dateTime' ASC`)
+        .limit(10);
       
       if (events.length === 0) {
         console.log(`No upcoming meetings found for user ${userEmail}`);
         continue;
       }
       
-      // Check each meeting for notification timing
       for (const event of events) {
-        const eventStart = new Date(event.start.dateTime || event.start.date);
-        const minutesUntilEvent = (eventStart.getTime() - nowTimestamp) / (1000 * 60);
+        const eventStart = new Date((event.start as any).dateTime || (event.start as any).date);
+        const minutesUntilEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60);
         
-        // Check if we should send a notification for this meeting
         for (const reminderMinutes of MEETING_REMINDERS) {
-          // If the meeting is within the reminder window (with a 1-minute buffer)
           if (minutesUntilEvent > reminderMinutes - 1 && minutesUntilEvent <= reminderMinutes) {
             console.log(`Sending notification for meeting ${event.summary} to ${userEmail}`);
             
-            // Send notification
             await sendNotification(
               userEmail,
               `Meeting Reminder: ${event.summary}`,
@@ -137,47 +127,39 @@ export async function checkUpcomingMeetings() {
 export async function checkUpcomingTasks() {
   try {
     const now = new Date();
-    const nowTimestamp = now.getTime();
     
-    // Get all users with push subscriptions
-    const { rows: subscriptions } = await query(`SELECT DISTINCT "userEmail" FROM "pushSubscriptions"`);
+    const subscriptions = await db.selectDistinct({ userEmail: pushSubscriptions.userEmail }).from(pushSubscriptions);
     
     if (subscriptions.length === 0) {
       console.log('No push subscriptions found');
       return;
     }
     
-    // Get unique user emails
-    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail));
+    const userEmails = new Set<string>(subscriptions.map(row => row.userEmail!));
     
     console.log(`Checking upcoming tasks for ${userEmails.size} users`);
     
-    // For each user, check their upcoming tasks
     for (const userEmail of Array.from(userEmails)) {
-      // Get upcoming tasks from Neon
-      // Assuming 'tasks' table has 'userId', 'text', 'done', 'dueDate' (BIGINT)
-      const { rows: tasks } = await query(
-        `SELECT id, text, done, "dueDate" FROM tasks WHERE "userId" = $1 AND done = FALSE AND "dueDate" > $2 ORDER BY "dueDate" ASC LIMIT 10`,
-        [userEmail, nowTimestamp]
-      );
+      const userTasks = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.userEmail, userEmail), eq(tasks.done, false), gt(tasks.dueDate, now)))
+        .orderBy(tasks.dueDate)
+        .limit(10);
       
-      if (tasks.length === 0) {
+      if (userTasks.length === 0) {
         console.log(`No upcoming tasks found for user ${userEmail}`);
         continue;
       }
       
-      // Check each task for notification timing
-      for (const task of tasks) {
-        const taskDue = new Date(Number(task.dueDate));
-        const minutesUntilDue = (taskDue.getTime() - nowTimestamp) / (1000 * 60);
+      for (const task of userTasks) {
+        const taskDue = new Date(task.dueDate!);
+        const minutesUntilDue = (taskDue.getTime() - now.getTime()) / (1000 * 60);
         
-        // Check if we should send a notification for this task
         for (const reminderMinutes of TASK_REMINDERS) {
-          // If the task is within the reminder window (with a 5-minute buffer)
           if (minutesUntilDue > reminderMinutes - 5 && minutesUntilDue <= reminderMinutes) {
             console.log(`Sending notification for task ${task.text} to ${userEmail}`);
             
-            // Format the reminder message based on time
             let reminderText = '';
             if (reminderMinutes >= 60) {
               const hours = Math.round(reminderMinutes / 60);
@@ -186,7 +168,6 @@ export async function checkUpcomingTasks() {
               reminderText = `due in ${reminderMinutes} minutes`;
             }
             
-            // Send notification
             await sendNotification(
               userEmail,
               `Task Reminder: ${task.text}`,

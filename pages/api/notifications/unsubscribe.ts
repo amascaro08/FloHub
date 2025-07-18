@@ -1,7 +1,9 @@
 // pages/api/notifications/unsubscribe.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { pushSubscriptions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 type Data = {
   success: boolean;
@@ -35,7 +37,7 @@ export default async function handler(
     // Delete subscription from Firestore
     const subscriptionId = Buffer.from(subscription.endpoint).toString('base64');
     
-    await query('DELETE FROM "pushSubscriptions" WHERE id = $1', [subscriptionId]);
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, subscriptionId));
 
     return res.status(200).json({ success: true });
   } catch (error) {

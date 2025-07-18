@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { analyticsPerformanceMetrics } from '@/db/schema';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -20,19 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dataToStore = {
       ...metrics,
       userId,
-      timestamp: Date.now()
+      timestamp: new Date()
     };
 
     // Store in Neon
-    // Dynamically build the INSERT query based on the metrics object
-    const columns = Object.keys(dataToStore).map(key => `"${key}"`).join(', ');
-    const values = Object.values(dataToStore);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-
-    await query(
-      `INSERT INTO "analytics_performance_metrics" (${columns}) VALUES (${placeholders})`,
-      values
-    );
+    await db.insert(analyticsPerformanceMetrics).values(dataToStore);
 
     return res.status(200).json({ success: true });
   } catch (error) {

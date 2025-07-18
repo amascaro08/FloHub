@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { query } from '@/lib/neon';
+import { db } from '@/lib/drizzle';
+import { meetings } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import PdfPrinter from 'pdfmake'; // Example using pdfmake
 import vfsFonts from 'pdfmake/build/vfs_fonts';
+import { Action } from '@/types/app';
 
 interface MeetingNote {
   id: string;
@@ -39,26 +42,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Fetch the selected meeting note from Firestore
-    const { rows } = await query(
-      `SELECT id, title, content, tags, "eventId", "eventTitle", "isAdhoc", actions, "createdAt" FROM meetings WHERE id = $1`,
-      [id]
-    );
+    const [meetingNote] = await db.select().from(meetings).where(eq(meetings.id, Number(id)));
 
-    if (rows.length === 0) {
+    if (!meetingNote) {
       return res.status(404).json({ message: 'Meeting note not found' });
     }
-
-    const meetingNote = {
-      id: rows[0].id,
-      title: rows[0].title,
-      content: rows[0].content,
-      tags: rows[0].tags,
-      eventId: rows[0].eventId,
-      eventTitle: rows[0].eventTitle,
-      isAdhoc: rows[0].isAdhoc,
-      actions: rows[0].actions,
-      createdAt: new Date(Number(rows[0].createdAt)).toISOString()
-    } as MeetingNote;
 
     // Implement PDF generation logic here using pdfmake
     const fonts = {
@@ -85,11 +73,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Add Creation Date
-    content.push({ text: `Created: ${new Date(meetingNote.createdAt).toLocaleString()}`, style: 'date' });
+    content.push({ text: `Created: ${new Date(meetingNote.createdAt!).toLocaleString()}`, style: 'date' });
 
     // Add Tags
-    if (meetingNote.tags && meetingNote.tags.length > 0) {
-        content.push({ text: `Tags: ${meetingNote.tags.join(', ')}`, style: 'tags' });
+    if (meetingNote.tags && (meetingNote.tags as string[]).length > 0) {
+        content.push({ text: `Tags: ${(meetingNote.tags as string[]).join(', ')}`, style: 'tags' });
     }
 
 
@@ -100,9 +88,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Add Actions
-    if (meetingNote.actions && meetingNote.actions.length > 0) {
+    if (meetingNote.actions && (meetingNote.actions as Action[]).length > 0) {
       content.push({ text: '\nAction Items:', style: 'heading' });
-      meetingNote.actions.forEach(action => {
+      (meetingNote.actions as Action[]).forEach(action => {
         content.push({
           text: `- [${action.status === 'done' ? 'x' : ' '}] ${action.description} (Assigned to: ${action.assignedTo})`,
           style: 'actionItem'
