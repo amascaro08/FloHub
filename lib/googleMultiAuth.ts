@@ -17,7 +17,9 @@ export const GOOGLE_OAUTH_CONFIG = {
   },
   get redirectUri() {
     if (process.env.NODE_ENV === 'production') {
-      return 'https://flohub.vercel.app/api/auth/callback/google-additional';
+      // Use NEXTAUTH_URL environment variable or fallback to flohub.vercel.app
+      const baseUrl = process.env.NEXTAUTH_URL || 'https://flohub.vercel.app';
+      return `${baseUrl}/api/auth/callback/google-additional`;
     }
     return 'http://localhost:3000/api/auth/callback/google-additional';
   }
