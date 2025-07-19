@@ -30,9 +30,13 @@ export default async function handler(
       "https://www.googleapis.com/auth/calendar.events",
     ];
 
+    // Create state with user email for callback identification
+    const state = Buffer.from(JSON.stringify({ email: user.email })).toString("base64");
+    
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: scopes,
+      state: state,
     });
 
     res.redirect(url);

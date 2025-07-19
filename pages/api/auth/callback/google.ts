@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { google } from "googleapis";
-import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/user";
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,16 +22,25 @@ export default async function handler(
       return res.redirect('/settings?error=missing_code');
     }
 
-    // Verify the user is authenticated
-    const decoded = auth(req);
-    if (!decoded) {
-      return res.redirect('/login?error=not_authenticated');
+    // Get user information from the OAuth state parameter
+    let userEmail: string;
+    try {
+      if (state) {
+        const decodedState = JSON.parse(Buffer.from(state as string, 'base64').toString());
+        userEmail = decodedState.email;
+      } else {
+        return res.redirect('/settings?error=missing_state');
+      }
+    } catch (error) {
+      console.error('Error decoding OAuth state:', error);
+      return res.redirect('/settings?error=invalid_state');
     }
 
-    const user = await getUserById(decoded.userId);
-    if (!user) {
-      return res.redirect('/login?error=user_not_found');
+    if (!userEmail) {
+      return res.redirect('/settings?error=missing_user_email');
     }
+
+    console.log('Google OAuth callback for user:', userEmail);
 
     // Create OAuth2 client with the same configuration as the calendar API
     const oauth2Client = new google.auth.OAuth2(
@@ -49,14 +56,51 @@ export default async function handler(
       return res.redirect('/settings?error=token_exchange_failed');
     }
 
-    // TODO: Store the tokens in your database
-    // This would typically involve saving the access token, refresh token, 
-    // and other relevant information to your user's account for calendar access
-    console.log('Google Calendar tokens received for user:', user.id);
+    // Store the tokens and add calendar source
+    console.log('Google Calendar tokens received for user:', userEmail);
     console.log('Tokens:', { 
       access_token: tokens.access_token ? 'Present' : 'Missing',
       refresh_token: tokens.refresh_token ? 'Present' : 'Missing'
     });
+
+    try {
+      // Get current user settings
+      const userSettingsRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/userSettings?userId=${encodeURIComponent(userEmail)}`);
+      const currentSettings = await userSettingsRes.json();
+
+      // Add the new Google calendar source
+      const newCalendarSource = {
+        id: `google_${Date.now()}`,
+        name: 'Google Calendar',
+        type: 'google' as const,
+        enabled: true,
+        connectionData: JSON.stringify({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: tokens.expiry_date,
+        }),
+      };
+
+      const updatedSources = [...(currentSettings.calendarSources || []), newCalendarSource];
+
+      // Update user settings with new calendar source
+      const updateRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/userSettings/update?userId=${encodeURIComponent(userEmail)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...currentSettings,
+          calendarSources: updatedSources,
+        }),
+      });
+
+      if (!updateRes.ok) {
+        console.error('Failed to update user settings with new calendar source');
+      } else {
+        console.log('Successfully added Google calendar source for user:', userEmail);
+      }
+    } catch (error) {
+      console.error('Error storing calendar source:', error);
+    }
 
     // Redirect back to settings with success
     return res.redirect('/settings?success=calendar_connected');
