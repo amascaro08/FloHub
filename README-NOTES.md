@@ -26,6 +26,15 @@ Type `/` to access a variety of formatting options:
 
 **Edit/Preview Toggle**: Switch between edit mode (raw markdown) and preview mode (beautifully formatted content)
 
+### 🎨 Visual Rendering
+- **Real-time formatting**: See your content beautifully formatted as you type
+- **Tables**: Properly rendered with headers, borders, and responsive design
+- **Lists**: Bullet and numbered lists with proper indentation
+- **Headings**: Hierarchical headings with appropriate sizing
+- **Code blocks**: Syntax-highlighted code with proper formatting
+- **Quotes**: Styled blockquotes with left border
+- **Dividers**: Clean horizontal lines for content separation
+
 ### 📱 Mobile-First Design
 - Fully responsive design that works on all devices
 - Touch-friendly interface with appropriate button sizes
