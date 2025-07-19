@@ -41,14 +41,27 @@ const SettingsPage = () => {
     }
   }, [user]);
 
-  const handleSettingsChange = (newSettings: UserSettings) => {
+  const handleSettingsChange = async (newSettings: UserSettings) => {
     setSettings(newSettings);
     if (user?.email) {
-      fetch(`/api/userSettings/update?userId=${user.email}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
-      });
+      try {
+        const response = await fetch(`/api/userSettings/update?userId=${user.email}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSettings),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Failed to update settings:", errorData.error || response.statusText);
+          throw new Error(errorData.error || "Failed to update settings");
+        }
+        console.log("Settings updated successfully!");
+      } catch (error) {
+        console.error("Error updating settings:", error);
+        // You might want to show a user-friendly error message here
+        alert(`Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   };
 

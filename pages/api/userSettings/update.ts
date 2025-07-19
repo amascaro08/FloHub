@@ -17,7 +17,13 @@ export default async function handler(
 
   try {
     const { userId } = req.query;
+    const bodyData = req.body;
     let user_email = Array.isArray(userId) ? userId[0] : userId;
+
+    // If userId is not in query, check if it's in the request body
+    if (!user_email && bodyData.userId) {
+      user_email = bodyData.userId;
+    }
 
     if (!user_email) {
       const decoded = auth(req);
@@ -30,8 +36,13 @@ export default async function handler(
       }
       user_email = user.email;
     }
-    const newSettings: UserSettings = req.body;
 
+    // Remove userId from the settings data if it was passed in the body
+    const { userId: _, ...newSettings } = bodyData;
+
+    console.log("Updating settings for user:", user_email);
+    console.log("PowerAutomate URL in request:", newSettings.powerAutomateUrl);
+    
     const settingsData = {
       selectedCals: newSettings.selectedCals || [],
       defaultView: newSettings.defaultView || 'month',
@@ -63,6 +74,9 @@ export default async function handler(
         set: settingsData,
       });
 
+    console.log("Settings updated successfully for user:", user_email);
+    console.log("PowerAutomate URL saved as:", settingsData.powerAutomateUrl);
+    
     return res.status(204).end();
   } catch (error: any) {
     console.error("Error updating user settings:", error);

@@ -51,10 +51,13 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               onClick={() => {
                 const powerAutomateUrl = prompt("Please enter your Power Automate URL");
                 if (powerAutomateUrl) {
-                  onSettingsChange({
+                  console.log("Setting PowerAutomate URL:", powerAutomateUrl);
+                  const newSettings = {
                     ...settings,
                     powerAutomateUrl: powerAutomateUrl,
-                  });
+                  };
+                  console.log("New settings object:", newSettings);
+                  onSettingsChange(newSettings);
                 }
               }}
               className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
@@ -63,6 +66,33 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Current PowerAutomate URL Display */}
+        {settings.powerAutomateUrl && (
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4 mb-6">
+            <h3 className="font-medium text-purple-800 dark:text-purple-200 mb-2">Current Power Automate URL</h3>
+            <div className="text-sm text-purple-600 dark:text-purple-300 break-all">
+              {settings.powerAutomateUrl}
+            </div>
+            <button
+              onClick={() => {
+                const newUrl = prompt("Enter new Power Automate URL", settings.powerAutomateUrl);
+                if (newUrl !== null) { // null means cancelled, empty string is valid
+                  console.log("Updating PowerAutomate URL from:", settings.powerAutomateUrl, "to:", newUrl);
+                  const newSettings = {
+                    ...settings,
+                    powerAutomateUrl: newUrl,
+                  };
+                  console.log("New settings object:", newSettings);
+                  onSettingsChange(newSettings);
+                }
+              }}
+              className="mt-2 bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs transition-colors"
+            >
+              Edit URL
+            </button>
+          </div>
+        )}
         
         {/* Calendar Sources List */}
         <div className="space-y-4 mb-6">
