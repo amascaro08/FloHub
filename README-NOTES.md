@@ -11,7 +11,7 @@ The notes functionality has been completely redesigned to provide a Notion-like 
 - No need to manually enter a title - just start typing
 - Titles update in real-time as you edit the first line
 
-### ✨ Rich Text Editor with Visual Rendering
+### ✨ Seamless WYSIWYG Editor
 Type `/` to access a variety of formatting options:
 
 - **`/h1`** - Large heading (visually rendered)
@@ -24,9 +24,9 @@ Type `/` to access a variety of formatting options:
 - **`/quote`** - Quote block (visually rendered)
 - **`/divider`** - Horizontal line (visually rendered)
 
-**Edit/Preview Toggle**: Switch between edit mode (raw markdown) and preview mode (beautifully formatted content)
+**What You See Is What You Get**: Content is beautifully formatted as you type - no need to switch between edit and preview modes
 
-### 🎨 Visual Rendering
+### 🎨 Seamless Visual Rendering
 - **Real-time formatting**: See your content beautifully formatted as you type
 - **Tables**: Properly rendered with headers, borders, and responsive design
 - **Lists**: Bullet and numbered lists with proper indentation
@@ -34,6 +34,7 @@ Type `/` to access a variety of formatting options:
 - **Code blocks**: Syntax-highlighted code with proper formatting
 - **Quotes**: Styled blockquotes with left border
 - **Dividers**: Clean horizontal lines for content separation
+- **No mode switching**: Edit and see formatted content simultaneously
 
 ### 📱 Mobile-First Design
 - Fully responsive design that works on all devices

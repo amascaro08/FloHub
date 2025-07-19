@@ -136,13 +136,15 @@ export default function NotesPage() {
       const response = await fetch(`/api/notes/delete`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: noteId }),
+        body: JSON.stringify({ ids: [noteId] }),
       });
 
       if (response.ok) {
-        mutate();
+        // Clear the selected note first
         setSelectedNoteId(null);
         setShowNewNote(false);
+        // Then refresh the data
+        await mutate();
       } else {
         const errorData = await response.json();
         console.error("Failed to delete note:", errorData.error);
@@ -226,6 +228,7 @@ export default function NotesPage() {
                 setSelectedNoteId(null);
                 setShowNewNote(true);
               }}
+              disabled={isSaving}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -300,6 +303,7 @@ export default function NotesPage() {
                         setSelectedNoteId(note.id);
                         setShowNewNote(false);
                       }}
+                      disabled={isSaving}
                     >
                       <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
                         {title}

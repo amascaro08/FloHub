@@ -216,7 +216,6 @@ export default function RichNoteEditor({
   const [slashCommandIndex, setSlashCommandIndex] = useState(0);
   const [slashCommandPosition, setSlashCommandPosition] = useState({ start: 0, end: 0 });
   const [isMobile, setIsMobile] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandsRef = useRef<HTMLDivElement>(null);
 
@@ -424,7 +423,12 @@ export default function RichNoteEditor({
     if (!note?.id || !onDelete) return;
     
     if (confirm("Are you sure you want to delete this note?")) {
-      await onDelete(note.id);
+      try {
+        await onDelete(note.id);
+      } catch (error) {
+        console.error("Error deleting note:", error);
+        alert("Failed to delete note. Please try again.");
+      }
     }
   };
 
@@ -459,95 +463,70 @@ export default function RichNoteEditor({
         </p>
       </div>
 
-      {/* Toggle between edit and view modes */}
-      <div className="flex gap-2 mb-4 px-4">
-        <button
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-            isEditing 
-              ? 'bg-primary-500 text-white' 
-              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
-          }`}
-          onClick={() => setIsEditing(true)}
-        >
-          Edit
-        </button>
-        <button
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-            !isEditing 
-              ? 'bg-primary-500 text-white' 
-              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
-          }`}
-          onClick={() => setIsEditing(false)}
-        >
-          Preview
-        </button>
-      </div>
-
-      {/* Rich text editor or preview */}
+      {/* Rich text editor with visual rendering */}
       <div className="flex-1 relative">
-        {isEditing ? (
-          <>
-            <textarea
-              ref={editorRef}
-              value={content}
-              onChange={handleContentChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Start typing or type / for commands..."
-              className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent"
-              disabled={isSaving}
-              style={{ 
-                minHeight: isMobile ? '60vh' : 'auto',
-                fontSize: isMobile ? '16px' : '18px' // Prevent zoom on iOS
-              }}
-            />
-            
-            {/* Slash commands dropdown */}
-            {showSlashCommands && (
-              <div
-                ref={slashCommandsRef}
-                className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
-                style={{
-                  top: '50px',
-                  left: isMobile ? '8px' : '16px',
-                  right: isMobile ? '8px' : 'auto',
-                  maxWidth: isMobile ? 'calc(100vw - 16px)' : 'auto'
+        <div className="absolute inset-0 bg-transparent pointer-events-none z-10">
+          <div 
+            className="w-full h-full p-4 text-base md:text-lg leading-relaxed overflow-y-auto"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+          />
+        </div>
+        
+        <textarea
+          ref={editorRef}
+          value={content}
+          onChange={handleContentChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Start typing or type / for commands..."
+          className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20"
+          disabled={isSaving}
+          style={{ 
+            minHeight: isMobile ? '60vh' : 'auto',
+            fontSize: isMobile ? '16px' : '18px', // Prevent zoom on iOS
+            color: 'transparent',
+            caretColor: 'black',
+            background: 'transparent'
+          }}
+        />
+        
+        {/* Slash commands dropdown */}
+        {showSlashCommands && (
+          <div
+            ref={slashCommandsRef}
+            className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+            style={{
+              top: '50px',
+              left: isMobile ? '8px' : '16px',
+              right: isMobile ? '8px' : 'auto',
+              maxWidth: isMobile ? 'calc(100vw - 16px)' : 'auto'
+            }}
+          >
+            {slashCommands.map((command, index) => (
+              <button
+                key={command.id}
+                className={`w-full px-3 md:px-4 py-2 md:py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 md:gap-3 ${
+                  index === slashCommandIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
+                }`}
+                onClick={() => {
+                  if (editorRef.current) {
+                    command.action(editorRef.current, slashCommandPosition.start, slashCommandPosition.end);
+                    setShowSlashCommands(false);
+                  }
                 }}
               >
-                {slashCommands.map((command, index) => (
-                  <button
-                    key={command.id}
-                    className={`w-full px-3 md:px-4 py-2 md:py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 md:gap-3 ${
-                      index === slashCommandIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
-                    }`}
-                    onClick={() => {
-                      if (editorRef.current) {
-                        command.action(editorRef.current, slashCommandPosition.start, slashCommandPosition.end);
-                        setShowSlashCommands(false);
-                      }
-                    }}
-                  >
-                    <span className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-xs md:text-sm font-mono flex-shrink-0">
-                      {command.icon}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
-                        {command.title}
-                      </div>
-                      <div className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 truncate">
-                        {command.description}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="w-full h-full p-4 overflow-y-auto">
-            <div 
-              className="prose prose-neutral dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-            />
+                <span className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-xs md:text-sm font-mono flex-shrink-0">
+                  {command.icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
+                    {command.title}
+                  </div>
+                  <div className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                    {command.description}
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
