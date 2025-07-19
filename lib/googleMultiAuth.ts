@@ -38,7 +38,9 @@ export function getGoogleOAuthUrl(state: string): string {
   console.log("Google OAuth Config:", {
     clientId: clientId ? "Set" : "Not set",
     clientSecret: clientSecret ? "Set" : "Not set",
-    redirectUri
+    redirectUri,
+    baseUrl,
+    nodeEnv: process.env.NODE_ENV
   });
   
   if (!clientId || !clientSecret || !redirectUri) {
