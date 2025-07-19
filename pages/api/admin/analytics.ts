@@ -1,9 +1,29 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
-import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { users, analyticsPageVisits, userSettings, analyticsWidgetUsage, analyticsPerformanceMetrics } from '@/db/schema';
-import { count, gte } from 'drizzle-orm';
+import { count, gte, eq } from 'drizzle-orm';
+
+// Move getUserById function here to avoid shared import issues
+async function getUserById(userId: number) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: {
+      id: true,
+      email: true,
+      name: true,
+    },
+    with: {
+      accounts: {
+        columns: {
+          access_token: true,
+        },
+      },
+    },
+  });
+
+  return user || null;
+}
 
 // Define types for our analytics data
 interface PageVisit {

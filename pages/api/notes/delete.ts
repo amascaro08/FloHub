@@ -1,9 +1,29 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
-import { notes } from "@/db/schema";
+import { notes, users } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
+
+// Move getUserById function here to avoid shared import issues
+async function getUserById(userId: number) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: {
+      id: true,
+      email: true,
+      name: true,
+    },
+    with: {
+      accounts: {
+        columns: {
+          access_token: true,
+        },
+      },
+    },
+  });
+
+  return user || null;
+}
 
 // Ensure Firebase Admin is initialized (assuming it's initialized elsewhere, e.g., in lib/firebaseAdmin.ts)
 // If not, uncomment the initialization block below:

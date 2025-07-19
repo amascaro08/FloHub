@@ -2,11 +2,31 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
-import { notes, tasks } from "@/db/schema";
+import { notes, tasks, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import OpenAI from "openai"; // Import OpenAI
+
+// Move getUserById function here to avoid shared import issues
+async function getUserById(userId: number) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: {
+      id: true,
+      email: true,
+      name: true,
+    },
+    with: {
+      accounts: {
+        columns: {
+          access_token: true,
+        },
+      },
+    },
+  });
+
+  return user || null;
+}
 
 import type { Action } from "@/types/app"; // Import Action type
 
