@@ -255,9 +255,13 @@ export default async function handler(
               const endsBeforeMax = eventEndTime ? eventEndTime.getTime() <= maxDate.getTime() : true;
               const startsBeforeMinEndsAfterMin = eventStartTime.getTime() < minDate.getTime() && eventEndTime && eventEndTime.getTime() > minDate.getTime();
 
+              console.log(`Event "${event.summary}" - Start: ${eventStartTime.toISOString()}, Min: ${minDate.toISOString()}, Max: ${maxDate.toISOString()}`);
+              console.log(`Passes filter: ${(startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin}`);
+
               return (startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin;
             });
             
+          console.log(`O365 events: ${o365EventsRaw.length} raw events, ${o365Events.length} after filtering`);
           console.log("O365 mapped and filtered events:", o365Events);
           allEvents.push(...o365Events);
         } else {
