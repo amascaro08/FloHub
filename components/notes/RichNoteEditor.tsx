@@ -454,7 +454,7 @@ export default function RichNoteEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Auto-generated title display */}
-      <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+      <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg flex-shrink-0">
         <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-100">
           {autoTitle}
         </h1>
@@ -464,10 +464,10 @@ export default function RichNoteEditor({
       </div>
 
       {/* Rich text editor with visual rendering */}
-      <div className="flex-1 relative">
-        <div className="absolute inset-0 bg-transparent pointer-events-none z-10">
+      <div className="flex-1 relative min-h-0">
+        <div className="absolute inset-0 bg-transparent pointer-events-none z-10 overflow-y-auto">
           <div 
-            className="w-full h-full p-4 text-base md:text-lg leading-relaxed overflow-y-auto"
+            className="w-full h-full p-4 text-base md:text-lg leading-relaxed"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
           />
         </div>
@@ -478,10 +478,9 @@ export default function RichNoteEditor({
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
           placeholder="Start typing or type / for commands..."
-          className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20"
+          className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20 overflow-y-auto"
           disabled={isSaving}
           style={{ 
-            minHeight: isMobile ? '60vh' : 'auto',
             fontSize: isMobile ? '16px' : '18px', // Prevent zoom on iOS
             color: 'transparent',
             caretColor: 'black',
@@ -532,7 +531,7 @@ export default function RichNoteEditor({
       </div>
 
       {/* Bottom toolbar */}
-      <div className="border-t border-neutral-200 dark:border-neutral-700 p-3 md:p-4 bg-neutral-50 dark:bg-neutral-800">
+      <div className="border-t border-neutral-200 dark:border-neutral-700 p-3 md:p-4 bg-neutral-50 dark:bg-neutral-800 flex-shrink-0">
         <div className="flex flex-col gap-3 md:gap-4">
           {/* Tags */}
           <div className="flex-1 min-w-0">

@@ -158,9 +158,11 @@ export default function NotesPage() {
     }
   };
 
-
-
-
+  // Handle creating a new note
+  const handleCreateNewNote = () => {
+    setSelectedNoteId(null);
+    setShowNewNote(true);
+  };
 
   const filteredNotes = useMemo(() => {
     // Extract the notes array from the fetched data
@@ -200,21 +202,17 @@ export default function NotesPage() {
     return <p>Loading notes and calendar events…</p>;
   }
 
-
   // Show error state if either notes or calendar events failed to load
   if (notesError || calendarError || settingsError) { // Add settingsError check
     return <p>Error loading data.</p>;
   }
 
-
-
-
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="border-b border-neutral-200 dark:border-neutral-700 p-3 md:p-4 bg-white dark:bg-neutral-900">
-        <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
-          <div className="flex-1">
+      <div className="border-b border-neutral-200 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-100">Notes</h1>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
               Write, organize, and collaborate on your ideas
@@ -224,10 +222,7 @@ export default function NotesPage() {
           <div className="flex gap-2 flex-shrink-0">
             <button
               className="btn-secondary"
-              onClick={() => {
-                setSelectedNoteId(null);
-                setShowNewNote(true);
-              }}
+              onClick={handleCreateNewNote}
               disabled={isSaving}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -239,8 +234,8 @@ export default function NotesPage() {
         </div>
 
         {/* Search and filter */}
-        <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-3 md:mt-4">
-          <div className="relative flex-1">
+        <div className="flex flex-col lg:flex-row gap-4 mt-4">
+          <div className="relative flex-1 min-w-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -248,14 +243,14 @@ export default function NotesPage() {
             </div>
             <input
               type="text"
-              className="input-modern pl-10"
+              className="input-modern pl-10 w-full"
               placeholder="Search notes..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
             />
           </div>
           <select
-            className="input-modern"
+            className="input-modern flex-shrink-0"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
           >
@@ -268,100 +263,106 @@ export default function NotesPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         {/* Sidebar - Note list */}
-        <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-y-auto">
-          <div className="p-4">
-            {filteredNotes.length === 0 ? (
-              <div className="text-center py-8">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-neutral-500 dark:text-neutral-400">No notes found</p>
-                <button
-                  className="btn-primary mt-4"
-                  onClick={() => setShowNewNote(true)}
-                >
-                  Create your first note
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredNotes.map((note) => {
-                  const title = note.title || note.content.split('\n')[0].replace(/^#+\s*/, '').trim() || "Untitled Note";
-                  const preview = note.content.split('\n').slice(1).join('\n').substring(0, 100);
-                  
-                  return (
-                    <button
-                      key={note.id}
-                      className={`w-full text-left p-3 rounded-lg transition-colors ${
-                        selectedNoteId === note.id
-                          ? 'bg-primary-100 dark:bg-primary-900 border border-primary-200 dark:border-primary-700'
-                          : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                      }`}
-                      onClick={() => {
-                        setSelectedNoteId(note.id);
-                        setShowNewNote(false);
-                      }}
-                      disabled={isSaving}
-                    >
-                      <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                        {title}
-                      </div>
-                      {preview && (
-                        <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">
-                          {preview}
+        <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex-shrink-0">
+          <div className="h-full overflow-y-auto">
+            <div className="p-4">
+              {filteredNotes.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-neutral-500 dark:text-neutral-400">No notes found</p>
+                  <button
+                    className="btn-primary mt-4"
+                    onClick={handleCreateNewNote}
+                  >
+                    Create your first note
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredNotes.map((note) => {
+                    const title = note.title || note.content.split('\n')[0].replace(/^#+\s*/, '').trim() || "Untitled Note";
+                    const preview = note.content.split('\n').slice(1).join('\n').substring(0, 100);
+                    
+                    return (
+                      <button
+                        key={note.id}
+                        className={`w-full text-left p-3 rounded-lg transition-colors ${
+                          selectedNoteId === note.id
+                            ? 'bg-primary-100 dark:bg-primary-900 border border-primary-200 dark:border-primary-700'
+                            : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                        }`}
+                        onClick={() => {
+                          setSelectedNoteId(note.id);
+                          setShowNewNote(false);
+                        }}
+                        disabled={isSaving}
+                      >
+                        <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                          {title}
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                          {new Date(note.createdAt).toLocaleDateString()}
-                        </span>
-                        {note.tags.length > 0 && (
-                          <div className="flex gap-1">
-                            {note.tags.slice(0, 2).map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {note.tags.length > 2 && (
-                              <span className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded">
-                                +{note.tags.length - 2}
-                              </span>
-                            )}
+                        {preview && (
+                          <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">
+                            {preview}
                           </div>
                         )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                            {new Date(note.createdAt).toLocaleDateString()}
+                          </span>
+                          {note.tags.length > 0 && (
+                            <div className="flex gap-1">
+                              {note.tags.slice(0, 2).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                              {note.tags.length > 2 && (
+                                <span className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded">
+                                  +{note.tags.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Main editor area */}
-        <div className="flex-1 bg-white dark:bg-neutral-900 min-h-0">
+        <div className="flex-1 bg-white dark:bg-neutral-900 min-h-0 flex flex-col">
           {showNewNote ? (
-            <RichNoteEditor
-              onSave={handleSaveNewNote}
-              isSaving={isSaving}
-              existingTags={allAvailableTags}
-              isNewNote={true}
-            />
+            <div className="flex-1 overflow-hidden">
+              <RichNoteEditor
+                onSave={handleSaveNewNote}
+                isSaving={isSaving}
+                existingTags={allAvailableTags}
+                isNewNote={true}
+              />
+            </div>
           ) : selectedNote ? (
-            <RichNoteEditor
-              note={selectedNote}
-              onSave={handleUpdateNote}
-              onDelete={handleDeleteNote}
-              isSaving={isSaving}
-              existingTags={allAvailableTags}
-            />
+            <div className="flex-1 overflow-hidden">
+              <RichNoteEditor
+                note={selectedNote}
+                onSave={handleUpdateNote}
+                onDelete={handleDeleteNote}
+                isSaving={isSaving}
+                existingTags={allAvailableTags}
+              />
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full p-4">
+            <div className="flex items-center justify-center flex-1 p-4">
               <div className="text-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 md:h-16 md:w-16 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -374,7 +375,7 @@ export default function NotesPage() {
                 </p>
                 <button
                   className="btn-primary"
-                  onClick={() => setShowNewNote(true)}
+                  onClick={handleCreateNewNote}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />

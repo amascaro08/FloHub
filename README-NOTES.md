@@ -41,6 +41,8 @@ Type `/` to access a variety of formatting options:
 - Touch-friendly interface with appropriate button sizes
 - Optimized text input to prevent zoom on iOS
 - Collapsible sidebar on mobile devices
+- Dynamic layout that adapts to available screen space
+- Proper scrolling behavior on all screen sizes
 
 ### 🔄 Auto-Save
 - Notes are automatically saved as you type (2-second debounce)
