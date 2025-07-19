@@ -11,18 +11,20 @@ The notes functionality has been completely redesigned to provide a Notion-like 
 - No need to manually enter a title - just start typing
 - Titles update in real-time as you edit the first line
 
-### ✨ Rich Text Editor with Slash Commands
+### ✨ Rich Text Editor with Visual Rendering
 Type `/` to access a variety of formatting options:
 
-- **`/h1`** - Large heading (#)
-- **`/h2`** - Medium heading (##)
-- **`/h3`** - Small heading (###)
-- **`/bullet`** - Bullet list (-)
-- **`/numbered`** - Numbered list (1.)
-- **`/table`** - Insert a table template
-- **`/code`** - Code block (```)
-- **`/quote`** - Quote block (>)
-- **`/divider`** - Horizontal line (---)
+- **`/h1`** - Large heading (visually rendered)
+- **`/h2`** - Medium heading (visually rendered)
+- **`/h3`** - Small heading (visually rendered)
+- **`/bullet`** - Bullet list (visually rendered)
+- **`/numbered`** - Numbered list (visually rendered)
+- **`/table`** - Insert a table template (visually rendered)
+- **`/code`** - Code block (visually rendered)
+- **`/quote`** - Quote block (visually rendered)
+- **`/divider`** - Horizontal line (visually rendered)
+
+**Edit/Preview Toggle**: Switch between edit mode (raw markdown) and preview mode (beautifully formatted content)
 
 ### 📱 Mobile-First Design
 - Fully responsive design that works on all devices

@@ -27,6 +27,180 @@ interface SlashCommand {
   action: (editor: HTMLTextAreaElement, startPos: number, endPos: number) => void;
 }
 
+// Function to render markdown content
+const renderMarkdown = (content: string) => {
+  const lines = content.split('\n');
+  let inTable = false;
+  let tableRows: string[] = [];
+  let inList = false;
+  let listItems: string[] = [];
+  let inCodeBlock = false;
+  let codeBlockContent: string[] = [];
+  
+  const result: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Handle code blocks
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        // End code block
+        result.push(`<pre class="bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg my-4 overflow-x-auto"><code class="text-sm font-mono text-neutral-800 dark:text-neutral-200">${codeBlockContent.join('\n')}</code></pre>`);
+        inCodeBlock = false;
+        codeBlockContent = [];
+      } else {
+        // Start code block
+        inCodeBlock = true;
+        codeBlockContent = [];
+      }
+      continue;
+    }
+    
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+    
+    // Handle tables
+    if (line.includes('|') && line.trim().length > 0) {
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      tableRows.push(line);
+      continue;
+    } else if (inTable) {
+      // End table
+      if (tableRows.length > 0) {
+        const tableHtml = renderTable(tableRows);
+        result.push(tableHtml);
+      }
+      inTable = false;
+      tableRows = [];
+    }
+    
+    // Handle lists
+    if (line.startsWith('- ') || line.match(/^\d+\. /)) {
+      if (!inList) {
+        inList = true;
+        listItems = [];
+      }
+      listItems.push(line);
+      continue;
+    } else if (inList) {
+      // End list
+      if (listItems.length > 0) {
+        const listHtml = renderList(listItems);
+        result.push(listHtml);
+      }
+      inList = false;
+      listItems = [];
+    }
+    
+    // Handle headings
+    if (line.startsWith('# ')) {
+      result.push(`<h1 class="text-3xl font-bold mb-4 mt-6 text-neutral-900 dark:text-neutral-100">${line.substring(2)}</h1>`);
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      result.push(`<h2 class="text-2xl font-bold mb-3 mt-5 text-neutral-900 dark:text-neutral-100">${line.substring(3)}</h2>`);
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      result.push(`<h3 class="text-xl font-bold mb-2 mt-4 text-neutral-900 dark:text-neutral-100">${line.substring(4)}</h3>`);
+      continue;
+    }
+    
+    // Handle quote
+    if (line.startsWith('> ')) {
+      result.push(`<blockquote class="border-l-4 border-neutral-300 dark:border-neutral-600 pl-4 my-4 italic text-neutral-600 dark:text-neutral-400">${line.substring(2)}</blockquote>`);
+      continue;
+    }
+    
+    // Handle divider
+    if (line === '---') {
+      result.push(`<hr class="my-6 border-neutral-300 dark:border-neutral-600" />`);
+      continue;
+    }
+    
+    // Handle regular paragraphs
+    if (line.trim() === '') {
+      result.push('<br />');
+    } else {
+      result.push(`<p class="mb-3 text-neutral-700 dark:text-neutral-300 leading-relaxed">${line}</p>`);
+    }
+  }
+  
+  // Handle any remaining table or list
+  if (inTable && tableRows.length > 0) {
+    const tableHtml = renderTable(tableRows);
+    result.push(tableHtml);
+  }
+  
+  if (inList && listItems.length > 0) {
+    const listHtml = renderList(listItems);
+    result.push(listHtml);
+  }
+  
+  return result.join('');
+};
+
+// Function to render tables
+const renderTable = (rows: string[]) => {
+  if (rows.length < 2) return '';
+  
+  const headers = rows[0].split('|').filter(cell => cell.trim());
+  const separatorRow = rows[1];
+  const dataRows = rows.slice(2);
+  
+  let tableHtml = '<div class="overflow-x-auto my-4"><table class="min-w-full border border-neutral-300 dark:border-neutral-600 rounded-lg">';
+  
+  // Headers
+  tableHtml += '<thead class="bg-neutral-50 dark:bg-neutral-800">';
+  tableHtml += '<tr>';
+  headers.forEach(header => {
+    tableHtml += `<th class="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600">${header.trim()}</th>`;
+  });
+  tableHtml += '</tr>';
+  tableHtml += '</thead>';
+  
+  // Data rows
+  tableHtml += '<tbody>';
+  dataRows.forEach(row => {
+    const cells = row.split('|').filter(cell => cell.trim());
+    tableHtml += '<tr class="border-b border-neutral-200 dark:border-neutral-700">';
+    cells.forEach(cell => {
+      tableHtml += `<td class="px-4 py-3 text-neutral-700 dark:text-neutral-300">${cell.trim()}</td>`;
+    });
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody>';
+  tableHtml += '</table></div>';
+  
+  return tableHtml;
+};
+
+// Function to render lists
+const renderList = (items: string[]) => {
+  if (items.length === 0) return '';
+  
+  const isOrdered = items[0].match(/^\d+\. /);
+  const listType = isOrdered ? 'ol' : 'ul';
+  const listClass = isOrdered ? 'list-decimal' : 'list-disc';
+  
+  let listHtml = `<${listType} class="${listClass} ml-6 mb-4 space-y-1">`;
+  
+  items.forEach(item => {
+    const content = isOrdered ? item.replace(/^\d+\. /, '') : item.substring(2);
+    listHtml += `<li class="text-neutral-700 dark:text-neutral-300">${content}</li>`;
+  });
+  
+  listHtml += `</${listType}>`;
+  
+  return listHtml;
+};
+
 export default function RichNoteEditor({ 
   note, 
   onSave, 
@@ -42,6 +216,7 @@ export default function RichNoteEditor({
   const [slashCommandIndex, setSlashCommandIndex] = useState(0);
   const [slashCommandPosition, setSlashCommandPosition] = useState({ start: 0, end: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandsRef = useRef<HTMLDivElement>(null);
 
@@ -244,6 +419,15 @@ export default function RichNoteEditor({
     await onSave({ title: autoTitle, content, tags });
   };
 
+  // Handle delete
+  const handleDelete = async () => {
+    if (!note?.id || !onDelete) return;
+    
+    if (confirm("Are you sure you want to delete this note?")) {
+      await onDelete(note.id);
+    }
+  };
+
   // Auto-save on content change (debounced)
   useEffect(() => {
     if (!isNewNote && content.trim()) {
@@ -275,60 +459,95 @@ export default function RichNoteEditor({
         </p>
       </div>
 
-      {/* Rich text editor */}
+      {/* Toggle between edit and view modes */}
+      <div className="flex gap-2 mb-4 px-4">
+        <button
+          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            isEditing 
+              ? 'bg-primary-500 text-white' 
+              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+          }`}
+          onClick={() => setIsEditing(true)}
+        >
+          Edit
+        </button>
+        <button
+          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            !isEditing 
+              ? 'bg-primary-500 text-white' 
+              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+          }`}
+          onClick={() => setIsEditing(false)}
+        >
+          Preview
+        </button>
+      </div>
+
+      {/* Rich text editor or preview */}
       <div className="flex-1 relative">
-        <textarea
-          ref={editorRef}
-          value={content}
-          onChange={handleContentChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Start typing or type / for commands..."
-          className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent"
-          disabled={isSaving}
-          style={{ 
-            minHeight: isMobile ? '60vh' : 'auto',
-            fontSize: isMobile ? '16px' : '18px' // Prevent zoom on iOS
-          }}
-        />
-        
-        {/* Slash commands dropdown */}
-        {showSlashCommands && (
-          <div
-            ref={slashCommandsRef}
-            className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
-            style={{
-              top: '50px',
-              left: isMobile ? '8px' : '16px',
-              right: isMobile ? '8px' : 'auto',
-              maxWidth: isMobile ? 'calc(100vw - 16px)' : 'auto'
-            }}
-          >
-            {slashCommands.map((command, index) => (
-              <button
-                key={command.id}
-                className={`w-full px-3 md:px-4 py-2 md:py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 md:gap-3 ${
-                  index === slashCommandIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
-                }`}
-                onClick={() => {
-                  if (editorRef.current) {
-                    command.action(editorRef.current, slashCommandPosition.start, slashCommandPosition.end);
-                    setShowSlashCommands(false);
-                  }
+        {isEditing ? (
+          <>
+            <textarea
+              ref={editorRef}
+              value={content}
+              onChange={handleContentChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Start typing or type / for commands..."
+              className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent"
+              disabled={isSaving}
+              style={{ 
+                minHeight: isMobile ? '60vh' : 'auto',
+                fontSize: isMobile ? '16px' : '18px' // Prevent zoom on iOS
+              }}
+            />
+            
+            {/* Slash commands dropdown */}
+            {showSlashCommands && (
+              <div
+                ref={slashCommandsRef}
+                className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                style={{
+                  top: '50px',
+                  left: isMobile ? '8px' : '16px',
+                  right: isMobile ? '8px' : 'auto',
+                  maxWidth: isMobile ? 'calc(100vw - 16px)' : 'auto'
                 }}
               >
-                <span className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-xs md:text-sm font-mono flex-shrink-0">
-                  {command.icon}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
-                    {command.title}
-                  </div>
-                  <div className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 truncate">
-                    {command.description}
-                  </div>
-                </div>
-              </button>
-            ))}
+                {slashCommands.map((command, index) => (
+                  <button
+                    key={command.id}
+                    className={`w-full px-3 md:px-4 py-2 md:py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 md:gap-3 ${
+                      index === slashCommandIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
+                    }`}
+                    onClick={() => {
+                      if (editorRef.current) {
+                        command.action(editorRef.current, slashCommandPosition.start, slashCommandPosition.end);
+                        setShowSlashCommands(false);
+                      }
+                    }}
+                  >
+                    <span className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-xs md:text-sm font-mono flex-shrink-0">
+                      {command.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
+                        {command.title}
+                      </div>
+                      <div className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                        {command.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full p-4 overflow-y-auto">
+            <div 
+              className="prose prose-neutral dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+            />
           </div>
         )}
       </div>
@@ -379,7 +598,7 @@ export default function RichNoteEditor({
               <button
                 type="button"
                 className="btn-secondary flex-1 md:flex-none"
-                onClick={() => note.id && onDelete(note.id)}
+                onClick={handleDelete}
                 disabled={isSaving}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">

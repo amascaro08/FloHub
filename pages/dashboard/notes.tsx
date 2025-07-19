@@ -142,12 +142,15 @@ export default function NotesPage() {
       if (response.ok) {
         mutate();
         setSelectedNoteId(null);
+        setShowNewNote(false);
       } else {
         const errorData = await response.json();
         console.error("Failed to delete note:", errorData.error);
+        alert("Failed to delete note. Please try again.");
       }
     } catch (error) {
       console.error("Error deleting note:", error);
+      alert("Error deleting note. Please try again.");
     } finally {
       setIsSaving(false);
     }
