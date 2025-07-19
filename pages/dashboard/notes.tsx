@@ -3,9 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@/lib/hooks/useUser";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
-import NoteList from "@/components/notes/NoteList"; // Import NoteList component
-import NoteDetail from "@/components/notes/NoteDetail"; // Import NoteDetail component
+import RichNoteEditor from "@/components/notes/RichNoteEditor";
 import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
 import type { Note, UserSettings } from "@/types/app"; // Import shared Note and UserSettings types
 
@@ -60,138 +58,111 @@ export default function NotesPage() {
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
-  const [showModal, setShowModal] = useState(false); // State to control modal visibility
   const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]); // State for selected notes for deletion
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
+  const [showNewNote, setShowNewNote] = useState(false);
 
   // Use only global tags from settings
   const allAvailableTags = useMemo(() => {
     return userSettings?.globalTags?.sort() || []; // Get global tags and sort them
   }, [userSettings]); // Dependency array includes userSettings
 
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
-
-  // Function to handle toggling selection of a note for deletion
-  const handleToggleSelectNote = (noteId: string, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedNotes([...selectedNotes, noteId]);
-    } else {
-      setSelectedNotes(selectedNotes.filter((id) => id !== noteId));
-    }
-  };
-
-  // Function to handle deleting selected notes
-  const handleDeleteSelected = async () => {
-    if (selectedNotes.length === 0) return;
-
-    setIsSaving(true); // Indicate saving/deleting in progress
-    try {
-      // Assuming your delete API can handle multiple IDs or you make multiple calls
-      // For now, let's assume the API can take an array of IDs
-      const response = await fetch(`/api/notes/delete`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedNotes }), // Send array of IDs
-      });
-
-      if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
-        setSelectedNoteId(null); // Deselect any currently selected note
-        setSelectedNotes([]); // Clear selected notes after deletion
-      } else {
-        console.error("Failed to delete selected notes. Status:", response.status); // Log response status
-        try {
-          const errorData = await response.json();
-          console.error("Error details:", errorData.error);
-        } catch (jsonError) {
-          console.error("Could not parse error response as JSON:", jsonError);
-        }
-        // Optionally show an error message to the user
-      }
-    } catch (error) {
-      console.error("Error deleting selected notes:", error);
-      console.error("Error details:", error); // Log error object
-       // Optionally show an error message to the user
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Placeholder function for exporting selected notes as PDF
-  const handleExportSelected = async () => {
-    if (selectedNotes.length === 0) return;
-
-    setIsSaving(true); // Indicate saving/exporting in progress
-    try {
-      const response = await fetch("/api/notes/export-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedNotes }),
-      });
-
-      if (response.ok) {
-        // Assuming the backend sends the PDF as a Blob
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "exported_notes.pdf"; // Set the desired filename
-        document.body.appendChild(a);
-        a.click();
-        a.remove(); // Clean up the element
-        window.URL.revokeObjectURL(url); // Free up memory
-      } else {
-        console.error("Failed to export notes. Status:", response.status);
-        try {
-          const errorData = await response.json();
-          console.error("Error details:", errorData.error);
-        } catch (jsonError) {
-          console.error("Could not parse error response as JSON:", jsonError);
-        }
-        // Optionally show an error message to the user
-      }
-    } catch (error) {
-      console.error("Error exporting notes:", error);
-      // Optionally show an error message to the user
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-
-  // Update handleSaveNote to include new fields
-  const handleSaveNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
+  // Handle saving a new note
+  const handleSaveNewNote = async (note: { title: string; content: string; tags: string[] }) => {
     setIsSaving(true);
     try {
       const response = await fetch("/api/notes/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Include all relevant fields in the body
         body: JSON.stringify({
           title: note.title,
           content: note.content,
           tags: note.tags,
-          eventId: note.eventId,
-          eventTitle: note.eventTitle,
-          isAdhoc: note.isAdhoc,
         }),
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
+        const result = await response.json();
+        mutate();
+        setShowNewNote(false);
+        setSelectedNoteId(result.noteId);
       } else {
         const errorData = await response.json();
         console.error("Failed to save note:", errorData.error);
-        // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error saving note:", error);
-       // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Handle updating an existing note
+  const handleUpdateNote = async (note: { title: string; content: string; tags: string[] }) => {
+    if (!selectedNote) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/notes/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedNote.id,
+          title: note.title,
+          content: note.content,
+          tags: note.tags,
+        }),
+      });
+
+      if (response.ok) {
+        mutate();
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update note:", errorData.error);
+      }
+    } catch (error) {
+      console.error("Error updating note:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle deleting a note
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm("Are you sure you want to delete this note?")) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/notes/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [noteId] }),
+      });
+
+      if (response.ok) {
+        // Clear the selected note first
+        setSelectedNoteId(null);
+        setShowNewNote(false);
+        // Then refresh the data
+        await mutate();
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to delete note:", errorData.error);
+        alert("Failed to delete note. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      alert("Error deleting note. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle creating a new note
+  const handleCreateNewNote = () => {
+    setSelectedNoteId(null);
+    setShowNewNote(true);
+  };
 
   const filteredNotes = useMemo(() => {
     // Extract the notes array from the fetched data
@@ -231,75 +202,40 @@ export default function NotesPage() {
     return <p>Loading notes and calendar events…</p>;
   }
 
-
   // Show error state if either notes or calendar events failed to load
   if (notesError || calendarError || settingsError) { // Add settingsError check
     return <p>Error loading data.</p>;
   }
 
-  // Update handleUpdateNote to include new fields
-  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean) => { // Include new fields
-    setIsSaving(true);
-    try {
-      const response = await fetch(`/api/notes/update`, { // Assuming update endpoint is /api/notes/update
-        method: "PUT", // Or PATCH, depending on API design
-        headers: { "Content-Type": "application/json" },
-        // Include all relevant fields in the body
-        body: JSON.stringify({
-          id: noteId,
-          title: updatedTitle,
-          content: updatedContent,
-          tags: updatedTags,
-          eventId: updatedEventId,
-          eventTitle: updatedEventTitle,
-          isAdhoc: updatedIsAdhoc,
-        }),
-      });
-
-      if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to update note:", errorData.error);
-        // Optionally show an error message to the user
-      }
-    } catch (error) {
-      console.error("Error updating note:", error);
-       // Optionally show an error message to the user
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-
   return (
-    <div className="p-4 flex flex-col md:flex-row h-full"> {/* Use flex-col on mobile, flex-row on medium and up */}
-      {/* Left Column: Note List */}
-      <div className="w-full md:w-80 border-r md:border-r-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0 mb-4 md:mb-0"> {/* Adjust width and add bottom margin for mobile */}
-        <h1 className="text-2xl font-semibold mb-4">Notes</h1>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="border-b border-neutral-200 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-100">Notes</h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Write, organize, and collaborate on your ideas
+            </p>
+          </div>
+          
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              className="btn-secondary"
+              onClick={handleCreateNewNote}
+              disabled={isSaving}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              <span className="hidden sm:inline">New Note</span>
+            </button>
+          </div>
+        </div>
 
-        <button
-          className="btn-primary mb-4 w-full flex items-center justify-center" // Use btn-primary class and make button full width
-          onClick={() => setShowModal(true)} // Open modal on button click
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add Note
-        </button>
-
-        {/* Add the modal component */}
-        <AddNoteModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveNote}
-          isSaving={isSaving}
-          existingTags={allAvailableTags} // Pass allAvailableTags to the modal
-        />
-
-
-        <div className="flex gap-4 mb-4">
-          <div className="relative w-full">
+        {/* Search and filter */}
+        <div className="flex flex-col lg:flex-row gap-4 mt-4">
+          <div className="relative flex-1 min-w-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -307,14 +243,14 @@ export default function NotesPage() {
             </div>
             <input
               type="text"
-              className="input-modern pl-10" // Use input-modern class with padding for the icon
-              placeholder="Search note content…"
+              className="input-modern pl-10 w-full"
+              placeholder="Search notes..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
             />
           </div>
           <select
-            className="input-modern"
+            className="input-modern flex-shrink-0"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
           >
@@ -324,43 +260,132 @@ export default function NotesPage() {
             ))}
           </select>
         </div>
-
-        {/* Render the NoteList component */}
-        <NoteList
-          notes={filteredNotes}
-          selectedNoteId={selectedNoteId}
-          onSelectNote={setSelectedNoteId}
-          selectedNotes={selectedNotes} // Pass selected notes state
-          onToggleSelectNote={handleToggleSelectNote} // Pass toggle select handler
-          onDeleteSelected={handleDeleteSelected} // Pass delete selected handler
-        />
-        {selectedNotes.length > 0 && (
-          <button
-            className="btn-secondary mt-4 w-full flex items-center justify-center" // Use btn-secondary class
-            onClick={handleExportSelected} // Call the export handler
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
-            </svg>
-            Export Selected as PDF ({selectedNotes.length})
-          </button>
-        )}
       </div>
 
-      {/* Right Column: Note Detail */}
-      <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
-        {selectedNote ? (
-          // Render the NoteDetail component if a note is selected
-          <NoteDetail
-            note={selectedNote}
-            onSave={handleUpdateNote}
-            onDelete={handleDeleteSelected} // Pass the delete handler (consider if this should delete single or selected)
-            isSaving={isSaving} // Pass isSaving state
-            existingTags={allAvailableTags} // Pass allAvailableTags to NoteDetail
-          />
-        ) : (
-          <p className="text-[var(--neutral-500)]">Select a note to view details.</p>
-        )}
+      {/* Main content */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        {/* Sidebar - Note list */}
+        <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex-shrink-0">
+          <div className="h-full overflow-y-auto">
+            <div className="p-4">
+              {filteredNotes.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-neutral-500 dark:text-neutral-400">No notes found</p>
+                  <button
+                    className="btn-primary mt-4"
+                    onClick={handleCreateNewNote}
+                  >
+                    Create your first note
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredNotes.map((note) => {
+                    const title = note.title || note.content.split('\n')[0].replace(/^#+\s*/, '').trim() || "Untitled Note";
+                    const preview = note.content.split('\n').slice(1).join('\n').substring(0, 100);
+                    
+                    return (
+                      <button
+                        key={note.id}
+                        className={`w-full text-left p-3 rounded-lg transition-colors ${
+                          selectedNoteId === note.id
+                            ? 'bg-primary-100 dark:bg-primary-900 border border-primary-200 dark:border-primary-700'
+                            : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                        }`}
+                        onClick={() => {
+                          setSelectedNoteId(note.id);
+                          setShowNewNote(false);
+                        }}
+                        disabled={isSaving}
+                      >
+                        <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                          {title}
+                        </div>
+                        {preview && (
+                          <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">
+                            {preview}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                            {new Date(note.createdAt).toLocaleDateString()}
+                          </span>
+                          {note.tags.length > 0 && (
+                            <div className="flex gap-1">
+                              {note.tags.slice(0, 2).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                              {note.tags.length > 2 && (
+                                <span className="px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded">
+                                  +{note.tags.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main editor area */}
+        <div className="flex-1 bg-white dark:bg-neutral-900 min-h-0 flex flex-col">
+          {showNewNote ? (
+            <div className="flex-1 overflow-hidden">
+              <RichNoteEditor
+                onSave={handleSaveNewNote}
+                isSaving={isSaving}
+                existingTags={allAvailableTags}
+                isNewNote={true}
+              />
+            </div>
+          ) : selectedNote ? (
+            <div className="flex-1 overflow-hidden">
+              <RichNoteEditor
+                note={selectedNote}
+                onSave={handleUpdateNote}
+                onDelete={handleDeleteNote}
+                isSaving={isSaving}
+                existingTags={allAvailableTags}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center flex-1 p-4">
+              <div className="text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 md:h-16 md:w-16 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="text-base md:text-lg font-medium text-neutral-900 dark:text-neutral-100 mb-2">
+                  Select a note to edit
+                </h3>
+                <p className="text-sm md:text-base text-neutral-500 dark:text-neutral-400 mb-4">
+                  Choose a note from the sidebar or create a new one
+                </p>
+                <button
+                  className="btn-primary"
+                  onClick={handleCreateNewNote}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  New Note
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
