@@ -8,13 +8,6 @@ export default function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
 
-export default function LoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
