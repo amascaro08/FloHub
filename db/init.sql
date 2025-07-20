@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
     "emailVerified" TIMESTAMP WITH TIME ZONE,
     image VARCHAR(255),
     password VARCHAR(255),
+    reset_token VARCHAR(255),
+    reset_token_expiry TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
