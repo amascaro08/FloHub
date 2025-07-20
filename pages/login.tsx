@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import AuthLayout from '@/components/ui/AuthLayout';
 import LoginForm from '@/components/ui/LoginForm';
+import PWAAuthDebug from '@/components/PWAAuthDebug';
 
 // Lazy load OAuthButtonGroup to avoid SSR crash
 
@@ -18,6 +19,7 @@ function LoginPage() {
         <a href="/terms" className="underline">Terms of Service</a> and{' '}
         <a href="/privacy" className="underline">Privacy Policy</a>.
       </p>
+      <PWAAuthDebug />
     </AuthLayout>
   );
 }

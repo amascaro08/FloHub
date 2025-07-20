@@ -53,7 +53,23 @@ const withPWA = require('next-pwa')({
       urlPattern: /\/api\/auth\/(?!refresh).*/i,
       handler: 'NetworkOnly',
       options: {
-        cacheName: 'auth-api'
+        cacheName: 'auth-api',
+        networkTimeoutSeconds: 10,
+        plugins: [
+          {
+            cacheWillUpdate: async ({ response }) => {
+              // Don't cache failed auth responses
+              return response.status === 200 ? response : null;
+            },
+            fetchDidFail: async ({ originalRequest, error }) => {
+              console.error('Auth API fetch failed:', error);
+              // For PWA, try to handle auth failures gracefully
+              if (originalRequest.url.includes('/login')) {
+                throw error; // Re-throw login errors to show proper error message
+              }
+            }
+          }
+        ]
       }
     }
   ]

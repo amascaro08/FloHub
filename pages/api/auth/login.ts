@@ -36,18 +36,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresIn: rememberMe ? '30d' : '24h', // 30 days if remember me, 24 hours if not
     });
 
+    // Check if this is a PWA request
+    const userAgent = req.headers['user-agent'] || '';
+    const isPWA = userAgent.includes('standalone') || req.headers['sec-fetch-site'] === 'none';
+
     const cookie = serialize('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'lax', // Changed to 'lax' for better PWA compatibility
+      sameSite: isPWA ? 'none' : 'lax', // Use 'none' for PWA to handle cross-context requests
       maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
       path: '/',
     });
 
+    // Add PWA-specific headers
     res.setHeader('Set-Cookie', cookie);
-    res.status(200).json({ message: 'Logged in successfully' });
+    
+    // Add headers to help with PWA caching and authentication
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    if (isPWA) {
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
+    res.status(200).json({ 
+      message: 'Logged in successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      },
+      isPWA
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error', error: error instanceof Error ? error.message : 'An unknown error occurred' });
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      details: process.env.NODE_ENV === 'development' ? {
+        jwtSecret: !!process.env.JWT_SECRET,
+        dbUrl: !!process.env.NEON_DATABASE_URL
+      } : undefined
+    });
   }
 }
