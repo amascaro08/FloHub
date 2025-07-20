@@ -19,7 +19,7 @@ Type `/` to access a variety of formatting options:
 - **`/h3`** - Small heading (visually rendered)
 - **`/bullet`** - Bullet list (visually rendered)
 - **`/numbered`** - Numbered list (visually rendered)
-- **`/table`** - Insert an interactive table with rich editing features
+- **`/table`** - Insert an interactive table with Mem.ai-like editing
 - **`/code`** - Code block (visually rendered)
 - **`/quote`** - Quote block (visually rendered)
 - **`/divider`** - Horizontal line (visually rendered)
@@ -28,7 +28,7 @@ Type `/` to access a variety of formatting options:
 
 ### 🎨 Seamless Visual Rendering
 - **Real-time formatting**: See your content beautifully formatted as you type
-- **Interactive Tables**: Rich table editor with add/remove columns/rows, editable cells, and hover controls
+- **Interactive Tables**: Mem.ai-style table editor with intuitive hover controls, editable cells, and smooth interactions
 - **Lists**: Bullet and numbered lists with proper indentation
 - **Headings**: Hierarchical headings with appropriate sizing
 - **Code blocks**: Syntax-highlighted code with proper formatting
@@ -43,7 +43,8 @@ Type `/` to access a variety of formatting options:
 - Collapsible sidebar on mobile devices
 - Dynamic layout that adapts to available screen space
 - Proper scrolling behavior on all screen sizes
-- Larger search bar and filter controls for better usability
+- Prominent search bar: Much larger search input that takes up available space
+- Better spacing: Improved padding and margins throughout the interface
 
 ### 🔄 Auto-Save
 - Notes are automatically saved as you type (2-second debounce)

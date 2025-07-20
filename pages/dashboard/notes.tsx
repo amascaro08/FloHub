@@ -211,7 +211,7 @@ export default function NotesPage() {
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <div className="border-b border-neutral-200 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 flex-shrink-0">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-100">Notes</h1>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
@@ -233,24 +233,24 @@ export default function NotesPage() {
           </div>
         </div>
 
-        {/* Search and filter */}
-        <div className="flex flex-col lg:flex-row gap-4 mt-4">
+        {/* Search and filter - Much larger search bar */}
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1 min-w-0">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               type="text"
-              className="input-modern pl-10 w-full h-12 text-base"
+              className="input-modern pl-12 w-full h-12 text-base"
               placeholder="Search notes..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
             />
           </div>
           <select
-            className="input-modern flex-shrink-0 h-12 text-base"
+            className="input-modern flex-shrink-0 h-12 text-base w-48"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
           >

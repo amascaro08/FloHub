@@ -27,7 +27,7 @@ interface SlashCommand {
   action: (editor: HTMLTextAreaElement, startPos: number, endPos: number) => void;
 }
 
-// Function to render markdown content
+// Function to render markdown content with proper styling
 const renderMarkdown = (content: string) => {
   const lines = content.split('\n');
   let inTable = false;
@@ -146,7 +146,7 @@ const renderMarkdown = (content: string) => {
   return result.join('');
 };
 
-// Function to render tables with rich features
+// Function to render tables with Mem.ai-like interface
 const renderTable = (rows: string[]) => {
   if (rows.length < 2) return '';
   
@@ -154,21 +154,21 @@ const renderTable = (rows: string[]) => {
   const separatorRow = rows[1];
   const dataRows = rows.slice(2);
   
-  let tableHtml = '<div class="overflow-x-auto my-4 relative group">';
-  tableHtml += '<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">';
-  tableHtml += '<button class="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 p-2 rounded text-xs" onclick="addTableRow(this)">+ Row</button>';
-  tableHtml += '<button class="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 p-2 rounded text-xs ml-1" onclick="addTableColumn(this)">+ Col</button>';
+  let tableHtml = '<div class="my-6 relative group">';
+  tableHtml += '<div class="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">';
+  tableHtml += '<button class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 px-2 py-1 rounded text-xs hover:bg-neutral-50 dark:hover:bg-neutral-700" onclick="addTableRow(this)">+ Row</button>';
+  tableHtml += '<button class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 px-2 py-1 rounded text-xs hover:bg-neutral-50 dark:hover:bg-neutral-700" onclick="addTableColumn(this)">+ Col</button>';
   tableHtml += '</div>';
-  tableHtml += '<table class="min-w-full border border-neutral-300 dark:border-neutral-600 rounded-lg">';
+  tableHtml += '<table class="w-full border-collapse border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">';
   
   // Headers
   tableHtml += '<thead class="bg-neutral-50 dark:bg-neutral-800">';
   tableHtml += '<tr>';
   headers.forEach((header, index) => {
-    tableHtml += `<th class="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600 relative group">
+    tableHtml += `<th class="border border-neutral-200 dark:border-neutral-600 p-3 text-left font-medium text-neutral-900 dark:text-neutral-100 relative group">
       <div class="flex items-center justify-between">
-        <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded">${header.trim()}</span>
-        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableColumn(this, ${index})">×</button>
+        <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block" contenteditable="true">${header.trim()}</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableColumn(this, ${index})">×</button>
       </div>
     </th>`;
   });
@@ -179,16 +179,16 @@ const renderTable = (rows: string[]) => {
   tableHtml += '<tbody>';
   dataRows.forEach((row, rowIndex) => {
     const cells = row.split('|').filter(cell => cell.trim());
-    tableHtml += `<tr class="border-b border-neutral-200 dark:border-neutral-700 group">`;
+    tableHtml += `<tr class="border-b border-neutral-200 dark:border-neutral-700 group hover:bg-neutral-50 dark:hover:bg-neutral-800">`;
     cells.forEach((cell, cellIndex) => {
-      tableHtml += `<td class="px-4 py-3 text-neutral-700 dark:text-neutral-300 relative">
+      tableHtml += `<td class="border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group">
         <div class="flex items-center justify-between">
-          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1">${cell.trim()}</span>
-          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${rowIndex}, ${cellIndex})">×</button>
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true">${cell.trim()}</span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${rowIndex}, ${cellIndex})">×</button>
         </div>
       </td>`;
     });
-    tableHtml += `<td class="px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity">
+    tableHtml += `<td class="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
       <button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowIndex})">×</button>
     </td>`;
     tableHtml += '</tr>';
@@ -227,22 +227,22 @@ const addTableRow = (button: HTMLElement) => {
     const rowCount = tbody.children.length;
     const colCount = tbody.children[0]?.children.length || 3;
     const newRow = document.createElement('tr');
-    newRow.className = 'border-b border-neutral-200 dark:border-neutral-700 group';
+    newRow.className = 'border-b border-neutral-200 dark:border-neutral-700 group hover:bg-neutral-50 dark:hover:bg-neutral-800';
     
     for (let i = 0; i < colCount - 1; i++) {
       const cell = document.createElement('td');
-      cell.className = 'px-4 py-3 text-neutral-700 dark:text-neutral-300 relative';
+      cell.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group';
       cell.innerHTML = `
         <div class="flex items-center justify-between">
-          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1"></span>
-          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${rowCount}, ${i})">×</button>
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${rowCount}, ${i})">×</button>
         </div>
       `;
       newRow.appendChild(cell);
     }
     
     const removeCell = document.createElement('td');
-    removeCell.className = 'px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity';
+    removeCell.className = 'p-2 opacity-0 group-hover:opacity-100 transition-opacity';
     removeCell.innerHTML = `<button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowCount})">×</button>`;
     newRow.appendChild(removeCell);
     
@@ -258,11 +258,11 @@ const addTableColumn = (button: HTMLElement) => {
   if (headers && rows) {
     // Add header
     const newHeader = document.createElement('th');
-    newHeader.className = 'px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600 relative group';
+    newHeader.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-left font-medium text-neutral-900 dark:text-neutral-100 relative group';
     newHeader.innerHTML = `
       <div class="flex items-center justify-between">
-        <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded">New Column</span>
-        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableColumn(this, ${headers.length - 1})">×</button>
+        <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block" contenteditable="true">New Column</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableColumn(this, ${headers.length - 1})">×</button>
       </div>
     `;
     headers[0].parentNode?.appendChild(newHeader);
@@ -271,11 +271,11 @@ const addTableColumn = (button: HTMLElement) => {
     rows.forEach(row => {
       const cells = row.querySelectorAll('td');
       const newCell = document.createElement('td');
-      newCell.className = 'px-4 py-3 text-neutral-700 dark:text-neutral-300 relative';
+      newCell.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group';
       newCell.innerHTML = `
         <div class="flex items-center justify-between">
-          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1"></span>
-          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${Array.from(rows).indexOf(row)}, ${cells.length})">×</button>
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${Array.from(rows).indexOf(row)}, ${cells.length})">×</button>
         </div>
       `;
       row.insertBefore(newCell, row.lastElementChild);
@@ -426,7 +426,7 @@ export default function RichNoteEditor({
     },
     {
       id: 'table',
-      title: 'Rich Table',
+      title: 'Table',
       description: 'Insert an interactive table',
       icon: '⊞',
       action: (editor, start, end) => {
@@ -574,20 +574,20 @@ export default function RichNoteEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Auto-generated title display */}
-      <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg flex-shrink-0">
-        <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+      <div className="mb-6 p-6 bg-neutral-50 dark:bg-neutral-800 rounded-lg flex-shrink-0">
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-neutral-100">
           {autoTitle}
         </h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
           Auto-generated from first line
         </p>
       </div>
 
-      {/* Rich text editor with visual rendering */}
+      {/* Rich text editor with proper cursor alignment */}
       <div className="flex-1 relative min-h-0">
         <div className="absolute inset-0 bg-transparent pointer-events-none z-10 overflow-y-auto">
           <div 
-            className="w-full h-full p-4 text-base md:text-lg leading-relaxed"
+            className="w-full h-full p-6 text-base md:text-lg leading-relaxed"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
           />
         </div>
@@ -598,15 +598,16 @@ export default function RichNoteEditor({
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
           placeholder="Start typing or type / for commands..."
-          className="w-full h-full p-4 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20 overflow-y-auto"
+          className="w-full h-full p-6 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20 overflow-y-auto"
           disabled={isSaving}
           style={{ 
-            fontSize: isMobile ? '16px' : '18px', // Prevent zoom on iOS
+            fontSize: isMobile ? '16px' : '18px',
             color: 'transparent',
             caretColor: 'black',
             background: 'transparent',
             fontFamily: 'inherit',
-            lineHeight: 'inherit'
+            lineHeight: '1.6',
+            letterSpacing: 'inherit'
           }}
         />
         
@@ -616,16 +617,16 @@ export default function RichNoteEditor({
             ref={slashCommandsRef}
             className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
             style={{
-              top: '50px',
-              left: isMobile ? '8px' : '16px',
-              right: isMobile ? '8px' : 'auto',
-              maxWidth: isMobile ? 'calc(100vw - 16px)' : 'auto'
+              top: '60px',
+              left: isMobile ? '24px' : '24px',
+              right: isMobile ? '24px' : 'auto',
+              maxWidth: isMobile ? 'calc(100vw - 48px)' : 'auto'
             }}
           >
             {slashCommands.map((command, index) => (
               <button
                 key={command.id}
-                className={`w-full px-3 md:px-4 py-2 md:py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 md:gap-3 ${
+                className={`w-full px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-3 ${
                   index === slashCommandIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
                 }`}
                 onClick={() => {
@@ -635,14 +636,14 @@ export default function RichNoteEditor({
                   }
                 }}
               >
-                <span className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-xs md:text-sm font-mono flex-shrink-0">
+                <span className="w-8 h-8 flex items-center justify-center bg-neutral-200 dark:bg-neutral-600 rounded text-sm font-mono flex-shrink-0">
                   {command.icon}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm md:text-base truncate">
+                  <div className="font-medium text-neutral-900 dark:text-neutral-100 text-base truncate">
                     {command.title}
                   </div>
-                  <div className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                     {command.description}
                   </div>
                 </div>
@@ -653,8 +654,8 @@ export default function RichNoteEditor({
       </div>
 
       {/* Bottom toolbar */}
-      <div className="border-t border-neutral-200 dark:border-neutral-700 p-3 md:p-4 bg-neutral-50 dark:bg-neutral-800 flex-shrink-0">
-        <div className="flex flex-col gap-3 md:gap-4">
+      <div className="border-t border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800 flex-shrink-0">
+        <div className="flex flex-col gap-4">
           {/* Tags */}
           <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
