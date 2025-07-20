@@ -4,6 +4,9 @@ import { getUserById } from "@/lib/user";
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
 import { parseISO } from 'date-fns'; // Import parseISO
 import { CalendarSource } from '../../types/app'; // Import CalendarSource type
+import { db } from '../../lib/drizzle';
+import { accounts } from '../../db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export type CalendarEvent = {
   id: string;
@@ -19,6 +22,47 @@ export type CalendarEvent = {
 
 type ErrorRes = { error: string };
 
+// Function to refresh Google access token
+async function refreshGoogleToken(userId: number, refreshToken: string): Promise<string | null> {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to refresh Google token:', response.status);
+      return null;
+    }
+
+    const tokenData = await response.json();
+    
+    // Update the access token in the database
+    await db.update(accounts)
+      .set({
+        access_token: tokenData.access_token,
+        expires_at: tokenData.expires_in ? Math.floor(Date.now() / 1000) + tokenData.expires_in : null,
+      })
+      .where(and(
+        eq(accounts.userId, userId),
+        eq(accounts.provider, 'google')
+      ));
+
+    return tokenData.access_token;
+  } catch (error) {
+    console.error('Error refreshing Google token:', error);
+    return null;
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CalendarEvent[] | ErrorRes>
@@ -33,10 +77,28 @@ export default async function handler(
       return res.status(401).json({ error: "User not found" });
     }
 
-    // In a real scenario, you would get the access token from the user object
-    // or from a separate token management system integrated with Neon Auth.
-    // For now, we'll use a placeholder or assume it's handled elsewhere if needed for Google API.
-    const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE"; // Placeholder
+    // Get Google OAuth access token from user's accounts
+    const googleAccount = user.accounts?.find(account => account.provider === 'google');
+    let accessToken = googleAccount?.access_token;
+    
+    // Check if token is expired and refresh if needed
+    if (googleAccount && accessToken) {
+      const expiresAt = googleAccount.expires_at;
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      if (expiresAt && expiresAt <= currentTime && googleAccount.refresh_token) {
+        console.log('Google access token expired, attempting to refresh...');
+        accessToken = await refreshGoogleToken(decoded.userId, googleAccount.refresh_token);
+        if (!accessToken) {
+          console.warn("Failed to refresh Google access token");
+        }
+      }
+    }
+    
+    if (!accessToken) {
+      console.warn("No Google access token found for user. Google Calendar features will be unavailable.");
+    }
+
     const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true" } = req.query; // Extract timezone and useCalendarSources flag
 
     // Normalize and validate dates
@@ -113,6 +175,12 @@ export default async function handler(
       const source = googleSources.find(s => s.sourceId === id);
       const tags = source?.tags || [];
       const sourceName = source?.name || "Google Calendar";
+      
+      // Skip Google Calendar requests if no access token is available
+      if (!accessToken) {
+        console.warn(`Skipping Google Calendar ${id} - no access token available`);
+        continue;
+      }
       
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
         id
@@ -302,224 +370,4 @@ export default async function handler(
                 if (Array.isArray(msEvents)) {
                   // Add the events to our list
                   allEvents.push(...msEvents);
-                  console.log(`Added ${msEvents.length} events from Microsoft Calendar:`, sourceName);
-                  continue; // Skip the placeholder
-                }
-              }
-            } catch (msError) {
-              console.error("Error fetching Microsoft events:", msError);
-            }
-          }
-          
-          // If we couldn't fetch real events, add a placeholder
-          // Add a placeholder event to show the OAuth calendar in the UI
-          const placeholderEvent = {
-            id: `o365_oauth_${source.id}_${Date.now()}`,
-            calendarId: `o365_${source.id}`,
-            summary: "Microsoft OAuth Calendar Integration",
-            start: { dateTime: new Date().toISOString() },
-            end: { dateTime: new Date(Date.now() + 3600000).toISOString() }, // 1 hour later
-            source: isWork ? "work" : "personal",
-            description: "This is a placeholder for Microsoft OAuth Calendar integration. In a production environment, this would fetch real events from Microsoft Graph API.",
-            calendarName: sourceName,
-            tags,
-          };
-          
-          // Only add the placeholder if we're in development mode or if explicitly requested
-          if (process.env.NODE_ENV === "development" || req.query.showPlaceholders === "true") {
-            allEvents.push(placeholderEvent);
-          }
-          
-          console.log("Added placeholder for Microsoft OAuth Calendar:", sourceName);
-        } catch (e) {
-          console.error("Error processing Microsoft OAuth Calendar source:", e);
-        }
-      }
-    }
-    
-    // Process Apple Calendar sources
-    const appleSources = calendarSources.filter(source => source.type === "apple");
-    if (appleSources.length > 0) {
-      for (const source of appleSources) {
-        if (!source.isEnabled) continue;
-        
-        const tags = source.tags || [];
-        const sourceName = source.name || "Apple Calendar";
-        const isWork = tags.includes("work");
-        const isPersonal = tags.includes("personal") || (!isWork && tags.length === 0);
-        
-        try {
-          // For Apple Calendar integration, we would need to implement a server-side
-          // integration with Apple's Calendar API or use a proxy service.
-          // Since this is beyond the scope of this implementation, we'll add a placeholder
-          // event to show the calendar in the UI
-          
-          const placeholderEvent = {
-            id: `apple_placeholder_${source.id}`,
-            calendarId: `apple_${source.id}`,
-            summary: "Apple Calendar Integration",
-            start: { dateTime: new Date().toISOString() },
-            end: { dateTime: new Date(Date.now() + 3600000).toISOString() }, // 1 hour later
-            source: isWork ? "work" : "personal",
-            description: "This is a placeholder for Apple Calendar integration. To see your actual Apple Calendar events, you'll need to set up calendar sync in your device settings.",
-            calendarName: sourceName,
-            tags,
-          };
-          
-          // Only add the placeholder if we're in development mode or if explicitly requested
-          if (process.env.NODE_ENV === "development" || req.query.showPlaceholders === "true") {
-            allEvents.push(placeholderEvent);
-          }
-          
-          console.log("Added placeholder for Apple Calendar:", sourceName);
-        } catch (e) {
-          console.error("Error processing Apple Calendar source:", e);
-        }
-      }
-    }
-    
-    // Process Other Calendar sources
-    const otherSources = calendarSources.filter(source => source.type === "other");
-    if (otherSources.length > 0) {
-      for (const source of otherSources) {
-        if (!source.isEnabled) continue;
-        
-        const tags = source.tags || [];
-        const sourceName = source.name || "Other Calendar";
-        const isWork = tags.includes("work");
-        const isPersonal = tags.includes("personal") || (!isWork && tags.length === 0);
-        
-        try {
-          // For other calendar types, we would need to implement specific integrations
-          // based on the calendar type. Since this is beyond the scope of this implementation,
-          // we'll add a placeholder event to show the calendar in the UI
-          
-          const placeholderEvent = {
-            id: `other_placeholder_${source.id}`,
-            calendarId: `other_${source.id}`,
-            summary: "External Calendar Integration",
-            start: { dateTime: new Date().toISOString() },
-            end: { dateTime: new Date(Date.now() + 3600000).toISOString() }, // 1 hour later
-            source: isWork ? "work" : "personal",
-            description: "This is a placeholder for external calendar integration. To see your actual events, you'll need to set up calendar sync with this provider.",
-            calendarName: sourceName,
-            tags,
-          };
-          
-          // Only add the placeholder if we're in development mode or if explicitly requested
-          if (process.env.NODE_ENV === "development" || req.query.showPlaceholders === "true") {
-            allEvents.push(placeholderEvent);
-          }
-          
-          console.log("Added placeholder for Other Calendar:", sourceName);
-        } catch (e) {
-          console.error("Error processing Other Calendar source:", e);
-        }
-      }
-    }
-
-    return res.status(200).json(allEvents);
-  } else if (req.method === "POST") {
-    // Handle event creation
-    const decodedPOST = auth(req);
-    if (!decodedPOST) {
-      return res.status(401).json({ error: "Not signed in" });
-    }
-    const user = await getUserById(decodedPOST.userId);
-    if (!user?.email) {
-      return res.status(401).json({ error: "User not found" });
-    }
-    // Placeholder for accessToken, as it's not directly available from `auth`
-    const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
-
-    const { calendarId, summary, start, end, description, source, tags } = req.body as {
-      calendarId: string;
-      summary: string;
-      start: string;
-      end: string;
-      description?: string;
-      source?: "personal" | "work";
-      tags?: string[];
-    };
-
-    if (!summary || !start || !end) {
-      return res.status(400).json({ error: "Missing required event fields" });
-    }
-
-    // Determine which calendar API to use based on calendarId
-    if (calendarId.startsWith('o365_')) {
-      // For O365 calendars, we would need to use the Microsoft Graph API
-      // This is beyond the scope of this implementation
-      return res.status(501).json({ error: "Creating events in O365 calendars is not yet implemented" });
-    } else if (calendarId.startsWith('apple_')) {
-      // For Apple calendars, we would need to use Apple's Calendar API
-      // This is beyond the scope of this implementation
-      return res.status(501).json({ error: "Creating events in Apple calendars is not yet implemented" });
-    } else if (calendarId.startsWith('other_')) {
-      // For other calendar types, we would need specific implementations
-      // This is beyond the scope of this implementation
-      return res.status(501).json({ error: "Creating events in this calendar type is not yet implemented" });
-    }
-    
-    // For Google Calendar, use the Google Calendar API
-    try {
-      // Build the event object for Google Calendar API
-      const eventData: any = {
-        summary,
-        description: description || "",
-        start: {
-          dateTime: start,
-          timeZone: 'UTC',
-        },
-        end: {
-          dateTime: end,
-          timeZone: 'UTC',
-        },
-      };
-      
-      // Add extended properties for tags and source
-      if (tags && tags.length > 0) {
-        eventData.extendedProperties = eventData.extendedProperties || {};
-        eventData.extendedProperties.private = eventData.extendedProperties.private || {};
-        eventData.extendedProperties.private.tags = JSON.stringify(tags);
-      }
-      
-      if (source) {
-        eventData.extendedProperties = eventData.extendedProperties || {};
-        eventData.extendedProperties.private = eventData.extendedProperties.private || {};
-        eventData.extendedProperties.private.source = source;
-      }
-      
-      // Call the Google Calendar API to create the event
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error creating event:", errorData);
-        return res.status(response.status).json({ error: errorData.error?.message || "Failed to create event" });
-      }
-      
-      const newEvent = await response.json();
-      
-      // Add our custom fields to the response
-      newEvent.source = source || "personal";
-      newEvent.tags = tags || [];
-      
-      return res.status(201).json([newEvent as any]);
-    } catch (error) {
-      console.error("Error creating event:", error);
-      return res.status(500).json({ error: "Failed to create event" });
-    }
-  } else {
-    res.setHeader("Allow", "GET, POST");
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
-}
+                  console.log(`

@@ -14,6 +14,30 @@ if (!res.ok) {
 return res.json();
 };
 
+// Function to extract Microsoft Teams meeting link from event description
+const extractTeamsLink = (description: string): string | null => {
+  if (!description) return null;
+  
+  // Common patterns for Teams meeting links
+  const patterns = [
+    /https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"'\s]+/gi,
+    /https:\/\/teams\.live\.com\/meet\/[^"'\s]+/gi,
+    /<a[^>]+href="(https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"]+)"/gi,
+    /<a[^>]+href="(https:\/\/teams\.live\.com\/meet\/[^"]+)"/gi
+  ];
+  
+  for (const pattern of patterns) {
+    const match = pattern.exec(description);
+    if (match) {
+      // Return the full URL, cleaning up any HTML encoding
+      const url = match[1] || match[0];
+      return url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    }
+  }
+  
+  return null;
+};
+
 // Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
    const { user } = useUser();
@@ -592,6 +616,29 @@ const CalendarPage = () => {
                   </div>
                 </div>
               )}
+              
+              {/* Microsoft Teams Meeting Link */}
+              {(() => {
+                const teamsLink = extractTeamsLink(selectedEvent.description || '');
+                return teamsLink ? (
+                  <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M24 12.01c0-1.02-.83-1.85-1.85-1.85H20.3c.13-.6.2-1.22.2-1.85C20.5 4.15 16.35 0 11.19 0S1.88 4.15 1.88 8.31c0 .63.07 1.25.2 1.85H.23C.1 10.16 0 11.07 0 12.01c0 6.63 5.37 12 12 12s12-5.37 12-12zM11.19 2.25c3.38 0 6.12 2.74 6.12 6.12s-2.74 6.12-6.12 6.12S5.07 11.75 5.07 8.37s2.74-6.12 6.12-6.12z"/>
+                    </svg>
+                    <div>
+                      <span className="font-medium text-blue-700 dark:text-blue-300">Microsoft Teams Meeting:</span>
+                      <a 
+                        href={teamsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                      >
+                        Join Meeting
+                      </a>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
               
               {/* Description */}
               {selectedEvent.description && (
