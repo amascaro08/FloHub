@@ -6,9 +6,9 @@ dotenv.config({ path: '.env.local' });
 export default {
   schema: './db/schema.ts',
   out: './db/migrations',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.NEON_DATABASE_URL!,
+    url: process.env.NEON_DATABASE_URL!,
   },
   verbose: true,
   strict: true,
