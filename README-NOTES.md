@@ -11,30 +11,30 @@ The notes functionality has been completely redesigned to provide a Notion-like 
 - No need to manually enter a title - just start typing
 - Titles update in real-time as you edit the first line
 
-### ✨ Seamless WYSIWYG Editor
+### ✨ Rich Text Editor with Preview Mode
 Type `/` to access a variety of formatting options:
 
-- **`/h1`** - Large heading (visually rendered)
-- **`/h2`** - Medium heading (visually rendered)
-- **`/h3`** - Small heading (visually rendered)
-- **`/bullet`** - Bullet list (visually rendered)
-- **`/numbered`** - Numbered list (visually rendered)
+- **`/h1`** - Large heading
+- **`/h2`** - Medium heading
+- **`/h3`** - Small heading
+- **`/bullet`** - Bullet list
+- **`/numbered`** - Numbered list
 - **`/table`** - Insert an interactive table with Mem.ai-like editing
-- **`/code`** - Code block (visually rendered)
-- **`/quote`** - Quote block (visually rendered)
-- **`/divider`** - Horizontal line (visually rendered)
+- **`/code`** - Code block
+- **`/quote`** - Quote block
+- **`/divider`** - Horizontal line
 
-**What You See Is What You Get**: Content is beautifully formatted as you type - no need to switch between edit and preview modes
+**Edit & Preview Modes**: Toggle between editing and preview modes to see your content beautifully formatted
 
-### 🎨 Seamless Visual Rendering
-- **Real-time formatting**: See your content beautifully formatted as you type
+### 🎨 Rich Content Preview
+- **Preview mode**: Toggle to see beautifully formatted content
 - **Interactive Tables**: Mem.ai-style table editor with intuitive hover controls, editable cells, and smooth interactions
 - **Lists**: Bullet and numbered lists with proper indentation
 - **Headings**: Hierarchical headings with appropriate sizing
 - **Code blocks**: Syntax-highlighted code with proper formatting
 - **Quotes**: Styled blockquotes with left border
 - **Dividers**: Clean horizontal lines for content separation
-- **No mode switching**: Edit and see formatted content simultaneously
+- **Easy switching**: Toggle between edit and preview modes
 
 ### 📱 Mobile-First Design
 - Fully responsive design that works on all devices

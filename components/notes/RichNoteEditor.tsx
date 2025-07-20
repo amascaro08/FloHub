@@ -336,6 +336,7 @@ export default function RichNoteEditor({
   const [slashCommandIndex, setSlashCommandIndex] = useState(0);
   const [slashCommandPosition, setSlashCommandPosition] = useState({ start: 0, end: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandsRef = useRef<HTMLDivElement>(null);
 
@@ -583,36 +584,32 @@ export default function RichNoteEditor({
         </p>
       </div>
 
-      {/* Rich text editor with proper cursor alignment */}
+      {/* Rich text editor */}
       <div className="flex-1 relative min-h-0">
-        <div className="absolute inset-0 bg-transparent pointer-events-none z-10 overflow-y-auto">
-          <div 
-            className="w-full h-full p-6 text-base md:text-lg leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+        {isPreviewMode ? (
+          <div className="w-full h-full p-6 text-base md:text-lg leading-relaxed text-neutral-700 dark:text-neutral-300 overflow-y-auto">
+            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+          </div>
+        ) : (
+          <textarea
+            ref={editorRef}
+            value={content}
+            onChange={handleContentChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Start typing or type / for commands..."
+            className="w-full h-full p-6 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 overflow-y-auto"
+            disabled={isSaving}
+            style={{ 
+              fontSize: isMobile ? '16px' : '18px',
+              fontFamily: 'inherit',
+              lineHeight: '1.6',
+              letterSpacing: 'inherit'
+            }}
           />
-        </div>
-        
-        <textarea
-          ref={editorRef}
-          value={content}
-          onChange={handleContentChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Start typing or type / for commands..."
-          className="w-full h-full p-6 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-transparent relative z-20 overflow-y-auto"
-          disabled={isSaving}
-          style={{ 
-            fontSize: isMobile ? '16px' : '18px',
-            color: 'transparent',
-            caretColor: 'black',
-            background: 'transparent',
-            fontFamily: 'inherit',
-            lineHeight: '1.6',
-            letterSpacing: 'inherit'
-          }}
-        />
+        )}
         
         {/* Slash commands dropdown */}
-        {showSlashCommands && (
+        {showSlashCommands && !isPreviewMode && (
           <div
             ref={slashCommandsRef}
             className="absolute z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
@@ -695,6 +692,29 @@ export default function RichNoteEditor({
 
           {/* Action buttons */}
           <div className="flex gap-2 flex-shrink-0">
+            <button
+              type="button"
+              className="btn-secondary flex-1 md:flex-none"
+              onClick={() => setIsPreviewMode(!isPreviewMode)}
+              disabled={isSaving}
+            >
+              {isPreviewMode ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="hidden sm:inline">Edit</span>
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span className="hidden sm:inline">Preview</span>
+                </>
+              )}
+            </button>
             {note?.id && onDelete && (
               <button
                 type="button"
