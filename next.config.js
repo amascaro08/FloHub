@@ -53,8 +53,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /\/api\/auth\/(?!refresh).*/i,
       handler: 'NetworkOnly',
       options: {
-        cacheName: 'auth-api',
-        networkTimeoutSeconds: 10
+        cacheName: 'auth-api'
       }
     }
   ]
