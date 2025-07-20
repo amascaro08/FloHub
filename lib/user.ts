@@ -14,6 +14,9 @@ export async function getUserById(userId: number) {
       accounts: {
         columns: {
           access_token: true,
+          provider: true,
+          refresh_token: true,
+          expires_at: true,
         },
       },
     },

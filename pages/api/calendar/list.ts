@@ -25,7 +25,8 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "User not found" });
   }
-  const accessToken = user.accounts[0]?.access_token;
+  const googleAccount = user.accounts?.find(account => account.provider === 'google');
+  const accessToken = googleAccount?.access_token;
 
   // Call Google Calendar API
   const resp = await fetch(

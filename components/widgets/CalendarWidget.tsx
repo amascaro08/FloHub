@@ -35,6 +35,30 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+// Function to extract Microsoft Teams meeting link from event description
+const extractTeamsLink = (description: string): string | null => {
+  if (!description) return null;
+  
+  // Common patterns for Teams meeting links
+  const patterns = [
+    /https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"'\s]+/gi,
+    /https:\/\/teams\.live\.com\/meet\/[^"'\s]+/gi,
+    /<a[^>]+href="(https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"]+)"/gi,
+    /<a[^>]+href="(https:\/\/teams\.live\.com\/meet\/[^"]+)"/gi
+  ];
+  
+  for (const pattern of patterns) {
+    const match = pattern.exec(description);
+    if (match) {
+      // Return the full URL, cleaning up any HTML encoding
+      const url = match[1] || match[0];
+      return url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    }
+  }
+  
+  return null;
+};
+
 // Fetcher specifically for calendar events API
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   const res = await fetch(url, { credentials: 'include' });

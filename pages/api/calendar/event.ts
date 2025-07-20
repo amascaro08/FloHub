@@ -17,7 +17,8 @@ export default async function handler(
   if (!user) {
     return res.status(401).json({ error: "User not found" });
   }
-  const accessToken = user.accounts[0]?.access_token;
+  const googleAccount = user.accounts?.find(account => account.provider === 'google');
+  const accessToken = googleAccount?.access_token;
 
   // POST = create, PUT = update
   if (req.method === "POST") {
