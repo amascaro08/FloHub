@@ -1,0 +1,806 @@
+[{
+  "Table": "accounts",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('accounts_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "userId",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "type",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "provider",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "providerAccountId",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "refresh_token",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "access_token",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "expires_at",
+  "Type": "bigint",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "id_token",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "scope",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "session_state",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "accounts",
+  "Column": "token_type",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "analytics",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('analytics_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "analytics",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "analytics",
+  "Column": "event_type",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "analytics",
+  "Column": "event_data",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "analytics",
+  "Column": "timestamp",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "conversations",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('conversations_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "conversations",
+  "Column": "user_id",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "conversations",
+  "Column": "messages",
+  "Type": "jsonb",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "conversations",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('\"habitCompletions_id_seq\"'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "habitId",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "userId",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "date",
+  "Type": "text",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "completed",
+  "Type": "boolean",
+  "Nullable": "YES",
+  "Default": "false",
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "notes",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habitCompletions",
+  "Column": "timestamp",
+  "Type": "timestamp without time zone",
+  "Nullable": "YES",
+  "Default": "now()",
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('habits_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "userId",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "name",
+  "Type": "text",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "description",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "frequency",
+  "Type": "text",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "customDays",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "createdAt",
+  "Type": "timestamp without time zone",
+  "Nullable": "YES",
+  "Default": "now()",
+  "Schema": "public"
+}, {
+  "Table": "habits",
+  "Column": "updatedAt",
+  "Type": "timestamp without time zone",
+  "Nullable": "YES",
+  "Default": "now()",
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('journal_activities_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "date",
+  "Type": "date",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "activities",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_activities",
+  "Column": "updated_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('journal_entries_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "date",
+  "Type": "date",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "content",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_entries",
+  "Column": "updated_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('journal_moods_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "date",
+  "Type": "date",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "emoji",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "label",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "tags",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_moods",
+  "Column": "updated_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('journal_sleep_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "date",
+  "Type": "date",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "quality",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "hours",
+  "Type": "integer",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "journal_sleep",
+  "Column": "updated_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('notes_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "title",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "content",
+  "Type": "text",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "tags",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "source",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "event_id",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "event_title",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "is_adhoc",
+  "Type": "boolean",
+  "Nullable": "YES",
+  "Default": "false",
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "actions",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "agenda",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "ai_summary",
+  "Type": "text",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "notes",
+  "Column": "updatedAt",
+  "Type": "timestamp without time zone",
+  "Nullable": "YES",
+  "Default": "now()",
+  "Schema": "public"
+}, {
+  "Table": "sessions",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('sessions_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "sessions",
+  "Column": "userId",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "sessions",
+  "Column": "sessionToken",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "sessions",
+  "Column": "expires",
+  "Type": "timestamp with time zone",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('tasks_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "text",
+  "Type": "text",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "done",
+  "Type": "boolean",
+  "Nullable": "YES",
+  "Default": "false",
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "due_date",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "source",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "tasks",
+  "Column": "tags",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "user_email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "flo_cat_style",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": "'default'::character varying",
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "flo_cat_personality",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "preferred_name",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "selected_cals",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "default_view",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "custom_range",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "power_automate_url",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "global_tags",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "active_widgets",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "calendar_sources",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "timezone",
+  "Type": "character varying",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "tags",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "widgets",
+  "Type": "ARRAY",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "calendar_settings",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "notification_settings",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "flo_cat_settings",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "user_settings",
+  "Column": "layouts",
+  "Type": "jsonb",
+  "Nullable": "YES",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "users",
+  "Column": "id",
+  "Type": "integer",
+  "Nullable": "NO",
+  "Default": "nextval('users_id_seq'::regclass)",
+  "Schema": "public"
+}, {
+  "Table": "users",
+  "Column": "name",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "users",
+  "Column": "email",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "users",
+  "Column": "password",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "users",
+  "Column": "created_at",
+  "Type": "timestamp with time zone",
+  "Nullable": "YES",
+  "Default": "CURRENT_TIMESTAMP",
+  "Schema": "public"
+}, {
+  "Table": "verification_tokens",
+  "Column": "identifier",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "verification_tokens",
+  "Column": "token",
+  "Type": "character varying",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}, {
+  "Table": "verification_tokens",
+  "Column": "expires",
+  "Type": "timestamp with time zone",
+  "Nullable": "NO",
+  "Default": null,
+  "Schema": "public"
+}]
