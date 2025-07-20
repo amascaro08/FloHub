@@ -57,6 +57,14 @@ const { user, isLoading } = useUser()
   if (isLoading) {
     return <div>Loading...</div>; // Or any other fallback UI
   }
+
+  // Don't render widget if user is not authenticated
+  if (!user) {
+    return <div className="p-4 border rounded-lg shadow-sm text-yellow-600">
+      Please log in to view your daily summary.
+    </div>;
+  }
+  
   const userName = user?.name || "User";
   
   // Check if we're on the client side

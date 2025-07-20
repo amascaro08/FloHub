@@ -42,6 +42,8 @@ export default async function handler(
       const { accounts } = await import("@/db/schema");
       const { eq, and } = await import("drizzle-orm");
       
+      console.log("Looking for Google OAuth tokens for user ID:", decoded.userId);
+      
       // Query the accounts table for Google OAuth tokens
       const googleAccount = await db.query.accounts.findFirst({
         where: and(
@@ -55,20 +57,28 @@ export default async function handler(
         }
       });
       
+      console.log("Google account found:", googleAccount ? "Yes" : "No");
+      
       if (googleAccount?.access_token) {
         // Check if token is still valid (if expires_at is available)
         const now = Math.floor(Date.now() / 1000);
         if (!googleAccount.expires_at || googleAccount.expires_at > now) {
           accessToken = googleAccount.access_token;
+          console.log("Using valid Google access token");
         } else if (googleAccount.refresh_token) {
-          // TODO: Implement token refresh logic here
           console.log("Google token expired, refresh token available but refresh not implemented");
+        } else {
+          console.log("Google token expired and no refresh token available");
         }
+      } else {
+        console.log("No Google access token found for user");
       }
     } catch (error) {
       console.error("Error retrieving Google OAuth tokens:", error);
     }
     const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true" } = req.query; // Extract timezone and useCalendarSources flag
+    
+    console.log("Calendar API request query:", { calendarId, timeMin, timeMax, o365Url, timezone, useCalendarSources });
 
     // Normalize and validate dates
     const safeTimeMin = typeof timeMin === "string" ? timeMin : "";
@@ -106,13 +116,38 @@ export default async function handler(
         if (userSettingsRes.ok) {
           const userSettings = await userSettingsRes.json();
           
+          console.log("User settings loaded:", {
+            hasCalendarSources: !!userSettings.calendarSources,
+            calendarSourcesLength: userSettings.calendarSources?.length || 0,
+            selectedCals: userSettings.selectedCals,
+            powerAutomateUrl: userSettings.powerAutomateUrl
+          });
+          
           if (userSettings.calendarSources && userSettings.calendarSources.length > 0) {
-            // Use only enabled calendar sources
-            calendarSources = userSettings.calendarSources.filter((source: CalendarSource) => source.isEnabled);
+            // Validate and filter calendar sources
+            const validTypes = ["google", "o365", "apple", "other"];
+            const validSources = userSettings.calendarSources.filter((source: CalendarSource) => {
+              const isValid = source && 
+                             typeof source.type === 'string' && 
+                             validTypes.includes(source.type) &&
+                             source.isEnabled;
+              if (!isValid) {
+                console.warn("Invalid calendar source detected:", source);
+              }
+              return isValid;
+            });
+            
+            if (validSources.length !== userSettings.calendarSources.length) {
+              console.log(`Filtered out ${userSettings.calendarSources.length - validSources.length} invalid calendar sources`);
+            }
+            
+            calendarSources = validSources;
+            console.log("Using calendar sources:", calendarSources.length, "enabled sources");
           } else {
             // Fall back to legacy settings
             legacyCalendarIds = userSettings.selectedCals || [];
             legacyO365Url = userSettings.powerAutomateUrl || null;
+            console.log("Using legacy calendar settings:", { legacyCalendarIds, legacyO365Url });
           }
         } else {
           console.error("Failed to fetch user settings:", userSettingsRes.status);
@@ -138,7 +173,7 @@ export default async function handler(
     const googleSources = calendarSources.filter(source => source.type === "google");
     const googleCalendarIds = googleSources.length > 0 
       ? googleSources.map(source => source.sourceId)
-      : legacyCalendarIds;
+      : legacyCalendarIds.filter(id => id && id.trim() !== ""); // Filter out empty/invalid IDs
 
     for (const id of googleCalendarIds) {
       // Skip Google Calendar API calls if no access token is available

@@ -71,6 +71,13 @@ function CalendarWidget() {
     return <div>Loading...</div>; // Or any other fallback UI
   }
 
+  // Don't render calendar widget if user is not authenticated
+  if (!user) {
+    return <div className="p-4 border rounded-lg shadow-sm text-yellow-600">
+      Please log in to view your calendar events.
+    </div>;
+  }
+
   // Fetch persistent user settings via SWR
   const { data: loadedSettings, error: settingsError } =
     useSWR<CalendarSettings>(user ? "/api/userSettings" : null, fetcher);
