@@ -112,6 +112,92 @@
   background-color: var(--surface);
 }
 
+/* React-select dark mode styling */
+.dark .react-select__control {
+  background-color: var(--surface) !important;
+  border-color: var(--neutral-600) !important;
+  box-shadow: none !important;
+}
+
+.dark .react-select__control:hover {
+  border-color: var(--neutral-500) !important;
+}
+
+.dark .react-select__control--is-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 1px var(--primary) !important;
+}
+
+.dark .react-select__menu {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--neutral-600) !important;
+  box-shadow: 0 4px 6px var(--shadow-color) !important;
+}
+
+.dark .react-select__option {
+  background-color: var(--surface) !important;
+  color: var(--fg) !important;
+}
+
+.dark .react-select__option:hover {
+  background-color: var(--surface-secondary) !important;
+}
+
+.dark .react-select__option--is-focused {
+  background-color: var(--surface-secondary) !important;
+}
+
+.dark .react-select__option--is-selected {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+.dark .react-select__input-container {
+  color: var(--fg) !important;
+}
+
+.dark .react-select__placeholder {
+  color: var(--neutral-400) !important;
+}
+
+.dark .react-select__single-value {
+  color: var(--fg) !important;
+}
+
+.dark .react-select__multi-value {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+.dark .react-select__multi-value__label {
+  color: white !important;
+}
+
+.dark .react-select__multi-value__remove:hover {
+  background-color: var(--primary-dark) !important;
+  color: white !important;
+}
+
+.dark .react-select__indicator-separator {
+  background-color: var(--neutral-600) !important;
+}
+
+.dark .react-select__dropdown-indicator {
+  color: var(--neutral-400) !important;
+}
+
+.dark .react-select__dropdown-indicator:hover {
+  color: var(--neutral-300) !important;
+}
+
+.dark .react-select__clear-indicator {
+  color: var(--neutral-400) !important;
+}
+
+.dark .react-select__clear-indicator:hover {
+  color: var(--neutral-300) !important;
+}
+
 /* Widget header styles */
 .widget-header {
   @apply font-semibold text-lg mb-3 pb-2 border-b border-neutral-200

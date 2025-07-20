@@ -332,13 +332,13 @@ export default function MeetingsPage() {
         <div className="flex gap-4 mb-4">
           <input
             type="text"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
+            className="input-modern"
             placeholder="Search meeting notes…"
             value={searchContent}
             onChange={(e) => setSearchContent(e.target.value)}
           />
            <select
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-[var(--fg)] leading-tight focus:outline-none focus:shadow-outline bg-transparent" // Use theme color and transparent background
+            className="input-modern"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
            >
