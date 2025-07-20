@@ -68,7 +68,10 @@ const HabitCalendar = () => {
   // Load habits and completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.primaryEmail) return;
+      if (!user?.primaryEmail) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       try {
@@ -95,7 +98,7 @@ const HabitCalendar = () => {
     };
     
     loadData();
-  }, [user, year, month]);
+  }, [user?.primaryEmail, currentDate]);
 
   // Handle month navigation
   const goToPreviousMonth = () => {
@@ -351,7 +354,7 @@ const HabitCalendar = () => {
     );
   };
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
