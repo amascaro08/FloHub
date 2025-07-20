@@ -1,8 +1,8 @@
-# Notes Functionality - Notion-like Editor
+# Notes Functionality - Clean, Mem.ai-Inspired Editor
 
 ## Overview
 
-The notes functionality has been completely redesigned to provide a Notion-like experience with a single-page editor, auto-generated titles, and rich formatting capabilities.
+The notes functionality has been completely redesigned with a clean, Mem.ai-inspired layout featuring a left sidebar for navigation and a right panel for seamless rich text editing.
 
 ## Key Features
 
@@ -11,7 +11,7 @@ The notes functionality has been completely redesigned to provide a Notion-like 
 - No need to manually enter a title - just start typing
 - Titles update in real-time as you edit the first line
 
-### ✨ Rich Text Editor with Preview Mode
+### ✨ Rich Text Editor with Slash Commands
 Type `/` to access a variety of formatting options:
 
 - **`/h1`** - Large heading
@@ -24,17 +24,14 @@ Type `/` to access a variety of formatting options:
 - **`/quote`** - Quote block
 - **`/divider`** - Horizontal line
 
-**Edit & Preview Modes**: Toggle between editing and preview modes to see your content beautifully formatted
+**Seamless Editing**: Clean, distraction-free writing experience with powerful formatting tools
 
-### 🎨 Rich Content Preview
-- **Preview mode**: Toggle to see beautifully formatted content
-- **Interactive Tables**: Mem.ai-style table editor with intuitive hover controls, editable cells, and smooth interactions
-- **Lists**: Bullet and numbered lists with proper indentation
-- **Headings**: Hierarchical headings with appropriate sizing
-- **Code blocks**: Syntax-highlighted code with proper formatting
-- **Quotes**: Styled blockquotes with left border
-- **Dividers**: Clean horizontal lines for content separation
-- **Easy switching**: Toggle between edit and preview modes
+### 🎨 Clean Layout Design
+- **Left Sidebar**: Notes list, search, filters, and bulk actions
+- **Right Panel**: Full-screen editor with auto-generated title display
+- **Bulk Operations**: Select multiple notes for deletion
+- **Search & Filter**: Find notes by content or tags
+- **Responsive Design**: Works perfectly on all devices
 
 ### 📱 Mobile-First Design
 - Fully responsive design that works on all devices
@@ -43,8 +40,6 @@ Type `/` to access a variety of formatting options:
 - Collapsible sidebar on mobile devices
 - Dynamic layout that adapts to available screen space
 - Proper scrolling behavior on all screen sizes
-- Prominent search bar: Much larger search input that takes up available space
-- Better spacing: Improved padding and margins throughout the interface
 
 ### 🔄 Auto-Save
 - Notes are automatically saved as you type (2-second debounce)
@@ -61,10 +56,15 @@ Type `/` to access a variety of formatting options:
 - Filter by tags
 - Real-time search results
 
+### 🗑️ Bulk Operations
+- Select multiple notes for bulk deletion
+- Visual feedback for selected items
+- Confirmation dialogs for safety
+
 ## Usage
 
 ### Creating a New Note
-1. Click "New Note" button
+1. Click the "+" button in the sidebar
 2. Start typing - the title will be auto-generated from your first line
 3. Use `/` commands for formatting
 4. Add tags as needed
@@ -75,6 +75,12 @@ Type `/` to access a variety of formatting options:
 2. Edit content directly in the rich editor
 3. Changes are auto-saved
 4. Use slash commands for formatting
+
+### Bulk Operations
+1. Click "Select" button in the sidebar
+2. Check the notes you want to delete
+3. Click "Delete" to remove selected notes
+4. Click "Cancel" to exit selection mode
 
 ### Navigation
 - **Desktop**: Sidebar with note list on the left, editor on the right
@@ -97,7 +103,7 @@ The existing database schema is preserved:
 ### API Endpoints
 - `POST /api/notes/create` - Create new note
 - `PUT /api/notes/update` - Update existing note
-- `DELETE /api/notes/delete` - Delete note
+- `DELETE /api/notes/delete` - Delete note(s)
 - `GET /api/notes` - Fetch all notes
 
 ## Mobile Optimizations
