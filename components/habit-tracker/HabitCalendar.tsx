@@ -37,10 +37,6 @@ import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
   const { user, isLoading } = useUser();
-  
-  console.log('HabitCalendar: user object =', user);
-  console.log('HabitCalendar: user?.email =', user?.email);
-  console.log('HabitCalendar: user?.primaryEmail =', user?.primaryEmail);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +68,7 @@ const HabitCalendar = () => {
   // Load habits and completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.email) {
+      if (!user?.primaryEmail) {
         setLoading(false);
         return;
       }
@@ -102,7 +98,7 @@ const HabitCalendar = () => {
     };
     
     loadData();
-  }, [user?.email, currentDate]);
+  }, [user?.primaryEmail, currentDate]);
 
   // Handle month navigation
   const goToPreviousMonth = () => {
@@ -124,7 +120,7 @@ const HabitCalendar = () => {
 
   // Handle habit completion toggle
   const handleToggleCompletion = async (habit: Habit, date: Date) => {
-    if (!user?.email) return;
+    if (!user?.primaryEmail) return;
     
     try {
       const dateStr = formatDate(date);
