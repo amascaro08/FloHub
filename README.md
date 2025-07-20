@@ -12,6 +12,7 @@ FloHub brings together your day-to-day tools into a single modular workspace:
 - 📅 **Calendar Integration** with Google Calendar (via OAuth)  
 - 💬 **AI Assistant FloCat** powered by OpenAI for summaries, Q&A, and planning help  
 - 🧱 **Customizable Widgets** for a dashboard that works your way  
+- 💭 **GitHub Feedback Integration** that converts user feedback into trackable GitHub issues  
 - 🔐 **Secure Auth + DB** via [Neon](https://neon.tech) and [Stack Auth](https://stackframe.dev)  
 - 📱 Fully responsive: use it on desktop, tablet, or mobile  
 
@@ -53,6 +54,13 @@ FloHub uses [Neon](https://neon.tech) as the **PostgreSQL database** for all cor
 | Neon Auth/DB         | ✅ Live     | Replaces Firebase for secure, scalable user data handling           |
 | Persistent Memory    | 🔄 In Dev  | Assistant context via Neon + Google Sheets hybrid                   |
 | Voice Interface      | 🧪 Testing  | Web speech + GPT voice pipeline under early testing                 |
+
+---
+
+## 📖 Additional Documentation
+
+- **[GitHub Feedback Integration Setup](./README-GITHUB-FEEDBACK.md)** - Complete guide for setting up GitHub issue creation from user feedback
+- **[Push Notifications Setup](./README-NOTIFICATIONS.md)** - Guide for setting up web push notifications
 
 ---
 

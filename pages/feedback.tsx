@@ -1,479 +1,297 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
-import { useRouter } from 'next/router';
 import { NextPage } from 'next';
-import { formatDistanceToNow } from 'date-fns';
-
-interface Feedback {
-  id: string;
-  feedbackType: string;
-  feedbackText: string;
-  status: 'open' | 'resolved' | 'completed' | 'backlog';
-  notes?: string;
-  createdAt: { seconds: number; nanoseconds: number };
-}
-
-interface BacklogItem {
-  id: string;
-  text: string;
-  originalId?: string;
-  createdAt: { seconds: number; nanoseconds: number };
-}
 
 const FeedbackPage: NextPage = () => {
-   const { user, isLoading: isUserLoading } = useUser();
-  const status = user ? "authenticated" : "unauthenticated";
-
-  const router = useRouter();
+  const { user, isLoading: isUserLoading } = useUser();
+  const [feedbackType, setFeedbackType] = useState('general');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [issueUrl, setIssueUrl] = useState('');
 
   // Handle loading state
   if (isUserLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
   }
 
   // Handle unauthenticated state
-  if (status !== 'authenticated' || !user) {
-    // Redirect to login or show a message
-    // For now, showing a message as per original logic
-    return <div>You must be signed in to view this page.</div>;
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-4">Submit Feedback</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            You must be signed in to submit feedback.
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  const [feedbackType, setFeedbackType] = useState('bug');
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
-  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
-  const [newBacklogItem, setNewBacklogItem] = useState('');
-  const [notes, setNotes] = useState<{[key: string]: string}>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Available feedback types
+  const feedbackTypes = [
+    { value: 'bug', label: '🐛 Bug Report', description: 'Something is broken or not working as expected' },
+    { value: 'feature', label: '✨ Feature Request', description: 'Suggest a new feature or improvement' },
+    { value: 'ui', label: '🎨 UI/UX Issue', description: 'Design, layout, or user experience feedback' },
+    { value: 'calendar', label: '📅 Calendar Issue', description: 'Issues with calendar functionality' },
+    { value: 'performance', label: '⚡ Performance', description: 'App is slow or unresponsive' },
+    { value: 'general', label: '💬 General Feedback', description: 'General comments or suggestions' },
+  ];
 
-  // Check if the user is an admin (replace with your actual admin check)
-  const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
+  // Predefined tags for easy selection
+  const availableTags = [
+    'urgent',
+    'minor',
+    'enhancement',
+    'documentation',
+    'mobile',
+    'desktop',
+    'accessibility',
+    'security',
+    'integration',
+    'workflow',
+    'notifications',
+    'search',
+    'export',
+    'sync',
+    'settings'
+  ];
 
-  // Fetch feedback and backlog data
-  const fetchData = async () => {
-    if (!isAdmin) return;
-    
-    setIsLoading(true);
-    try {
-      // Fetch feedback
-      const feedbackResponse = await fetch('/api/feedback');
-      if (feedbackResponse.ok) {
-        const data = await feedbackResponse.json();
-        // Initialize status field if it doesn't exist
-        const processedData = data.map((item: any) => ({
-          ...item,
-          status: item.status || 'open'
-        }));
-        setFeedbackData(processedData);
-        
-        // Initialize notes state
-        const notesObj: {[key: string]: string} = {};
-        processedData.forEach((item: Feedback) => {
-          notesObj[item.id] = item.notes || '';
-        });
-        setNotes(notesObj);
-      } else {
-        console.error('Failed to fetch feedback:', feedbackResponse.status);
-      }
-      
-      // Fetch backlog items
-      const backlogResponse = await fetch('/api/feedback?type=backlog');
-      if (backlogResponse.ok) {
-        const data = await backlogResponse.json();
-        setBacklogItems(data);
-      } else {
-        console.error('Failed to fetch backlog items:', backlogResponse.status);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const handleAddCustomTag = () => {
+    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
+      setSelectedTags(prev => [...prev, customTag.trim()]);
+      setCustomTag('');
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [isAdmin]);
+  const handleRemoveTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitMessage('');
+    setIssueUrl('');
 
     try {
-      const response = await fetch('/api/feedback', {
+      const response = await fetch('/api/github-issues', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ feedbackType, feedbackText }),
+        body: JSON.stringify({ 
+          feedbackType, 
+          feedbackText,
+          tags: selectedTags
+        }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        alert(`Feedback submitted successfully with ID: ${data.feedbackId}`);
-        setFeedbackText(''); // Clear the form
-        
-        // Refresh data if admin
-        if (isAdmin) {
-          fetchData();
-        }
+        setSubmitMessage(data.message);
+        setIssueUrl(data.issueUrl);
+        setFeedbackText('');
+        setSelectedTags([]);
+        setFeedbackType('general');
       } else {
-        const errorData = await response.json();
-        console.error('Failed to submit feedback:', errorData);
-        alert('Failed to submit feedback.');
+        setSubmitMessage(data.error || 'Failed to submit feedback.');
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      alert('An error occurred while submitting feedback.');
+      setSubmitMessage('An error occurred while submitting feedback.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleStatusChange = async (feedbackId: string, newStatus: string) => {
-    try {
-      const response = await fetch('/api/feedback', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          id: feedbackId, 
-          status: newStatus,
-          notes: notes[feedbackId]
-        }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setFeedbackData((prevData: Feedback[]) => 
-          prevData.map((item: Feedback) => 
-            item.id === feedbackId 
-              ? { ...item, status: newStatus as 'open' | 'resolved' | 'completed' | 'backlog' } 
-              : item
-          )
-        );
-        
-        // Refresh data to get updated backlog items
-        if (newStatus === 'backlog') {
-          fetchData();
-        }
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to update status:', errorData);
-        alert('Failed to update status.');
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('An error occurred while updating status.');
-    }
-  };
-
-  const handleNotesChange = (feedbackId: string, value: string) => {
-    setNotes(prev => ({
-      ...prev,
-      [feedbackId]: value
-    }));
-  };
-
-  const saveNotes = async (feedbackId: string) => {
-    try {
-      const feedback = feedbackData.find(f => f.id === feedbackId);
-      if (!feedback) return;
-      
-      const response = await fetch('/api/feedback', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          id: feedbackId, 
-          status: feedback.status,
-          notes: notes[feedbackId]
-        }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setFeedbackData((prevData: Feedback[]) => 
-          prevData.map((item: Feedback) => 
-            item.id === feedbackId 
-              ? { ...item, notes: notes[feedbackId] } 
-              : item
-          )
-        );
-        alert('Notes saved successfully');
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to save notes:', errorData);
-        alert('Failed to save notes.');
-      }
-    } catch (error) {
-      console.error('Error saving notes:', error);
-      alert('An error occurred while saving notes.');
-    }
-  };
-
-  const addToBacklog = async () => {
-    if (!newBacklogItem.trim()) return;
-    
-    try {
-      const response = await fetch('/api/feedback?type=backlog', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: newBacklogItem }),
-      });
-
-      if (response.ok) {
-        // Clear input
-        setNewBacklogItem('');
-        
-        // Refresh backlog data
-        fetchData();
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to add to backlog:', errorData);
-        alert('Failed to add to backlog.');
-      }
-    } catch (error) {
-      console.error('Error adding to backlog:', error);
-      alert('An error occurred while adding to backlog.');
-    }
-  };
-
-  const getItemAge = (createdAt: { seconds: number; nanoseconds: number }) => {
-    if (!createdAt) return 'Unknown';
-    
-    const date = new Date(createdAt.seconds * 1000);
-    return formatDistanceToNow(date, { addSuffix: true });
-  };
-
-  if (isAdmin) {
-    // Render admin view
-    return (
-      <>
-        <h1 className="text-2xl font-semibold mb-4">Admin Feedback</h1>
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>Loading...</p>
-          </div>
-        ) : feedbackData.length > 0 ? (
-          <div>
-            <div className="flex justify-between p-4 border rounded mb-4">
-              <div>
-                <p>Open Bugs: {feedbackData.filter((f: Feedback) => f.feedbackType === 'bug' && f.status === 'open').length}</p>
-                <p>Open Feature Requests: {feedbackData.filter((f: Feedback) => f.feedbackType === 'feature' && f.status === 'open').length}</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <section className="border rounded p-4">
-                <h2 className="text-lg font-medium mb-2">Bug Reports</h2>
-                {feedbackData
-                  .filter((feedback: Feedback) => feedback.feedbackType === 'bug')
-                  .map((feedback: Feedback) => (
-                    <div key={feedback.id} className="mb-4 p-4 border rounded">
-                      <div className="flex justify-between">
-                        <p className="font-medium">Feedback: {feedback.feedbackText}</p>
-                        <p className="text-sm text-gray-500">Created {getItemAge(feedback.createdAt)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <label htmlFor={`status-${feedback.id}`}>Status:</label>
-                        <select
-                          id={`status-${feedback.id}`}
-                          value={feedback.status}
-                          onChange={(e) => handleStatusChange(feedback.id, e.target.value)}
-                          className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                        >
-                          <option value="open">Open</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                      </div>
-                      <div className="mt-2">
-                        <textarea
-                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                          placeholder="Add notes here..."
-                          value={notes[feedback.id] || ''}
-                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
-                        />
-                        <button 
-                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
-                          onClick={() => saveNotes(feedback.id)}
-                        >
-                          Save Notes
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </section>
-
-              <section className="border rounded p-4">
-                <h2 className="text-lg font-medium mb-2">Feature Requests</h2>
-                {feedbackData
-                  .filter((feedback: Feedback) => feedback.feedbackType === 'feature')
-                  .map((feedback: Feedback) => (
-                    <div key={feedback.id} className="mb-4 p-4 border rounded">
-                      <div className="flex justify-between">
-                        <p className="font-medium">Feedback: {feedback.feedbackText}</p>
-                        <p className="text-sm text-gray-500">Created {getItemAge(feedback.createdAt)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <label htmlFor={`status-${feedback.id}`}>Status:</label>
-                        <select
-                          id={`status-${feedback.id}`}
-                          value={feedback.status}
-                          onChange={(e) => handleStatusChange(feedback.id, e.target.value)}
-                          className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                        >
-                          <option value="open">Open</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="completed">Completed</option>
-                          <option value="backlog">Add to Backlog</option>
-                        </select>
-                      </div>
-                      <div className="mt-2">
-                        <textarea
-                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                          placeholder="Add notes here..."
-                          value={notes[feedback.id] || ''}
-                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
-                        />
-                        <button 
-                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
-                          onClick={() => saveNotes(feedback.id)}
-                        >
-                          Save Notes
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </section>
-
-              <section className="border rounded p-4">
-                <h2 className="text-lg font-medium mb-2">General Feedback</h2>
-                {feedbackData
-                  .filter((feedback: Feedback) => feedback.feedbackType === 'general')
-                  .map((feedback: Feedback) => (
-                    <div key={feedback.id} className="mb-4 p-4 border rounded">
-                      <div className="flex justify-between">
-                        <p className="font-medium">Feedback: {feedback.feedbackText}</p>
-                        <p className="text-sm text-gray-500">Created {getItemAge(feedback.createdAt)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <label htmlFor={`status-${feedback.id}`}>Status:</label>
-                        <select
-                          id={`status-${feedback.id}`}
-                          value={feedback.status}
-                          onChange={(e) => handleStatusChange(feedback.id, e.target.value)}
-                          className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                        >
-                          <option value="open">Open</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                      </div>
-                      <div className="mt-2">
-                        <textarea
-                          className="w-full p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                          placeholder="Add notes here..."
-                          value={notes[feedback.id] || ''}
-                          onChange={(e) => handleNotesChange(feedback.id, e.target.value)}
-                        />
-                        <button 
-                          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow mt-2"
-                          onClick={() => saveNotes(feedback.id)}
-                        >
-                          Save Notes
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </section>
-
-              <section className="border rounded p-4">
-                <h2 className="text-lg font-medium mb-2">Feature Request Backlog</h2>
-                <div className="flex gap-2">
-                  <textarea
-                    className="flex-1 p-2 border rounded border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                    placeholder="Add a new feature request to the backlog..."
-                    value={newBacklogItem}
-                    onChange={(e) => setNewBacklogItem(e.target.value)}
-                  />
-                  <button 
-                    className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow"
-                    onClick={addToBacklog}
-                  >
-                    Add to Backlog
-                  </button>
-                </div>
-                
-                {backlogItems.length > 0 ? (
-                  <div className="mt-4">
-                    {backlogItems.map((item: BacklogItem) => (
-                      <div key={item.id} className="p-2 border-b">
-                        <div className="flex justify-between">
-                          <p>{item.text}</p>
-                          <p className="text-sm text-gray-500">Added {getItemAge(item.createdAt)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2">No backlog items yet.</p>
-                )}
-              </section>
-            </div>
-          </div>
-        ) : (
-          <p>No feedback yet.</p>
-        )}
-      </>
-    );
-  }
-
-  // Render user feedback form
   return (
-    <>
-      <h1 className="text-2xl font-semibold mb-4">Submit Feedback</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col">
-          <label htmlFor="feedbackType" className="mb-1">Feedback Type:</label>
-          <select
-            id="feedbackType"
-            name="feedbackType"
-            value={feedbackType}
-            onChange={(e) => setFeedbackType(e.target.value)}
-            className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-          >
-            <option value="bug">Bug Report</option>
-            <option value="feature">Feature Request</option>
-            <option value="general">General Feedback</option>
-          </select>
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Submit Feedback</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Help us improve the app by sharing your feedback. Your submission will create a GitHub issue for tracking.
+        </p>
+      </div>
+
+      {submitMessage && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          submitMessage.includes('successfully') 
+            ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200'
+            : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
+        }`}>
+          <p className="font-medium">{submitMessage}</p>
+          {issueUrl && (
+            <a 
+              href={issueUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+            >
+              View on GitHub →
+            </a>
+          )}
         </div>
-        <div className="flex flex-col">
-          <label htmlFor="feedbackText" className="mb-1">Feedback:</label>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Feedback Type Selection */}
+        <div>
+          <label className="block text-sm font-medium mb-3">Feedback Type</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {feedbackTypes.map((type) => (
+              <div
+                key={type.value}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  feedbackType === type.value
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+                onClick={() => setFeedbackType(type.value)}
+              >
+                <input
+                  type="radio"
+                  name="feedbackType"
+                  value={type.value}
+                  checked={feedbackType === type.value}
+                  onChange={(e) => setFeedbackType(e.target.value)}
+                  className="sr-only"
+                />
+                <div className="font-medium text-sm mb-1">{type.label}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">{type.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Feedback Text */}
+        <div>
+          <label htmlFor="feedbackText" className="block text-sm font-medium mb-2">
+            Describe your feedback
+          </label>
           <textarea
             id="feedbackText"
             name="feedbackText"
-            rows={4}
-            cols={50}
+            rows={6}
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
-            className="p-2 rounded border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+            placeholder="Please provide detailed information about your feedback..."
+            required
+            className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
         </div>
-        <button 
-          type="submit" 
-          className="p-2 rounded bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors shadow-sm hover:shadow"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </button>
+
+        {/* Tags Section */}
+        <div>
+          <label className="block text-sm font-medium mb-3">Tags (optional)</label>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+            Add tags to help categorize your feedback
+          </p>
+          
+          {/* Predefined Tags */}
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleTagToggle(tag)}
+                  className={`px-3 py-1 text-sm rounded-full border transition-all ${
+                    selectedTags.includes(tag)
+                      ? 'bg-primary-100 border-primary-300 text-primary-800 dark:bg-primary-900/30 dark:border-primary-700 dark:text-primary-200'
+                      : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Tag Input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              placeholder="Add custom tag..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomTag())}
+              className="flex-1 p-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            />
+            <button
+              type="button"
+              onClick={handleAddCustomTag}
+              disabled={!customTag.trim()}
+              className="px-4 py-2 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Selected Tags */}
+          {selectedTags.length > 0 && (
+            <div className="mt-3">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Selected tags:</div>
+              <div className="flex flex-wrap gap-2">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-3 py-1 text-sm bg-primary-100 text-primary-800 rounded-full dark:bg-primary-900/30 dark:text-primary-200"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={isSubmitting || !feedbackText.trim()}
+            className="w-full md:w-auto px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+          </button>
+        </div>
       </form>
-    </>
+
+      {/* Info Section */}
+      <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h3 className="font-medium text-blue-900 dark:text-blue-200 mb-2">How it works</h3>
+        <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+          <li>• Your feedback will be automatically converted into a GitHub issue</li>
+          <li>• You'll receive a link to track the progress of your feedback</li>
+          <li>• All feedback is reviewed and prioritized by the development team</li>
+          <li>• You'll be notified when your issue is resolved</li>
+        </ul>
+      </div>
+    </div>
   );
 };
 
