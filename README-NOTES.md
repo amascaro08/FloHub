@@ -19,7 +19,7 @@ Type `/` to access a variety of formatting options:
 - **`/h3`** - Small heading (visually rendered)
 - **`/bullet`** - Bullet list (visually rendered)
 - **`/numbered`** - Numbered list (visually rendered)
-- **`/table`** - Insert a table template (visually rendered)
+- **`/table`** - Insert an interactive table with rich editing features
 - **`/code`** - Code block (visually rendered)
 - **`/quote`** - Quote block (visually rendered)
 - **`/divider`** - Horizontal line (visually rendered)
@@ -28,7 +28,7 @@ Type `/` to access a variety of formatting options:
 
 ### 🎨 Seamless Visual Rendering
 - **Real-time formatting**: See your content beautifully formatted as you type
-- **Tables**: Properly rendered with headers, borders, and responsive design
+- **Interactive Tables**: Rich table editor with add/remove columns/rows, editable cells, and hover controls
 - **Lists**: Bullet and numbered lists with proper indentation
 - **Headings**: Hierarchical headings with appropriate sizing
 - **Code blocks**: Syntax-highlighted code with proper formatting
@@ -43,6 +43,7 @@ Type `/` to access a variety of formatting options:
 - Collapsible sidebar on mobile devices
 - Dynamic layout that adapts to available screen space
 - Proper scrolling behavior on all screen sizes
+- Larger search bar and filter controls for better usability
 
 ### 🔄 Auto-Save
 - Notes are automatically saved as you type (2-second debounce)

@@ -146,7 +146,7 @@ const renderMarkdown = (content: string) => {
   return result.join('');
 };
 
-// Function to render tables
+// Function to render tables with rich features
 const renderTable = (rows: string[]) => {
   if (rows.length < 2) return '';
   
@@ -154,25 +154,43 @@ const renderTable = (rows: string[]) => {
   const separatorRow = rows[1];
   const dataRows = rows.slice(2);
   
-  let tableHtml = '<div class="overflow-x-auto my-4"><table class="min-w-full border border-neutral-300 dark:border-neutral-600 rounded-lg">';
+  let tableHtml = '<div class="overflow-x-auto my-4 relative group">';
+  tableHtml += '<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">';
+  tableHtml += '<button class="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 p-2 rounded text-xs" onclick="addTableRow(this)">+ Row</button>';
+  tableHtml += '<button class="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 p-2 rounded text-xs ml-1" onclick="addTableColumn(this)">+ Col</button>';
+  tableHtml += '</div>';
+  tableHtml += '<table class="min-w-full border border-neutral-300 dark:border-neutral-600 rounded-lg">';
   
   // Headers
   tableHtml += '<thead class="bg-neutral-50 dark:bg-neutral-800">';
   tableHtml += '<tr>';
-  headers.forEach(header => {
-    tableHtml += `<th class="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600">${header.trim()}</th>`;
+  headers.forEach((header, index) => {
+    tableHtml += `<th class="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600 relative group">
+      <div class="flex items-center justify-between">
+        <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded">${header.trim()}</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableColumn(this, ${index})">×</button>
+      </div>
+    </th>`;
   });
   tableHtml += '</tr>';
   tableHtml += '</thead>';
   
   // Data rows
   tableHtml += '<tbody>';
-  dataRows.forEach(row => {
+  dataRows.forEach((row, rowIndex) => {
     const cells = row.split('|').filter(cell => cell.trim());
-    tableHtml += '<tr class="border-b border-neutral-200 dark:border-neutral-700">';
-    cells.forEach(cell => {
-      tableHtml += `<td class="px-4 py-3 text-neutral-700 dark:text-neutral-300">${cell.trim()}</td>`;
+    tableHtml += `<tr class="border-b border-neutral-200 dark:border-neutral-700 group">`;
+    cells.forEach((cell, cellIndex) => {
+      tableHtml += `<td class="px-4 py-3 text-neutral-700 dark:text-neutral-300 relative">
+        <div class="flex items-center justify-between">
+          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1">${cell.trim()}</span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${rowIndex}, ${cellIndex})">×</button>
+        </div>
+      </td>`;
     });
+    tableHtml += `<td class="px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowIndex})">×</button>
+    </td>`;
     tableHtml += '</tr>';
   });
   tableHtml += '</tbody>';
@@ -200,6 +218,108 @@ const renderList = (items: string[]) => {
   
   return listHtml;
 };
+
+// Table manipulation functions
+const addTableRow = (button: HTMLElement) => {
+  const table = button.closest('table');
+  const tbody = table?.querySelector('tbody');
+  if (tbody) {
+    const rowCount = tbody.children.length;
+    const colCount = tbody.children[0]?.children.length || 3;
+    const newRow = document.createElement('tr');
+    newRow.className = 'border-b border-neutral-200 dark:border-neutral-700 group';
+    
+    for (let i = 0; i < colCount - 1; i++) {
+      const cell = document.createElement('td');
+      cell.className = 'px-4 py-3 text-neutral-700 dark:text-neutral-300 relative';
+      cell.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${rowCount}, ${i})">×</button>
+        </div>
+      `;
+      newRow.appendChild(cell);
+    }
+    
+    const removeCell = document.createElement('td');
+    removeCell.className = 'px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity';
+    removeCell.innerHTML = `<button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowCount})">×</button>`;
+    newRow.appendChild(removeCell);
+    
+    tbody.appendChild(newRow);
+  }
+};
+
+const addTableColumn = (button: HTMLElement) => {
+  const table = button.closest('table');
+  const headers = table?.querySelectorAll('thead tr th');
+  const rows = table?.querySelectorAll('tbody tr');
+  
+  if (headers && rows) {
+    // Add header
+    const newHeader = document.createElement('th');
+    newHeader.className = 'px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100 border-b border-neutral-300 dark:border-neutral-600 relative group';
+    newHeader.innerHTML = `
+      <div class="flex items-center justify-between">
+        <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded">New Column</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableColumn(this, ${headers.length - 1})">×</button>
+      </div>
+    `;
+    headers[0].parentNode?.appendChild(newHeader);
+    
+    // Add cells to each row
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const newCell = document.createElement('td');
+      newCell.className = 'px-4 py-3 text-neutral-700 dark:text-neutral-300 relative';
+      newCell.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span contenteditable="true" class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 rounded flex-1"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableCell(this, ${Array.from(rows).indexOf(row)}, ${cells.length})">×</button>
+        </div>
+      `;
+      row.insertBefore(newCell, row.lastElementChild);
+    });
+  }
+};
+
+const removeTableRow = (button: HTMLElement, rowIndex: number) => {
+  const row = button.closest('tr');
+  row?.remove();
+};
+
+const removeTableColumn = (button: HTMLElement, colIndex: number) => {
+  const table = button.closest('table');
+  const headers = table?.querySelectorAll('thead tr th');
+  const rows = table?.querySelectorAll('tbody tr');
+  
+  if (headers && rows) {
+    // Remove header
+    headers[colIndex]?.remove();
+    
+    // Remove cells from each row
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells[colIndex]) {
+        cells[colIndex].remove();
+      }
+    });
+  }
+};
+
+const removeTableCell = (button: HTMLElement, rowIndex: number, colIndex: number) => {
+  const cell = button.closest('td');
+  cell?.remove();
+};
+
+// Add table functions to window
+if (typeof window !== 'undefined') {
+  (window as any).addTableRow = addTableRow;
+  (window as any).addTableColumn = addTableColumn;
+  (window as any).removeTableRow = removeTableRow;
+  (window as any).removeTableColumn = removeTableColumn;
+  (window as any).removeTableCell = removeTableCell;
+}
 
 export default function RichNoteEditor({ 
   note, 
@@ -306,8 +426,8 @@ export default function RichNoteEditor({
     },
     {
       id: 'table',
-      title: 'Table',
-      description: 'Insert a table',
+      title: 'Rich Table',
+      description: 'Insert an interactive table',
       icon: '⊞',
       action: (editor, start, end) => {
         const before = content.substring(0, start);
@@ -484,7 +604,9 @@ export default function RichNoteEditor({
             fontSize: isMobile ? '16px' : '18px', // Prevent zoom on iOS
             color: 'transparent',
             caretColor: 'black',
-            background: 'transparent'
+            background: 'transparent',
+            fontFamily: 'inherit',
+            lineHeight: 'inherit'
           }}
         />
         

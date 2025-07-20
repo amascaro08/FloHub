@@ -208,7 +208,7 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <div className="border-b border-neutral-200 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-900 flex-shrink-0">
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
@@ -243,14 +243,14 @@ export default function NotesPage() {
             </div>
             <input
               type="text"
-              className="input-modern pl-10 w-full"
+              className="input-modern pl-10 w-full h-12 text-base"
               placeholder="Search notes..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
             />
           </div>
           <select
-            className="input-modern flex-shrink-0"
+            className="input-modern flex-shrink-0 h-12 text-base"
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
           >
@@ -341,7 +341,7 @@ export default function NotesPage() {
         </div>
 
         {/* Main editor area */}
-        <div className="flex-1 bg-white dark:bg-neutral-900 min-h-0 flex flex-col">
+        <div className="flex-1 bg-white dark:bg-neutral-900 min-h-0 flex flex-col overflow-hidden">
           {showNewNote ? (
             <div className="flex-1 overflow-hidden">
               <RichNoteEditor
