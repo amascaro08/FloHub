@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -7,6 +9,9 @@ const ProgressBar: React.FC = () => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const handleStart = () => {
       setIsLoading(true);
       setProgress(0);

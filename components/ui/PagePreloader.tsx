@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
@@ -5,6 +7,9 @@ const PagePreloader: React.FC = () => {
   const router = useRouter();
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const preloadPage = (href: string) => {
       // Preload the page by prefetching it
       router.prefetch(href);

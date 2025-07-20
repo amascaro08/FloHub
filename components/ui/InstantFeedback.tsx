@@ -1,7 +1,12 @@
+'use client';
+
 import { useEffect } from 'react';
 
 const InstantFeedback: React.FC = () => {
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     // Add instant feedback to all clickable elements
     const addInstantFeedback = () => {
       const clickableElements = document.querySelectorAll('a, button, [role="button"]');

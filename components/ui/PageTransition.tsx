@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import LoadingSpinner from './LoadingSpinner';
@@ -12,6 +14,9 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   const [loadingKey, setLoadingKey] = useState(0);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const handleStart = () => {
       setIsLoading(true);
       setLoadingKey(prev => prev + 1);

@@ -5,9 +5,7 @@ import { useEffect } from 'react';
 import Head from 'next/head';
 import MainLayout from '@/components/ui/MainLayout';
 import PageTransition from '@/components/ui/PageTransition';
-import PagePreloader from '@/components/ui/PagePreloader';
 import ProgressBar from '@/components/ui/ProgressBar';
-import InstantFeedback from '@/components/ui/InstantFeedback';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import PWAStatus from '@/components/ui/PWAStatus';
 
@@ -56,8 +54,6 @@ const App = ({ Component, pageProps }: AppProps) => {
       </Head>
       <ChatProvider>
         <ProgressBar />
-        <PagePreloader />
-        <InstantFeedback />
         <PageTransition>
           <MainLayout>
             <Component {...pageProps} />
