@@ -12,20 +12,33 @@ export function useAuthPersistence() {
       });
 
       if (!response.ok) {
-        // If refresh fails, redirect to login
-        router.push('/login');
+        // If refresh fails, only redirect to login if we're not already on a public page
+        const publicPaths = ['/', '/login', '/register', '/terms', '/privacy'];
+        if (!publicPaths.includes(router.pathname)) {
+          router.push('/login');
+        }
         return false;
       }
 
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      router.push('/login');
+      // Only redirect if not on a public page
+      const publicPaths = ['/', '/login', '/register', '/terms', '/privacy'];
+      if (!publicPaths.includes(router.pathname)) {
+        router.push('/login');
+      }
       return false;
     }
   }, [router]);
 
   useEffect(() => {
+    // Only set up auth persistence if we're not on a public page
+    const publicPaths = ['/', '/login', '/register', '/terms', '/privacy'];
+    if (publicPaths.includes(router.pathname)) {
+      return;
+    }
+
     // Refresh token every 12 hours for better persistence
     const refreshInterval = setInterval(refreshToken, 12 * 60 * 60 * 1000);
 
@@ -64,7 +77,7 @@ export function useAuthPersistence() {
         document.removeEventListener(event, handleUserActivity, true);
       });
     };
-  }, [refreshToken]);
+  }, [refreshToken, router.pathname]);
 
   return { refreshToken };
 }
