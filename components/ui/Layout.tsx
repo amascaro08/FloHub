@@ -127,10 +127,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
               className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group`}
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => {
                 setMobileSidebarOpen(false);
-                window.location.href = x.href;
               }}
             >
               <x.icon className={`w-5 h-5 text-primary-500 group-hover:text-primary-600 transition-colors ${
@@ -150,10 +148,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
               className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group`}
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => {
                 setMobileSidebarOpen(false);
-                window.location.href = adminNavItem.href;
               }}
             >
               <Settings className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
