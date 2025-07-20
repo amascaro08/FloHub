@@ -6,18 +6,25 @@ import LoadingSpinner from './LoadingSpinner';
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/terms', '/privacy'];
 
-const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useUser();
+interface MainLayoutProps {
+  children: React.ReactNode;
+  requiresAuth?: boolean;
+}
+
+const MainLayout = ({ children, requiresAuth = true }: MainLayoutProps) => {
   const router = useRouter();
   const isPublicPath = PUBLIC_PATHS.includes(router.pathname);
+  
+  // Only call useUser hook if authentication is required
+  const { user, isLoading } = requiresAuth ? useUser() : { user: null, isLoading: false };
 
   useEffect(() => {
-    if (!isLoading && !user && !isPublicPath) {
+    if (requiresAuth && !isLoading && !user && !isPublicPath) {
       router.push('/login');
     }
-  }, [isLoading, user, router, isPublicPath]);
+  }, [requiresAuth, isLoading, user, router, isPublicPath]);
 
-  if (isLoading) {
+  if (isLoading && requiresAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
         <div className="flex flex-col items-center space-y-4">
@@ -30,7 +37,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (isPublicPath) {
+  if (isPublicPath || !requiresAuth) {
     return <>{children}</>;
   }
 

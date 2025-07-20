@@ -33,6 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30, // 30 days for refresh
       path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.flohub.xyz' : undefined, // Allow subdomains
     });
 
     res.setHeader('Set-Cookie', cookie);

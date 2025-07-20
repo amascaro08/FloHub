@@ -10,8 +10,11 @@ import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
 const App = ({ Component, pageProps }: AppProps) => {
-  // Initialize auth persistence
-  useAuthPersistence();
+  // Check if the component requires authentication
+  const requiresAuth = (Component as any).auth !== false;
+
+  // Initialize auth persistence only for authenticated pages
+  useAuthPersistence(requiresAuth);
 
   useEffect(() => {
     const registerSW = async () => {
@@ -57,7 +60,7 @@ const App = ({ Component, pageProps }: AppProps) => {
       <ChatProvider>
         <ProgressBar />
         <PageTransition>
-          <MainLayout>
+          <MainLayout requiresAuth={requiresAuth}>
             <Component {...pageProps} />
           </MainLayout>
         </PageTransition>
