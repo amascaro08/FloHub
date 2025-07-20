@@ -9,6 +9,7 @@ import {
   varchar,
   jsonb,
   uniqueIndex,
+  bigint,
 } from 'drizzle-orm/pg-core';
 import { InferSelectModel, InferInsertModel, relations } from 'drizzle-orm';
 
@@ -38,7 +39,7 @@ export const accounts = pgTable(
     providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
     refresh_token: text("refresh_token"),
     access_token: text("access_token"),
-    expires_at: integer("expires_at"),
+    expires_at: bigint("expires_at", { mode: "number" }),
     token_type: varchar("token_type", { length: 255 }),
     scope: text("scope"),
     id_token: text("id_token"),
@@ -266,7 +267,7 @@ export const journalActivities = pgTable("journal_activities", {
   id: serial("id").notNull().primaryKey(),
   user_email: varchar("user_email", { length: 255 }).notNull(),
   date: text("date").notNull(),
-  activities: jsonb("activities"),
+  activities: text("activities").array(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
@@ -288,7 +289,7 @@ export const journalMoods = pgTable("journal_moods", {
   date: text("date").notNull(),
   emoji: text("emoji"),
   label: text("label"),
-  tags: jsonb("tags"),
+  tags: text("tags").array(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });

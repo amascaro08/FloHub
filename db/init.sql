@@ -19,15 +19,15 @@ CREATE TABLE IF NOT EXISTS accounts (
     expires_at BIGINT,
     id_token TEXT,
     scope TEXT,
-    user_state TEXT,
+    session_state TEXT,
     token_type VARCHAR(255),
     CONSTRAINT "provider_account_id" UNIQUE (provider, "providerAccountId")
 );
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
     "userId" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "userToken" VARCHAR(255) NOT NULL UNIQUE,
+    "sessionToken" VARCHAR(255) NOT NULL UNIQUE,
     expires TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS notes (
     is_adhoc BOOLEAN DEFAULT FALSE,
     actions JSONB,
     agenda TEXT,
-    ai_summary TEXT
+    ai_summary TEXT,
+    "updatedAt" TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS journal_activities (
@@ -141,4 +142,25 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_email, date)
+);
+
+CREATE TABLE IF NOT EXISTS habits (
+    id SERIAL PRIMARY KEY,
+    "userId" VARCHAR(255) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    frequency TEXT NOT NULL,
+    "customDays" JSONB,
+    "createdAt" TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS "habitCompletions" (
+    id SERIAL PRIMARY KEY,
+    "habitId" INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+    "userId" VARCHAR(255) NOT NULL,
+    date TEXT NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    timestamp TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
