@@ -15,5 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'User not found' });
   }
 
+  console.log('Session API: user object =', user);
   res.status(200).json(user);
 }

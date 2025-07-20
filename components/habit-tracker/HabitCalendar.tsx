@@ -37,6 +37,10 @@ import { Habit, HabitCompletion } from '@/types/habit-tracker';
 
 const HabitCalendar = () => {
   const { user, isLoading } = useUser();
+  
+  console.log('HabitCalendar: user object =', user);
+  console.log('HabitCalendar: user?.email =', user?.email);
+  console.log('HabitCalendar: user?.primaryEmail =', user?.primaryEmail);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +72,10 @@ const HabitCalendar = () => {
   // Load habits and completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.primaryEmail) return;
+      if (!user?.email) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       try {
@@ -95,7 +102,7 @@ const HabitCalendar = () => {
     };
     
     loadData();
-  }, [user, year, month]);
+  }, [user?.email, currentDate]);
 
   // Handle month navigation
   const goToPreviousMonth = () => {
@@ -117,7 +124,7 @@ const HabitCalendar = () => {
 
   // Handle habit completion toggle
   const handleToggleCompletion = async (habit: Habit, date: Date) => {
-    if (!user?.primaryEmail) return;
+    if (!user?.email) return;
     
     try {
       const dateStr = formatDate(date);
@@ -351,7 +358,7 @@ const HabitCalendar = () => {
     );
   };
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>

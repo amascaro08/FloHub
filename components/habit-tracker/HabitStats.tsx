@@ -16,7 +16,7 @@ const HabitStats: React.FC<HabitStatsProps> = ({ habit, onClose }) => {
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!user?.primaryEmail) return;
+      if (!user?.email) return;
       
       setLoading(true);
       try {

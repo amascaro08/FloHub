@@ -57,7 +57,7 @@ const HabitForm: React.FC<HabitFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.primaryEmail) {
+    if (!user?.email) {
       setError('You must be logged in to create habits');
       return;
     }
