@@ -27,6 +27,300 @@ interface SlashCommand {
   action: (editor: HTMLTextAreaElement, startPos: number, endPos: number) => void;
 }
 
+// Function to render markdown content with proper styling
+const renderMarkdown = (content: string) => {
+  const lines = content.split('\n');
+  let inTable = false;
+  let tableRows: string[] = [];
+  let inList = false;
+  let listItems: string[] = [];
+  let inCodeBlock = false;
+  let codeBlockContent: string[] = [];
+  
+  const result: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Handle code blocks
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        // End code block
+        result.push(`<pre class="bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg my-4 overflow-x-auto"><code class="text-sm font-mono text-neutral-800 dark:text-neutral-200">${codeBlockContent.join('\n')}</code></pre>`);
+        inCodeBlock = false;
+        codeBlockContent = [];
+      } else {
+        // Start code block
+        inCodeBlock = true;
+        codeBlockContent = [];
+      }
+      continue;
+    }
+    
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+    
+    // Handle tables
+    if (line.includes('|') && line.trim().length > 0) {
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      tableRows.push(line);
+      continue;
+    } else if (inTable) {
+      // End table
+      if (tableRows.length > 0) {
+        const tableHtml = renderTable(tableRows);
+        result.push(tableHtml);
+      }
+      inTable = false;
+      tableRows = [];
+    }
+    
+    // Handle lists
+    if (line.startsWith('- ') || line.match(/^\d+\. /)) {
+      if (!inList) {
+        inList = true;
+        listItems = [];
+      }
+      listItems.push(line);
+      continue;
+    } else if (inList) {
+      // End list
+      if (listItems.length > 0) {
+        const listHtml = renderList(listItems);
+        result.push(listHtml);
+      }
+      inList = false;
+      listItems = [];
+    }
+    
+    // Handle headings
+    if (line.startsWith('# ')) {
+      result.push(`<h1 class="text-3xl font-bold mb-4 mt-6 text-neutral-900 dark:text-neutral-100">${line.substring(2)}</h1>`);
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      result.push(`<h2 class="text-2xl font-bold mb-3 mt-5 text-neutral-900 dark:text-neutral-100">${line.substring(3)}</h2>`);
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      result.push(`<h3 class="text-xl font-bold mb-2 mt-4 text-neutral-900 dark:text-neutral-100">${line.substring(4)}</h3>`);
+      continue;
+    }
+    
+    // Handle quote
+    if (line.startsWith('> ')) {
+      result.push(`<blockquote class="border-l-4 border-neutral-300 dark:border-neutral-600 pl-4 my-4 italic text-neutral-600 dark:text-neutral-400">${line.substring(2)}</blockquote>`);
+      continue;
+    }
+    
+    // Handle divider
+    if (line === '---') {
+      result.push(`<hr class="my-6 border-neutral-300 dark:border-neutral-600" />`);
+      continue;
+    }
+    
+    // Handle regular paragraphs
+    if (line.trim() === '') {
+      result.push('<br />');
+    } else {
+      result.push(`<p class="mb-3 text-neutral-700 dark:text-neutral-300 leading-relaxed">${line}</p>`);
+    }
+  }
+  
+  // Handle any remaining table or list
+  if (inTable && tableRows.length > 0) {
+    const tableHtml = renderTable(tableRows);
+    result.push(tableHtml);
+  }
+  
+  if (inList && listItems.length > 0) {
+    const listHtml = renderList(listItems);
+    result.push(listHtml);
+  }
+  
+  return result.join('');
+};
+
+// Function to render tables with Mem.ai-like interface
+const renderTable = (rows: string[]) => {
+  if (rows.length < 2) return '';
+  
+  const headers = rows[0].split('|').filter(cell => cell.trim());
+  const separatorRow = rows[1];
+  const dataRows = rows.slice(2);
+  
+  let tableHtml = '<div class="my-6 relative group">';
+  tableHtml += '<div class="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">';
+  tableHtml += '<button class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 px-2 py-1 rounded text-xs hover:bg-neutral-50 dark:hover:bg-neutral-700" onclick="addTableRow(this)">+ Row</button>';
+  tableHtml += '<button class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 px-2 py-1 rounded text-xs hover:bg-neutral-50 dark:hover:bg-neutral-700" onclick="addTableColumn(this)">+ Col</button>';
+  tableHtml += '</div>';
+  tableHtml += '<table class="w-full border-collapse border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">';
+  
+  // Headers
+  tableHtml += '<thead class="bg-neutral-50 dark:bg-neutral-800">';
+  tableHtml += '<tr>';
+  headers.forEach((header, index) => {
+    tableHtml += `<th class="border border-neutral-200 dark:border-neutral-600 p-3 text-left font-medium text-neutral-900 dark:text-neutral-100 relative group">
+      <div class="flex items-center justify-between">
+        <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block" contenteditable="true">${header.trim()}</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableColumn(this, ${index})">×</button>
+      </div>
+    </th>`;
+  });
+  tableHtml += '</tr>';
+  tableHtml += '</thead>';
+  
+  // Data rows
+  tableHtml += '<tbody>';
+  dataRows.forEach((row, rowIndex) => {
+    const cells = row.split('|').filter(cell => cell.trim());
+    tableHtml += `<tr class="border-b border-neutral-200 dark:border-neutral-700 group hover:bg-neutral-50 dark:hover:bg-neutral-800">`;
+    cells.forEach((cell, cellIndex) => {
+      tableHtml += `<td class="border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group">
+        <div class="flex items-center justify-between">
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true">${cell.trim()}</span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${rowIndex}, ${cellIndex})">×</button>
+        </div>
+      </td>`;
+    });
+    tableHtml += `<td class="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowIndex})">×</button>
+    </td>`;
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody>';
+  tableHtml += '</table></div>';
+  
+  return tableHtml;
+};
+
+// Function to render lists
+const renderList = (items: string[]) => {
+  if (items.length === 0) return '';
+  
+  const isOrdered = items[0].match(/^\d+\. /);
+  const listType = isOrdered ? 'ol' : 'ul';
+  const listClass = isOrdered ? 'list-decimal' : 'list-disc';
+  
+  let listHtml = `<${listType} class="${listClass} ml-6 mb-4 space-y-1">`;
+  
+  items.forEach(item => {
+    const content = isOrdered ? item.replace(/^\d+\. /, '') : item.substring(2);
+    listHtml += `<li class="text-neutral-700 dark:text-neutral-300">${content}</li>`;
+  });
+  
+  listHtml += `</${listType}>`;
+  
+  return listHtml;
+};
+
+// Table manipulation functions
+const addTableRow = (button: HTMLElement) => {
+  const table = button.closest('table');
+  const tbody = table?.querySelector('tbody');
+  if (tbody) {
+    const rowCount = tbody.children.length;
+    const colCount = tbody.children[0]?.children.length || 3;
+    const newRow = document.createElement('tr');
+    newRow.className = 'border-b border-neutral-200 dark:border-neutral-700 group hover:bg-neutral-50 dark:hover:bg-neutral-800';
+    
+    for (let i = 0; i < colCount - 1; i++) {
+      const cell = document.createElement('td');
+      cell.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group';
+      cell.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${rowCount}, ${i})">×</button>
+        </div>
+      `;
+      newRow.appendChild(cell);
+    }
+    
+    const removeCell = document.createElement('td');
+    removeCell.className = 'p-2 opacity-0 group-hover:opacity-100 transition-opacity';
+    removeCell.innerHTML = `<button class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" onclick="removeTableRow(this, ${rowCount})">×</button>`;
+    newRow.appendChild(removeCell);
+    
+    tbody.appendChild(newRow);
+  }
+};
+
+const addTableColumn = (button: HTMLElement) => {
+  const table = button.closest('table');
+  const headers = table?.querySelectorAll('thead tr th');
+  const rows = table?.querySelectorAll('tbody tr');
+  
+  if (headers && rows) {
+    // Add header
+    const newHeader = document.createElement('th');
+    newHeader.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-left font-medium text-neutral-900 dark:text-neutral-100 relative group';
+    newHeader.innerHTML = `
+      <div class="flex items-center justify-between">
+        <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block" contenteditable="true">New Column</span>
+        <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableColumn(this, ${headers.length - 1})">×</button>
+      </div>
+    `;
+    headers[0].parentNode?.appendChild(newHeader);
+    
+    // Add cells to each row
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const newCell = document.createElement('td');
+      newCell.className = 'border border-neutral-200 dark:border-neutral-600 p-3 text-neutral-700 dark:text-neutral-300 relative group';
+      newCell.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="outline-none focus:bg-neutral-100 dark:focus:bg-neutral-700 px-1 py-1 rounded min-w-[100px] block flex-1" contenteditable="true"></span>
+          <button class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 ml-2" onclick="removeTableCell(this, ${Array.from(rows).indexOf(row)}, ${cells.length})">×</button>
+        </div>
+      `;
+      row.insertBefore(newCell, row.lastElementChild);
+    });
+  }
+};
+
+const removeTableRow = (button: HTMLElement, rowIndex: number) => {
+  const row = button.closest('tr');
+  row?.remove();
+};
+
+const removeTableColumn = (button: HTMLElement, colIndex: number) => {
+  const table = button.closest('table');
+  const headers = table?.querySelectorAll('thead tr th');
+  const rows = table?.querySelectorAll('tbody tr');
+  
+  if (headers && rows) {
+    // Remove header
+    headers[colIndex]?.remove();
+    
+    // Remove cells from each row
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells[colIndex]) {
+        cells[colIndex].remove();
+      }
+    });
+  }
+};
+
+const removeTableCell = (button: HTMLElement, rowIndex: number, colIndex: number) => {
+  const cell = button.closest('td');
+  cell?.remove();
+};
+
+// Add table functions to window
+if (typeof window !== 'undefined') {
+  (window as any).addTableRow = addTableRow;
+  (window as any).addTableColumn = addTableColumn;
+  (window as any).removeTableRow = removeTableRow;
+  (window as any).removeTableColumn = removeTableColumn;
+  (window as any).removeTableCell = removeTableCell;
+}
+
 export default function RichNoteEditor({ 
   note, 
   onSave, 
@@ -210,7 +504,7 @@ export default function RichNoteEditor({
     }
   }, []);
 
-  // Handle keyboard navigation for slash commands
+  // Handle keyboard events for list continuation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (showSlashCommands) {
       if (e.key === 'ArrowDown') {
@@ -230,8 +524,36 @@ export default function RichNoteEditor({
         e.preventDefault();
         setShowSlashCommands(false);
       }
+    } else if (e.key === 'Enter') {
+      // Handle list continuation
+      const editor = e.target as HTMLTextAreaElement;
+      const cursorPos = editor.selectionStart;
+      const lines = content.split('\n');
+      const currentLineIndex = content.substring(0, cursorPos).split('\n').length - 1;
+      const currentLine = lines[currentLineIndex];
+      
+      // Check if we're in a list
+      if (currentLine.match(/^-\s/)) {
+        e.preventDefault();
+        const before = content.substring(0, cursorPos);
+        const after = content.substring(cursorPos);
+        const newContent = before + '\n- ' + after;
+        setContent(newContent);
+        editor.focus();
+        editor.setSelectionRange(cursorPos + 3, cursorPos + 3);
+      } else if (currentLine.match(/^\d+\.\s/)) {
+        e.preventDefault();
+        const before = content.substring(0, cursorPos);
+        const after = content.substring(cursorPos);
+        const match = currentLine.match(/^(\d+)\.\s/);
+        const nextNumber = match ? parseInt(match[1]) + 1 : 1;
+        const newContent = before + '\n' + nextNumber + '. ' + after;
+        setContent(newContent);
+        editor.focus();
+        editor.setSelectionRange(cursorPos + (nextNumber.toString().length + 3), cursorPos + (nextNumber.toString().length + 3));
+      }
     }
-  }, [showSlashCommands, slashCommandIndex, slashCommands, slashCommandPosition]);
+  }, [showSlashCommands, slashCommandIndex, slashCommands, slashCommandPosition, content]);
 
   // Handle tag changes
   const handleTagChange = (selectedOptions: any) => {
@@ -275,6 +597,17 @@ export default function RichNoteEditor({
     }
   }, [isNewNote]);
 
+  // Reset content when note changes
+  useEffect(() => {
+    if (note) {
+      setContent(note.content || "");
+      setTags(note.tags || []);
+    } else if (isNewNote) {
+      setContent("");
+      setTags([]);
+    }
+  }, [note, isNewNote]);
+
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
 
   return (
@@ -289,18 +622,30 @@ export default function RichNoteEditor({
         </p>
       </div>
 
-      {/* Rich text editor */}
+      {/* Rich text editor with WYSIWYG overlay */}
       <div className="flex-1 relative min-h-0">
+        {/* Rendered content layer */}
+        <div className="absolute inset-0 bg-transparent pointer-events-none z-10 overflow-y-auto">
+          <div 
+            className="w-full h-full p-6 text-base md:text-lg leading-relaxed text-neutral-700 dark:text-neutral-300"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+          />
+        </div>
+        
+        {/* Editable textarea layer */}
         <textarea
           ref={editorRef}
           value={content}
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
           placeholder="Start typing or type / for commands..."
-          className="w-full h-full p-6 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 overflow-y-auto"
+          className="w-full h-full p-6 text-base md:text-lg leading-relaxed resize-none border-0 focus:outline-none relative z-20 overflow-y-auto bg-transparent"
           disabled={isSaving}
           style={{ 
             fontSize: isMobile ? '16px' : '18px',
+            color: 'rgba(0, 0, 0, 0.01)', // Nearly transparent but not completely
+            caretColor: 'black',
+            background: 'transparent',
             fontFamily: 'inherit',
             lineHeight: '1.6',
             letterSpacing: 'inherit'

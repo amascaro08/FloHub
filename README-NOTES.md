@@ -11,20 +11,20 @@ The notes functionality has been completely redesigned with a clean, Mem.ai-insp
 - No need to manually enter a title - just start typing
 - Titles update in real-time as you edit the first line
 
-### ✨ Rich Text Editor with Slash Commands
+### ✨ WYSIWYG Rich Text Editor
 Type `/` to access a variety of formatting options:
 
-- **`/h1`** - Large heading
-- **`/h2`** - Medium heading
-- **`/h3`** - Small heading
-- **`/bullet`** - Bullet list
-- **`/numbered`** - Numbered list
+- **`/h1`** - Large heading (visually rendered)
+- **`/h2`** - Medium heading (visually rendered)
+- **`/h3`** - Small heading (visually rendered)
+- **`/bullet`** - Bullet list (continues on Enter)
+- **`/numbered`** - Numbered list (continues on Enter)
 - **`/table`** - Insert an interactive table with Mem.ai-like editing
-- **`/code`** - Code block
-- **`/quote`** - Quote block
-- **`/divider`** - Horizontal line
+- **`/code`** - Code block (visually rendered)
+- **`/quote`** - Quote block (visually rendered)
+- **`/divider`** - Horizontal line (visually rendered)
 
-**Seamless Editing**: Clean, distraction-free writing experience with powerful formatting tools
+**What You See Is What You Get**: Content is beautifully formatted as you type with seamless list continuation
 
 ### 🎨 Clean Layout Design
 - **Left Sidebar**: Notes list, search, filters, and bulk actions

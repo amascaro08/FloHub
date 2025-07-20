@@ -193,6 +193,8 @@ export default function NotesPage() {
     setShowNewNote(true);
     setIsBulkMode(false);
     setSelectedNotes(new Set());
+    setSearchContent(""); // Clear search when creating new note
+    setFilterTag(""); // Clear filter when creating new note
   };
 
   // Handle note selection
