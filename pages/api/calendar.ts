@@ -370,4 +370,132 @@ export default async function handler(
                 if (Array.isArray(msEvents)) {
                   // Add the events to our list
                   allEvents.push(...msEvents);
-                  console.log(`
+                  console.log(`Added ${msEvents.length} events from Microsoft Calendar:`, sourceName);
+                }
+              }
+            } catch (msError) {
+              console.error("Error fetching Microsoft events:", msError);
+            }
+          }
+        } catch (e) {
+          console.error("Error processing Microsoft OAuth Calendar source:", e);
+        }
+      }
+    }
+
+    return res.status(200).json(allEvents);
+  } else if (req.method === "POST") {
+    // Handle event creation
+    const decodedPOST = auth(req);
+    if (!decodedPOST) {
+      return res.status(401).json({ error: "Not signed in" });
+    }
+    const user = await getUserById(decodedPOST.userId);
+    if (!user?.email) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    // Get Google OAuth access token from user's accounts
+    const googleAccount = user.accounts?.find(account => account.provider === 'google');
+    let accessToken = googleAccount?.access_token;
+    
+    // Check if token is expired and refresh if needed
+    if (googleAccount && accessToken) {
+      const expiresAt = googleAccount.expires_at;
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      if (expiresAt && expiresAt <= currentTime && googleAccount.refresh_token) {
+        console.log('Google access token expired, attempting to refresh...');
+        accessToken = await refreshGoogleToken(decodedPOST.userId, googleAccount.refresh_token);
+        if (!accessToken) {
+          console.warn("Failed to refresh Google access token");
+        }
+      }
+    }
+    
+    if (!accessToken && !req.body.calendarId?.startsWith('o365_')) {
+      return res.status(400).json({ error: "No Google access token available for event creation" });
+    }
+
+    const { calendarId, summary, start, end, description, source, tags } = req.body as {
+      calendarId: string;
+      summary: string;
+      start: string;
+      end: string;
+      description?: string;
+      source?: "personal" | "work";
+      tags?: string[];
+    };
+
+    if (!summary || !start || !end) {
+      return res.status(400).json({ error: "Missing required event fields" });
+    }
+
+    // Determine which calendar API to use based on calendarId
+    if (calendarId.startsWith('o365_')) {
+      // For O365 calendars, we would need to use the Microsoft Graph API
+      // This is beyond the scope of this implementation
+      return res.status(501).json({ error: "Creating events in O365 calendars is not yet implemented" });
+    }
+    
+    // For Google Calendar, use the Google Calendar API
+    try {
+      // Build the event object for Google Calendar API
+      const eventData: any = {
+        summary,
+        description: description || "",
+        start: {
+          dateTime: start,
+          timeZone: 'UTC',
+        },
+        end: {
+          dateTime: end,
+          timeZone: 'UTC',
+        },
+      };
+      
+      // Add extended properties for tags and source
+      if (tags && tags.length > 0) {
+        eventData.extendedProperties = eventData.extendedProperties || {};
+        eventData.extendedProperties.private = eventData.extendedProperties.private || {};
+        eventData.extendedProperties.private.tags = JSON.stringify(tags);
+      }
+      
+      if (source) {
+        eventData.extendedProperties = eventData.extendedProperties || {};
+        eventData.extendedProperties.private = eventData.extendedProperties.private || {};
+        eventData.extendedProperties.private.source = source;
+      }
+      
+      // Call the Google Calendar API to create the event
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error creating event:", errorData);
+        return res.status(response.status).json({ error: errorData.error?.message || "Failed to create event" });
+      }
+      
+      const newEvent = await response.json();
+      
+      // Add our custom fields to the response
+      newEvent.source = source || "personal";
+      newEvent.tags = tags || [];
+      
+      return res.status(201).json([newEvent as any]);
+    } catch (error) {
+      console.error("Error creating event:", error);
+      return res.status(500).json({ error: "Failed to create event" });
+    }
+  } else {
+    res.setHeader("Allow", "GET, POST");
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+}
