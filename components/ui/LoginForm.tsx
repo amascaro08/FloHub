@@ -17,21 +17,42 @@ export default function LoginForm() {
     setSuccess('');
     setIsLoading(true);
 
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password, rememberMe }),
-    });
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, rememberMe }),
+        credentials: 'include', // Important for PWA cookie handling
+      });
 
-    if (res.ok) {
-      router.push('/dashboard');
-    } else {
-      const { message } = await res.json();
-      setError(message);
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Login successful:', data.isPWA ? 'PWA mode' : 'Browser mode');
+        
+        // Force a small delay to ensure cookie is set properly in PWA
+        if (data.isPWA) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        router.push('/dashboard');
+      } else {
+        const errorData = await res.json();
+        console.error('Login failed:', errorData);
+        setError(errorData.message || 'Login failed');
+        
+        // Show additional debug info in development
+        if (process.env.NODE_ENV === 'development' && errorData.details) {
+          console.log('Debug info:', errorData.details);
+        }
+      }
+    } catch (error) {
+      console.error('Login request failed:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
