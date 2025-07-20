@@ -33,10 +33,41 @@ export default async function handler(
       return res.status(401).json({ error: "User not found" });
     }
 
-    // In a real scenario, you would get the access token from the user object
-    // or from a separate token management system integrated with Neon Auth.
-    // For now, we'll skip Google Calendar API calls if no proper token is available
-    const accessToken = process.env.GOOGLE_ACCESS_TOKEN || null; // Use environment variable or null
+    // Get the user's Google OAuth access token from their stored credentials
+    let accessToken = null;
+    
+    try {
+      // Import db and accounts schema here to avoid circular dependencies
+      const { db } = await import("@/lib/drizzle");
+      const { accounts } = await import("@/db/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Query the accounts table for Google OAuth tokens
+      const googleAccount = await db.query.accounts.findFirst({
+        where: and(
+          eq(accounts.userId, decoded.userId),
+          eq(accounts.provider, "google")
+        ),
+        columns: {
+          access_token: true,
+          refresh_token: true,
+          expires_at: true,
+        }
+      });
+      
+      if (googleAccount?.access_token) {
+        // Check if token is still valid (if expires_at is available)
+        const now = Math.floor(Date.now() / 1000);
+        if (!googleAccount.expires_at || googleAccount.expires_at > now) {
+          accessToken = googleAccount.access_token;
+        } else if (googleAccount.refresh_token) {
+          // TODO: Implement token refresh logic here
+          console.log("Google token expired, refresh token available but refresh not implemented");
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving Google OAuth tokens:", error);
+    }
     const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true" } = req.query; // Extract timezone and useCalendarSources flag
 
     // Normalize and validate dates
@@ -112,7 +143,7 @@ export default async function handler(
     for (const id of googleCalendarIds) {
       // Skip Google Calendar API calls if no access token is available
       if (!accessToken) {
-        console.log(`Skipping Google Calendar ${id} - no access token available`);
+        console.log(`Skipping Google Calendar ${id} - user hasn't connected Google Calendar or token expired`);
         continue;
       }
       
@@ -424,6 +455,14 @@ export default async function handler(
       }
     }
 
+    // Log the number of events found for debugging
+    console.log(`Calendar API: Returning ${allEvents.length} events for user ${user.email}`);
+    
+    // If no events and no configured sources, provide helpful message
+    if (allEvents.length === 0 && calendarSources.length === 0 && legacyCalendarIds.length <= 1) {
+      console.log("No calendar sources configured for user, returning empty array");
+    }
+    
     return res.status(200).json(allEvents);
   } else if (req.method === "POST") {
     // Handle event creation
@@ -435,8 +474,41 @@ export default async function handler(
     if (!user?.email) {
       return res.status(401).json({ error: "User not found" });
     }
-    // Placeholder for accessToken, as it's not directly available from `auth`
-    const accessToken = process.env.GOOGLE_ACCESS_TOKEN || null;
+    // Get the user's Google OAuth access token from their stored credentials
+    let accessToken = null;
+    
+    try {
+      // Import db and accounts schema here to avoid circular dependencies
+      const { db } = await import("@/lib/drizzle");
+      const { accounts } = await import("@/db/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Query the accounts table for Google OAuth tokens
+      const googleAccount = await db.query.accounts.findFirst({
+        where: and(
+          eq(accounts.userId, decodedPOST.userId),
+          eq(accounts.provider, "google")
+        ),
+        columns: {
+          access_token: true,
+          refresh_token: true,
+          expires_at: true,
+        }
+      });
+      
+      if (googleAccount?.access_token) {
+        // Check if token is still valid (if expires_at is available)
+        const now = Math.floor(Date.now() / 1000);
+        if (!googleAccount.expires_at || googleAccount.expires_at > now) {
+          accessToken = googleAccount.access_token;
+        } else if (googleAccount.refresh_token) {
+          // TODO: Implement token refresh logic here
+          console.log("Google token expired, refresh token available but refresh not implemented");
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving Google OAuth tokens:", error);
+    }
 
     const { calendarId, summary, start, end, description, source, tags } = req.body as {
       calendarId: string;
@@ -469,7 +541,7 @@ export default async function handler(
     
     // Check if access token is available for Google Calendar API
     if (!accessToken) {
-      return res.status(400).json({ error: "Google Calendar access not configured" });
+      return res.status(400).json({ error: "Google Calendar not connected. Please connect your Google account in settings." });
     }
     
     // For Google Calendar, use the Google Calendar API

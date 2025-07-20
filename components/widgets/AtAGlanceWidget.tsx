@@ -450,6 +450,51 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
             });
 
             if (!aiRes.ok) {
+              // Handle authentication errors
+              if (aiRes.status === 401) {
+                console.warn("Authentication error for AI assistant, using fallback message");
+                const fallbackMessage = `# Hello ${userName}! 😺
+
+## Your Day at a Glance
+
+${upcomingEventsForPrompt.length > 0 ? `
+**Upcoming Events:**
+${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
+  let eventTime;
+  if (event.start instanceof Date) {
+    eventTime = formatInTimeZone(event.start, userTimezone, 'h:mm a');
+  } else {
+    eventTime = event.start.dateTime
+      ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
+      : event.start.date;
+  }
+  
+  const eventTitle = event.summary || event.title || 'Untitled Event';
+  const calendarName = event.calendarName || (event.source === "work" ? "Work Calendar" : "Personal Calendar");
+  const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
+  return `- ${eventTitle} at ${eventTime} - ${calendarName}${calendarTags}`;
+}).join('\n')}
+` : ''}
+
+${incompleteTasks.length > 0 ? `
+**Tasks to Complete:**
+${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text}`).join('\n')}
+` : ''}
+
+${todaysHabits.length > 0 ? `
+**Habits Progress:** ${completedHabits.length}/${todaysHabits.length} completed
+${todaysHabits.slice(0, 3).map(habit => {
+  const isCompleted = completedHabits.some(h => h.id === habit.id);
+  return `- ${isCompleted ? '✅' : '⬜'} ${habit.name}`;
+}).join('\n')}
+` : ''}
+
+Have a purr-fect day! (Please check your login status if you need AI insights)`;
+
+                setAiMessage(fallbackMessage);
+                setFormattedHtml(parseMarkdown(fallbackMessage));
+                return;
+              }
               // If we get a timeout or other error, generate a simple message instead
               if (aiRes.status === 504) {
                 console.warn("AI request timed out, using fallback message");

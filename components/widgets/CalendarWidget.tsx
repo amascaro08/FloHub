@@ -37,17 +37,28 @@ const fetcher = async (url: string) => {
 
 // Fetcher specifically for calendar events API
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
-  const res = await fetch(url, { credentials: 'include' });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error loading events');
-  
-  // Handle both formats: direct array or {events: [...]} object 
-  if (Array.isArray(data)) {
-    return data;
-  } else if (data && Array.isArray(data.events)) {
-    return data.events;
-  } else {
-    console.error("Unexpected response format from calendar API:", data);
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      const errorMessage = data.error || 'Error loading events';
+      console.error(`Calendar API error (${res.status}):`, errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    // Handle both formats: direct array or {events: [...]} object 
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && Array.isArray(data.events)) {
+      return data.events;
+    } else {
+      console.error("Unexpected response format from calendar API:", data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching calendar events:", error);
+    // Return empty array instead of throwing to prevent widget crashes
     return [];
   }
 };
