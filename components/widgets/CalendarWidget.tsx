@@ -202,7 +202,7 @@ function CalendarWidget() {
   // Build API URL for calendar events
   const apiUrl =
     timeRange &&
-    `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
+    `/api/calendar/events?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
     )}${selectedCals.map((id) => `&calendarId=${encodeURIComponent(id)}`).join('')}${
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''

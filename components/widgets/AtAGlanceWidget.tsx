@@ -200,7 +200,7 @@ const { user, isLoading } = useUser()
         // Fetch data in parallel using Promise.all with enhanced fetcher
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
           // Fetch calendar events with enhanced fetcher
-          fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `flohub:calendar:${apiUrlParams}`),
+          fetchCalendarEvents(`/api/calendar/events?${apiUrlParams}`, `flohub:calendar:${apiUrlParams}`),
           
           // Fetch tasks with enhanced fetcher
           fetchTasks(),

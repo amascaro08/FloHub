@@ -24,36 +24,62 @@ export default async function handler(
   if (!user) {
     return res.status(401).json({ error: "User not found" });
   }
-  const accessToken = user.accounts[0]?.access_token;
-
-  // 2) Get calendarId from query parameters
-  const { calendarId } = req.query;
-
-  if (!calendarId) {
-    return res.status(400).json({ error: "Calendar ID is required" });
+  // Get Google OAuth access token using the same logic as calendar.ts
+  let accessToken = null;
+  
+  try {
+    const { db } = await import("@/lib/drizzle");
+    const { accounts } = await import("@/db/schema");
+    const { eq, and } = await import("drizzle-orm");
+    
+    const googleAccount = await db.query.accounts.findFirst({
+      where: and(
+        eq(accounts.userId, decoded.userId),
+        eq(accounts.provider, "google")
+      ),
+      columns: {
+        access_token: true,
+        refresh_token: true,
+        expires_at: true,
+      }
+    });
+    
+    if (googleAccount?.access_token) {
+      const now = Math.floor(Date.now() / 1000);
+      if (!googleAccount.expires_at || googleAccount.expires_at > now) {
+        accessToken = googleAccount.access_token;
+      }
+    }
+  } catch (error) {
+    console.error("Error retrieving Google OAuth tokens:", error);
   }
 
-  const calendarIds = typeof calendarId === 'string' ? calendarId.split(',') : Array.isArray(calendarId) ? calendarId : [];
+  // 2) Get parameters from query
+  const { calendarId, timeMin, timeMax, o365Url } = req.query;
 
-  if (calendarIds.length === 0) {
-    return res.status(400).json({ error: "Calendar ID is required" });
-  }
+  // Handle multiple calendar IDs
+  const calendarIds = Array.isArray(calendarId) ? calendarId : 
+                     typeof calendarId === 'string' ? [calendarId] : 
+                     ['primary']; // Default to primary calendar
 
   try {
     const allEvents: any[] = [];
 
-    // 3) Get o365Url from query parameters
-    const { o365Url } = req.query;
-
-    // Set time range for events (e.g., next 3 months)
-    const now = new Date();
-    const timeMinISO = now.toISOString();
-    const threeMonthsLater = new Date(now.setMonth(now.getMonth() + 3));
-    const timeMaxISO = threeMonthsLater.toISOString();
+    // 3) Set time range for events from query parameters or defaults
+    const timeMinISO = typeof timeMin === 'string' ? timeMin : new Date().toISOString();
+    const timeMaxISO = typeof timeMax === 'string' ? timeMax : (() => {
+      const threeMonthsLater = new Date();
+      threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+      return threeMonthsLater.toISOString();
+    })();
 
     // 4) Call Google Calendar API to list events for the specified calendar
     if (!o365Url) {
-      for (const calId of calendarIds) {
+      // Skip Google Calendar calls if no access token
+      if (!accessToken) {
+        console.log("No Google access token available, skipping Google Calendar events");
+      } else {
+        for (const calId of calendarIds) {
         const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${encodeURIComponent(timeMinISO)}&timeMax=${encodeURIComponent(timeMaxISO)}&orderBy=startTime`;
 
         const apiRes = await fetch(url, {
@@ -85,6 +111,7 @@ export default async function handler(
           : [];
 
         allEvents.push(...events);
+        }
       }
     } else {
       // 5) Call O365 API to list events for the specified calendar
