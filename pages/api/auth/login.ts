@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { email, password } = req.body;
+  const { email, password, rememberMe = true } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
@@ -33,14 +33,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET as string, {
-      expiresIn: '7d',
+      expiresIn: rememberMe ? '30d' : '24h', // 30 days if remember me, 24 hours if not
     });
 
     const cookie = serialize('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      sameSite: 'lax', // Changed to 'lax' for better PWA compatibility
+      maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
       path: '/',
     });
 
