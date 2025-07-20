@@ -1,31 +1,17 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { ChatProvider } from '@/components/assistant/ChatContext'
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 import MainLayout from '@/components/ui/MainLayout';
+import PageTransition from '@/components/ui/PageTransition';
+import PagePreloader from '@/components/ui/PagePreloader';
+import ProgressBar from '@/components/ui/ProgressBar';
+import InstantFeedback from '@/components/ui/InstantFeedback';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import PWAStatus from '@/components/ui/PWAStatus';
 
 const App = ({ Component, pageProps }: AppProps) => {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => setIsLoading(false);
-
-    router.events.on('routeChangeStart', handleStart);
-    router.events.on('routeChangeComplete', handleComplete);
-    router.events.on('routeChangeError', handleComplete);
-
-    return () => {
-      router.events.off('routeChangeStart', handleStart);
-      router.events.off('routeChangeComplete', handleComplete);
-      router.events.off('routeChangeError', handleComplete);
-    };
-  }, [router]);
 
   useEffect(() => {
     const registerSW = async () => {
@@ -69,9 +55,14 @@ const App = ({ Component, pageProps }: AppProps) => {
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
       <ChatProvider>
-        <MainLayout>
-          <Component {...pageProps} />
-        </MainLayout>
+        <ProgressBar />
+        <PagePreloader />
+        <InstantFeedback />
+        <PageTransition>
+          <MainLayout>
+            <Component {...pageProps} />
+          </MainLayout>
+        </PageTransition>
         <PWAInstallPrompt />
         <PWAStatus />
       </ChatProvider>
