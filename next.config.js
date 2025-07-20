@@ -2,7 +2,62 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development'
+  disable: process.env.NODE_ENV === 'development',
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 1 year
+        }
+      }
+    },
+    {
+      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-font-assets',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 7 * 24 * 60 * 60 // 7 days
+        }
+      }
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'static-image-assets',
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+        }
+      }
+    },
+    {
+      urlPattern: /\/api\/auth\/refresh/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'auth-refresh',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 16,
+          maxAgeSeconds: 24 * 60 * 60 // 24 hours
+        }
+      }
+    },
+    {
+      urlPattern: /\/api\/auth\/(?!refresh).*/i,
+      handler: 'NetworkOnly',
+      options: {
+        cacheName: 'auth-api',
+        networkTimeoutSeconds: 10
+      }
+    }
+  ]
 });
 
 /** @type {import('next').NextConfig} */

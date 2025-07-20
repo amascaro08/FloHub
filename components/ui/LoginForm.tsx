@@ -5,6 +5,14 @@ export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState('');
+
+export default function LoginForm() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,7 +24,7 @@ export default function LoginForm() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rememberMe }),
     });
 
     if (res.ok) {
@@ -59,6 +67,19 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
+      </div>
+      <div className="flex items-center">
+        <input
+          id="remember-me"
+          name="remember-me"
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+        />
+        <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Remember me for 30 days
+        </label>
       </div>
       <button
         type="submit"
