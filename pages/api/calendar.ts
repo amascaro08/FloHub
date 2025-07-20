@@ -35,8 +35,8 @@ export default async function handler(
 
     // In a real scenario, you would get the access token from the user object
     // or from a separate token management system integrated with Neon Auth.
-    // For now, we'll use a placeholder or assume it's handled elsewhere if needed for Google API.
-    const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE"; // Placeholder
+    // For now, we'll skip Google Calendar API calls if no proper token is available
+    const accessToken = process.env.GOOGLE_ACCESS_TOKEN || null; // Use environment variable or null
     const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true" } = req.query; // Extract timezone and useCalendarSources flag
 
     // Normalize and validate dates
@@ -110,6 +110,12 @@ export default async function handler(
       : legacyCalendarIds;
 
     for (const id of googleCalendarIds) {
+      // Skip Google Calendar API calls if no access token is available
+      if (!accessToken) {
+        console.log(`Skipping Google Calendar ${id} - no access token available`);
+        continue;
+      }
+      
       const source = googleSources.find(s => s.sourceId === id);
       const tags = source?.tags || [];
       const sourceName = source?.name || "Google Calendar";
@@ -430,7 +436,7 @@ export default async function handler(
       return res.status(401).json({ error: "User not found" });
     }
     // Placeholder for accessToken, as it's not directly available from `auth`
-    const accessToken = "YOUR_GOOGLE_ACCESS_TOKEN_HERE";
+    const accessToken = process.env.GOOGLE_ACCESS_TOKEN || null;
 
     const { calendarId, summary, start, end, description, source, tags } = req.body as {
       calendarId: string;
@@ -459,6 +465,11 @@ export default async function handler(
       // For other calendar types, we would need specific implementations
       // This is beyond the scope of this implementation
       return res.status(501).json({ error: "Creating events in this calendar type is not yet implemented" });
+    }
+    
+    // Check if access token is available for Google Calendar API
+    if (!accessToken) {
+      return res.status(400).json({ error: "Google Calendar access not configured" });
     }
     
     // For Google Calendar, use the Google Calendar API
