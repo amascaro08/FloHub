@@ -16,9 +16,11 @@ import { InferSelectModel, InferInsertModel, relations } from 'drizzle-orm';
 // USERS TABLE
 export const users = pgTable("users", {
   id: serial("id").notNull().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  password: varchar("password", { length: 255 }).notNull(),
+  emailVerified: timestamp("emailVerified", { withTimezone: true, mode: "date" }),
+  image: varchar("image", { length: 255 }),
+  password: varchar("password", { length: 255 }),
   resetToken: varchar("reset_token", { length: 255 }),
   resetTokenExpiry: timestamp("reset_token_expiry", { withTimezone: true, mode: "date" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
