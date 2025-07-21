@@ -106,7 +106,6 @@ export default async function handler(
     const safeTimeMax = typeof timeMax === "string" ? timeMax : "";
     const userTimezone = typeof timezone === "string" ? timezone : "UTC"; // Default to UTC if no timezone is provided
 
-
     if (!safeTimeMin || !safeTimeMax) {
       return res.status(400).json({ error: "Missing timeMin or timeMax" });
     }
@@ -275,6 +274,11 @@ export default async function handler(
           .map(source => source.connectionData)
           .filter(url => url && url.startsWith("http"))
       : (legacyO365Url && legacyO365Url.startsWith("http") ? [legacyO365Url] : []);
+
+    // Also check for o365Url in query parameters if no calendar sources found
+    if (o365Urls.length === 0 && typeof o365Url === "string" && o365Url.startsWith("http")) {
+      o365Urls.push(o365Url);
+    }
 
     for (const url of o365Urls) {
       if (!url) continue;

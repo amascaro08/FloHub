@@ -18,7 +18,7 @@ export default async function handler(
 
   if (error) {
     console.error("OAuth error:", error);
-    return res.redirect("/dashboard?error=oauth_error");
+    return res.redirect("/dashboard/settings?tab=calendar&error=oauth_error");
   }
 
   if (!code || typeof code !== "string") {
@@ -37,7 +37,9 @@ export default async function handler(
     // Get the current user from JWT token
     const decoded = auth(req);
     if (!decoded) {
-      return res.status(401).json({ error: "Not signed in" });
+      // If not authenticated, redirect to login with return URL
+      const returnUrl = encodeURIComponent("/dashboard/settings?tab=calendar&success=google_connected");
+      return res.redirect(`/dashboard/login?returnUrl=${returnUrl}`);
     }
 
     const user = await getUserById(decoded.userId);
