@@ -130,6 +130,7 @@ export default async function handler(
           headers: {
             // Forward the Authorization header for internal API calls
             Authorization: req.headers.authorization || "",
+            Cookie: req.headers.cookie || "",
           },
         });
         
@@ -174,14 +175,22 @@ export default async function handler(
     const o365Sources = calendarSources.filter(source => source.type === "o365");
     
     // Process PowerAutomate URL sources
-    const o365Urls = o365Sources.length > 0
-      ? o365Sources
-          .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
-          .map(source => source.connectionData)
-          .filter(url => url && url.startsWith("http"))
-      : (legacyO365Url && legacyO365Url.startsWith("http") ? [legacyO365Url] : []);
-
-    // Also check for o365Url in query parameters if no calendar sources found
+    let o365Urls: string[] = [];
+    
+    // First, check calendar sources
+    if (o365Sources.length > 0) {
+      o365Urls = o365Sources
+        .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
+        .map(source => source.connectionData)
+        .filter(url => url && url.startsWith("http"));
+    }
+    
+    // Then check legacy O365 URL from settings
+    if (o365Urls.length === 0 && legacyO365Url && legacyO365Url.startsWith("http")) {
+      o365Urls.push(legacyO365Url);
+    }
+    
+    // Finally check query parameters
     if (o365Urls.length === 0 && typeof o365Url === "string" && o365Url.startsWith("http")) {
       o365Urls.push(o365Url);
     }
@@ -189,6 +198,12 @@ export default async function handler(
     // Check if we have any calendar sources to process
     if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
       console.log("No calendar sources found, returning empty events array");
+      return res.status(200).json([]);
+    }
+
+    // If no calendar sources found but useCalendarSources is true, return empty array instead of error
+    if (useCalendarSources === "true" && calendarSources.length === 0 && legacyCalendarIds.length === 0 && !legacyO365Url) {
+      console.log("No enabled calendar sources found, returning empty events array");
       return res.status(200).json([]);
     }
 

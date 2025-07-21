@@ -210,7 +210,7 @@ function CalendarWidget() {
     timeRange &&
     `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
-    )}${selectedCals.map((id) => `&calendarId=${encodeURIComponent(id)}`).join('')}${
+    )}&useCalendarSources=true${
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
     }`;
 

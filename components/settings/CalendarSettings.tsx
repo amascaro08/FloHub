@@ -50,14 +50,14 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             <button
               onClick={() => {
                 const powerAutomateUrl = prompt("Please enter your Power Automate URL");
-                if (powerAutomateUrl) {
+                if (powerAutomateUrl && powerAutomateUrl.trim()) {
                   // Create a new calendar source for the Power Automate URL
                   const newSource: CalendarSource = {
                     id: `o365_${Date.now()}`,
                     name: "Work Calendar (O365)",
                     type: "o365",
                     sourceId: "default",
-                    connectionData: powerAutomateUrl,
+                    connectionData: powerAutomateUrl.trim(),
                     tags: ["work"],
                     isEnabled: true,
                   };
@@ -67,7 +67,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                   onSettingsChange({
                     ...settings,
                     calendarSources: updatedSources,
-                    powerAutomateUrl: powerAutomateUrl, // Keep legacy field for backward compatibility
+                    powerAutomateUrl: powerAutomateUrl.trim(), // Keep legacy field for backward compatibility
                   });
                 }
               }}
@@ -189,6 +189,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 onSettingsChange({
                   ...settings,
                   calendarSources: [newSource],
+                  powerAutomateUrl: "", // Clear the legacy field after conversion
                 });
               }}
               className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"

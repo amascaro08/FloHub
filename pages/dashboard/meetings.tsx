@@ -69,13 +69,13 @@ export default function MeetingsPage() {
     }
   );
 
-  // Build API URL for calendar events, including o365Url from settings
+  // Build API URL for calendar events, using calendar sources
   const apiUrl = useMemo(() => {
-    if (!shouldFetch || !timeRange || !userSettings?.powerAutomateUrl) return null;
+    if (!shouldFetch || !timeRange) return null;
     return `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
-    )}&o365Url=${encodeURIComponent(userSettings.powerAutomateUrl)}`;
-  }, [shouldFetch, timeRange, userSettings?.powerAutomateUrl]);
+    )}&useCalendarSources=true`;
+  }, [shouldFetch, timeRange]);
 
   // Fetch meeting notes and calendar events in parallel
   const { data: meetingNotesResponse, error: meetingNotesError, mutate } = useSWR<GetMeetingNotesResponse>(
