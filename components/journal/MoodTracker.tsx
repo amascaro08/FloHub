@@ -280,14 +280,17 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Mood Tracker</h2>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Mood Tracker</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">How are you feeling?</p>
+        </div>
         <button
           onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
         >
-          {showInsights ? 'Hide Insights' : 'Show Insights'}
+          {showInsights ? 'Hide Insights' : 'Insights'}
         </button>
       </div>
       
@@ -309,10 +312,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
             <button
               key={emoji}
               onClick={() => handleEmojiSelect(emoji, index)}
-              className={`flex flex-col items-center justify-center p-3 rounded-full transition-all ${
+              className={`flex flex-col items-center justify-center p-3 rounded-full mood-emoji ${
                 isSelected
-                  ? `${selectedColor} scale-110 shadow-md`
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? `${selectedColor} selected shadow-md`
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               aria-label={`Select mood: ${labels[index]}`}
             >
@@ -335,10 +338,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
             <button
               key={tag}
               onClick={() => toggleTag(tag)}
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                 selectedTags.includes(tag)
-                  ? 'bg-teal-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {tag}
@@ -352,7 +355,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
             placeholder="Add custom tag..."
-            className="flex-grow p-2 rounded-l-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="flex-grow p-2 rounded-l-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -362,7 +365,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
           />
           <button
             onClick={addCustomTag}
-            className="px-3 py-2 rounded-r-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+            className="px-3 py-2 rounded-r-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors font-medium"
           >
             Add
           </button>
