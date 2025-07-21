@@ -5,6 +5,7 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { accounts } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import type { CalendarSource } from "@/types/app";
 
 export default async function handler(
   req: NextApiRequest,
