@@ -117,6 +117,12 @@ export default async function handler(
       return res.status(400).json({ error: "Invalid date format for timeMin/timeMax" });
     }
 
+    // Add this check before processing calendars
+    if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
+      console.log("No calendar sources found, returning empty events array");
+      return res.status(200).json([]);
+    }
+
     // Determine which calendar sources to use
     let calendarSources: CalendarSource[] = [];
     let legacyCalendarIds: string[] = [];
