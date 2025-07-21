@@ -168,8 +168,8 @@ export default async function handler(
     // Process Google Calendar sources
     const googleSources = calendarSources.filter(source => source.type === "google");
     const googleCalendarIds = googleSources.length > 0 
-      ? googleSources.map(source => source.sourceId)
-      : legacyCalendarIds;
+      ? googleSources.map(source => source.sourceId).filter((id): id is string => id !== undefined)
+      : legacyCalendarIds.filter((id): id is string => id !== undefined);
 
     // Process O365 Calendar sources
     const o365Sources = calendarSources.filter(source => source.type === "o365");
@@ -182,7 +182,7 @@ export default async function handler(
       o365Urls = o365Sources
         .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
         .map(source => source.connectionData)
-        .filter(url => url && url.startsWith("http"));
+        .filter((url): url is string => url && url.startsWith("http"));
     }
     
     // Then check legacy O365 URL from settings
