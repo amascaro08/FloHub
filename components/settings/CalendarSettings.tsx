@@ -51,9 +51,23 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               onClick={() => {
                 const powerAutomateUrl = prompt("Please enter your Power Automate URL");
                 if (powerAutomateUrl) {
+                  // Create a new calendar source for the Power Automate URL
+                  const newSource: CalendarSource = {
+                    id: `o365_${Date.now()}`,
+                    name: "Work Calendar (O365)",
+                    type: "o365",
+                    sourceId: "default",
+                    connectionData: powerAutomateUrl,
+                    tags: ["work"],
+                    isEnabled: true,
+                  };
+                  
+                  const updatedSources = settings.calendarSources ? [...settings.calendarSources, newSource] : [newSource];
+                  
                   onSettingsChange({
                     ...settings,
-                    powerAutomateUrl: powerAutomateUrl,
+                    calendarSources: updatedSources,
+                    powerAutomateUrl: powerAutomateUrl, // Keep legacy field for backward compatibility
                   });
                 }
               }}
@@ -77,6 +91,11 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                        source.type === "o365" ? "Microsoft 365" :
                        source.type === "apple" ? "Apple Calendar" : "Other Calendar"}
                     </div>
+                    {source.connectionData && source.type === "o365" && (
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 break-all">
+                        URL: {source.connectionData}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                     <label className="inline-flex items-center cursor-pointer">
@@ -142,10 +161,42 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             ))
           ) : (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No calendar sources added yet. Click "Add New Calendar" to get started.
+              No calendar sources added yet. Click "Add Google Calendar" or "Add Power Automate URL" to get started.
             </div>
           )}
         </div>
+        
+        {/* Legacy Power Automate URL Display */}
+        {settings.powerAutomateUrl && (!settings.calendarSources || settings.calendarSources.length === 0) && (
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+            <h3 className="font-medium text-lg mb-2">Legacy Power Automate URL</h3>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              URL: {settings.powerAutomateUrl}
+            </div>
+            <button
+              onClick={() => {
+                // Convert legacy URL to calendar source
+                const newSource: CalendarSource = {
+                  id: `o365_legacy_${Date.now()}`,
+                  name: "Work Calendar (O365) - Legacy",
+                  type: "o365",
+                  sourceId: "default",
+                  connectionData: settings.powerAutomateUrl,
+                  tags: ["work"],
+                  isEnabled: true,
+                };
+                
+                onSettingsChange({
+                  ...settings,
+                  calendarSources: [newSource],
+                });
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+            >
+              Convert to Calendar Source
+            </button>
+          </div>
+        )}
       </section>
       
       {/* Default view filter */}

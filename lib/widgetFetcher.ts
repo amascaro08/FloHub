@@ -30,7 +30,8 @@ export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promi
     throw new Error('Not signed in');
   }
   const data = await res.json();
-  return data.events || [];
+  // The calendar API returns events directly as an array, not wrapped in an events property
+  return Array.isArray(data) ? data : (data.events || []);
 };
 
 // Typed fetcher for tasks
