@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 
-export function useAuthPersistence() {
+export function useAuthPersistence(enabled: boolean = true) {
   const router = useRouter();
 
   const refreshToken = useCallback(async () => {
@@ -26,6 +26,10 @@ export function useAuthPersistence() {
   }, [router]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     // Refresh token every 12 hours for better persistence
     const refreshInterval = setInterval(refreshToken, 12 * 60 * 60 * 1000);
 
@@ -64,7 +68,7 @@ export function useAuthPersistence() {
         document.removeEventListener(event, handleUserActivity, true);
       });
     };
-  }, [refreshToken]);
+  }, [refreshToken, enabled]);
 
   return { refreshToken };
 }

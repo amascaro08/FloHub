@@ -46,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sameSite: isPWA ? 'none' : 'lax', // Use 'none' for PWA to handle cross-context requests
       maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
       path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.flohub.xyz' : undefined, // Allow subdomains
     });
 
     // Add PWA-specific headers

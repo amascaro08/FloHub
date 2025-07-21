@@ -54,7 +54,6 @@ const withPWA = require('next-pwa')({
       handler: 'NetworkOnly',
       options: {
         cacheName: 'auth-api',
-        networkTimeoutSeconds: 10,
         plugins: [
           {
             cacheWillUpdate: async ({ response }) => {

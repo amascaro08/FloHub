@@ -14,6 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sameSite: 'lax',
       maxAge: 0, // Expire immediately
       path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.flohub.xyz' : undefined, // Allow subdomains
     });
 
     res.setHeader('Set-Cookie', cookie);
