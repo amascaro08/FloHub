@@ -50,6 +50,10 @@ export default async function handler(
           notificationSettings: {
             subscribed: false,
           },
+          calendarSources: [],
+          timezone: "UTC",
+          floCatSettings: { enabledCapabilities: [] },
+          layouts: {},
         };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
@@ -69,6 +73,10 @@ export default async function handler(
         widgets: (data.widgets as string[]) || [],
         calendarSettings: (data.calendarSettings as any) || { calendars: [] },
         notificationSettings: (data.notificationSettings as any) || { subscribed: false },
+        calendarSources: (data.calendarSources as any) || [],
+        timezone: data.timezone || "UTC",
+        floCatSettings: (data.floCatSettings as any) || { enabledCapabilities: [] },
+        layouts: (data.layouts as any) || {},
       };
 
       console.log("User settings loaded for", user_email, settings);
