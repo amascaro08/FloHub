@@ -94,3 +94,31 @@ export default async function handler(
     return res.redirect("/dashboard/settings?tab=calendar&error=oauth_failed");
   }
 }
+
+    // After saving the account, add this code:
+    const newGoogleSource: CalendarSource = {
+      id: `google_${Date.now()}`,
+      name: "Google Calendar", 
+      type: "google",
+      sourceId: "primary",
+      tags: ["personal"],
+      isEnabled: true,
+    };
+    
+    // Update user settings with the new calendar source
+    const userSettingsRes = await fetch(`${process.env.NEXTAUTH_URL}/api/userSettings`);
+    if (userSettingsRes.ok) {
+      const userSettings = await userSettingsRes.json();
+      const updatedSources = userSettings.calendarSources 
+        ? [...userSettings.calendarSources, newGoogleSource]
+        : [newGoogleSource];
+        
+      await fetch(`${process.env.NEXTAUTH_URL}/api/userSettings/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...userSettings,
+          calendarSources: updatedSources,
+        }),
+      });
+    }
