@@ -117,12 +117,6 @@ export default async function handler(
       return res.status(400).json({ error: "Invalid date format for timeMin/timeMax" });
     }
 
-    // Add this check before processing calendars
-    if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
-      console.log("No calendar sources found, returning empty events array");
-      return res.status(200).json([]);
-    }
-
     // Determine which calendar sources to use
     let calendarSources: CalendarSource[] = [];
     let legacyCalendarIds: string[] = [];
@@ -175,6 +169,28 @@ export default async function handler(
     const googleCalendarIds = googleSources.length > 0 
       ? googleSources.map(source => source.sourceId)
       : legacyCalendarIds;
+
+    // Process O365 Calendar sources
+    const o365Sources = calendarSources.filter(source => source.type === "o365");
+    
+    // Process PowerAutomate URL sources
+    const o365Urls = o365Sources.length > 0
+      ? o365Sources
+          .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
+          .map(source => source.connectionData)
+          .filter(url => url && url.startsWith("http"))
+      : (legacyO365Url && legacyO365Url.startsWith("http") ? [legacyO365Url] : []);
+
+    // Also check for o365Url in query parameters if no calendar sources found
+    if (o365Urls.length === 0 && typeof o365Url === "string" && o365Url.startsWith("http")) {
+      o365Urls.push(o365Url);
+    }
+
+    // Check if we have any calendar sources to process
+    if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
+      console.log("No calendar sources found, returning empty events array");
+      return res.status(200).json([]);
+    }
 
     for (const id of googleCalendarIds) {
       const source = googleSources.find(s => s.sourceId === id);
@@ -268,22 +284,6 @@ export default async function handler(
           console.error(`Error processing additional Google account ${accountLabel}:`, e);
         }
       }
-    }
-
-    // Process O365 Calendar sources
-    const o365Sources = calendarSources.filter(source => source.type === "o365");
-    
-    // Process PowerAutomate URL sources
-    const o365Urls = o365Sources.length > 0
-      ? o365Sources
-          .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
-          .map(source => source.connectionData)
-          .filter(url => url && url.startsWith("http"))
-      : (legacyO365Url && legacyO365Url.startsWith("http") ? [legacyO365Url] : []);
-
-    // Also check for o365Url in query parameters if no calendar sources found
-    if (o365Urls.length === 0 && typeof o365Url === "string" && o365Url.startsWith("http")) {
-      o365Urls.push(o365Url);
     }
 
     for (const url of o365Urls) {
