@@ -1,39 +1,43 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/user";
+import { NextApiRequest, NextApiResponse } from 'next';
+import { db } from '@/lib/drizzle';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Disable caching
-  res.setHeader('Cache-Control', 'no-store');
-  
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
   try {
-    // Get the token
-    const decoded = auth(req);
-    let user = null;
-    if (decoded) {
-      user = await getUserById(decoded.userId);
-    }
+    // Test database connection
+    const testEmail = 'test@example.com';
     
-    // Return debug information
-    return res.status(200).json({
-      authenticated: !!user,
-      user: user ? {
-        email: user.email,
-        name: user.name || '',
-        // Don't include sensitive information
-      } : null,
-      headers: {
-        authorization: req.headers.authorization ? 'Present' : 'Missing',
-        cookie: req.headers.cookie ? 'Present' : 'Missing',
-      },
-      method: req.method,
-      query: req.query,
+    // Test the exact query structure used in login
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, testEmail),
     });
-  } catch (error: any) {
-    console.error("Debug endpoint error:", error);
-    return res.status(500).json({ error: error.message });
+
+    // Test the exact query structure used in reset-password
+    const userReset = await db.select().from(users).where(eq(users.email, testEmail)).limit(1);
+
+    return res.status(200).json({
+      message: 'Database connection successful',
+      hasEnvVar: !!process.env.NEON_DATABASE_URL,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      queryResults: {
+        findFirst: user || 'No user found',
+        selectFrom: userReset.length > 0 ? userReset[0] : 'No user found'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    return res.status(500).json({
+      message: 'Database connection failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      hasEnvVar: !!process.env.NEON_DATABASE_URL,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      timestamp: new Date().toISOString()
+    });
   }
 }
