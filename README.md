@@ -13,7 +13,7 @@ FloHub brings together your day-to-day tools into a single modular workspace:
 - 💬 **AI Assistant FloCat** powered by OpenAI for summaries, Q&A, and planning help  
 - 🧱 **Customizable Widgets** for a dashboard that works your way  
 - 💭 **GitHub Feedback Integration** that converts user feedback into trackable GitHub issues  
-- 🔐 **Secure Auth + DB** via [Neon](https://neon.tech) and [Stack Auth](https://stackframe.dev)  
+- 🔐 **Secure Auth + DB** via [Neon](https://neon.tech) and custom jwt auth  
 - 📱 Fully responsive: use it on desktop, tablet, or mobile  
 
 ---
@@ -24,7 +24,7 @@ FloHub brings together your day-to-day tools into a single modular workspace:
 |---------------|------------------------------------------------------------------------|
 | **Frontend**  | Next.js 14, React 19, Tailwind CSS                                      |
 | **Backend**   | Neon (PostgreSQL), Firebase (legacy), Express (for service endpoints)  |
-| **Auth**      | Stack Auth + Neon integration (user DB + auth in sync)                 |
+| **Auth**      | JWT Auth + Neon integration                  |
 | **AI**        | OpenAI GPT-4o                                                           |
 | **Scheduling**| Google Calendar API via OAuth 2.0                                      |
 | **Deployment**| Vercel (Frontend) + Replit (Future backend memory persistence)         |
