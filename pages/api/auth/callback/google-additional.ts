@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getGoogleTokens } from "@/lib/googleMultiAuth";
 import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/user";
+import { getUserById, getUserByEmail } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { accounts } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -51,7 +51,7 @@ export default async function handler(
     }
 
     // Get user by email
-    const user = await getUserById(userEmail);
+    const user = await getUserByEmail(userEmail);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
