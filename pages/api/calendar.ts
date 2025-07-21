@@ -182,7 +182,7 @@ export default async function handler(
       o365Urls = o365Sources
         .filter(source => source.connectionData && !source.connectionData.startsWith("oauth:"))
         .map(source => source.connectionData)
-        .filter((url): url is string => url && url.startsWith("http"));
+        .filter((url): url is string => typeof url === "string" && url.startsWith("http"));
     }
     
     // Then check legacy O365 URL from settings
