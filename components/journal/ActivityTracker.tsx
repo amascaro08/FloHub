@@ -338,31 +338,30 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   };
   
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Activities</h2>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Activities</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">What did you do today?</p>
+        </div>
         <button
           onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
         >
-          {showInsights ? 'Hide Insights' : 'Show Insights'}
+          {showInsights ? 'Hide Insights' : 'Insights'}
         </button>
       </div>
       
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          What did you do today?
-        </label>
-        
         <div className="flex flex-wrap gap-2 mb-4">
           {defaultActivities.map(activity => (
             <button
               key={activity.name}
               onClick={() => toggleActivity(activity.name)}
-              className={`px-3 py-1 rounded-full text-sm transition-all flex items-center ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center activity-tag ${
                 selectedActivities.includes(activity.name)
-                  ? 'bg-teal-500 text-white scale-105 shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  ? 'bg-teal-600 text-white scale-105 shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               <span className="mr-1">{activity.icon}</span>
@@ -374,9 +373,9 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             <button
               key={`custom-${activity}`}
               onClick={() => toggleActivity(activity)}
-              className={`px-3 py-1 rounded-full text-sm transition-all flex items-center ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center activity-tag ${
                 selectedActivities.includes(activity)
-                  ? 'bg-purple-500 text-white scale-105 shadow-sm'
+                  ? 'bg-purple-600 text-white scale-105 shadow-sm'
                   : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800'
               }`}
             >
@@ -392,7 +391,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             value={customActivity}
             onChange={(e) => setCustomActivity(e.target.value)}
             placeholder="Add custom activity..."
-            className="flex-grow p-2 rounded-l-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="flex-grow p-2 rounded-l-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -402,7 +401,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           />
           <button
             onClick={addCustomActivity}
-            className="px-3 py-2 rounded-r-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+            className="px-3 py-2 rounded-r-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors font-medium"
           >
             Add
           </button>

@@ -110,8 +110,11 @@ const LinkedMoments: React.FC<LinkedMomentsProps> = ({ date, timezone }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Linked Moments</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Linked Moments</h2>
+        <div className="h-1 w-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></div>
+      </div>
       
       <div className="mb-4">
         <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">

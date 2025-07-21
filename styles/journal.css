@@ -1,0 +1,230 @@
+/* Journal Page Specific Styles */
+
+/* Smooth fade-in animation for cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gradient hover animation for cards */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+/* Card hover animation */
+.journal-card {
+  animation: fadeInUp 0.5s ease-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.journal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Mood tracker emoji animations */
+.mood-emoji {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mood-emoji:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.mood-emoji.selected {
+  animation: bounce 0.6s ease;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0) scale(1.1);
+  }
+  40%, 43% {
+    transform: translate3d(0,-30px,0) scale(1.1);
+  }
+  70% {
+    transform: translate3d(0,-15px,0) scale(1.1);
+  }
+  90% {
+    transform: translate3d(0,-4px,0) scale(1.1);
+  }
+}
+
+/* Activity tag animations */
+.activity-tag {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.activity-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.activity-tag:hover::before {
+  left: 100%;
+}
+
+/* Sleep quality button effects */
+.sleep-button {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.sleep-button:hover {
+  transform: translateY(-2px);
+}
+
+.sleep-button.selected {
+  animation: pulse 1s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Floating action button animation */
+.fab-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+}
+
+.fab-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Success message animation */
+@keyframes slideInBottom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes slideOutBottom {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+.animate-fade-in-out {
+  animation: slideInBottom 0.3s ease-out, slideOutBottom 0.3s ease-in 2.7s;
+}
+
+/* Timeline scroll indicator */
+.timeline-scroll {
+  position: relative;
+}
+
+.timeline-scroll::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(14, 165, 233, 0.3) 20%, 
+    rgba(14, 165, 233, 0.6) 50%, 
+    rgba(14, 165, 233, 0.3) 80%, 
+    transparent 100%
+  );
+  animation: shimmer 2s infinite linear;
+}
+
+/* Header gradient accent */
+.header-accent {
+  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+  border-radius: 9999px;
+  animation: shimmer 3s ease-in-out infinite alternate;
+}
+
+/* Insight panel animation */
+.insights-panel {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 0;
+  overflow: hidden;
+}
+
+.insights-panel.expanded {
+  max-height: 500px;
+}
+
+/* Smooth transitions for dark mode */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Custom scrollbar for webkit browsers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Focus states for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

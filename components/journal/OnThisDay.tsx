@@ -73,9 +73,12 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
 
   if (!historicalEntry) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">On This Day</h2>
-        <p className="text-slate-600 dark:text-slate-400 italic">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">On This Day</h2>
+          <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+        </div>
+        <p className="text-gray-500 dark:text-gray-400 italic">
           No journal entries from this day in previous years.
         </p>
       </div>
@@ -83,8 +86,11 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ onViewEntry, timezone }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">On This Day</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">On This Day</h2>
+        <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+      </div>
       
       <div className="mb-3">
         <span className="text-teal-600 dark:text-teal-400 font-medium">

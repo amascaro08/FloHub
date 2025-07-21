@@ -165,20 +165,20 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
   };
   
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-4 w-full">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Sleep Quality</h3>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sleep Quality</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {sleepQuality ? `${sleepQuality} - ${sleepHours} hours` : 'Track your sleep quality'}
+          </p>
+        </div>
         <button
           onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
         >
-          {showInsights ? 'Hide Insights' : 'Show Insights'}
+          {showInsights ? 'Hide Insights' : 'Insights'}
         </button>
-        {sleepQuality && (
-          <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-            {sleepQuality} - {sleepHours} hours
-          </span>
-        )}
       </div>
       
       <div className="mb-4">
@@ -187,10 +187,10 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
             <button
               key={option.quality}
               onClick={() => handleSaveSleep(option.quality, sleepHours)}
-              className={`flex flex-col items-center p-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center p-3 rounded-lg sleep-button ${
                 sleepQuality === option.quality
-                  ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500 scale-110 shadow-md'
-                  : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500 selected shadow-md'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title={option.description}
             >
@@ -202,7 +202,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
       </div>
       
       <div className="mb-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
           Hours of sleep: {sleepHours}
         </label>
         <input

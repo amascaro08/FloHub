@@ -172,38 +172,43 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
 
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Journal Summary</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">FloCats Insights</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered journal analysis</p>
+        </div>
         {isGenerating && (
           <div className="flex items-center">
             <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Updating...</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Updating...</span>
           </div>
         )}
       </div>
       
       <div className="mb-6">
-        <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">FloCats Summary</h3>
-        <p className="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-          {floCatsSummary || "Start journaling to get FloCats insights about your entries."}
-        </p>
+        <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">Summary</h3>
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            {floCatsSummary || "Start journaling to get FloCats insights about your entries."}
+          </p>
+        </div>
       </div>
       
       <div>
-        <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Top Themes</h3>
+        <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">Top Themes</h3>
         <div className="flex flex-wrap gap-2">
           {topThemes.length > 0 ? (
             topThemes.map(({ theme, count }) => (
               <div 
                 key={theme}
-                className="px-3 py-1 rounded-full text-sm bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200"
+                className="px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 text-teal-700 dark:text-teal-200 border border-teal-200 dark:border-teal-700 font-medium"
               >
                 {theme} ({count})
               </div>
             ))
           ) : (
-            <p className="text-slate-500 dark:text-slate-400 text-sm italic">
+            <p className="text-gray-500 dark:text-gray-400 text-sm italic">
               Add tags to your mood entries to see themes
             </p>
           )}
