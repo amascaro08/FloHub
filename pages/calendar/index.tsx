@@ -60,7 +60,7 @@ const CalendarPage = () => {
   );
 
   // Fetch all available calendars
-  const { data: calendarList, error: calendarListError } = useSWR<any[]>(
+  const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
     user ? '/api/calendar/list' : null,
     fetcher
   );
@@ -69,8 +69,14 @@ const CalendarPage = () => {
   useEffect(() => {
     if (calendarList) {
       console.log('Available calendars:', calendarList);
+      console.log('Calendar list length:', calendarList.length);
+      if (calendarList.length > 0) {
+        console.log('First calendar:', calendarList[0]);
+      }
+    } else if (calendarListError) {
+      console.error('Calendar list error:', calendarListError);
     }
-  }, [calendarList]);
+  }, [calendarList, calendarListError]);
 
   // Memoize the API URL to prevent unnecessary re-fetching
   const calendarApiUrl = useMemo(() => {
@@ -144,12 +150,24 @@ const CalendarPage = () => {
     return format(date, 'MMM d, yyyy h:mm a');
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(prev => subMonths(prev, 1));
+  const goToPrevious = () => {
+    if (currentView === 'month') {
+      setCurrentDate(prev => subMonths(prev, 1));
+    } else if (currentView === 'week') {
+      setCurrentDate(prev => addDays(prev, -7));
+    } else if (currentView === 'day') {
+      setCurrentDate(prev => addDays(prev, -1));
+    }
   };
 
-  const goToNextMonth = () => {
-    setCurrentDate(prev => addMonths(prev, 1));
+  const goToNext = () => {
+    if (currentView === 'month') {
+      setCurrentDate(prev => addMonths(prev, 1));
+    } else if (currentView === 'week') {
+      setCurrentDate(prev => addDays(prev, 7));
+    } else if (currentView === 'day') {
+      setCurrentDate(prev => addDays(prev, 1));
+    }
   };
 
   const goToToday = () => {
@@ -184,11 +202,15 @@ const CalendarPage = () => {
   // Handle event form submission
   const handleEventSubmit = async (eventData: any) => {
     try {
+      console.log('Calendar page received event data:', eventData);
+      
       const url = editingEvent 
         ? `/api/calendar/event?id=${editingEvent.id}`
         : '/api/calendar/event';
       
       const method = editingEvent ? 'PUT' : 'POST';
+      
+      console.log('Making request to:', url, 'with method:', method);
       
       const response = await fetch(url, {
         method,
@@ -199,9 +221,16 @@ const CalendarPage = () => {
         body: JSON.stringify(eventData),
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to save event');
+        const errorText = await response.text();
+        console.error('Response error text:', errorText);
+        throw new Error(`Failed to save event: ${response.status} ${errorText}`);
       }
+
+      const result = await response.json();
+      console.log('Event saved successfully:', result);
 
       // Refresh calendar data
       window.location.reload();
@@ -369,9 +398,9 @@ const CalendarPage = () => {
               {/* Navigation */}
               <div className="flex items-center space-x-4">
                 <button
-                  onClick={goToPreviousMonth}
+                  onClick={goToPrevious}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label="Previous month"
+                  aria-label={`Previous ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -379,13 +408,18 @@ const CalendarPage = () => {
                 </button>
                 
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {format(currentDate, 'MMMM yyyy')}
+                  {currentView === 'day' 
+                    ? format(currentDate, 'MMMM d, yyyy')
+                    : currentView === 'week'
+                    ? `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
+                    : format(currentDate, 'MMMM yyyy')
+                  }
                 </h2>
                 
                 <button
-                  onClick={goToNextMonth}
+                  onClick={goToNext}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label="Next month"
+                  aria-label={`Next ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
