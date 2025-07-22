@@ -483,7 +483,7 @@ export default async function handler(
   }
 
   // DELETE = delete
-  if (req.method === "DELETE") {
+  if ((req.method as string) === "DELETE") {
     const { id, calendarId } = req.query;
 
     if (!id || !calendarId) {
