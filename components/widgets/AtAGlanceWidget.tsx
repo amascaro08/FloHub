@@ -27,6 +27,421 @@ import type { UserSettings } from '../../types/app';
 import type { CalendarEvent, Task, Note } from '../../types/calendar';
 import type { Habit, HabitCompletion } from '../../types/habit-tracker';
 
+// Function to generate dashboard widget with FloCat suggestions
+function generateDashboardWidget(
+  tasks: any[], // Use any[] since the actual task structure differs from the type
+  events: CalendarEvent[],
+  habits: Habit[],
+  habitCompletions: any[],
+  preferredName: string,
+  userTimezone: string
+): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // Filter out completed/done tasks first
+  const incompleteTasks = tasks.filter(task => !(task.completed || task.done));
+  
+  // Analyze data for insights
+  const urgentTasks = incompleteTasks.filter(task => 
+    task.text?.toLowerCase().includes('urgent') ||
+    task.text?.toLowerCase().includes('asap') ||
+    task.text?.toLowerCase().includes('priority') ||
+    task.text?.toLowerCase().includes('important') ||
+    (task.dueDate && new Date(task.dueDate) <= tomorrow)
+  );
+
+  const todayEvents = events.filter(event => {
+    let eventDate;
+    if (event.start instanceof Date) {
+      eventDate = event.start;
+    } else {
+      eventDate = new Date(event.start?.dateTime || event.start?.date || '');
+    }
+    return eventDate >= today && eventDate < tomorrow;
+  });
+
+  const tomorrowEvents = events.filter(event => {
+    let eventDate;
+    if (event.start instanceof Date) {
+      eventDate = event.start;
+    } else {
+      eventDate = new Date(event.start?.dateTime || event.start?.date || '');
+    }
+    return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+  });
+
+  // Identify work vs personal events
+  const workEvents = todayEvents.filter(event => 
+    event.summary?.toLowerCase().includes('meeting') ||
+    event.summary?.toLowerCase().includes('standup') ||
+    event.summary?.toLowerCase().includes('review') ||
+    event.summary?.toLowerCase().includes('work') ||
+    event.description?.includes('teams.microsoft.com') ||
+    event.description?.includes('zoom.us')
+  );
+
+  const personalEvents = todayEvents.filter(event => !workEvents.includes(event));
+
+  // Habit progress
+  const todayFormatted = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd');
+  const completedHabits = habits.filter(habit =>
+    habitCompletions.some(c =>
+      c.habitId === habit.id &&
+      c.date === todayFormatted &&
+      c.completed
+    )
+  );
+
+  // Generate FloCat insights
+  let floCatInsights = [];
+  let priorityLevel = "calm";
+
+  if (urgentTasks.length > 0) {
+    floCatInsights.push(`🚨 **Priority Alert:** You have ${urgentTasks.length} urgent task${urgentTasks.length > 1 ? 's' : ''} that need immediate attention!`);
+    priorityLevel = "urgent";
+  }
+
+  if (todayEvents.length > 3) {
+    floCatInsights.push(`📅 **Busy Day Ahead:** ${todayEvents.length} events scheduled today. Consider 15-min buffers between meetings.`);
+    priorityLevel = priorityLevel === "urgent" ? "urgent" : "busy";
+  }
+
+  if (workEvents.length > 0 && personalEvents.length > 0) {
+    floCatInsights.push(`⚖️ **Balance Tip:** Nice mix of ${workEvents.length} work and ${personalEvents.length} personal events today!`);
+  }
+
+  if (urgentTasks.length === 0 && todayEvents.length === 0) {
+    floCatInsights.push(`🎯 **Focus Opportunity:** Clear schedule today - perfect for deep work on your ${incompleteTasks.length} pending tasks!`);
+    priorityLevel = "focus";
+  }
+
+  if (completedHabits.length === habits.length && habits.length > 0) {
+    floCatInsights.push(`🌟 **Habit Champion:** All ${habits.length} habits completed today! You're on fire! 🔥`);
+  } else if (completedHabits.length > 0) {
+    floCatInsights.push(`💪 **Good Progress:** ${completedHabits.length}/${habits.length} habits done. Keep the momentum going!`);
+  }
+
+  // Next event timing
+  const nextEvent = todayEvents.find(event => {
+    let eventTime;
+    if (event.start instanceof Date) {
+      eventTime = event.start;
+    } else {
+      eventTime = new Date(event.start?.dateTime || event.start?.date || '');
+    }
+    return eventTime > now;
+  });
+
+  if (nextEvent) {
+    let nextEventTime;
+    if (nextEvent.start instanceof Date) {
+      nextEventTime = nextEvent.start;
+    } else {
+      nextEventTime = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || '');
+    }
+    const timeUntilNext = nextEventTime.getTime() - now.getTime();
+    const hoursUntil = Math.floor(timeUntilNext / (1000 * 60 * 60));
+    const minutesUntil = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hoursUntil === 0 && minutesUntil <= 15) {
+      floCatInsights.unshift(`⏰ **Heads Up:** "${nextEvent.summary}" starts in ${minutesUntil} minutes!`);
+    } else if (hoursUntil <= 1) {
+      floCatInsights.push(`⌚ **Coming Up:** "${nextEvent.summary}" in ${hoursUntil > 0 ? `${hoursUntil}h ` : ''}${minutesUntil}m - perfect time for a quick task!`);
+    }
+  }
+
+  const hour = now.getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  // FloCat personality responses
+  const floCatGreetings = {
+    urgent: [`${timeGreeting} ${preferredName}! 😾 Time to pounce on those urgent tasks!`, `Meow! ${timeGreeting}! 🙀 We've got some important items that need your claws on them!`],
+    busy: [`${timeGreeting} ${preferredName}! 😸 Busy day ahead - let's tackle it paw by paw!`, `Purr-fect timing, ${preferredName}! 😺 Lots happening today, but you've got this!`],
+    focus: [`${timeGreeting} ${preferredName}! 😌 Clear skies ahead - time for some deep focus work!`, `Meow! ${timeGreeting}! 🐱 Perfect day for productivity - your calendar is purr-fectly clear!`],
+    calm: [`${timeGreeting} ${preferredName}! 😸 Looking good today - smooth sailing ahead!`, `Purr-fect! ${timeGreeting} ${preferredName}! 😺 Everything looks well under control!`]
+  };
+
+  const randomGreeting = floCatGreetings[priorityLevel as keyof typeof floCatGreetings][Math.floor(Math.random() * floCatGreetings[priorityLevel as keyof typeof floCatGreetings].length)];
+
+  return `<div class="dashboard-widget">
+  <div class="flocat-header">
+    <div class="flocat-avatar">😺</div>
+    <div class="flocat-greeting">
+      <h3>${randomGreeting}</h3>
+      ${floCatInsights.length > 0 ? `<div class="flocat-insights">${floCatInsights.slice(0, 2).join('<br>')}</div>` : ''}
+    </div>
+  </div>
+  
+  <div class="dashboard-grid">
+    <div class="dashboard-section">
+      <h4>📋 Tasks (${incompleteTasks.length})</h4>
+      <div class="items-list">
+        ${incompleteTasks.length > 0 ? 
+          incompleteTasks.slice(0, 4).map(task => 
+            `<div class="item ${urgentTasks.includes(task) ? 'urgent' : ''}">
+              <span class="item-text">${task.text || 'Untitled task'}</span>
+              ${urgentTasks.includes(task) ? '<span class="urgent-badge">⚠️</span>' : ''}
+            </div>`
+          ).join('') 
+          : '<div class="empty-state">No tasks 🎉</div>'
+        }
+      </div>
+    </div>
+
+    <div class="dashboard-section">
+      <h4>📅 Today (${todayEvents.length})</h4>
+      <div class="items-list">
+        ${todayEvents.length > 0 ?
+          todayEvents.slice(0, 4).map(event => {
+            let time;
+            if (event.start instanceof Date) {
+              time = formatInTimeZone(event.start, userTimezone, 'h:mm a');
+            } else {
+              time = event.start?.dateTime ? 
+                formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a') : 
+                'All day';
+            }
+            const isWork = workEvents.includes(event);
+            return `<div class="item">
+              <span class="item-time">${time}</span>
+              <span class="item-text">${event.summary}</span>
+              <span class="event-type">${isWork ? '💼' : '👤'}</span>
+            </div>`;
+          }).join('')
+          : '<div class="empty-state">Free day! 🌅</div>'
+        }
+      </div>
+    </div>
+
+    <div class="dashboard-section">
+      <h4>🎯 Habits (${completedHabits.length}/${habits.length})</h4>
+      <div class="habits-progress">
+        ${habits.length > 0 ? 
+          `<div class="progress-bar">
+            <div class="progress-fill" style="width: ${(completedHabits.length / habits.length) * 100}%"></div>
+          </div>
+          <div class="habits-list">
+            ${habits.slice(0, 3).map(habit => {
+              const isCompleted = completedHabits.some(h => h.id === habit.id);
+              return `<div class="habit-item ${isCompleted ? 'completed' : ''}">
+                <span class="habit-icon">${isCompleted ? '✅' : '⭕'}</span>
+                <span class="habit-name">${habit.name}</span>
+              </div>`;
+            }).join('')}
+          </div>` 
+          : '<div class="empty-state">No habits tracked</div>'
+        }
+      </div>
+    </div>
+
+    <div class="dashboard-section">
+      <h4>📈 Tomorrow (${tomorrowEvents.length})</h4>
+      <div class="items-list">
+        ${tomorrowEvents.length > 0 ?
+          tomorrowEvents.slice(0, 3).map(event => {
+            let time;
+            if (event.start instanceof Date) {
+              time = formatInTimeZone(event.start, userTimezone, 'h:mm a');
+            } else {
+              time = event.start?.dateTime ? 
+                formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a') : 
+                'All day';
+            }
+            return `<div class="item preview">
+              <span class="item-time">${time}</span>
+              <span class="item-text">${event.summary}</span>
+            </div>`;
+          }).join('')
+          : '<div class="empty-state">Open schedule 📅</div>'
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="flocat-footer">
+    <span class="motivational-quote">
+      ${priorityLevel === "urgent" ? "Remember: One paw at a time! 🐾" : 
+        priorityLevel === "busy" ? "You're paw-sitively capable of handling this! 💪" :
+        priorityLevel === "focus" ? "Time to show those tasks who's the cat! 😼" :
+        "Purr-fect balance makes for a great day! ✨"}
+    </span>
+  </div>
+</div>
+
+<style>
+.dashboard-widget {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.flocat-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.flocat-avatar {
+  font-size: 2rem;
+  margin-right: 12px;
+}
+
+.flocat-greeting h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.flocat-insights {
+  font-size: 0.9rem;
+  opacity: 0.95;
+  line-height: 1.4;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dashboard-section {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.dashboard-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f9fafb);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  position: relative;
+}
+
+.item.urgent {
+  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+}
+
+.item.preview {
+  opacity: 0.7;
+}
+
+.item-time {
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  margin-right: 8px;
+  min-width: 60px;
+}
+
+.item-text {
+  flex: 1;
+  color: var(--text-primary, #1f2937);
+}
+
+.urgent-badge {
+  margin-left: 8px;
+}
+
+.event-type {
+  margin-left: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  font-style: italic;
+  padding: 20px;
+}
+
+.habits-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  transition: width 0.3s ease;
+}
+
+.habits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.habit-item.completed .habit-name {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.flocat-footer {
+  text-align: center;
+  padding: 16px;
+  background: var(--bg-secondary, #f9fafb);
+  border-radius: 8px;
+  font-style: italic;
+  color: var(--text-secondary, #6b7280);
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .flocat-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .flocat-avatar {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+}
+</style>`;
+}
+
 // Create a memoized markdown parser
 const createMarkdownParser = () => {
   const parseMarkdown = (text: string): string => {
@@ -415,148 +830,42 @@ const { user, isLoading } = useUser()
                 styleInstruction = `You are FloCat, an AI assistant with a friendly, sarcastic cat personality 🐾. ${personalityTraits}`;
             }
             
-            // Generate AI message with a more compact prompt
-            const prompt = `${styleInstruction}
-Generate a short "At A Glance" message for ${preferredName} with:
-
-EVENTS: ${limitedEvents.map((event: CalendarEvent) => {
-  // Check if event has the required properties
-  if (!event || !(event.summary || event.title) || !event.start) {
-    console.warn("Invalid event format:", event);
-    return null; // Skip this event
-  }
-
-  let eventTime;
-  if (event.start instanceof Date) {
-    eventTime = formatInTimeZone(event.start, userTimezone, 'h:mm a');
-  } else {
-    eventTime = event.start.dateTime
-      ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
-      : event.start.date;
-  }
-  
-  const eventTitle = event.summary || event.title || 'Untitled Event';
-  const calendarType = event.source === "work" ? "work" : "personal";
-  const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
-  return `${eventTitle} at ${eventTime} [${calendarType}${calendarTags}]`;
-}).filter(item => item !== null).join(', ') || 'None'}
-
-TASKS: ${limitedTasks.map((task: Task) => task.text).join(', ') || 'None'}
-
-HABITS: ${completedHabits.length}/${todaysHabits.length} completed (${habitCompletionRate}%)
-${todaysHabits.map(habit => {
-  const isCompleted = completedHabits.some(h => h.id === habit.id);
-  return `${isCompleted ? '✅' : '⬜'} ${habit.name}`;
-}).join(', ') || 'None'}
-
-Be witty and brief (under 200 words). Use markdown formatting. Consider the time (${currentTimeInterval}).`;
 
 
-            // Skip AI completely and create a dynamic dashboard widget
+            // Generate dashboard widget with FloCat suggestions
             const dashboardContent = generateDashboardWidget(
-              incompleteTasks,
+              allTasks, // Pass all tasks, function will filter out completed ones
               upcomingEventsForPrompt,
               todaysHabits,
               habitCompletions,
-              preferredName,
+              preferredName || userName,
               userTimezone
             );
             
             if (isMounted) {
-              setGeneratedMessage(dashboardContent);
-              setIsLoading(false);
+              setFormattedHtml(dashboardContent);
+              setLoading(false);
             }
-            return;
-
-            if (!aiRes.ok) {
-              // If we get any error (500, 504, etc.), generate a simple message instead
-              console.warn(`AI request failed with status ${aiRes.status}, using fallback message`);
-              const fallbackMessage = `# Hello ${preferredName || userName}! 😺
-
-## Your Day at a Glance
-
-${upcomingEventsForPrompt.length > 0 ? `
-**Upcoming Events:**
-${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
-  let eventTime;
-  if (event.start instanceof Date) {
-    eventTime = formatInTimeZone(event.start, userTimezone, 'h:mm a');
-  } else {
-    eventTime = event.start.dateTime
-      ? formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a')
-      : event.start.date;
-  }
-  
-  const eventTitle = event.summary || event.title || 'Untitled Event';
-  const calendarName = event.calendarName || (event.source === "work" ? "Work Calendar" : "Personal Calendar");
-  const calendarTags = event.tags && event.tags.length > 0 ? ` (${event.tags.join(', ')})` : '';
-  return `- ${eventTitle} at ${eventTime} - ${calendarName}${calendarTags}`;
-}).join('\n')}
-` : ''}
-
-${incompleteTasks.length > 0 ? `
-**Tasks to Complete:**
-${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text || 'Untitled task'}`).join('\n')}
-` : ''}
-
-${todaysHabits.length > 0 ? `
-**Habits Progress:** ${completedHabits.length}/${todaysHabits.length} completed
-${todaysHabits.slice(0, 3).map(habit => {
-  const isCompleted = completedHabits.some(h => h.id === habit.id);
-  return `- ${isCompleted ? '✅' : '⬜'} ${habit.name}`;
-}).join('\n')}
-` : ''}
-
-${currentTimeInterval === 'morning' ? 'Good morning!' : currentTimeInterval === 'lunch' ? 'Hope your day is going well!' : 'Good evening!'} 
-
-Have a purr-fect day! 🐾`;
-
-              setAiMessage(fallbackMessage);
-              setFormattedHtml(parseMarkdown(fallbackMessage));
-              
-              // Store the fallback message in localStorage
-              try {
-                localStorage.setItem('flohub.atAGlanceMessage', fallbackMessage);
-                localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
-                localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
-              } catch (err) {
-                console.error("Error saving to localStorage:", err);
-              }
-              
-              return;
-            }
-
-            const aiData = await aiRes.json();
-            if (aiData.reply && isMounted) {
-              console.log("AtAGlanceWidget: AI response received:", aiData.reply.substring(0, 100) + "...");
-              setAiMessage(aiData.reply);
-              // Pre-parse the markdown
-              const parsedHtml = parseMarkdown(aiData.reply);
-              console.log("AtAGlanceWidget: Parsed HTML length:", parsedHtml.length);
-              setFormattedHtml(parsedHtml);
-              
-              // Store the new message and timestamp in localStorage
-              try {
-                localStorage.setItem('flohub.atAGlanceMessage', aiData.reply);
-                localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
-                localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
-              } catch (err) {
-                console.error("Error saving to localStorage:", err);
-              }
-            } else if (isMounted) {
-              console.error("AtAGlanceWidget: AI assistant did not return a message. Response:", aiData);
-              setError("AI assistant did not return a message.");
-            }
-          }
         } catch (err) {
           console.error("Error accessing localStorage:", err);
+          // Generate fallback content on localStorage error
+          const fallbackContent = generateDashboardWidget(
+            allTasks,
+            upcomingEventsForPrompt,
+            todaysHabits,
+            habitCompletions,
+            preferredName || userName,
+            userTimezone
+          );
+          if (isMounted) {
+            setFormattedHtml(fallbackContent);
+            setLoading(false);
+          }
         }
-
-
       } catch (err: any) {
         if (isMounted) {
           setError(err.message);
-          console.error("Error fetching data or generating AI message for At A Glance widget:", err);
+          console.error("Error fetching data or generating dashboard widget:", err);
         }
       } finally {
         if (isMounted) {
