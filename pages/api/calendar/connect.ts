@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
-import { google } from "googleapis";
+import { getGoogleOAuthUrl } from "@/lib/googleMultiAuth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,24 +16,14 @@ export default async function handler(
     return res.status(401).json({ error: "User not found" });
   }
 
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-  );
-
   const { provider } = req.query;
 
   if (provider === "google") {
-    const scopes = [
-      "https://www.googleapis.com/auth/calendar.readonly",
-      "https://www.googleapis.com/auth/calendar.events",
-    ];
+    // Encode user information in state parameter
+    const state = Buffer.from(JSON.stringify({ email: user.email })).toString('base64');
 
-    const url = oauth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: scopes,
-    });
+    // Use the robust OAuth URL generator from googleMultiAuth
+    const url = getGoogleOAuthUrl(state);
 
     res.redirect(url);
   } else {
