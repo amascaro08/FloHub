@@ -70,6 +70,21 @@ const withPWA = require('next-pwa')({
           }
         ]
       }
+    },
+    {
+      urlPattern: /\/api\/(?!auth).*/i,
+      handler: 'NetworkOnly',
+      options: {
+        cacheName: 'api-calls',
+        plugins: [
+          {
+            cacheWillUpdate: async ({ response }) => {
+              // Don't cache any API responses except 200s
+              return response.status === 200 ? response : null;
+            }
+          }
+        ]
+      }
     }
   ]
 });
@@ -97,12 +112,11 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/api/auth/:path*",
+        source: "/api/:path*",
         headers: [
           { key: "Access-Control-Allow-Credentials", value: "true" },
-          { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET,POST,DELETE,PUT,OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" },
+          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie" },
         ],
       },
     ];

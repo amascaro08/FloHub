@@ -90,7 +90,13 @@ function CalendarWidget() {
   const { mutate } = useSWRConfig();
 
   if (isLoading) { // Correctly check for loading status
-    return <div>Loading...</div>; // Or any other fallback UI
+    return <div>Loading calendar...</div>; // Or any other fallback UI
+  }
+
+  if (!user || !user.email) {
+    return <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+      Please sign in to view your calendar
+    </div>;
   }
 
   // Fetch persistent user settings via SWR

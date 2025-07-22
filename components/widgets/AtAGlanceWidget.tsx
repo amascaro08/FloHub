@@ -143,7 +143,15 @@ const { user, isLoading } = useUser()
 
   // Main data fetching effect
   useEffect(() => {
-    if (!user || !loadedSettings || !dataFetchStarted) return;
+    if (!user || !user.email || !loadedSettings || !dataFetchStarted) {
+      console.log("AtAGlanceWidget: Waiting for user and settings", { 
+        hasUser: !!user, 
+        hasEmail: !!user?.email, 
+        hasSettings: !!loadedSettings, 
+        dataFetchStarted 
+      });
+      return;
+    }
     
     let isMounted = true; // Flag to prevent state updates after unmount
     
@@ -247,12 +255,14 @@ const { user, isLoading } = useUser()
           };
         });
 
-        // Update state with fetched data
+                    // Update state with fetched data
         if (isMounted) {
           setUpcomingEvents(eventsInUserTimezone);
-          setTasks(tasksData.tasks || []);
-          setNotes(notesData.notes || []);
-          setMeetings(meetingsData.meetings || []);
+          const allTasks = tasksData.tasks || tasksData || [];
+          setTasks(Array.isArray(allTasks) ? allTasks : []);
+          setNotes(notesData.notes || notesData || []);
+          setMeetings(meetingsData.meetings || meetingsData || []);
+          console.log("AtAGlanceWidget: State updated - tasks:", allTasks.length);
         }
 
         // Fetch habits in a separate non-blocking call with enhanced fetcher
@@ -274,8 +284,10 @@ const { user, isLoading } = useUser()
         }
 
         // Filter out completed tasks for the AI prompt
-        const incompleteTasks = tasksData.tasks ? tasksData.tasks.filter((task: Task) => !task.completed) : [];
-        console.log("Incomplete tasks found:", incompleteTasks.length);
+        const allTasks = tasksData.tasks || tasksData || [];
+        const incompleteTasks = Array.isArray(allTasks) ? allTasks.filter((task: Task) => !task.completed) : [];
+        console.log("AtAGlanceWidget: All tasks:", allTasks.length, "Incomplete tasks:", incompleteTasks.length);
+        console.log("AtAGlanceWidget: Tasks data structure:", tasksData);
 
         // Filter out past events for the AI prompt - include events for the next 7 days
         const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
@@ -477,7 +489,7 @@ ${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
 
 ${incompleteTasks.length > 0 ? `
 **Tasks to Complete:**
-${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text}`).join('\n')}
+${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text || task.title || 'Untitled task'}`).join('\n')}
 ` : ''}
 
 ${todaysHabits.length > 0 ? `
