@@ -437,83 +437,267 @@ const CalendarPage = () => {
 
           {/* Calendar Grid */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="p-4 text-center font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
-                  {day}
+            {currentView === 'month' && (
+              <>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="p-4 text-center font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
+                      {day}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            {/* Calendar Days */}
-            <div className="grid grid-cols-7">
-              {calendarDays.map(day => {
-                const dayEvents = getEventsForDay(day);
-                const isCurrentMonth = isSameMonth(day, currentDate);
-                const isTodayDate = isToday(day);
                 
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`min-h-[120px] p-3 border-b border-r border-gray-200 dark:border-gray-700 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                      !isCurrentMonth ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className={`text-sm font-medium ${
-                        isTodayDate
-                          ? 'bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
-                          : 'text-gray-900 dark:text-white'
-                      }`}>
-                        {format(day, 'd')}
-                      </span>
-                      {isCurrentMonth && dayEvents.length > 0 && (
-                        <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                          {dayEvents.length}
-                        </span>
-                      )}
-                    </div>
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7">
+                  {calendarDays.map(day => {
+                    const dayEvents = getEventsForDay(day);
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isTodayDate = isToday(day);
                     
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 3).map(event => {
-                        const colorClass = event.source === 'work'
-                          ? 'border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
-                          : 'border-l-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100';
-                        
-                        return (
-                          <div
-                            key={event.id}
-                            onClick={() => setSelectedEvent(event)}
-                            className={`text-xs p-2 rounded cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
-                          >
-                            <div className="font-medium truncate">
-                              {event.summary || event.title || "No Title"}
-                            </div>
-                            {event.start && (
-                              <div className="text-xs opacity-75">
-                                {formatDateTime(event.start)}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {dayEvents.length > 3 && (
-                        <div
-                          className="text-xs text-gray-500 dark:text-gray-400 text-center py-1 cursor-pointer hover:underline"
-                          onClick={() => {
-                            setCurrentDate(day);
-                            setCurrentView('day');
-                          }}
-                        >
-                          +{dayEvents.length - 3} more
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className={`min-h-[120px] p-3 border-b border-r border-gray-200 dark:border-gray-700 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                          !isCurrentMonth ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className={`text-sm font-medium ${
+                            isTodayDate
+                              ? 'bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {format(day, 'd')}
+                          </span>
+                          {isCurrentMonth && dayEvents.length > 0 && (
+                            <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                              {dayEvents.length}
+                            </span>
+                          )}
                         </div>
-                      )}
+                        
+                        <div className="space-y-1">
+                          {dayEvents.slice(0, 3).map(event => {
+                            const colorClass = event.source === 'work'
+                              ? 'border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                              : 'border-l-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100';
+                            
+                            return (
+                              <div
+                                key={event.id}
+                                onClick={() => setSelectedEvent(event)}
+                                className={`text-xs p-2 rounded cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                              >
+                                <div className="font-medium truncate">
+                                  {event.summary || event.title || "No Title"}
+                                </div>
+                                {event.start && (
+                                  <div className="text-xs opacity-75">
+                                    {formatDateTime(event.start)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {dayEvents.length > 3 && (
+                            <div
+                              className="text-xs text-gray-500 dark:text-gray-400 text-center py-1 cursor-pointer hover:underline"
+                              onClick={() => {
+                                setCurrentDate(day);
+                                setCurrentView('day');
+                              }}
+                            >
+                              +{dayEvents.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {currentView === 'week' && (
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Week of {format(startOfWeek(currentDate), 'MMM d')} - {format(endOfWeek(currentDate), 'MMM d, yyyy')}
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {eachDayOfInterval({ start: startOfWeek(currentDate), end: endOfWeek(currentDate) }).map(day => {
+                    const dayEvents = getEventsForDay(day);
+                    const isTodayDate = isToday(day);
+                    
+                    return (
+                      <div key={day.toISOString()} className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                        <div className="flex items-center mb-3">
+                          <span className={`text-lg font-semibold mr-4 ${
+                            isTodayDate
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {format(day, 'EEEE, MMM d')}
+                          </span>
+                          {dayEvents.length > 0 && (
+                            <span className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                              {dayEvents.length} events
+                            </span>
+                          )}
+                        </div>
+                        
+                        {dayEvents.length === 0 ? (
+                          <p className="text-gray-500 dark:text-gray-400 text-sm italic">No events scheduled</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {dayEvents.map(event => {
+                              const colorClass = event.source === 'work'
+                                ? 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20';
+                              
+                              return (
+                                <div
+                                  key={event.id}
+                                  onClick={() => setSelectedEvent(event)}
+                                  className={`p-3 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-gray-900 dark:text-white">
+                                        {event.summary || event.title || "No Title"}
+                                      </div>
+                                      {event.start && (
+                                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          {formatDateTime(event.start)}
+                                          {event.end && (
+                                            <span> - {formatDateTime(event.end)}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {event.location && (
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                          📍 {event.location}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="ml-4">
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        event.source === 'work'
+                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                      }`}>
+                                        {event.source === 'work' ? 'Work' : 'Personal'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {currentView === 'day' && (
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {format(currentDate, 'EEEE, MMMM d, yyyy')}
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {getEventsForDay(currentDate).length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="text-gray-400 dark:text-gray-500 mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 dark:text-gray-400">No events scheduled for today</p>
+                      <button
+                        onClick={() => {
+                          setEditingEvent(null);
+                          setIsEventFormOpen(true);
+                        }}
+                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        Add Event
+                      </button>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ) : (
+                    getEventsForDay(currentDate).map(event => {
+                      const colorClass = event.source === 'work'
+                        ? 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20';
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={() => setSelectedEvent(event)}
+                          className={`p-4 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                {event.summary || event.title || "No Title"}
+                              </div>
+                              {event.start && (
+                                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                  <div className="flex items-center">
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {formatDateTime(event.start)}
+                                    {event.end && (
+                                      <span> - {formatDateTime(event.end)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {event.location && (
+                                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                  <div className="flex items-center">
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    {event.location}
+                                  </div>
+                                </div>
+                              )}
+                              {event.description && (
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                                    {event.description.length > 200 
+                                      ? `${event.description.substring(0, 200)}...` 
+                                      : event.description}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                event.source === 'work'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                  : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              }`}>
+                                {event.source === 'work' ? 'Work' : 'Personal'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

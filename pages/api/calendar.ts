@@ -79,7 +79,7 @@ async function validateGoogleToken(accessToken: string): Promise<boolean> {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<CalendarEvent[] | ErrorRes>
+  res: NextApiResponse<{ events: CalendarEvent[] } | ErrorRes>
 ) {
   if (req.method === "GET") {
     const decoded = auth(req);
@@ -247,7 +247,7 @@ export default async function handler(
       
       // If no access token and no O365 URLs, provide helpful error
       if (!accessToken) {
-        return res.status(200).json([]);
+        return res.status(200).json({ events: [] });
       }
       
       // If we have access token but no calendar sources, use primary calendar as fallback
@@ -413,7 +413,7 @@ export default async function handler(
     }
 
     console.log(`Total events fetched: ${allEvents.length}`);
-    return res.status(200).json(allEvents);
+    return res.status(200).json({ events: allEvents });
   } else if (req.method === "POST") {
     // Handle event creation
     const decodedPOST = auth(req);
@@ -519,7 +519,7 @@ export default async function handler(
       newEvent.source = source || "personal";
       newEvent.tags = tags || [];
       
-      return res.status(201).json([newEvent as any]);
+      return res.status(201).json({ events: [newEvent as any] });
     } catch (error) {
       console.error("Error creating event:", error);
       return res.status(500).json({ error: "Failed to create event" });
