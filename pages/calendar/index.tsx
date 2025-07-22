@@ -70,6 +70,18 @@ const CalendarPage = () => {
     }
   }, [currentDate, currentView]);
 
+  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
+    user ? '/api/userSettings' : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
+  );
+
+  // Fetch all available calendars
+  const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
+    user ? '/api/calendar/list' : null,
+    fetcher
+  );
+
   const { start: startDate, end: endDate } = getDateRange();
 
   // Use cached calendar events hook
@@ -87,18 +99,6 @@ const CalendarPage = () => {
     endDate,
     enabled: !!user && !!settings?.selectedCals
   });
-
-  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
-    user ? '/api/userSettings' : null,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
-  );
-
-  // Fetch all available calendars
-  const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
-    user ? '/api/calendar/list' : null,
-    fetcher
-  );
 
   // Log available calendars for debugging
   useEffect(() => {
