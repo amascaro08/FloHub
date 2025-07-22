@@ -55,14 +55,14 @@ export default async function handler(
     console.log("[API] Raw request body:", JSON.stringify(req.body, null, 2));
     
     // Simple test - just echo back the data to see if we can receive it
-    const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
-    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, description, tags, source });
+    const { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source } = req.body;
+    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source });
     
     // Test: Just return the received data to see if the request is working
     if (req.headers['x-test-mode'] === 'true') {
       return res.status(200).json({ 
         message: "Test mode - request received successfully",
-        receivedData: { calendarId, summary, start, end, timeZone, description, tags, source }
+        receivedData: { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source }
       });
     }
     
@@ -211,8 +211,14 @@ export default async function handler(
       const [year, month, day] = datePart.split('-').map(Number);
       const [hour, minute] = timePart.split(':').map(Number);
       
-      // Create date in local timezone
+      // Create date in local timezone - this is the key fix
+      // We need to create the date as if it's in the user's timezone
       const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Adjust for timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        localDate.setMinutes(localDate.getMinutes() - timezoneOffset);
+      }
       
       // Convert to ISO string for Google API
       const startISO = localDate.toISOString();
@@ -221,7 +227,7 @@ export default async function handler(
         dateTime: startISO,
         timeZone: userTimezone,
       };
-      console.log("[API] Converted start time:", start, "->", startISO, "in timezone:", userTimezone);
+      console.log("[API] Converted start time:", start, "->", startISO, "in timezone:", userTimezone, "offset:", timezoneOffset);
     }
 
     if (end) {
@@ -233,8 +239,14 @@ export default async function handler(
       const [year, month, day] = datePart.split('-').map(Number);
       const [hour, minute] = timePart.split(':').map(Number);
       
-      // Create date in local timezone
+      // Create date in local timezone - this is the key fix
+      // We need to create the date as if it's in the user's timezone
       const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Adjust for timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        localDate.setMinutes(localDate.getMinutes() - timezoneOffset);
+      }
       
       // Convert to ISO string for Google API
       const endISO = localDate.toISOString();
@@ -243,7 +255,7 @@ export default async function handler(
         dateTime: endISO,
         timeZone: userTimezone,
       };
-      console.log("[API] Converted end time:", end, "->", endISO, "in timezone:", userTimezone);
+      console.log("[API] Converted end time:", end, "->", endISO, "in timezone:", userTimezone, "offset:", timezoneOffset);
     }
 
     // Check if user has permission to create events in this calendar
