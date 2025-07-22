@@ -27,9 +27,9 @@ type ChatResponse = {
   error?: string;
 };
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 // Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
 const parseDueDate = (phrase: string): string | undefined => {
@@ -225,13 +225,13 @@ export default async function handler(
     }
   }
 
-  // ── Fetch Context & Fallback to OpenAI ─────────────
+  // ── Fetch Context & Use Local AI or OpenAI ─────────────
   try {
     // Fetch all data in parallel
     const [notes, meetings, conversations] = await Promise.all([
-      fetchUserNotes(email),
-      fetchUserMeetingNotes(email),
-      fetchUserConversations(email)
+      fetchUserNotes(email).catch(() => []),
+      fetchUserMeetingNotes(email).catch(() => []),
+      fetchUserConversations(email).catch(() => [])
     ]);
     
     // Fetch user settings to get FloCat style preference
@@ -246,6 +246,14 @@ export default async function handler(
     const floCatStyle = userSettingsData?.floCatStyle || "default";
     const floCatPersonality = userSettingsData?.floCatPersonality || [];
     const preferredName = userSettingsData?.preferredName || "";
+
+    // If no OpenAI API key, use local AI
+    if (!openai) {
+      console.log("Using local AI (no OpenAI API key found)");
+      return res.status(200).json({ 
+        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+      });
+    }
     
     // Start context processing
     const relevantContextPromise = findRelevantContext(userInput, notes, meetings, conversations);
@@ -304,7 +312,7 @@ export default async function handler(
       },
     ];
 
-    try { // Moved try block to wrap only the OpenAI call
+    try { // Try OpenAI first, fallback to local AI
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages,
@@ -312,16 +320,177 @@ export default async function handler(
 
       const aiReply = completion.choices[0]?.message?.content;
       if (!aiReply) {
-        return res.status(500).json({ error: "OpenAI did not return a message." });
+        console.log("OpenAI returned empty response, using local AI");
+        return res.status(200).json({ 
+          reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        });
       }
 
       return res.status(200).json({ reply: aiReply });
     } catch (err: any) {
-      console.error("OpenAI API error:", err);
-      return res.status(500).json({ error: err.message || "Internal server error" });
+      console.error("OpenAI API error, falling back to local AI:", err.message);
+      return res.status(200).json({ 
+        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+      });
     }
   } catch (err: any) {
     console.error("Assistant error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
+}
+
+// Local AI response generator (no external API required)
+function generateLocalResponse(
+  input: string, 
+  floCatStyle: string, 
+  preferredName: string, 
+  notes: any[], 
+  meetings: any[]
+): string {
+  const lowerInput = input.toLowerCase();
+  
+  // Get personality based on style
+  const getCatPersonality = () => {
+    switch(floCatStyle) {
+      case "more_catty":
+        return {
+          greeting: ["Meow! 😺", "Purr-fect! 🐱", "Paw-some! 😻"],
+          positive: ["That's purr-fect!", "Meow-nificent!", "Paw-sitively great!"],
+          emoji: "😺",
+          sign: "- FloCat 🐾"
+        };
+      case "less_catty":
+        return {
+          greeting: ["Hello!", "Hi there!", "Good to see you!"],
+          positive: ["That's great!", "Excellent!", "Wonderful!"],
+          emoji: "😺",
+          sign: "- FloCat"
+        };
+      case "professional":
+        return {
+          greeting: ["Good day", "Hello", "Greetings"],
+          positive: ["Excellent", "Very good", "Outstanding"],
+          emoji: "",
+          sign: "- FloCat Assistant"
+        };
+      default:
+        return {
+          greeting: ["Hey there! 😺", "Hello!", "Hi!"],
+          positive: ["That's great!", "Awesome!", "Perfect!"],
+          emoji: "😺",
+          sign: "- FloCat 😼"
+        };
+    }
+  };
+  
+  const personality = getCatPersonality();
+  const randomGreeting = personality.greeting[Math.floor(Math.random() * personality.greeting.length)];
+  const userName = preferredName || "User";
+  
+  // Current time context
+  const now = new Date();
+  const hour = now.getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  
+  // Summary/At-a-glance requests
+  if (lowerInput.includes("summary") || lowerInput.includes("at a glance") || lowerInput.includes("overview")) {
+    return `# ${timeGreeting}, ${userName}! ${personality.emoji}
+
+## Your Day at a Glance
+
+I'm gathering information from all your connected services to give you a comprehensive overview. Here's what I can help you with:
+
+- **📋 Tasks**: Your todo items and project progress
+- **📅 Calendar**: Upcoming events and meetings
+- **📝 Notes**: Your saved thoughts and important information
+- **🎯 Habits**: Daily habit tracking and streaks
+- **📊 Analytics**: Productivity insights and trends
+
+${notes.length > 0 ? `You have **${notes.length}** notes saved.` : ''}
+${meetings.length > 0 ? `You have **${meetings.length}** meeting records.` : ''}
+
+Ask me about any specific area, or say "help" to see all my capabilities!
+
+${floCatStyle === "more_catty" ? "Have a purr-fect day! 🐾" : floCatStyle === "professional" ? "Have a productive day." : "Have a great day!"}
+
+${personality.sign}`;
+  }
+  
+  // Help requests
+  if (lowerInput.includes("help") || lowerInput.includes("what can you do")) {
+    return `${randomGreeting} I'm FloCat, your productivity assistant! Here's what I can help you with:
+
+## 🎯 Core Features:
+- **📋 Task Management**: Create, view, and organize your tasks
+- **📅 Calendar Integration**: Schedule events and view your agenda  
+- **📝 Notes & Knowledge**: Organize your thoughts and information
+- **🎯 Habit Tracking**: Build and maintain positive routines
+- **📊 Daily Summaries**: Get overviews of your progress
+
+## 🗣️ How to Talk to Me:
+- Ask for a "summary" or "overview" to see your day
+- Say "my tasks" or "show tasks" for your todo items
+- Ask about "calendar" or "today's events" for your schedule
+- Say "my notes" to browse your saved information
+- Request "motivation" when you need encouragement
+
+I'm constantly learning to provide you with more personalized and helpful insights!
+
+${floCatStyle === "more_catty" ? "Purr-fect! What would you like to explore? 🐾" : "What would you like to explore today?"}
+
+${personality.sign}`;
+  }
+  
+  // Motivational requests
+  if (lowerInput.includes("motivat") || lowerInput.includes("productiv") || lowerInput.includes("focus")) {
+    const motivationalMessages = {
+      more_catty: [
+        "You're absolutely claw-some! Keep pouncing on those goals! 🐾",
+        "Every small step is a paw in the right direction! 😺",
+        "You've got this! Time to show the world your purr-fect skills! 💪"
+      ],
+      professional: [
+        "Maintain focus on your objectives and execute with precision.",
+        "Consistent effort compounds into extraordinary results.", 
+        "Your dedication to excellence will yield significant outcomes."
+      ],
+      default: [
+        "You're doing great! Keep pushing forward! 🌟",
+        "Every step counts towards your goals! 💪",
+        "Stay focused and keep making progress! ✨"
+      ]
+    };
+    
+    const messages = motivationalMessages[floCatStyle] || motivationalMessages.default;
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    
+    return `${randomMessage}
+
+Remember: Progress, not perfection! You're building something amazing one step at a time.
+
+${personality.sign}`;
+  }
+  
+  // Default helpful response
+  const defaultResponses = {
+    more_catty: [
+      "Meow! I'm here to help you stay paw-ductively organized! 😺 Ask me for a summary, or about your tasks and schedule!",
+      "Purr-fect! I can help you with summaries, tasks, calendar events, and more! What would you like to know? 🐾"
+    ],
+    professional: [
+      "I am here to assist with your productivity management. I can provide summaries, task updates, and schedule information.",
+      "Please let me know how I can help with your tasks, calendar, or organizational needs."
+    ],
+    default: [
+      "I'm here to help you stay organized! 😺 Ask me for a summary, or about your tasks, calendar, notes, and more!",
+      "How can I help you today? I can show you summaries, tasks, events, and provide productivity insights!"
+    ]
+  };
+  
+  const responses = defaultResponses[floCatStyle] || defaultResponses.default;
+  const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+  
+  return `${randomResponse}
+
+${personality.sign}`;
 }

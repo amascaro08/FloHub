@@ -485,7 +485,7 @@ function CalendarWidget() {
     <div className="relative">
       {!hasValidCalendar ? (
         <div className="text-neutral-500 dark:text-neutral-400 flex items-center justify-center py-8">
-          Please select a valid calendar in your <a href="/dashboard/settings-modular" className="text-teal-500 hover:text-teal-400 underline ml-1" target="_blank" rel="noopener noreferrer">settings</a>.
+          Please select a valid calendar in your <a href="/dashboard/settings" className="text-teal-500 hover:text-teal-400 underline ml-1" target="_blank" rel="noopener noreferrer">settings</a>.
         </div>
       ) : (
         <>
