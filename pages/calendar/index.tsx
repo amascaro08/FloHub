@@ -224,9 +224,15 @@ const CalendarPage = () => {
       console.log('Response status:', response.status);
       
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText = '';
+        try {
+          const errorJson = await response.json();
+          errorText = errorJson.error || JSON.stringify(errorJson);
+        } catch (e) {
+          errorText = await response.text();
+        }
         console.error('Response error text:', errorText);
-        throw new Error(`Failed to save event: ${response.status} ${errorText}`);
+        throw new Error(errorText || `Failed to save event: ${response.status}`);
       }
 
       const result = await response.json();
@@ -937,7 +943,11 @@ const CalendarPage = () => {
           setEditingEvent(null);
         }}
         onSubmit={handleEventSubmit}
-        availableCalendars={calendarList || []}
+        availableCalendars={
+          Array.isArray(settings?.selectedCals) && Array.isArray(calendarList)
+            ? calendarList.filter(cal => settings.selectedCals.includes(cal.id))
+            : calendarList || []
+        }
       />
     </div>
   );

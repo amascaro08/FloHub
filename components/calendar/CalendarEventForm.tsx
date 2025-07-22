@@ -115,9 +115,10 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
       await onSubmit(eventData);
 
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Form submission error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      // If the error has a message property, use it. Otherwise, stringify the error.
+      setError(err?.message || (typeof err === 'string' ? err : JSON.stringify(err)));
     } finally {
       setIsSubmitting(false);
     }
