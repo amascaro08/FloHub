@@ -62,25 +62,40 @@ const extractTeamsLink = (description: string): string | null => {
 // Fetcher specifically for calendar events API
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   try {
+    console.log("CalendarWidget: Fetching from URL:", url);
     const res = await fetch(url, { credentials: 'include' });
-    const data = await res.json();
+    
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      console.error("Calendar API JSON parse error:", parseError);
+      throw new Error(`Failed to parse response: ${res.status} ${res.statusText}`);
+    }
     
     if (!res.ok) {
-      console.error("Calendar API error:", res.status, data);
-      throw new Error(data.error || `HTTP ${res.status}: Error loading events`);
+      console.error("Calendar API error details:", {
+        status: res.status,
+        statusText: res.statusText,
+        url: url,
+        response: data
+      });
+      throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
     }
     
     // Handle both formats: direct array or {events: [...]} object 
     if (Array.isArray(data)) {
+      console.log("CalendarWidget: Received", data.length, "events directly");
       return data;
     } else if (data && Array.isArray(data.events)) {
+      console.log("CalendarWidget: Received", data.events.length, "events in events property");
       return data.events;
     } else {
-      console.error("Unexpected response format from calendar API:", data);
+      console.error("CalendarWidget: Unexpected response format:", data);
       return [];
     }
   } catch (error) {
-    console.error("Calendar fetch error:", error);
+    console.error("CalendarWidget: Calendar fetch error:", error);
     throw error;
   }
 };
@@ -125,11 +140,18 @@ function CalendarWidget() {
   // Update local state when loadedSettings changes
   useEffect(() => {
     if (loadedSettings) {
-      console.log("CalendarWidget loaded settings:", loadedSettings);
+      console.log("CalendarWidget loaded settings:", {
+        selectedCals: loadedSettings.selectedCals,
+        defaultView: loadedSettings.defaultView,
+        hasPowerAutomateUrl: !!loadedSettings.powerAutomateUrl,
+        hasCalendarSources: !!loadedSettings.calendarSources
+      });
       if (Array.isArray(loadedSettings.selectedCals) && loadedSettings.selectedCals.length > 0) {
         setSelectedCals(loadedSettings.selectedCals);
+        console.log("CalendarWidget: Set selectedCals to:", loadedSettings.selectedCals);
       } else {
         setSelectedCals(['primary']); // Default if empty/invalid
+        console.log("CalendarWidget: No selectedCals found, using default ['primary']");
       }
       if (['today', 'tomorrow', 'week', 'month', 'custom'].includes(loadedSettings.defaultView)) {
         setActiveView(loadedSettings.defaultView);
@@ -179,9 +201,10 @@ function CalendarWidget() {
         maxDate = endOfDay(t);
         break;
       case 'week': {
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(now.setDate(diff));
+        const currentDate = new Date(now); // Don't mutate the original now
+        const day = currentDate.getDay();
+        const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(currentDate.setDate(diff));
         minDate = startOfDay(new Date(monday));
         maxDate = endOfDay(new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000));
         break;
@@ -207,11 +230,11 @@ function CalendarWidget() {
         break;
       }
       default:
-        console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
         // default to week
-        const ddd = now.getDay();
-        const diff3 = now.getDate() - ddd + (ddd === 0 ? -6 : 1);
-        const monday3 = new Date(now.setDate(diff3));
+        const defaultDate = new Date(now); // Don't mutate the original now
+        const ddd = defaultDate.getDay();
+        const diff3 = defaultDate.getDate() - ddd + (ddd === 0 ? -6 : 1);
+        const monday3 = new Date(defaultDate.setDate(diff3));
         minDate = startOfDay(new Date(monday3));
         maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
     }
@@ -223,8 +246,14 @@ function CalendarWidget() {
 
   // Build API URL for calendar events
   const apiUrl = useMemo(() => {
-    if (!timeRange || !timeRange.timeMin || !timeRange.timeMax) {
-      console.log("CalendarWidget: timeRange not ready:", timeRange);
+    // Wait for user, settings, and timeRange to be ready
+    if (!user || !loadedSettings || !timeRange || !timeRange.timeMin || !timeRange.timeMax) {
+      console.log("CalendarWidget: Not ready yet:", {
+        hasUser: !!user,
+        hasSettings: !!loadedSettings,
+        hasTimeRange: !!timeRange,
+        timeRange: timeRange
+      });
       return null;
     }
     
@@ -236,7 +265,7 @@ function CalendarWidget() {
     
     console.log("CalendarWidget: Built API URL:", url);
     return url;
-  }, [timeRange, powerAutomateUrl]);
+  }, [user, loadedSettings, timeRange, powerAutomateUrl]);
 
   // Fetch calendar events with error handling
   const { data, error } = useSWR(
@@ -271,7 +300,16 @@ function CalendarWidget() {
     }
   }, [data]);
 
-  const hasValidCalendar = loadedSettings && loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0;
+  const hasValidCalendar = loadedSettings && (
+    (loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0) ||
+    (loadedSettings.calendarSources && Array.isArray(loadedSettings.calendarSources) && loadedSettings.calendarSources.length > 0)
+  );
+  
+  console.log("CalendarWidget: hasValidCalendar:", hasValidCalendar, {
+    hasSettings: !!loadedSettings,
+    selectedCals: loadedSettings?.selectedCals,
+    calendarSources: loadedSettings?.calendarSources
+  });
 
   // Filter out past events and find the next upcoming event
   const now = new Date();
