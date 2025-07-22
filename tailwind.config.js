@@ -9,21 +9,51 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: { // FloHub Teal
+        // Brand Guidelines Colors
+        primary: { // FloHub Teal (#00C9A7)
           50:  '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4',
-          300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6',
-          600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a',
+          300: '#5eead4', 400: '#2dd4bf', 500: '#00C9A7',
+          600: '#00b396', 700: '#009d85', 800: '#008774', 900: '#007163',
         },
-        accent: { // FloHub Coral
-          50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3',
-          300: '#fda4af', 400: '#fb7185', 500: '#f43f5e',
-          600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337',
+        accent: { // FloHub Coral (#FF6B6B)
+          50: '#fff5f5', 100: '#fed7d7', 200: '#feb2b2',
+          300: '#fc8181', 400: '#f56565', 500: '#FF6B6B',
+          600: '#e53e3e', 700: '#c53030', 800: '#9b2c2c', 900: '#742a2a',
         },
-        charcoal: '#1F2937', // Dark Charcoal
-        'cool-grey': '#9CA3AF', // Cool Grey
-        'off-white': '#F9FAFB', // Off-White
-        'soft-yellow': '#FACC15', // Soft Yellow
-        'sky-blue': '#38BDF8', // Sky Blue
+        'dark-base': '#1E1E2F', // Brand Dark Base
+        'soft-white': '#FDFDFD', // Brand Soft White
+        'grey-tint': '#9CA3AF', // Brand Grey Tint
+        // Legacy colors for compatibility
+        charcoal: '#1E1E2F', // Updated to brand dark base
+        'cool-grey': '#9CA3AF',
+        'off-white': '#FDFDFD', // Updated to brand soft white
+        'soft-yellow': '#FACC15',
+        'sky-blue': '#38BDF8',
+      },
+      fontFamily: {
+        // Brand Guidelines Typography
+        'heading': ['Poppins', 'sans-serif'], // For headings
+        'body': ['Inter', 'sans-serif'], // For body text
+        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'], // Default sans
+      },
+      fontSize: {
+        // Brand Guidelines Type Sizes
+        'xs': '0.75rem',     // 12px - Microcopy
+        'sm': '0.875rem',    // 14px - Microcopy
+        'base': '1rem',      // 16px - Body text
+        'lg': '1.125rem',    // 18px
+        'xl': '1.25rem',     // 20px
+        '2xl': '1.5rem',     // 24px - H2
+        '3xl': '1.875rem',   // 30px
+        '4xl': '2rem',       // 32px - H1
+        '5xl': '3rem',       // 48px
+        '6xl': '4rem',       // 64px
+      },
+      lineHeight: {
+        // Brand Guidelines Line Heights (1.4-1.6x)
+        'tight': '1.4',
+        'normal': '1.5',
+        'relaxed': '1.6',
       },
       borderRadius: { xl: '1.5rem' },
       boxShadow: {

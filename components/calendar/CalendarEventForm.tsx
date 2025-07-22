@@ -7,7 +7,7 @@ interface CalendarEventFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (eventData: any) => Promise<void>;
-  availableCalendars?: Array<{ id: string; name: string; source?: string }>;
+  availableCalendars?: Array<{ id: string; summary: string; source?: string }>;
 }
 
 export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
@@ -33,6 +33,9 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
 
   // Initialize form data when event changes
   useEffect(() => {
+    console.log('CalendarEventForm: availableCalendars changed:', availableCalendars);
+    console.log('CalendarEventForm: availableCalendars length:', availableCalendars?.length);
+    
     if (event) {
       const startDate = event.start instanceof Date 
         ? format(event.start, "yyyy-MM-dd'T'HH:mm")
@@ -66,7 +69,7 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         description: '',
         start: format(now, "yyyy-MM-dd'T'HH:mm"),
         end: format(inOneHour, "yyyy-MM-dd'T'HH:mm"),
-        calendarId: availableCalendars[0]?.id || '',
+        calendarId: availableCalendars.length > 0 ? availableCalendars[0].id : '',
         source: 'personal',
         tags: [],
         location: ''
@@ -80,6 +83,9 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
     setError(null);
 
     try {
+      console.log('Submitting form data:', formData);
+      console.log('Available calendars:', availableCalendars);
+
       // Validate form data
       if (!formData.summary.trim()) {
         throw new Error('Event title is required');
@@ -93,17 +99,31 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
       if (new Date(formData.start) >= new Date(formData.end)) {
         throw new Error('End time must be after start time');
       }
+      if (availableCalendars.length > 0 && !formData.calendarId) {
+        throw new Error('Please select a calendar');
+      }
+      if (availableCalendars.length === 0) {
+        throw new Error('No calendars available. Please check your calendar settings.');
+      }
 
-      await onSubmit({
+      const eventData = {
         ...formData,
         summary: formData.summary.trim(),
         description: formData.description.trim(),
-        location: formData.location.trim()
-      });
+        location: formData.location.trim(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Add user's timezone
+        timezoneOffset: new Date().getTimezoneOffset() // Add timezone offset in minutes
+      };
+
+      console.log('Submitting event data:', eventData);
+
+      await onSubmit(eventData);
 
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (err: any) {
+      console.error('Form submission error:', err);
+      // If the error has a message property, use it. Otherwise, stringify the error.
+      setError(err?.message || (typeof err === 'string' ? err : JSON.stringify(err)));
     } finally {
       setIsSubmitting(false);
     }
@@ -208,25 +228,31 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
             </div>
 
             {/* Calendar Selection */}
-            {availableCalendars.length > 0 && (
-              <div>
-                <label htmlFor="calendarId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Calendar
-                </label>
+            <div>
+              <label htmlFor="calendarId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Calendar {availableCalendars.length === 0 && <span className="text-red-500">*</span>}
+              </label>
+              {availableCalendars.length > 0 ? (
                 <select
                   id="calendarId"
                   value={formData.calendarId}
                   onChange={(e) => setFormData(prev => ({ ...prev, calendarId: e.target.value }))}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                  required
                 >
+                  <option value="">Select a calendar</option>
                   {availableCalendars.map(calendar => (
                     <option key={calendar.id} value={calendar.id}>
-                      {calendar.name}
+                      {calendar.summary}
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+              ) : (
+                <div className="w-full px-4 py-3 border border-red-300 dark:border-red-600 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
+                  No calendars available. Please check your calendar settings.
+                </div>
+              )}
+            </div>
 
             {/* Event Type */}
             <div>

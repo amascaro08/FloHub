@@ -80,6 +80,10 @@ export default async function handler(
         return res.status(200).json(defaultSettings);
       }
 
+      console.log("Raw data from database:", data);
+      console.log("selectedCals from database:", data.selectedCals);
+      console.log("selectedCals type:", typeof data.selectedCals);
+      
       const settings: UserSettings = {
         selectedCals: (data.selectedCals as string[]) || [], // Ensure it's an array
         defaultView: data.defaultView as UserSettings['defaultView'] || "month",

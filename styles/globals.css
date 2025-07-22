@@ -2,19 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Brand Guidelines Typography */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  h1 {
+    font-size: 2rem; /* 32px */
+    font-weight: 700;
+  }
+  
+  h2 {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+  }
+  
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem; /* 16px */
+    line-height: 1.5;
+  }
+  
+  .text-microcopy {
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.4;
+  }
+  
+  .text-small {
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.4;
+  }
+}
 
 
-/* Theme vars */
+
+/* Theme vars - Brand Guidelines Colors */
 :root {
-  --bg: #F9FAFB; /* Off-White */
-  --fg: #1F2937; /* Dark Charcoal */
+  --bg: #FDFDFD; /* Brand Soft White */
+  --fg: #1E1E2F; /* Brand Dark Base */
   --surface: #FFFFFF; /* Pure White for light mode surfaces */
   --surface-secondary: #F3F4F6; /* Slightly darker for secondary surfaces */
-  --primary: #14B8A6; /* FloHub Teal */
+  --primary: #00C9A7; /* Brand FloTeal */
   --primary-light: #5EEAD4; /* Light Teal for accents */
-  --primary-dark: #0D9488; /* Dark Teal for hover states */
-  --accent: #FB7185; /* FloHub Coral */
-  --accent-light: #FDA4AF; /* Light Coral */
+  --primary-dark: #009d85; /* Dark Teal for hover states */
+  --accent: #FF6B6B; /* Brand FloCoral */
+  --accent-light: #fc8181; /* Light Coral */
   --neutral-50: #F9FAFB;
   --neutral-100: #F3F4F6;
   --neutral-200: #E5E7EB;
@@ -30,15 +69,15 @@
 }
 
 .dark {
-  --bg: #111827; /* Darker background for better contrast */
-  --fg: #F9FAFB; /* Off-White */
-  --surface: #1F2937; /* Dark Charcoal for surfaces */
+  --bg: #1E1E2F; /* Brand Dark Base */
+  --fg: #FDFDFD; /* Brand Soft White */
+  --surface: #1E1E2F; /* Brand Dark Base for surfaces */
   --surface-secondary: #374151; /* Slightly lighter for secondary surfaces */
-  --primary: #14B8A6; /* FloHub Teal */
+  --primary: #00C9A7; /* Brand FloTeal */
   --primary-light: #2DD4BF; /* Adjusted for dark mode */
-  --primary-dark: #0F766E; /* Darker Teal for hover states */
-  --accent: #FB7185; /* FloHub Coral */
-  --accent-light: #F43F5E; /* Adjusted for dark mode */
+  --primary-dark: #007163; /* Darker Teal for hover states */
+  --accent: #FF6B6B; /* Brand FloCoral */
+  --accent-light: #f56565; /* Adjusted for dark mode */
   --shadow-color: rgba(0, 0, 0, 0.3);
   --shadow-color-darker: rgba(0, 0, 0, 0.5);
 }
@@ -200,7 +239,7 @@
 
 /* Widget header styles */
 .widget-header {
-  @apply font-semibold text-lg mb-3 pb-2 border-b border-neutral-200
+  @apply font-heading font-semibold text-lg mb-3 pb-2 border-b border-neutral-200
     dark:border-neutral-700 flex items-center;
 }
 
