@@ -223,8 +223,19 @@ function CalendarWidget() {
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
     }`;
 
-  // Fetch calendar events
-  const { data, error } = useSWR(apiUrl, calendarEventsFetcher);
+  // Fetch calendar events with error handling
+  const { data, error } = useSWR(
+    apiUrl, 
+    calendarEventsFetcher,
+    {
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+      errorRetryInterval: 5000,
+      onError: (error) => {
+        console.log("SWR calendar error:", error);
+      }
+    }
+  );
 
   // Debug logs for API URL and error
   useEffect(() => {
@@ -540,12 +551,20 @@ function CalendarWidget() {
             )}
             
             {error && (
-              <div className="text-red-500 text-sm">
-                Error loading events: {error.message}
+              <div className="text-amber-600 dark:text-amber-400 text-sm p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                <div className="font-medium mb-1">Calendar Temporarily Unavailable</div>
+                <div className="text-xs">
+                  We're having trouble connecting to your calendar right now. This could be due to:
+                  <ul className="mt-1 ml-4 list-disc">
+                    <li>Authentication needs to be refreshed</li>
+                    <li>Network connectivity issues</li>
+                    <li>Calendar service maintenance</li>
+                  </ul>
+                </div>
                 <div className="mt-2">
                   <button 
                     onClick={() => window.location.reload()} 
-                    className="text-blue-500 hover:text-blue-700 underline text-xs"
+                    className="text-blue-600 hover:text-blue-700 underline text-xs"
                   >
                     Try reloading the page
                   </button>

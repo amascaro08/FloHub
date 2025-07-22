@@ -192,16 +192,16 @@ const { user, isLoading } = useUser()
         // Fetch data in parallel using Promise.all with enhanced fetcher
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
           // Fetch calendar events with enhanced fetcher
-          fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `flohub:calendar:${apiUrlParams}`),
+          fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `flohub:calendar:${apiUrlParams}`).catch(() => []),
           
           // Fetch tasks with enhanced fetcher
-          fetchTasks(),
+          fetchTasks().catch(() => ({ tasks: [] })),
           
           // Fetch notes with enhanced fetcher
-          fetchNotes(),
+          fetchNotes().catch(() => ({ notes: [] })),
           
           // Fetch meetings with enhanced fetcher
-          fetchMeetings()
+          fetchMeetings().catch(() => ({ meetings: [] }))
         ]);
 
         // Handle both response formats: direct array or {events: [...]} object
@@ -574,7 +574,26 @@ Have a purr-fect day! 🐾`;
   }
 
   if (error) {
-     return <div className="p-4 border rounded-lg shadow-sm text-red-500">Error: {error}</div>;
+     return (
+       <div className="p-4 border rounded-lg shadow-sm">
+         <div className="text-amber-600 dark:text-amber-400 mb-3">
+           <h3 className="font-medium">FloCat is Taking a Quick Nap 😴</h3>
+           <p className="text-sm mt-1">
+             I'm having trouble gathering all your information right now, but I'll keep trying in the background!
+           </p>
+         </div>
+         <div className="text-sm text-neutral-600 dark:text-neutral-400">
+           In the meantime, you can still access your:
+           <ul className="mt-2 ml-4 list-disc">
+             <li>Tasks and todo items</li>
+             <li>Calendar events</li> 
+             <li>Notes and meetings</li>
+             <li>Habit tracking</li>
+           </ul>
+         </div>
+         <p className="text-sm mt-3 text-right">- FloCat 😼</p>
+       </div>
+     );
    }
 
    return (
