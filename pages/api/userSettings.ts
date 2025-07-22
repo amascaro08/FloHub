@@ -7,10 +7,11 @@ import { eq } from "drizzle-orm";
 import { UserSettings } from "../../types/app"; // Import UserSettings from typese
 
 type ErrorRes = { error: string };
+type SuccessRes = { message: string };
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UserSettings | ErrorRes>
+  res: NextApiResponse<UserSettings | ErrorRes | SuccessRes>
 ) {
   // Disable caching to always return freshest data
   res.setHeader('Cache-Control', 'no-store');
@@ -109,13 +110,13 @@ export default async function handler(
       });
 
       console.log("Updated user settings with default widgets for", user_email);
-      return res.status(200).json({ message: "User settings updated with default widgets" });
+      return res.status(200).json({ message: "User settings updated with default widgets" } as SuccessRes);
     } catch (error) {
       console.error("Error updating user settings for", user_email, error);
-      return res.status(500).json({ error: "Failed to update user settings" });
+      return res.status(500).json({ error: "Failed to update user settings" } as ErrorRes);
     }
   } else {
     res.setHeader("Allow", ["GET", "POST"]);
-    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+    return res.status(405).json({ error: `Method ${req.method} not allowed` } as ErrorRes);
   }
 }
