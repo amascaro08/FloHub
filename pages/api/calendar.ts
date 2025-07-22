@@ -359,10 +359,8 @@ export default async function handler(
       const isWork = tags.includes("work") || tags.length === 0; // Default to work if no tags
       
       console.log("Attempting to fetch O365 events from URL:", url);
-      try {
-        const o365Res = await fetch(url, {
-          timeout: 10000, // 10 second timeout
-        });
+              try {
+          const o365Res = await fetch(url);
         console.log("O365 fetch response status:", o365Res.status);
         
         if (o365Res.ok) {
