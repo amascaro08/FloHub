@@ -188,6 +188,34 @@ export default async function handler(
     console.log("[API] User email:", user.email);
     console.log("[API] Is primary calendar:", calendarId === 'primary');
     console.log("[API] Is user's own calendar:", calendarId === user.email);
+    
+    // If it's a shared calendar, try the primary calendar instead
+    if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
+      console.log("[API] Shared calendar detected, trying primary calendar instead");
+      const originalCalendarId = calendarId;
+      const primaryUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
+      
+      try {
+        const primaryRes = await fetch(primaryUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        if (primaryRes.ok) {
+          const data = await primaryRes.json();
+          console.log("[API] Successfully created event in primary calendar:", data);
+          return res.status(200).json(data);
+        } else {
+          console.log("[API] Primary calendar also failed, trying original calendar");
+        }
+      } catch (error) {
+        console.log("[API] Primary calendar attempt failed:", error);
+      }
+    }
 
     // Prepare payload for Google Calendar API
     const payload: any = {
@@ -253,6 +281,13 @@ export default async function handler(
           } else if (err.error?.errors && err.error.errors.length > 0) {
             errorMessage = err.error.errors[0].message || errorMessage;
           }
+          
+          console.error("[API] Detailed Google API error:", {
+            status: apiRes.status,
+            error: err,
+            calendarId: calendarId,
+            userEmail: user.email
+          });
           
           return res.status(apiRes.status).json({ error: errorMessage });
         } catch (parseError) {
