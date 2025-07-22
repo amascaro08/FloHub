@@ -38,20 +38,36 @@ const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "hab
 export default function MobileDashboard() {
   const isClient = typeof window !== 'undefined';
 
-  // === LOCK STATE: local, persistent ===
+  // === LOCK STATE: read from shared storage ===
   const [isLocked, setIsLocked] = useState(false);
   useEffect(() => {
     if (isClient) {
-      const saved = localStorage.getItem("isLocked");
+      const saved = localStorage.getItem("dashboardLocked");
       setIsLocked(saved === "true");
+
+      // Listen for storage changes to sync lock state across components
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "dashboardLocked") {
+          setIsLocked(e.newValue === "true");
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Also listen for custom events for same-tab updates
+      const handleLockChange = () => {
+        const saved = localStorage.getItem("dashboardLocked");
+        setIsLocked(saved === "true");
+      };
+
+      window.addEventListener('lockStateChanged', handleLockChange);
+
+      return () => {
+        window.removeEventListener('storage', handleLockChange);
+        window.removeEventListener('lockStateChanged', handleLockChange);
+      };
     }
   }, [isClient]);
-  const toggleLock = () => {
-    setIsLocked(l => {
-      localStorage.setItem("isLocked", String(!l));
-      return !l;
-    });
-  };
 
   // Use useUser to trigger auth state, but NOT for lock
   const { user, isLoading: isUserLoading } = useUser();
@@ -216,17 +232,6 @@ export default function MobileDashboard() {
 
   return (
     <div className="grid grid-cols-1 gap-4 px-2 py-4">
-      <div className="mb-2 flex justify-end">
-        {/* Lock/unlock dashboard button */}
-        <button
-          onClick={toggleLock}
-          className={`rounded-full px-4 py-2 text-xs font-bold ${
-            isLocked ? "bg-red-500 text-white" : "bg-green-500 text-white"
-          }`}
-        >
-          {isLocked ? "Unlock Dashboard" : "Lock Dashboard"}
-        </button>
-      </div>
       {activeWidgets.length === 0 ? (
         <div className="glass px-4 py-4 rounded-xl shadow-md text-center">
           <p className="text-gray-500 dark:text-gray-400">No widgets selected. Visit settings to add widgets.</p>

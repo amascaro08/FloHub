@@ -493,8 +493,207 @@ function CalendarWidget() {
               >
                 Today
               </button>
+              <button
+                onClick={() => setActiveView('tomorrow')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'tomorrow'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Tomorrow
+              </button>
+              <button
+                onClick={() => setActiveView('week')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'week'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Week
+              </button>
             </div>
           </div>
+
+          {/* Events Display */}
+          <div className="space-y-3">
+            {error && (
+              <div className="text-red-500 text-sm">
+                Error loading events: {error.message}
+              </div>
+            )}
+            
+            {!error && upcomingEvents.length === 0 ? (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                No upcoming events found
+              </div>
+            ) : (
+              upcomingEvents.slice(0, 5).map((event, index) => {
+                const teamsLink = event.description ? extractTeamsLink(event.description) : null;
+                
+                                 return (
+                   <div
+                     key={`${event.id}-${index}`}
+                     className="p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                     onClick={() => setViewingEvent(event)}
+                   >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                          {event.summary || "Untitled Event"}
+                        </h3>
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                          {formatEvent(event)}
+                        </p>
+                        {event.calendarName && (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+                            {event.calendarName}
+                            {event.source === "work" && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Work
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      
+                                             {/* Teams Link Button */}
+                       {teamsLink && (
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             window.open(teamsLink, '_blank');
+                           }}
+                           className="ml-3 flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                           title="Join Teams Meeting"
+                         >
+                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
+                          </svg>
+                          Teams
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Add Event Button */}
+          <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+            <button
+              onClick={openAdd}
+              className="w-full px-3 py-2 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+            >
+              + Add Event
+            </button>
+          </div>
+
+          {/* Add/Edit Event Modal */}
+          {modalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
+                <h3 className="text-lg font-medium mb-4">
+                  {editingEvent ? 'Edit Event' : 'Add Event'}
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={form.summary}
+                      onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                      placeholder="Event title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Start</label>
+                    <input
+                      type="datetime-local"
+                      value={form.start}
+                      onChange={(e) => setForm({ ...form, start: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">End</label>
+                    <input
+                      type="datetime-local"
+                      value={form.end}
+                      onChange={(e) => setForm({ ...form, end: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={handleSaveEvent}
+                    className="flex-1 bg-teal-500 text-white py-2 rounded-md hover:bg-teal-600 transition-colors"
+                  >
+                    {editingEvent ? 'Update' : 'Create'}
+                  </button>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Event Details Modal */}
+          {viewingEvent && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
+                <h3 className="text-lg font-medium mb-4">{viewingEvent.summary}</h3>
+                <div className="space-y-2">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                    {formatEvent(viewingEvent)}
+                  </p>
+                  {viewingEvent.description && (
+                    <p className="text-sm">{viewingEvent.description}</p>
+                  )}
+                  {/* Teams Link in Modal */}
+                  {extractTeamsLink(viewingEvent.description || '') && (
+                    <button
+                      onClick={() => window.open(extractTeamsLink(viewingEvent.description || '') || '', '_blank')}
+                      className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
+                      </svg>
+                      Join Teams Meeting
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={() => openEdit(viewingEvent)}
+                    className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)}
+                    className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setViewingEvent(null)}
+                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

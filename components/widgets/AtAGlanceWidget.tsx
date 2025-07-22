@@ -510,9 +510,12 @@ Have a purr-fect day!`;
 
             const aiData = await aiRes.json();
             if (aiData.reply && isMounted) {
+              console.log("AtAGlanceWidget: AI response received:", aiData.reply.substring(0, 100) + "...");
               setAiMessage(aiData.reply);
               // Pre-parse the markdown
-              setFormattedHtml(parseMarkdown(aiData.reply));
+              const parsedHtml = parseMarkdown(aiData.reply);
+              console.log("AtAGlanceWidget: Parsed HTML length:", parsedHtml.length);
+              setFormattedHtml(parsedHtml);
               
               // Store the new message and timestamp in localStorage
               try {
@@ -523,6 +526,7 @@ Have a purr-fect day!`;
                 console.error("Error saving to localStorage:", err);
               }
             } else if (isMounted) {
+              console.error("AtAGlanceWidget: AI assistant did not return a message. Response:", aiData);
               setError("AI assistant did not return a message.");
             }
           }
