@@ -4,6 +4,7 @@ import { useUser } from "@/lib/hooks/useUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -43,9 +44,42 @@ const CalendarPage = () => {
   const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  // Calculate date range for current view
+  const getDateRange = useCallback(() => {
+    if (currentView === 'day') {
+      const start = new Date(currentDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(currentDate);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    } else if (currentView === 'week') {
+      const start = startOfWeek(currentDate);
+      const end = endOfWeek(currentDate);
+      return { start, end };
+    } else {
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
+      return { start, end };
+    }
+  }, [currentDate, currentView]);
+
+  const { start: startDate, end: endDate } = getDateRange();
+
+  // Use cached calendar events hook
+  const {
+    events,
+    isLoading,
+    error: fetchError,
+    addEvent,
+    updateEvent,
+    removeEvent,
+    invalidateCache,
+    refetch
+  } = useCalendarEvents({
+    startDate,
+    endDate,
+    enabled: !!user && !!settings?.selectedCals
+  });
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('month');
@@ -83,47 +117,7 @@ const CalendarPage = () => {
     }
   }, [calendarList, calendarListError, settings]);
 
-  // Memoize the API URL to prevent unnecessary re-fetching
-  const calendarApiUrl = useMemo(() => {
-    if (!user || !settings?.selectedCals) return null;
-    
-    const now = new Date();
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
-    
-    return `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true`;
-  }, [user, settings?.selectedCals]);
-  
-  // Use SWR for calendar data with optimized settings
-  const { data: calendarData, error: calendarError } = useSWR(
-    calendarApiUrl,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 300000, // 5 minutes
-      onSuccess: () => setFetchError(null)
-    }
-  );
-  
-  // Process events when calendar data changes
-  useEffect(() => {
-    setIsLoading(true);
-    
-    if (calendarError) {
-      console.error('Error fetching events:', calendarError);
-      setFetchError('Failed to load calendar events. Please try again later.');
-      setIsLoading(false);
-      return;
-    }
 
-    if (calendarData?.events) {
-      setEvents(calendarData.events);
-    } else {
-      setEvents([]);
-    }
-    
-    setIsLoading(false);
-  }, [calendarData, calendarError]);
 
   const getEventDate = (event: CalendarEvent): Date => {
     if (event.start instanceof Date) {
@@ -265,8 +259,27 @@ const CalendarPage = () => {
       const result = await response.json();
       console.log('Event saved successfully:', result);
 
-      // Refresh calendar data
-      window.location.reload();
+      // Add the new event to the cached events instead of reloading
+      const newEvent: CalendarEvent = {
+        id: result.id,
+        summary: eventData.summary,
+        description: eventData.description,
+        start: { dateTime: eventData.start },
+        end: { dateTime: eventData.end },
+        calendarId: eventData.calendarId,
+        source: eventData.source,
+        tags: eventData.tags || [],
+        location: eventData.location,
+        htmlLink: result.htmlLink,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      };
+      
+      addEvent(newEvent);
+      
+      // Close the form
+      setIsEventFormOpen(false);
+      setEditingEvent(null);
     } catch (error) {
       console.error('Error saving event:', error);
       throw error;
@@ -289,8 +302,8 @@ const CalendarPage = () => {
         throw new Error('Failed to delete event');
       }
 
-      // Refresh calendar data
-      window.location.reload();
+      // Remove the event from cached events instead of reloading
+      removeEvent(event.id);
     } catch (error) {
       console.error('Error deleting event:', error);
       alert('Failed to delete event');

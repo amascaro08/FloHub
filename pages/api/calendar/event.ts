@@ -203,13 +203,19 @@ export default async function handler(
     }
 
     if (start) {
-      // Convert datetime-local format to ISO string for Google Calendar API
-      // datetime-local format is in local timezone, so we need to preserve that
-      const startDate = new Date(start);
-      const userTimezone = timeZone || 'Australia/Sydney'; // Default to AEST/AEDT
+      // datetime-local inputs are in local time, so we need to create the ISO string correctly
+      const userTimezone = timeZone || 'Australia/Sydney';
       
-      // Create ISO string in the user's timezone
-      const startISO = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString();
+      // Create a date object from the datetime-local string (which is in local time)
+      const [datePart, timePart] = start.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      
+      // Create date in local timezone
+      const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Convert to ISO string for Google API
+      const startISO = localDate.toISOString();
       
       payload.start = {
         dateTime: startISO,
@@ -219,13 +225,19 @@ export default async function handler(
     }
 
     if (end) {
-      // Convert datetime-local format to ISO string for Google Calendar API
-      // datetime-local format is in local timezone, so we need to preserve that
-      const endDate = new Date(end);
-      const userTimezone = timeZone || 'Australia/Sydney'; // Default to AEST/AEDT
+      // datetime-local inputs are in local time, so we need to create the ISO string correctly
+      const userTimezone = timeZone || 'Australia/Sydney';
       
-      // Create ISO string in the user's timezone
-      const endISO = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000)).toISOString();
+      // Create a date object from the datetime-local string (which is in local time)
+      const [datePart, timePart] = end.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      
+      // Create date in local timezone
+      const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Convert to ISO string for Google API
+      const endISO = localDate.toISOString();
       
       payload.end = {
         dateTime: endISO,
