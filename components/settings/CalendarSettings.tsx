@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserSettings, CalendarSource } from '../../types/app';
 
 type CalItem = { id: string; summary: string; primary?: boolean };
@@ -31,8 +31,128 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
   newCalendarTag,
   setNewCalendarTag
 }) => {
+  const [connectionStatus, setConnectionStatus] = useState<{ [key: string]: 'connected' | 'error' | 'checking' }>({});
+  const [testingUrl, setTestingUrl] = useState<string | null>(null);
+
+  // Test Google Calendar connection
+  const testGoogleConnection = async () => {
+    setConnectionStatus(prev => ({ ...prev, google: 'checking' }));
+    try {
+      const response = await fetch('/api/calendar/list');
+      if (response.ok) {
+        const calendars = await response.json();
+        setConnectionStatus(prev => ({ ...prev, google: 'connected' }));
+        return true;
+      } else {
+        setConnectionStatus(prev => ({ ...prev, google: 'error' }));
+        return false;
+      }
+    } catch (error) {
+      console.error('Error testing Google connection:', error);
+      setConnectionStatus(prev => ({ ...prev, google: 'error' }));
+      return false;
+    }
+  };
+
+  // Test Power Automate URL
+  const testPowerAutomateUrl = async (url: string) => {
+    setTestingUrl(url);
+    try {
+      const response = await fetch(url, { 
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Power Automate URL test successful:', data);
+        alert('Power Automate URL is working correctly!');
+        return true;
+      } else {
+        console.error('Power Automate URL test failed:', response.status);
+        alert(`Power Automate URL test failed with status ${response.status}. Please check the URL.`);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error testing Power Automate URL:', error);
+      alert('Error testing Power Automate URL. Please check the URL and try again.');
+      return false;
+    } finally {
+      setTestingUrl(null);
+    }
+  };
+
+  // Check connection status on component mount
+  useEffect(() => {
+    testGoogleConnection();
+  }, []);
+
+  const getConnectionStatusIcon = (status: 'connected' | 'error' | 'checking') => {
+    switch (status) {
+      case 'connected':
+        return <span className="text-green-500">✓</span>;
+      case 'error':
+        return <span className="text-red-500">✗</span>;
+      case 'checking':
+        return <span className="text-yellow-500 animate-spin">⟳</span>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Connection Status Summary */}
+      <section className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-4">
+        <h3 className="text-lg font-medium mb-3">Calendar Connection Status</h3>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span>Google Calendar</span>
+            <div className="flex items-center gap-2">
+              {getConnectionStatusIcon(connectionStatus.google)}
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {connectionStatus.google === 'connected' ? 'Connected' : 
+                 connectionStatus.google === 'error' ? 'Not Connected' : 'Checking...'}
+              </span>
+              {connectionStatus.google === 'error' ? (
+                <button
+                  onClick={testGoogleConnection}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Retry
+                </button>
+              ) : connectionStatus.google === 'connected' ? (
+                <button
+                  onClick={() => {
+                    const refreshUrl = `/api/calendar/connect?provider=google&refresh=true`;
+                    window.location.href = refreshUrl;
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Refresh Calendars
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {settings.calendarSources?.filter(s => s.type === 'o365').map(source => (
+            <div key={source.id} className="flex items-center justify-between">
+              <span className="truncate">{source.name}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => source.connectionData && testPowerAutomateUrl(source.connectionData)}
+                  disabled={testingUrl === source.connectionData}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                >
+                  {testingUrl === source.connectionData ? 'Testing...' : 'Test'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Calendar Sources */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-hidden">
         <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
@@ -49,8 +169,17 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             </button>
             <button
               onClick={() => {
-                const powerAutomateUrl = prompt("Please enter your Power Automate URL");
+                const powerAutomateUrl = prompt(
+                  "Please enter your Power Automate URL:\n\n" +
+                  "This should be a HTTP endpoint that returns calendar events in JSON format.\n" +
+                  "Example: https://prod-xx.westus.logic.azure.com:443/workflows/xxx/triggers/manual/paths/invoke?..."
+                );
                 if (powerAutomateUrl && powerAutomateUrl.trim()) {
+                  if (!powerAutomateUrl.startsWith('http')) {
+                    alert('Please enter a valid HTTP URL');
+                    return;
+                  }
+                  
                   // Create a new calendar source for the Power Automate URL
                   const newSource: CalendarSource = {
                     id: `o365_${Date.now()}`,
@@ -84,7 +213,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             settings.calendarSources.map((source, index) => (
               <div key={source.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-hidden">
                 <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-lg">{source.name}</h3>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                       {source.type === "google" ? "Google Calendar" :
@@ -93,7 +222,9 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     </div>
                     {source.connectionData && source.type === "o365" && (
                       <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 break-all">
-                        URL: {source.connectionData}
+                        URL: {source.connectionData.length > 60 ? 
+                          `${source.connectionData.substring(0, 60)}...` : 
+                          source.connectionData}
                       </div>
                     )}
                   </div>
@@ -117,6 +248,15 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                         {source.isEnabled ? "Enabled" : "Disabled"}
                       </span>
                     </label>
+                    {source.type === "o365" && source.connectionData && (
+                      <button
+                        onClick={() => testPowerAutomateUrl(source.connectionData!)}
+                        disabled={testingUrl === source.connectionData}
+                        className="text-xs text-green-600 hover:text-green-800 underline disabled:opacity-50"
+                      >
+                        {testingUrl === source.connectionData ? 'Testing...' : 'Test URL'}
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setNewCalendarSource({...source});
@@ -160,8 +300,29 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               </div>
             ))
           ) : (
-            <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No calendar sources added yet. Click "Add Google Calendar" or "Add Power Automate URL" to get started.
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6v6m8-6v6M6 7h12l-1 14H7L6 7z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Calendar Sources</h3>
+              <p className="mb-4">Connect your calendars to see events in FloHub</p>
+              <div className="space-y-2 text-sm">
+                <p>• <strong>Google Calendar:</strong> Full sync with your Google events</p>
+                <p>• <strong>Power Automate:</strong> Connect Office 365 or other calendar systems</p>
+              </div>
+              <div className="mt-6 space-x-2">
+                <button
+                  onClick={() => {
+                    const googleAuthUrl = `/api/calendar/connect?provider=google`;
+                    window.location.href = googleAuthUrl;
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                >
+                  Connect Google Calendar
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -170,34 +331,53 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         {settings.powerAutomateUrl && (!settings.calendarSources || settings.calendarSources.length === 0) && (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
             <h3 className="font-medium text-lg mb-2">Legacy Power Automate URL</h3>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-all">
               URL: {settings.powerAutomateUrl}
             </div>
-            <button
-              onClick={() => {
-                // Convert legacy URL to calendar source
-                const newSource: CalendarSource = {
-                  id: `o365_legacy_${Date.now()}`,
-                  name: "Work Calendar (O365) - Legacy",
-                  type: "o365",
-                  sourceId: "default",
-                  connectionData: settings.powerAutomateUrl,
-                  tags: ["work"],
-                  isEnabled: true,
-                };
-                
-                onSettingsChange({
-                  ...settings,
-                  calendarSources: [newSource],
-                  powerAutomateUrl: "", // Clear the legacy field after conversion
-                });
-              }}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
-            >
-              Convert to Calendar Source
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => testPowerAutomateUrl(settings.powerAutomateUrl!)}
+                disabled={testingUrl === settings.powerAutomateUrl}
+                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors disabled:opacity-50"
+              >
+                {testingUrl === settings.powerAutomateUrl ? 'Testing...' : 'Test URL'}
+              </button>
+              <button
+                onClick={() => {
+                  // Convert legacy URL to calendar source
+                  const newSource: CalendarSource = {
+                    id: `o365_legacy_${Date.now()}`,
+                    name: "Work Calendar (O365) - Legacy",
+                    type: "o365",
+                    sourceId: "default",
+                    connectionData: settings.powerAutomateUrl,
+                    tags: ["work"],
+                    isEnabled: true,
+                  };
+                  
+                  onSettingsChange({
+                    ...settings,
+                    calendarSources: [newSource],
+                    powerAutomateUrl: "", // Clear the legacy field after conversion
+                  });
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+              >
+                Convert to Calendar Source
+              </button>
+            </div>
           </div>
         )}
+      </section>
+      
+      {/* Help Section */}
+      <section className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700 p-4">
+        <h3 className="text-lg font-medium mb-2">Having Issues?</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <p><strong>Google Calendar:</strong> If you see "Not Connected", click "Add Google Calendar" to authorize access.</p>
+          <p><strong>Power Automate URL:</strong> Make sure your URL returns JSON data and is accessible from the internet. Use the "Test URL" button to verify.</p>
+          <p><strong>No Events Showing:</strong> Check that your calendar sources are enabled and that you have events in the selected date range.</p>
+        </div>
       </section>
       
       {/* Default view filter */}

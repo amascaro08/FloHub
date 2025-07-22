@@ -60,6 +60,20 @@ const SettingsModularPage = () => {
     }
   );
 
+  // Fetch available calendars
+  const { data: availableCalendars } = useSWR(
+    userId ? '/api/calendar/list' : null,
+    async (url: string) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        // If calendar list fails, return empty array instead of throwing
+        console.warn('Failed to fetch calendar list:', response.status);
+        return [];
+      }
+      return response.json();
+    }
+  );
+
   useEffect(() => {
     if (userSettings) {
       setSettings(userSettings);
@@ -114,7 +128,7 @@ const SettingsModularPage = () => {
         <CalendarSettings
             settings={settings}
             onSettingsChange={handleSettingsChange}
-            calendars={[]}
+            calendars={availableCalendars || []}
             newCalendarSource={newCalendarSource}
             setNewCalendarSource={setNewCalendarSource}
             editingCalendarSourceIndex={editingCalendarSourceIndex}

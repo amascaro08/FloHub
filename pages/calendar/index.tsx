@@ -323,14 +323,34 @@ const CalendarPage = () => {
       <div className="container mx-auto py-10">
         <h1 className="text-2xl font-bold mb-5">Calendar</h1>
         <div className="bg-red-100 dark:bg-red-900 dark:bg-opacity-20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded">
-          <h3 className="font-bold">Error</h3>
-          <p>{settingsError?.message || fetchError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
-            Retry
-          </button>
+          <h3 className="font-bold">Calendar Load Error</h3>
+          <p className="mb-3">{settingsError?.message || fetchError}</p>
+          
+          {/* More specific error guidance */}
+          <div className="text-sm mb-4 space-y-2">
+            <p><strong>Common Solutions:</strong></p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Check your internet connection</li>
+              <li>Verify your Google Calendar is connected in Settings</li>
+              <li>Ensure Power Automate URLs are working correctly</li>
+              <li>Try refreshing the page</li>
+            </ul>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard/settings?tab=calendar'}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Check Settings
+            </button>
+          </div>
         </div>
       </div>
     );
