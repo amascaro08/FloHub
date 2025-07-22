@@ -951,7 +951,10 @@ const CalendarPage = () => {
         availableCalendars={
           Array.isArray(calendarList)
             ? (Array.isArray(settings?.selectedCals) && settings.selectedCals.length > 0
-                ? calendarList.filter(cal => settings.selectedCals.includes(cal.id))
+                ? calendarList.filter(cal => {
+                    console.log('Checking calendar:', cal.id, 'against selectedCals:', settings.selectedCals);
+                    return settings.selectedCals.includes(cal.id);
+                  })
                 : calendarList)
             : []
         }

@@ -19,10 +19,16 @@ export default async function handler(
   }
   const googleAccount = user.accounts?.find(account => account.provider === 'google');
   const accessToken = googleAccount?.access_token;
+  
+  console.log("[API] User:", user.email);
+  console.log("[API] Google account found:", !!googleAccount);
+  console.log("[API] Access token exists:", !!accessToken);
 
   // POST = create, PUT = update
   if (req.method === "POST") {
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
+    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, description, tags, source });
+    
     if (!calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });
       return res.status(400).json({ error: "Missing required fields for create" });
@@ -174,6 +180,9 @@ export default async function handler(
     }
 
     // Call Google API to create event
+    console.log("[API] Calling Google Calendar API with URL:", url);
+    console.log("[API] Payload:", JSON.stringify(payload, null, 2));
+    
     const apiRes = await fetch(url, {
       method: 'POST',
       headers: {
@@ -183,6 +192,8 @@ export default async function handler(
       body: JSON.stringify(payload),
     });
 
+    console.log("[API] Google API response status:", apiRes.status);
+    
     if (!apiRes.ok) {
       const err = await apiRes.json();
       console.error("Google Calendar API create error:", apiRes.status, err);
