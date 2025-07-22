@@ -232,7 +232,8 @@ export default async function handler(
       }
     } catch (fetchError) {
       console.error("[API] Fetch error:", fetchError);
-      return res.status(500).json({ error: `Network error: ${fetchError.message}` });
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown network error';
+      return res.status(500).json({ error: `Network error: ${errorMessage}` });
     }
 
     const data = await apiRes.json();
