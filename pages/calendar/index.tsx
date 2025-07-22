@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useUser } from "@/lib/hooks/useUser";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
+import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
-const res = await fetch(url, { credentials: 'include' });
-if (!res.ok) {
-  const errorInfo = await res.text();
-  throw new Error(`HTTP ${res.status}: ${errorInfo}`);
-}
-return res.json();
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    const errorInfo = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errorInfo}`);
+  }
+  return res.json();
 };
 
 // Function to extract Microsoft Teams meeting link from event description
@@ -38,15 +39,20 @@ const extractTeamsLink = (description: string): string | null => {
   return null;
 };
 
-// Memoized calendar component to prevent unnecessary re-renders
 const CalendarPage = () => {
-   const { user } = useUser();
+  const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('month');
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
   const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
     user ? '/api/userSettings' : null,
     fetcher,
@@ -98,220 +104,193 @@ const CalendarPage = () => {
       setIsLoading(false);
       return;
     }
-    
-    if (!calendarData) {
-      // Still loading or no data
-      return;
+
+    if (calendarData?.events) {
+      setEvents(calendarData.events);
+    } else {
+      setEvents([]);
     }
     
-    try {
-      // Check if data is an array or has an events property
-      const eventsArray = Array.isArray(calendarData) ? calendarData : calendarData.events || [];
-      
-      // Normalize the events to ensure consistent structure - use a more efficient approach
-      const normalizedEvents = eventsArray.reduce((acc: CalendarEvent[], event: any) => {
-        if (!event) return acc;
-        
-        acc.push({
-          id: event.id || `event-${Math.random().toString(36).substr(2, 9)}`,
-          summary: event.summary || event.title || "No Title",
-          start: event.start,
-          end: event.end || event.start,
-          description: event.description || "",
-          calendarId: event.calendarId,
-          source: event.source || "personal",
-          calendarName: event.calendarName || "Calendar",
-          tags: event.tags || []
-        });
-        
-        return acc;
-      }, []);
-      
-      setEvents(normalizedEvents);
-    } catch (error) {
-      console.error('Error processing calendar data:', error);
-      setFetchError('Error processing calendar data');
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, [calendarData, calendarError]);
 
-  // Helper functions for date handling
   const getEventDate = (event: CalendarEvent): Date => {
     if (event.start instanceof Date) {
       return event.start;
     }
-    
-    if (typeof event.start === 'object') {
-      const dateStr = event.start.dateTime || event.start.date;
-      return dateStr ? parseISO(dateStr) : new Date();
+    if (event.start.dateTime) {
+      return parseISO(event.start.dateTime);
     }
-    
+    if (event.start.date) {
+      return parseISO(event.start.date);
+    }
     return new Date();
   };
 
   const formatDateTime = (dateTime: any): string => {
-    if (!dateTime) return 'N/A';
+    if (!dateTime) return '';
     
+    let date: Date;
     if (dateTime instanceof Date) {
-      return dateTime.toLocaleString();
+      date = dateTime;
+    } else if (dateTime.dateTime) {
+      date = parseISO(dateTime.dateTime);
+    } else if (dateTime.date) {
+      date = parseISO(dateTime.date);
+    } else {
+      return '';
     }
     
-    if (typeof dateTime === 'object') {
-      const dateStr = dateTime.dateTime || dateTime.date;
-      return dateStr ? new Date(dateStr).toLocaleString() : 'N/A';
-    }
-    
-    if (typeof dateTime === 'string') {
-      return new Date(dateTime).toLocaleString();
-    }
-    
-    return 'N/A';
+    return format(date, 'MMM d, yyyy h:mm a');
   };
 
-  // Calendar state
-  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month' | 'year'>('month');
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-
-  // Calendar navigation functions
   const goToPreviousMonth = () => {
-    setCurrentDate(prevDate => subMonths(prevDate, 1));
+    setCurrentDate(prev => subMonths(prev, 1));
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(prevDate => addMonths(prevDate, 1));
+    setCurrentDate(prev => addMonths(prev, 1));
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
-  // Generate calendar days based on current date and view
-  const calendarDays = useMemo(() => {
-    if (currentView === 'month') {
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-      const startDate = startOfWeek(monthStart);
-      const endDate = endOfWeek(monthEnd);
-      
-      return eachDayOfInterval({ start: startDate, end: endDate });
-    } else if (currentView === 'week') {
-      const weekStart = startOfWeek(currentDate);
-      const weekEnd = endOfWeek(currentDate);
-      
-      return eachDayOfInterval({ start: weekStart, end: weekEnd });
-    } else if (currentView === 'day') {
-      return [currentDate];
-    } else {
-      // Year view - simplified for now, just show current month
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-      
-      return eachDayOfInterval({ start: monthStart, end: monthEnd });
-    }
-  }, [currentDate, currentView]);
-
-  // Get events for a specific day
   const getEventsForDay = (day: Date) => {
-    if (!events) return [];
-    
     return events.filter(event => {
       const eventDate = getEventDate(event);
       return isSameDay(eventDate, day);
     }).sort((a, b) => {
-      // Sort by start time
-      const dateA = getEventDate(a);
-      const dateB = getEventDate(b);
-      return dateA.getTime() - dateB.getTime();
+      const aDate = getEventDate(a);
+      const bDate = getEventDate(b);
+      return aDate.getTime() - bDate.getTime();
     });
   };
 
-  // Get all events for the current view (used for day view)
   const getEventsForCurrentView = () => {
-    if (!events) return [];
-    
     if (currentView === 'day') {
       return getEventsForDay(currentDate);
-    } else if (currentView === 'week') {
-      const weekStart = startOfWeek(currentDate);
-      const weekEnd = endOfWeek(currentDate);
-      return events.filter(event => {
-        const eventDate = getEventDate(event);
-        return eventDate >= weekStart && eventDate <= weekEnd;
-      }).sort((a, b) => {
-        // Sort by date then time
-        const dateA = getEventDate(a);
-        const dateB = getEventDate(b);
-        return dateA.getTime() - dateB.getTime();
-      });
     }
-    
-    return [];
+    return events;
   };
 
-  // Memoize the event handlers to prevent unnecessary re-renders
-  const handleSelectDate = useCallback((date: string) => {
-    setSelectedDate(date);
-    // Also update the currentDate for the calendar view
-    if (date) {
-      setCurrentDate(new Date(date));
-    }
-  }, []);
+  // Calculate calendar days for the current month
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentDate));
+    const end = endOfWeek(endOfMonth(currentDate));
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
 
-  const handleViewEvent = useCallback((event: CalendarEvent) => {
-    if (user) {
-      setSelectedEvent(event);
+  // Handle event form submission
+  const handleEventSubmit = async (eventData: any) => {
+    try {
+      const url = editingEvent 
+        ? `/api/calendar/event?id=${editingEvent.id}`
+        : '/api/calendar/event';
+      
+      const method = editingEvent ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(eventData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save event');
+      }
+
+      // Refresh calendar data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error saving event:', error);
+      throw error;
     }
-  }, [user]);
-  
+  };
+
+  // Handle event deletion
+  const handleEventDelete = async (event: CalendarEvent) => {
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/calendar/event?id=${event.id}&calendarId=${event.calendarId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete event');
+      }
+
+      // Refresh calendar data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event');
+    }
+  };
+
   // Handle authentication and loading states with better UI
   if (!user || isLoading) {
     return (
-      <div className="container mx-auto py-10">
-        <h1 className="text-2xl font-bold mb-5">Calendar</h1>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 animate-pulse">
-          {/* Loading skeleton for calendar controls */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex space-x-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-10 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-              ))}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calendar</h1>
+              <p className="text-gray-600 dark:text-gray-400">Manage your events and schedule</p>
             </div>
-            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            <div className="flex space-x-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Loading skeleton for calendar grid */}
-          <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
-            {/* Day headers */}
-            {[1, 2, 3, 4, 5, 6, 7].map(i => (
-              <div key={i} className="p-2 text-center bg-gray-100 dark:bg-gray-800">
-                <div className="h-5 w-10 mx-auto bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            ))}
             
-            {/* Calendar cells */}
-            {Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} className="min-h-[100px] bg-white dark:bg-gray-800 p-2">
-                <div className="flex justify-between items-center">
-                  <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            {/* Loading skeleton */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-pulse">
+              {/* Calendar controls skeleton */}
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex space-x-2">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-10 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  ))}
                 </div>
-                <div className="mt-2 space-y-1">
-                  {Math.random() > 0.7 && (
-                    <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  )}
-                  {Math.random() > 0.8 && (
-                    <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  )}
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                <div className="flex space-x-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  ))}
                 </div>
               </div>
-            ))}
+              
+              {/* Calendar grid skeleton */}
+              <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
+                {/* Day headers */}
+                {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                  <div key={i} className="p-2 text-center bg-gray-100 dark:bg-gray-800">
+                    <div className="h-5 w-10 mx-auto bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  </div>
+                ))}
+                
+                {/* Calendar cells */}
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <div key={i} className="min-h-[120px] bg-white dark:bg-gray-800 p-2">
+                    <div className="flex justify-between items-center">
+                      <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {Math.random() > 0.7 && (
+                        <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      )}
+                      {Math.random() > 0.8 && (
+                        <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -320,36 +299,38 @@ const CalendarPage = () => {
 
   if (settingsError || fetchError) {
     return (
-      <div className="container mx-auto py-10">
-        <h1 className="text-2xl font-bold mb-5">Calendar</h1>
-        <div className="bg-red-100 dark:bg-red-900 dark:bg-opacity-20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded">
-          <h3 className="font-bold">Calendar Load Error</h3>
-          <p className="mb-3">{settingsError?.message || fetchError}</p>
-          
-          {/* More specific error guidance */}
-          <div className="text-sm mb-4 space-y-2">
-            <p><strong>Common Solutions:</strong></p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Check your internet connection</li>
-              <li>Verify your Google Calendar is connected in Settings</li>
-              <li>Ensure Power Automate URLs are working correctly</li>
-              <li>Try refreshing the page</li>
-            </ul>
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-            >
-              Retry
-            </button>
-            <button
-              onClick={() => window.location.href = '/dashboard/settings?tab=calendar'}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            >
-              Check Settings
-            </button>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-6 rounded-lg">
+              <h3 className="font-bold text-lg mb-3">Calendar Load Error</h3>
+              <p className="mb-4">{settingsError?.message || fetchError}</p>
+              
+              <div className="text-sm mb-4 space-y-2">
+                <p><strong>Common Solutions:</strong></p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Check your internet connection</li>
+                  <li>Verify your Google Calendar is connected in Settings</li>
+                  <li>Ensure Power Automate URLs are working correctly</li>
+                  <li>Try refreshing the page</li>
+                </ul>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => window.location.href = '/dashboard/settings?tab=calendar'}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Check Settings
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -357,282 +338,303 @@ const CalendarPage = () => {
   }
 
   return (
-    <div className="max-w-full overflow-hidden px-2 sm:px-4 py-4 sm:py-6">
-      <h1 className="text-2xl font-bold mb-4">Calendar</h1>
-      
-      {/* Calendar controls - Mobile optimized */}
-      <div className="mb-6">
-        {/* Month and navigation */}
-        <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={goToPreviousMonth}
-            className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
-            aria-label="Previous month"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
-          
-          <div className="text-lg sm:text-xl font-semibold text-neutral-800 dark:text-neutral-100">
-            {format(currentDate, 'MMMM yyyy')}
-          </div>
-          
-          <button
-            onClick={goToNextMonth}
-            className="p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all"
-            aria-label="Next month"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-        
-        {/* View selection and Today button */}
-        <div className="flex flex-wrap gap-2 justify-center mb-4">
-          <button
-            onClick={() => setCurrentView('day')}
-            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'day'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Day
-          </button>
-          <button
-            onClick={() => setCurrentView('week')}
-            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'week'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Week
-          </button>
-          <button
-            onClick={() => setCurrentView('month')}
-            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'month'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => setCurrentView('year')}
-            className={`px-3 py-1 rounded-lg text-sm transition-all ${currentView === 'year'
-              ? 'bg-primary-500 text-white shadow-sm'
-              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'}`}
-          >
-            Year
-          </button>
-          <button
-            onClick={goToToday}
-            className="px-3 py-1 rounded-lg text-sm bg-teal-500 text-white hover:bg-teal-600 transition-colors"
-          >
-            Today
-          </button>
-        </div>
-      </div>
-      
-      {/* Calendar grid */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-elevate-md overflow-x-auto border border-neutral-200 dark:border-neutral-700">
-        <div className="min-w-[600px]"> {/* Reduced minimum width for better mobile experience */}
-        {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-700">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-3 text-center font-medium text-neutral-600 dark:text-neutral-400">
-              {day}
-            </div>
-          ))}
-        </div>
-        
-        {/* Calendar content based on view */}
-        {currentView === 'day' ? (
-          // Day view (agenda style)
-          <div className="bg-white dark:bg-neutral-800 p-4 rounded-b-xl">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-medium text-neutral-800 dark:text-neutral-100">
-                {format(currentDate, 'EEEE, MMMM d, yyyy')}
-              </h3>
-            </div>
-            
-            <div className="space-y-2">
-              {getEventsForCurrentView().length > 0 ? (
-                getEventsForCurrentView().map(event => {
-                  const startTime = formatDateTime(event.start);
-                  const endTime = formatDateTime(event.end);
-                  
-                  return (
-                    <div
-                      key={event.id}
-                      onClick={() => setSelectedEvent(event)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all hover:shadow-elevate-sm
-                        ${event.source === 'work'
-                          ? 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-blue-900 dark:text-blue-100'
-                          : 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-900 dark:text-green-100'
-                        }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{event.summary || event.title || "No Title"}</h4>
-                          <p className="text-sm mt-1 opacity-90">{startTime} - {endTime}</p>
-                        </div>
-                        <div className={`tag ${event.source === 'work' ? 'tag-work' : 'tag-personal'}`}>
-                          {event.source === 'work' ? 'Work' : 'Personal'}
-                        </div>
-                      </div>
-                      
-                      {event.calendarName && (
-                        <p className="text-xs mt-2 opacity-75">{event.calendarName}</p>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
-                  <p>No events scheduled for this day</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          // Month view (calendar grid)
-          <div className={`grid grid-cols-7 ${currentView === 'month' ? 'grid-rows-6' : ''}`}>
-            {calendarDays.map(day => {
-              const dayEvents = getEventsForDay(day);
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              const isToday = isSameDay(day, new Date());
-              
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`min-h-[120px] p-2 border-b border-r border-neutral-200 dark:border-neutral-700 transition-colors
-                    ${!isCurrentMonth ? 'text-neutral-500 bg-neutral-100 dark:text-neutral-400 dark:bg-neutral-800/50' : 'bg-white dark:bg-neutral-800'}
-                    ${isToday ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className={`text-sm font-semibold ${isToday
-                      ? 'bg-primary-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
-                      : 'text-neutral-800 dark:text-neutral-200'}`}>
-                      {format(day, 'd')}
-                    </span>
-                    {isCurrentMonth && dayEvents.length > 0 && (
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded-full">
-                        {dayEvents.length}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px]">
-                    {dayEvents.slice(0, 3).map(event => {
-                      // Determine color based on source (work/personal) and add a left border
-                      const colorClass = event.source === 'work'
-                        ? 'border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-blue-900 dark:text-blue-100'
-                        : 'border-l-2 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-900 dark:text-green-100';
-                      
-                      return (
-                        <div
-                          key={event.id}
-                          onClick={() => setSelectedEvent(event)}
-                          className={`text-xs p-1.5 rounded-lg truncate cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
-                        >
-                          {event.summary || event.title || "No Title"}
-                        </div>
-                      );
-                    })}
-                    {dayEvents.length > 3 && (
-                      <div
-                        className="text-xs text-neutral-500 dark:text-neutral-400 text-center py-1 cursor-pointer hover:underline"
-                        onClick={() => {
-                          // Find all events for this day and show them in a modal
-                          setCurrentDate(day);
-                          setCurrentView('day');
-                        }}
-                      >
-                        +{dayEvents.length - 3} more
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        </div>
-      </div>
-      
-      {/* Event detail modal */}
-      {selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-elevate-lg border border-neutral-200 dark:border-neutral-700">
-            <div className="flex justify-between items-start">
-              <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
-                {selectedEvent.summary || selectedEvent.title || "No Title"}
-              </h2>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calendar</h1>
+                <p className="text-gray-600 dark:text-gray-400">Manage your events and schedule</p>
+              </div>
               <button
-                onClick={() => setSelectedEvent(null)}
-                className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700"
-                aria-label="Close"
+                onClick={() => {
+                  setEditingEvent(null);
+                  setIsEventFormOpen(true);
+                }}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
+                <span>Add Event</span>
               </button>
             </div>
+          </div>
+
+          {/* Calendar Controls */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              {/* Navigation */}
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
+                  aria-label="Previous month"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {format(currentDate, 'MMMM yyyy')}
+                </h2>
+                
+                <button
+                  onClick={goToNextMonth}
+                  className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
+                  aria-label="Next month"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* View Controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentView('day')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'day'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Day
+                </button>
+                <button
+                  onClick={() => setCurrentView('week')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'week'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setCurrentView('month')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'month'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Month
+                </button>
+                <button
+                  onClick={goToToday}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                >
+                  Today
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="p-4 text-center font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
+                  {day}
+                </div>
+              ))}
+            </div>
             
-            {/* Event details in a more structured format */}
-            <div className="mt-6 space-y-4 text-neutral-800 dark:text-neutral-100">
-              {/* Color-coded event type indicator */}
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7">
+              {calendarDays.map(day => {
+                const dayEvents = getEventsForDay(day);
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const isTodayDate = isToday(day);
+                
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`min-h-[120px] p-3 border-b border-r border-gray-200 dark:border-gray-700 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                      !isCurrentMonth ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className={`text-sm font-medium ${
+                        isTodayDate
+                          ? 'bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {format(day, 'd')}
+                      </span>
+                      {isCurrentMonth && dayEvents.length > 0 && (
+                        <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                          {dayEvents.length}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {dayEvents.slice(0, 3).map(event => {
+                        const colorClass = event.source === 'work'
+                          ? 'border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                          : 'border-l-2 border-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100';
+                        
+                        return (
+                          <div
+                            key={event.id}
+                            onClick={() => setSelectedEvent(event)}
+                            className={`text-xs p-2 rounded cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                          >
+                            <div className="font-medium truncate">
+                              {event.summary || event.title || "No Title"}
+                            </div>
+                            {event.start && (
+                              <div className="text-xs opacity-75">
+                                {formatDateTime(event.start)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {dayEvents.length > 3 && (
+                        <div
+                          className="text-xs text-gray-500 dark:text-gray-400 text-center py-1 cursor-pointer hover:underline"
+                          onClick={() => {
+                            setCurrentDate(day);
+                            setCurrentView('day');
+                          }}
+                        >
+                          +{dayEvents.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {selectedEvent.summary || selectedEvent.title || "No Title"}
+              </h2>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setEditingEvent(selectedEvent);
+                    setIsEventFormOpen(true);
+                    setSelectedEvent(null);
+                  }}
+                  className="p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  aria-label="Edit"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => handleEventDelete(selectedEvent)}
+                  className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  aria-label="Delete"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Event details */}
+            <div className="space-y-4 text-gray-700 dark:text-gray-300">
+              {/* Color indicator */}
               <div className={`w-full h-2 rounded-full mb-4 ${
-                selectedEvent.source === 'work'
-                  ? 'bg-blue-500'
-                  : 'bg-green-500'
+                selectedEvent.source === 'work' ? 'bg-blue-500' : 'bg-green-500'
               }`}></div>
               
-              {/* Start time */}
-              <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <span className="font-medium text-neutral-600 dark:text-neutral-300">Start:</span>
-                  <span className="ml-2 text-neutral-800 dark:text-neutral-100">{formatDateTime(selectedEvent.start)}</span>
+              {/* Time details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Start:</span>
+                    <span className="ml-2">{formatDateTime(selectedEvent.start)}</span>
+                  </div>
                 </div>
-              </div>
-              
-              {/* End time */}
-              <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <span className="font-medium text-neutral-600 dark:text-neutral-300">End:</span>
-                  <span className="ml-2 text-neutral-800 dark:text-neutral-100">{formatDateTime(selectedEvent.end)}</span>
-                </div>
+                
+                {selectedEvent.end && (
+                  <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                    <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <span className="font-medium text-gray-600 dark:text-gray-400">End:</span>
+                      <span className="ml-2">{formatDateTime(selectedEvent.end)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Calendar */}
               {selectedEvent.calendarName && (
-                <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Calendar:</span>
-                    <span className="ml-2 text-neutral-800 dark:text-neutral-100">{selectedEvent.calendarName}</span>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Calendar:</span>
+                    <span className="ml-2">{selectedEvent.calendarName}</span>
                   </div>
                 </div>
               )}
               
               {/* Source */}
               {selectedEvent.source && (
-                <div className="flex items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <div>
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">Source:</span>
-                    <span className={`tag ${selectedEvent.source === 'work' ? 'tag-work' : 'tag-personal'}`}>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Type:</span>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedEvent.source === 'work' 
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    }`}>
                       {selectedEvent.source === 'work' ? 'Work' : 'Personal'}
                     </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Location */}
+              {selectedEvent.location && (
+                <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Location:</span>
+                    <span className="ml-2">{selectedEvent.location}</span>
                   </div>
                 </div>
               )}
@@ -642,7 +644,7 @@ const CalendarPage = () => {
                 const teamsLink = extractTeamsLink(selectedEvent.description || '');
                 return teamsLink ? (
                   <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                    <svg className="w-5 h-5 mr-3 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M24 12.01c0-1.02-.83-1.85-1.85-1.85H20.3c.13-.6.2-1.22.2-1.85C20.5 4.15 16.35 0 11.19 0S1.88 4.15 1.88 8.31c0 .63.07 1.25.2 1.85H.23C.1 10.16 0 11.07 0 12.01c0 6.63 5.37 12 12 12s12-5.37 12-12zM11.19 2.25c3.38 0 6.12 2.74 6.12 6.12s-2.74 6.12-6.12 6.12S5.07 11.75 5.07 8.37s2.74-6.12 6.12-6.12z"/>
                     </svg>
                     <div>
@@ -664,13 +666,12 @@ const CalendarPage = () => {
               {selectedEvent.description && (
                 <div className="mt-6">
                   <div className="flex items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span className="font-medium">Description:</span>
                   </div>
-                  <div className="mt-1 p-4 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg text-neutral-700 dark:text-neutral-300">
-                    {/* Check if description contains HTML */}
+                  <div className="mt-1 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-300">
                     {selectedEvent.description.includes('<html>') ||
                      selectedEvent.description.includes('<body>') ||
                      selectedEvent.description.includes('<div>') ||
@@ -686,17 +687,18 @@ const CalendarPage = () => {
                 </div>
               )}
               
+              {/* Tags */}
               {selectedEvent.tags && selectedEvent.tags.length > 0 && (
                 <div>
                   <div className="flex items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
                     <span className="font-medium">Tags:</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selectedEvent.tags.map(tag => (
-                      <span key={tag} className="bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 px-3 py-1 rounded-full text-sm">
+                      <span key={tag} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
                         {tag}
                       </span>
                     ))}
@@ -707,6 +709,18 @@ const CalendarPage = () => {
           </div>
         </div>
       )}
+
+      {/* Event Form Modal */}
+      <CalendarEventForm
+        event={editingEvent}
+        isOpen={isEventFormOpen}
+        onClose={() => {
+          setIsEventFormOpen(false);
+          setEditingEvent(null);
+        }}
+        onSubmit={handleEventSubmit}
+        availableCalendars={calendarList || []}
+      />
     </div>
   );
 };
