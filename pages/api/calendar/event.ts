@@ -23,6 +23,12 @@ export default async function handler(
   console.log("[API] User:", user.email);
   console.log("[API] Google account found:", !!googleAccount);
   console.log("[API] Access token exists:", !!accessToken);
+  console.log("[API] Access token length:", accessToken?.length);
+  
+  if (!accessToken) {
+    console.error("[API] No access token available");
+    return res.status(401).json({ error: "Google Calendar not connected. Please reconnect your Google account." });
+  }
 
   // POST = create, PUT = update
   if (req.method === "POST") {
@@ -188,34 +194,49 @@ export default async function handler(
     // Call Google API to create event
     console.log("[API] Calling Google Calendar API with URL:", url);
     console.log("[API] Payload:", JSON.stringify(payload, null, 2));
+    console.log("[API] Access token (first 20 chars):", accessToken?.substring(0, 20) + "...");
     
-    const apiRes = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const apiRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    console.log("[API] Google API response status:", apiRes.status);
-    
-    if (!apiRes.ok) {
-      const err = await apiRes.json();
-      console.error("Google Calendar API create error:", apiRes.status, err);
+      console.log("[API] Google API response status:", apiRes.status);
+      console.log("[API] Google API response headers:", Object.fromEntries(apiRes.headers.entries()));
       
-      // Provide more specific error messages
-      let errorMessage = "Google API create error";
-      if (err.error?.message) {
-        errorMessage = err.error.message;
-      } else if (err.error?.errors && err.error.errors.length > 0) {
-        errorMessage = err.error.errors[0].message || errorMessage;
+      if (!apiRes.ok) {
+        let errorText = '';
+        try {
+          const err = await apiRes.json();
+          console.error("Google Calendar API create error:", apiRes.status, err);
+          
+          // Provide more specific error messages
+          let errorMessage = "Google API create error";
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err.error?.errors && err.error.errors.length > 0) {
+            errorMessage = err.error.errors[0].message || errorMessage;
+          }
+          
+          return res.status(apiRes.status).json({ error: errorMessage });
+        } catch (parseError) {
+          errorText = await apiRes.text();
+          console.error("Failed to parse Google API error response:", errorText);
+          return res.status(apiRes.status).json({ error: `Google API error: ${apiRes.status} - ${errorText}` });
+        }
       }
-      
-      return res.status(apiRes.status).json({ error: errorMessage });
+    } catch (fetchError) {
+      console.error("[API] Fetch error:", fetchError);
+      return res.status(500).json({ error: `Network error: ${fetchError.message}` });
     }
 
     const data = await apiRes.json();
+    console.log("[API] Successfully created event:", data);
     return res.status(200).json(data);
   }
 
