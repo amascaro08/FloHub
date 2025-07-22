@@ -452,29 +452,21 @@ ${todaysHabits.map(habit => {
 Be witty and brief (under 200 words). Use markdown formatting. Consider the time (${currentTimeInterval}).`;
 
 
-            const aiRes = await fetch('/api/assistant', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ 
-                userInput: 'summary',
-                style: floCatStyle,
-                preferredName: preferredName,
-                notes: (notesData.notes || []).slice(0, 10),
-                meetings: (meetingsData.meetings || []).slice(0, 5),
-                // Pass all the collected data for intelligent analysis
-                contextData: {
-                  tasks: incompleteTasks,
-                  events: upcomingEventsForPrompt,
-                  habits: todaysHabits,
-                  habitCompletions: habitCompletions,
-                  allEvents: eventsInUserTimezone,
-                  allTasks: allTasks
-                }
-              }),
-              credentials: 'include',
-            });
+            // Skip AI completely and create a dynamic dashboard widget
+            const dashboardContent = generateDashboardWidget(
+              incompleteTasks,
+              upcomingEventsForPrompt,
+              todaysHabits,
+              habitCompletions,
+              preferredName,
+              userTimezone
+            );
+            
+            if (isMounted) {
+              setGeneratedMessage(dashboardContent);
+              setIsLoading(false);
+            }
+            return;
 
             if (!aiRes.ok) {
               // If we get any error (500, 504, etc.), generate a simple message instead
