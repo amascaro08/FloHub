@@ -290,8 +290,29 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               </div>
             ))
           ) : (
-            <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No calendar sources added yet. Click "Add Google Calendar" or "Add Power Automate URL" to get started.
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6v6m8-6v6M6 7h12l-1 14H7L6 7z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Calendar Sources</h3>
+              <p className="mb-4">Connect your calendars to see events in FloHub</p>
+              <div className="space-y-2 text-sm">
+                <p>• <strong>Google Calendar:</strong> Full sync with your Google events</p>
+                <p>• <strong>Power Automate:</strong> Connect Office 365 or other calendar systems</p>
+              </div>
+              <div className="mt-6 space-x-2">
+                <button
+                  onClick={() => {
+                    const googleAuthUrl = `/api/calendar/connect?provider=google`;
+                    window.location.href = googleAuthUrl;
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                >
+                  Connect Google Calendar
+                </button>
+              </div>
             </div>
           )}
         </div>
