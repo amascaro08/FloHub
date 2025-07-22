@@ -457,7 +457,22 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ history: [], prompt }),
+              body: JSON.stringify({ 
+                userInput: 'summary',
+                style: floCatStyle,
+                preferredName: preferredName,
+                notes: (notesData.notes || []).slice(0, 10),
+                meetings: (meetingsData.meetings || []).slice(0, 5),
+                // Pass all the collected data for intelligent analysis
+                contextData: {
+                  tasks: incompleteTasks,
+                  events: upcomingEventsForPrompt,
+                  habits: todaysHabits,
+                  habitCompletions: habitCompletions,
+                  allEvents: eventsInUserTimezone,
+                  allTasks: allTasks
+                }
+              }),
               credentials: 'include',
             });
 
@@ -489,7 +504,7 @@ ${upcomingEventsForPrompt.slice(0, 5).map((event: CalendarEvent) => {
 
 ${incompleteTasks.length > 0 ? `
 **Tasks to Complete:**
-${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text || task.title || 'Untitled task'}`).join('\n')}
+${incompleteTasks.slice(0, 5).map((task: Task) => `- ${task.text || 'Untitled task'}`).join('\n')}
 ` : ''}
 
 ${todaysHabits.length > 0 ? `
