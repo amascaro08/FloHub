@@ -230,15 +230,16 @@ export default async function handler(
           return res.status(apiRes.status).json({ error: `Google API error: ${apiRes.status} - ${errorText}` });
         }
       }
+
+      // Success case
+      const data = await apiRes.json();
+      console.log("[API] Successfully created event:", data);
+      return res.status(200).json(data);
     } catch (fetchError) {
       console.error("[API] Fetch error:", fetchError);
       const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown network error';
       return res.status(500).json({ error: `Network error: ${errorMessage}` });
     }
-
-    const data = await apiRes.json();
-    console.log("[API] Successfully created event:", data);
-    return res.status(200).json(data);
   }
 
   if (req.method === "PUT") {
