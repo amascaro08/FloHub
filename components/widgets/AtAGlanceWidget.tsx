@@ -450,10 +450,9 @@ Be witty and brief (under 200 words). Use markdown formatting. Consider the time
             });
 
             if (!aiRes.ok) {
-              // If we get a timeout or other error, generate a simple message instead
-              if (aiRes.status === 504) {
-                console.warn("AI request timed out, using fallback message");
-                const fallbackMessage = `# Hello ${userName}! 😺
+              // If we get any error (500, 504, etc.), generate a simple message instead
+              console.warn(`AI request failed with status ${aiRes.status}, using fallback message`);
+              const fallbackMessage = `# Hello ${preferredName || userName}! 😺
 
 ## Your Day at a Glance
 
@@ -489,23 +488,23 @@ ${todaysHabits.slice(0, 3).map(habit => {
 }).join('\n')}
 ` : ''}
 
-Have a purr-fect day!`;
+${currentTimeInterval === 'morning' ? 'Good morning!' : currentTimeInterval === 'lunch' ? 'Hope your day is going well!' : 'Good evening!'} 
 
-                setAiMessage(fallbackMessage);
-                setFormattedHtml(parseMarkdown(fallbackMessage));
-                
-                // Store the fallback message in localStorage
-                try {
-                  localStorage.setItem('flohub.atAGlanceMessage', fallbackMessage);
-                  localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
-                  localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
-                } catch (err) {
-                  console.error("Error saving to localStorage:", err);
-                }
-                
-                return;
+Have a purr-fect day! 🐾`;
+
+              setAiMessage(fallbackMessage);
+              setFormattedHtml(parseMarkdown(fallbackMessage));
+              
+              // Store the fallback message in localStorage
+              try {
+                localStorage.setItem('flohub.atAGlanceMessage', fallbackMessage);
+                localStorage.setItem('flohub.atAGlanceTimestamp', now.toISOString());
+                localStorage.setItem('flohub.atAGlanceInterval', currentTimeInterval);
+              } catch (err) {
+                console.error("Error saving to localStorage:", err);
               }
-              throw new Error(`Error generating AI message: ${aiRes.statusText}`);
+              
+              return;
             }
 
             const aiData = await aiRes.json();

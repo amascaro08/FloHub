@@ -61,18 +61,27 @@ const extractTeamsLink = (description: string): string | null => {
 
 // Fetcher specifically for calendar events API
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
-  const res = await fetch(url, { credentials: 'include' });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error loading events');
-  
-  // Handle both formats: direct array or {events: [...]} object 
-  if (Array.isArray(data)) {
-    return data;
-  } else if (data && Array.isArray(data.events)) {
-    return data.events;
-  } else {
-    console.error("Unexpected response format from calendar API:", data);
-    return [];
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      console.error("Calendar API error:", res.status, data);
+      throw new Error(data.error || `HTTP ${res.status}: Error loading events`);
+    }
+    
+    // Handle both formats: direct array or {events: [...]} object 
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && Array.isArray(data.events)) {
+      return data.events;
+    } else {
+      console.error("Unexpected response format from calendar API:", data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Calendar fetch error:", error);
+    throw error;
   }
 };
 
@@ -220,19 +229,19 @@ function CalendarWidget() {
   // Debug logs for API URL and error
   useEffect(() => {
     if (apiUrl) {
-      console.log("Fetching calendar events from:", apiUrl);
+      console.log("CalendarWidget: Fetching calendar events from:", apiUrl);
     }
   }, [apiUrl]);
 
   useEffect(() => {
     if (error) {
-      console.error("Error fetching calendar events:", error);
+      console.error("CalendarWidget: Error fetching calendar events:", error);
     }
   }, [error]);
 
   useEffect(() => {
     if (data) {
-      console.log("Calendar events data:", data);
+      console.log("CalendarWidget: Calendar events data:", data);
     }
   }, [data]);
 
@@ -518,17 +527,39 @@ function CalendarWidget() {
 
           {/* Events Display */}
           <div className="space-y-3">
-            {error && (
-              <div className="text-red-500 text-sm">
-                Error loading events: {error.message}
+            {!apiUrl && (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                Loading calendar configuration...
               </div>
             )}
             
-            {!error && upcomingEvents.length === 0 ? (
+            {apiUrl && !data && !error && (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                Loading events...
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-red-500 text-sm">
+                Error loading events: {error.message}
+                <div className="mt-2">
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="text-blue-500 hover:text-blue-700 underline text-xs"
+                  >
+                    Try reloading the page
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!error && data && upcomingEvents.length === 0 && (
               <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
                 No upcoming events found
               </div>
-            ) : (
+            )}
+            
+            {!error && data && upcomingEvents.length > 0 && 
               upcomingEvents.slice(0, 5).map((event, index) => {
                 const teamsLink = event.description ? extractTeamsLink(event.description) : null;
                 
@@ -576,9 +607,9 @@ function CalendarWidget() {
                       )}
                     </div>
                   </div>
-                );
-              })
-            )}
+                                 );
+               })
+             }
           </div>
 
           {/* Add Event Button */}
