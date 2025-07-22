@@ -147,10 +147,10 @@ export default async function handler(
     )}/events`;
     
     // Check if user has permission to create events in this calendar
-    if (calendarId !== 'primary' && calendarId !== user.email) {
-      console.log("[API] Warning: User attempting to create event in calendar:", calendarId);
-      console.log("[API] User email:", user.email);
-    }
+    console.log("[API] Creating event in calendar:", calendarId);
+    console.log("[API] User email:", user.email);
+    console.log("[API] Is primary calendar:", calendarId === 'primary');
+    console.log("[API] Is user's own calendar:", calendarId === user.email);
 
     // Prepare payload for Google Calendar API
     const payload: any = {
