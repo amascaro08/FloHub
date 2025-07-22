@@ -145,6 +145,12 @@ export default async function handler(
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       calendarId
     )}/events`;
+    
+    // Check if user has permission to create events in this calendar
+    if (calendarId !== 'primary' && calendarId !== user.email) {
+      console.log("[API] Warning: User attempting to create event in calendar:", calendarId);
+      console.log("[API] User email:", user.email);
+    }
 
     // Prepare payload for Google Calendar API
     const payload: any = {
@@ -197,7 +203,16 @@ export default async function handler(
     if (!apiRes.ok) {
       const err = await apiRes.json();
       console.error("Google Calendar API create error:", apiRes.status, err);
-      return res.status(apiRes.status).json({ error: err.error?.message || "Google API create error" });
+      
+      // Provide more specific error messages
+      let errorMessage = "Google API create error";
+      if (err.error?.message) {
+        errorMessage = err.error.message;
+      } else if (err.error?.errors && err.error.errors.length > 0) {
+        errorMessage = err.error.errors[0].message || errorMessage;
+      }
+      
+      return res.status(apiRes.status).json({ error: errorMessage });
     }
 
     const data = await apiRes.json();

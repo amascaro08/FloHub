@@ -955,7 +955,8 @@ const CalendarPage = () => {
                     console.log('Checking calendar:', cal.id, 'against selectedCals:', settings.selectedCals);
                     return settings.selectedCals.includes(cal.id);
                   })
-                : calendarList)
+                : // If no calendars are selected, show only the user's primary calendar
+                  calendarList.filter(cal => cal.id === 'primary' || cal.id === user?.email))
             : []
         }
       />
