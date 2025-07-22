@@ -110,7 +110,8 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         ...formData,
         summary: formData.summary.trim(),
         description: formData.description.trim(),
-        location: formData.location.trim()
+        location: formData.location.trim(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Add user's timezone
       };
 
       console.log('Submitting event data:', eventData);

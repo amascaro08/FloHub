@@ -204,22 +204,34 @@ export default async function handler(
 
     if (start) {
       // Convert datetime-local format to ISO string for Google Calendar API
+      // datetime-local format is in local timezone, so we need to preserve that
       const startDate = new Date(start);
+      const userTimezone = timeZone || 'Australia/Sydney'; // Default to AEST/AEDT
+      
+      // Create ISO string in the user's timezone
+      const startISO = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString();
+      
       payload.start = {
-        dateTime: startDate.toISOString(),
-        timeZone: timeZone || 'UTC',
+        dateTime: startISO,
+        timeZone: userTimezone,
       };
-      console.log("[API] Converted start time:", start, "->", startDate.toISOString());
+      console.log("[API] Converted start time:", start, "->", startISO, "in timezone:", userTimezone);
     }
 
     if (end) {
       // Convert datetime-local format to ISO string for Google Calendar API
+      // datetime-local format is in local timezone, so we need to preserve that
       const endDate = new Date(end);
+      const userTimezone = timeZone || 'Australia/Sydney'; // Default to AEST/AEDT
+      
+      // Create ISO string in the user's timezone
+      const endISO = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000)).toISOString();
+      
       payload.end = {
-        dateTime: endDate.toISOString(),
-        timeZone: timeZone || 'UTC',
+        dateTime: endISO,
+        timeZone: userTimezone,
       };
-      console.log("[API] Converted end time:", end, "->", endDate.toISOString());
+      console.log("[API] Converted end time:", end, "->", endISO, "in timezone:", userTimezone);
     }
 
     // Check if user has permission to create events in this calendar
