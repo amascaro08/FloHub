@@ -289,10 +289,47 @@ export default async function handler(
             userEmail: user.email
           });
           
-          return res.status(apiRes.status).json({ error: errorMessage });
+          // Return more detailed error information to the client
+          return res.status(apiRes.status).json({ 
+            error: errorMessage,
+            details: {
+              status: apiRes.status,
+              calendarId: calendarId,
+              userEmail: user.email,
+              isSharedCalendar: calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')
+            }
+          });
         } catch (parseError) {
           errorText = await apiRes.text();
           console.error("Failed to parse Google API error response:", errorText);
+          
+          // If this is a shared calendar and it failed, try the primary calendar
+          if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
+            console.log("[API] Shared calendar failed, trying primary calendar as fallback");
+            try {
+              const primaryUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
+              const primaryRes = await fetch(primaryUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              });
+              
+              if (primaryRes.ok) {
+                const data = await primaryRes.json();
+                console.log("[API] Successfully created event in primary calendar as fallback:", data);
+                return res.status(200).json({ 
+                  ...data, 
+                  message: "Event created in primary calendar (shared calendar access denied)" 
+                });
+              }
+            } catch (fallbackError) {
+              console.error("[API] Primary calendar fallback also failed:", fallbackError);
+            }
+          }
+          
           return res.status(apiRes.status).json({ error: `Google API error: ${apiRes.status} - ${errorText}` });
         }
       }
