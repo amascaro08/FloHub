@@ -17,8 +17,11 @@ const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r)
 });
 
 function TaskWidget() {
+  console.log("TaskWidget: Component rendered");
   const { user, isLoading } = useUser(); // Just user object or null
   const isLoggedIn = !!user;
+
+  console.log("TaskWidget: User state", { user, isLoggedIn, isLoading });
 
   // Only fetch tasks if logged in
   const { data: tasks, mutate } = useSWR<Task[]>(
@@ -27,9 +30,11 @@ function TaskWidget() {
   );
 
   if (!isLoggedIn) {
+    console.log("TaskWidget: Not logged in");
     return <div className="text-gray-400">Please sign in to view your tasks.</div>;
   }
   if (isLoading) {
+    console.log("TaskWidget: Loading state");
     return <div>Loading...</div>;
   }
 

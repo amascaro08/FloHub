@@ -77,10 +77,14 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 function CalendarWidget() {
+  console.log("CalendarWidget: Component rendered");
   const { user, isLoading } = useUser();
   const { mutate } = useSWRConfig();
 
+  console.log("CalendarWidget: User state", { user, isLoading });
+
   if (isLoading) { // Correctly check for loading status
+    console.log("CalendarWidget: Loading state");
     return <div>Loading...</div>; // Or any other fallback UI
   }
 

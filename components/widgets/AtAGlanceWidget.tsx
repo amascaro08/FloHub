@@ -52,9 +52,11 @@ const fetcher = async (url: string) => {
 };
 
 const AtAGlanceWidget = () => {
-const { user, isLoading } = useUser()
+  console.log("AtAGlanceWidget: Component rendered");
+  const { user, isLoading } = useUser()
   
   if (isLoading) {
+    console.log("AtAGlanceWidget: Loading state");
     return <div>Loading...</div>; // Or any other fallback UI
   }
   const userName = user?.name || "User";

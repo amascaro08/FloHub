@@ -25,6 +25,8 @@ const AtAGlanceWidget = lazy(() => import("@/components/widgets/AtAGlanceWidget"
 const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"));
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 
+console.log("DashboardGrid: Lazy widgets imported");
+
 import { ReactElement } from "react";
 import { useUser } from "@/lib/hooks/useUser";
 import { UserSettings } from "@/types/app";
@@ -41,6 +43,8 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   quicknote: <Suspense fallback={<WidgetSkeleton />}><QuickNoteWidget /></Suspense>,
   "habit-tracker": <Suspense fallback={<WidgetSkeleton />}><HabitTrackerWidget /></Suspense>,
 };
+
+console.log("DashboardGrid: Widget components defined", Object.keys(widgetComponents));
 
 // Helper function to recursively remove undefined values from an object
 function removeUndefined(obj: any): any {
@@ -88,16 +92,44 @@ const DashboardGrid = () => {
   // Use Stack Auth
   const { user, isLoading } = useUser();
 
-  // Not signed in? Show loading or redirect to login
+  console.log("DashboardGrid: User state", { user, isLoading });
+
+  // Show loading state while user is loading
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="grid-bg">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Locking: If you store this per user, add logic here. Otherwise, just default to false.
   const isLocked = false;
 
+  // If no user, show a message
+  if (!user) {
+    return (
+      <div className="grid-bg">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+            <p className="text-gray-600 dark:text-gray-400">Please sign in to view your dashboard.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
-  const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
+  const memoizedWidgetComponents = useMemo(() => {
+    console.log("DashboardGrid: Creating memoized widget components");
+    return widgetComponents;
+  }, []);
 
   // Default layouts
   const defaultLayouts = {
@@ -130,27 +162,36 @@ const DashboardGrid = () => {
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      if (isClient && user?.email) {
+      console.log("DashboardGrid: User object", user);
+      const userEmail = user?.email || user?.primaryEmail;
+      if (isClient && userEmail) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${user.email}`);
+          const response = await fetch(`/api/userSettings?userId=${userEmail}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
-            setActiveWidgets(userSettings.activeWidgets || []);
+            console.log("DashboardGrid: Loaded user settings", userSettings);
+            setActiveWidgets(userSettings.activeWidgets || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
           } else {
-            setActiveWidgets([]);
+            console.log("DashboardGrid: Failed to fetch user settings, using defaults");
+            setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
           }
         } catch (e) {
-          setActiveWidgets([]);
+          console.log("DashboardGrid: Error fetching user settings, using defaults", e);
+          setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
         } finally {
           setLoadedSettings(true);
         }
+      } else {
+        console.log("DashboardGrid: No user email found, using defaults");
+        setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+        setLoadedSettings(true);
       }
     };
 
     if (isClient) {
       fetchUserSettings();
     } else {
-      setActiveWidgets([]);
+      setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
       setLoadedSettings(true);
     }
   }, [user, isClient]);
@@ -158,9 +199,10 @@ const DashboardGrid = () => {
   // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
-      if (isClient && user?.email) {
+      const userEmail = user?.email || user?.primaryEmail;
+      if (isClient && userEmail) {
         try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
+          const response = await fetch(`/api/userSettings/layouts?userId=${userEmail}`);
           if (response.ok) {
             const { layouts: savedLayouts } = await response.json();
             if (savedLayouts) {
@@ -177,8 +219,12 @@ const DashboardGrid = () => {
             setLayouts(defaultLayouts);
           }
         } catch (e) {
+          console.log("DashboardGrid: Error loading layouts, using defaults", e);
           setLayouts(defaultLayouts);
         }
+      } else {
+        console.log("DashboardGrid: No user email for layout loading, using defaults");
+        setLayouts(defaultLayouts);
       }
     };
 
@@ -224,7 +270,8 @@ const DashboardGrid = () => {
       }
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          if (isClient && user?.email) {
+          const userEmail = user?.email || user?.primaryEmail;
+          if (isClient && userEmail) {
             await fetch('/api/userSettings/layouts', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -232,7 +279,7 @@ const DashboardGrid = () => {
             });
           }
         } catch (e) {
-          // noop
+          console.log("DashboardGrid: Error saving layouts", e);
         }
       }, 500);
     } catch (err) {
@@ -255,31 +302,52 @@ const DashboardGrid = () => {
     );
   }
 
+  console.log("DashboardGrid: Rendering with activeWidgets", activeWidgets);
+
   return (
     <div className="grid-bg">
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={30}
-        onLayoutChange={onLayoutChange}
-        isDraggable={!isLocked}
-        isResizable={!isLocked}
-        margin={[16, 16]}
-      >
-        {activeWidgets.map((key) => (
-          <div key={key} className="glass p-5 rounded-xl flex flex-col">
-            <h2 className="widget-header">
-              {getWidgetIcon(key)}
-              {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
-            </h2>
-            <div className="widget-content">
-              {memoizedWidgetComponents[key as WidgetType]}
-            </div>
+      {activeWidgets.length === 0 ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">No widgets configured</h2>
+            <p className="text-gray-600 dark:text-gray-400">Please visit settings to configure your dashboard widgets.</p>
           </div>
-        ))}
-      </ResponsiveGridLayout>
+        </div>
+      ) : (
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={30}
+          onLayoutChange={onLayoutChange}
+          isDraggable={!isLocked}
+          isResizable={!isLocked}
+          margin={[16, 16]}
+        >
+          {activeWidgets.map((key) => {
+            console.log("DashboardGrid: Rendering widget", key);
+            return (
+              <div key={key} className="glass p-5 rounded-xl flex flex-col">
+                <h2 className="widget-header">
+                  {getWidgetIcon(key)}
+                  {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
+                </h2>
+                <div className="widget-content">
+                  {(() => {
+                    const widgetComponent = memoizedWidgetComponents[key as WidgetType];
+                    console.log("DashboardGrid: Widget component for", key, "is", widgetComponent ? "defined" : "undefined");
+                    if (!widgetComponent) {
+                      return <div className="text-red-500">Widget {key} not found</div>;
+                    }
+                    return widgetComponent;
+                  })()}
+                </div>
+              </div>
+            );
+          })}
+        </ResponsiveGridLayout>
+      )}
     </div>
   );
 };
