@@ -61,9 +61,18 @@ export function getGoogleOAuthUrl(state: string): string {
  * Exchange authorization code for tokens
  */
 export async function getGoogleTokens(code: string): Promise<any> {
+  console.log('🔄 getGoogleTokens called with code:', code.substring(0, 10) + '...');
+  
   const { clientId, clientSecret, redirectUri } = GOOGLE_OAUTH_CONFIG;
   
+  console.log('OAuth Config:', {
+    clientId: clientId ? clientId.substring(0, 10) + '...' : 'Not set',
+    clientSecret: clientSecret ? 'Set' : 'Not set',
+    redirectUri
+  });
+  
   if (!clientId || !clientSecret || !redirectUri) {
+    console.error('❌ Google OAuth configuration is missing required parameters');
     throw new Error('Google OAuth configuration is missing required parameters');
   }
 
@@ -73,8 +82,19 @@ export async function getGoogleTokens(code: string): Promise<any> {
     redirectUri
   );
 
-  const { tokens } = await oauth2Client.getToken(code);
-  return tokens;
+  console.log('🔄 Exchanging code for tokens...');
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    console.log('✅ Tokens received from Google:', { 
+      hasAccessToken: !!tokens.access_token, 
+      hasRefreshToken: !!tokens.refresh_token,
+      expiresIn: (tokens as any).expires_in 
+    });
+    return tokens;
+  } catch (error) {
+    console.error('❌ Error getting tokens from Google:', error);
+    throw error;
+  }
 }
 
 /**

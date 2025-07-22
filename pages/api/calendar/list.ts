@@ -84,7 +84,10 @@ export default async function handler(
 
   if (!googleAccount) {
     console.log('No Google account found for user');
-    return res.status(200).json([]);
+    return res.status(401).json({ 
+      error: "Google Calendar not connected", 
+      details: "Please connect your Google account in settings"
+    });
   }
 
   // Check if token is expired and refresh if needed
