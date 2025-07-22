@@ -44,6 +44,13 @@ const CalendarPage = () => {
   const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('month');
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
   // Calculate date range for current view
   const getDateRange = useCallback(() => {
     if (currentView === 'day') {
@@ -80,12 +87,6 @@ const CalendarPage = () => {
     endDate,
     enabled: !!user && !!settings?.selectedCals
   });
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('month');
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
     user ? '/api/userSettings' : null,
