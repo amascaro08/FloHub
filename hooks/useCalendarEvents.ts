@@ -10,7 +10,7 @@ interface UseCalendarEventsOptions {
 
 interface CachedEvent {
   id: string;
-  event: CalendarEvent;
+  events: CalendarEvent[];
   lastUpdated: number;
 }
 
@@ -52,7 +52,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
   const getCachedEvents = useCallback(() => {
     const cached = eventCache.get(cacheKey);
     if (cached && isCacheValid(cached)) {
-      return cached.event;
+      return cached.events;
     }
     return null;
   }, [cacheKey]);
@@ -79,7 +79,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       // Cache the result
       eventCache.set(cacheKey, {
         id: cacheKey,
-        event: events,
+        events: events,
         lastUpdated: Date.now(),
       });
 
@@ -101,7 +101,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       if (cached) {
         eventCache.set(cacheKey, {
           ...cached,
-          event: updated,
+          events: updated,
           lastUpdated: Date.now(),
         });
       }
@@ -122,7 +122,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       if (cached) {
         eventCache.set(cacheKey, {
           ...cached,
-          event: updated,
+          events: updated,
           lastUpdated: Date.now(),
         });
       }
@@ -141,7 +141,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       if (cached) {
         eventCache.set(cacheKey, {
           ...cached,
-          event: updated,
+          events: updated,
           lastUpdated: Date.now(),
         });
       }
