@@ -17,6 +17,9 @@ export interface CalendarEvent {
   calendarName?: string;
   tags?: string[];
   location?: string;
+  htmlLink?: string; // Google Calendar event link
+  created?: string; // ISO string for creation time
+  updated?: string; // ISO string for last update time
 }
 
 // Settings type for calendar components
