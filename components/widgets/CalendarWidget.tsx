@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { useEffect, useState, memo, useMemo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useUser } from '@/lib/hooks/useUser';
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
@@ -174,7 +174,7 @@ function CalendarWidget() {
         break;
       case 'tomorrow':
         const t = new Date(now);
-        t.setDate(now.getDate() + 1);
+        t.setDate(t.getDate() + 1);
         minDate = startOfDay(t);
         maxDate = endOfDay(t);
         break;
@@ -215,19 +215,28 @@ function CalendarWidget() {
         minDate = startOfDay(new Date(monday3));
         maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
     }
-    console.log("Calculated minDate (local):", minDate);
-    console.log("Calculated maxDate (local):", maxDate);
-    setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
+            console.log("Calculated minDate (local):", minDate);
+        console.log("Calculated maxDate (local):", maxDate);
+        console.log("Setting timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
+        setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
   }, [activeView, customRange]);
 
   // Build API URL for calendar events
-  const apiUrl =
-    timeRange &&
-    `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
+  const apiUrl = useMemo(() => {
+    if (!timeRange || !timeRange.timeMin || !timeRange.timeMax) {
+      console.log("CalendarWidget: timeRange not ready:", timeRange);
+      return null;
+    }
+    
+    const url = `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
     )}&useCalendarSources=true${
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
     }`;
+    
+    console.log("CalendarWidget: Built API URL:", url);
+    return url;
+  }, [timeRange, powerAutomateUrl]);
 
   // Fetch calendar events with error handling
   const { data, error } = useSWR(
@@ -587,16 +596,20 @@ function CalendarWidget() {
             {!error && data && upcomingEvents.length > 0 && 
               upcomingEvents.slice(0, 5).map((event, index) => {
                 const teamsLink = event.description ? extractTeamsLink(event.description) : null;
+                const isNextUpcoming = event === nextUpcomingEvent;
                 
                                  return (
                    <div
                      key={`${event.id}-${index}`}
-                     className="p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                     className={`p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${
+                       isNextUpcoming ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : ''
+                     }`}
                      onClick={() => setViewingEvent(event)}
                    >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                          {isNextUpcoming && <span className="text-teal-600 mr-2">📍</span>}
                           {event.summary || "Untitled Event"}
                         </h3>
                         <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">

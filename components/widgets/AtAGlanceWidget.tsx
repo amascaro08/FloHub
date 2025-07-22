@@ -61,7 +61,11 @@ function generateDashboardWidget(
     } else {
       eventDate = new Date(event.start?.dateTime || event.start?.date || '');
     }
-    return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+    // Check if event starts on tomorrow (between start of tomorrow and end of tomorrow)
+    const endOfTomorrow = new Date(tomorrow);
+    endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+    
+    return eventDate >= tomorrow && eventDate < endOfTomorrow;
   });
 
   // Identify work vs personal events
@@ -478,8 +482,16 @@ const AtAGlanceWidget = () => {
         const now = new Date();
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        // Build API parameters for calendar
-        let apiUrlParams = `useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
+        // Calculate proper time range for fetching events (today + next 7 days)
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const oneWeekFromNow = new Date(startOfToday);
+        oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+        oneWeekFromNow.setHours(23, 59, 59, 999);
+
+        // Build API parameters for calendar with required timeMin and timeMax
+        const timeMin = startOfToday.toISOString();
+        const timeMax = oneWeekFromNow.toISOString();
+        let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
 
         // Fetch data in parallel
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
