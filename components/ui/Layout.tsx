@@ -30,9 +30,25 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   // -- AUTH --
   const { user } = useUser();
-  // For widget lock/unlock, implement these as needed, for now just dummy:
-  const isLocked = false; // If you have a lock/unlock feature, implement as state
-  const toggleLock = () => {};
+  
+  // -- LOCK STATE --
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    // Load lock state from localStorage on component mount
+    const saved = localStorage.getItem("dashboardLocked");
+    setIsLocked(saved === "true");
+  }, []);
+
+  const toggleLock = () => {
+    setIsLocked(current => {
+      const newState = !current;
+      localStorage.setItem("dashboardLocked", String(newState));
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('lockStateChanged'));
+      return newState;
+    });
+  };
 
   const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
   const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: Settings };

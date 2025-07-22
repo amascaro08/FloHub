@@ -236,7 +236,7 @@ function CalendarWidget() {
     }
   }, [data]);
 
-  const hasValidCalendar = loadedSettings && loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0 && !loadedSettings.selectedCals.every(calId => calId === 'primary');
+  const hasValidCalendar = loadedSettings && loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0;
 
   // Filter out past events and find the next upcoming event
   const now = new Date();
