@@ -33,6 +33,9 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
 
   // Initialize form data when event changes
   useEffect(() => {
+    console.log('CalendarEventForm: availableCalendars changed:', availableCalendars);
+    console.log('CalendarEventForm: availableCalendars length:', availableCalendars?.length);
+    
     if (event) {
       const startDate = event.start instanceof Date 
         ? format(event.start, "yyyy-MM-dd'T'HH:mm")

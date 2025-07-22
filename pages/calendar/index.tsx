@@ -76,7 +76,12 @@ const CalendarPage = () => {
     } else if (calendarListError) {
       console.error('Calendar list error:', calendarListError);
     }
-  }, [calendarList, calendarListError]);
+    
+    if (settings) {
+      console.log('Settings:', settings);
+      console.log('Selected calendars:', settings.selectedCals);
+    }
+  }, [calendarList, calendarListError, settings]);
 
   // Memoize the API URL to prevent unnecessary re-fetching
   const calendarApiUrl = useMemo(() => {
@@ -944,9 +949,11 @@ const CalendarPage = () => {
         }}
         onSubmit={handleEventSubmit}
         availableCalendars={
-          Array.isArray(settings?.selectedCals) && Array.isArray(calendarList)
-            ? calendarList.filter(cal => settings.selectedCals.includes(cal.id))
-            : calendarList || []
+          Array.isArray(calendarList)
+            ? (Array.isArray(settings?.selectedCals) && settings.selectedCals.length > 0
+                ? calendarList.filter(cal => settings.selectedCals.includes(cal.id))
+                : calendarList)
+            : []
         }
       />
     </div>
