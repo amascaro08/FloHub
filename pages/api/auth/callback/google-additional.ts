@@ -11,8 +11,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log('🔥 Google OAuth callback started');
-  console.log('Query params:', { code: !!req.query.code, state: !!req.query.state });
+  console.log('🔥🔥🔥 GOOGLE OAUTH CALLBACK REACHED 🔥🔥🔥');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Query params:', req.query);
+  console.log('Headers:', {
+    'user-agent': req.headers['user-agent'],
+    'referer': req.headers['referer']
+  });
   
   const { code, state } = req.query;
 
