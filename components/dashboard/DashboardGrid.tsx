@@ -93,8 +93,36 @@ const DashboardGrid = () => {
     return <div>Loading...</div>;
   }
 
-  // Locking: If you store this per user, add logic here. Otherwise, just default to false.
-  const isLocked = false;
+  // Locking: Read lock state from localStorage
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    // Load lock state from localStorage on component mount
+    const saved = localStorage.getItem("dashboardLocked");
+    setIsLocked(saved === "true");
+
+    // Listen for storage changes to sync lock state across components
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "dashboardLocked") {
+        setIsLocked(e.newValue === "true");
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom events for same-tab updates
+    const handleLockChange = () => {
+      const saved = localStorage.getItem("dashboardLocked");
+      setIsLocked(saved === "true");
+    };
+
+    window.addEventListener('lockStateChanged', handleLockChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('lockStateChanged', handleLockChange);
+    };
+  }, []);
 
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
   const memoizedWidgetComponents = useMemo(() => widgetComponents, []);

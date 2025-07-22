@@ -20,6 +20,19 @@ type ChatRequest = {
   history?: { role: string; content: string }[];
   prompt?: string;
   message?: string; // Added for direct message support
+  userInput?: string;
+  style?: string;
+  preferredName?: string;
+  notes?: any[];
+  meetings?: any[];
+  contextData?: {
+    tasks?: any[];
+    events?: any[];
+    habits?: any[];
+    habitCompletions?: any[];
+    allEvents?: any[];
+    allTasks?: any[];
+  };
 };
 
 type ChatResponse = {
@@ -27,9 +40,9 @@ type ChatResponse = {
   error?: string;
 };
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 // Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
 const parseDueDate = (phrase: string): string | undefined => {
@@ -95,10 +108,23 @@ export default async function handler(
     return res.status(401).json({ error: "User not found" });
   }
   const email = user.email;
-  const { history = [], prompt, message } = req.body as ChatRequest;
+  const { 
+    history = [], 
+    prompt, 
+    message, 
+    userInput: bodyUserInput,
+    style: bodyFloCatStyle,
+    preferredName: bodyPreferredName,
+    notes: bodyNotes = [],
+    meetings: bodyMeetings = [],
+    contextData = {}
+  } = req.body as ChatRequest;
 
-  // Use either prompt or message, with message taking precedence
-  const userInput = message || prompt || "";
+  // Store contextData globally for use in generateLocalResponse
+  (global as any).currentContextData = contextData;
+
+  // Use either prompt or message, with message taking precedence, or bodyUserInput
+  const userInput = bodyUserInput || message || prompt || "";
 
   if (!Array.isArray(history) || typeof userInput !== "string" || !userInput) {
     return res.status(400).json({ error: "Invalid request body - missing message/prompt or invalid history" });
@@ -225,14 +251,10 @@ export default async function handler(
     }
   }
 
-  // ── Fetch Context & Fallback to OpenAI ─────────────
+  // ── Fetch Context & Use Local AI or OpenAI ─────────────
   try {
-    // Fetch all data in parallel
-    const [notes, meetings, conversations] = await Promise.all([
-      fetchUserNotes(email),
-      fetchUserMeetingNotes(email),
-      fetchUserConversations(email)
-    ]);
+    // Fetch conversations (notes and meetings will be handled in settings section)
+    const conversations = await fetchUserConversations(email).catch(() => []);
     
     // Fetch user settings to get FloCat style preference
     const userSettingsData = await db.query.userSettings.findFirst({
@@ -243,9 +265,21 @@ export default async function handler(
         preferredName: true,
       },
     });
-    const floCatStyle = userSettingsData?.floCatStyle || "default";
+    const floCatStyle = bodyFloCatStyle || userSettingsData?.floCatStyle || "default";
     const floCatPersonality = userSettingsData?.floCatPersonality || [];
-    const preferredName = userSettingsData?.preferredName || "";
+    const preferredName = bodyPreferredName || userSettingsData?.preferredName || "";
+    
+    // Use notes and meetings from request body if provided, otherwise fetch from database
+    const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
+    const meetings = bodyMeetings.length > 0 ? bodyMeetings : await fetchUserMeetingNotes(email).catch(() => []);
+
+    // If no OpenAI API key, use local AI
+    if (!openai) {
+      console.log("Using local AI (no OpenAI API key found)");
+      return res.status(200).json({ 
+        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+      });
+    }
     
     // Start context processing
     const relevantContextPromise = findRelevantContext(userInput, notes, meetings, conversations);
@@ -304,7 +338,7 @@ export default async function handler(
       },
     ];
 
-    try { // Moved try block to wrap only the OpenAI call
+    try { // Try OpenAI first, fallback to local AI
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages,
@@ -312,16 +346,373 @@ export default async function handler(
 
       const aiReply = completion.choices[0]?.message?.content;
       if (!aiReply) {
-        return res.status(500).json({ error: "OpenAI did not return a message." });
+        console.log("OpenAI returned empty response, using local AI");
+        return res.status(200).json({ 
+          reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        });
       }
 
       return res.status(200).json({ reply: aiReply });
     } catch (err: any) {
-      console.error("OpenAI API error:", err);
-      return res.status(500).json({ error: err.message || "Internal server error" });
+      console.error("OpenAI API error, falling back to local AI:", err.message);
+      return res.status(200).json({ 
+        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+      });
     }
   } catch (err: any) {
     console.error("Assistant error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
+}
+
+// Local AI response generator (no external API required)
+function generateLocalResponse(
+  input: string, 
+  floCatStyle: string, 
+  preferredName: string, 
+  notes: any[], 
+  meetings: any[]
+): string {
+  const lowerInput = input.toLowerCase();
+  
+  // Get personality based on style
+  const getCatPersonality = () => {
+    switch(floCatStyle) {
+      case "more_catty":
+        return {
+          greeting: ["Meow! 😺", "Purr-fect! 🐱", "Paw-some! 😻"],
+          positive: ["That's purr-fect!", "Meow-nificent!", "Paw-sitively great!"],
+          emoji: "😺",
+          sign: "- FloCat 🐾"
+        };
+      case "less_catty":
+        return {
+          greeting: ["Hello!", "Hi there!", "Good to see you!"],
+          positive: ["That's great!", "Excellent!", "Wonderful!"],
+          emoji: "😺",
+          sign: "- FloCat"
+        };
+      case "professional":
+        return {
+          greeting: ["Good day", "Hello", "Greetings"],
+          positive: ["Excellent", "Very good", "Outstanding"],
+          emoji: "",
+          sign: "- FloCat Assistant"
+        };
+      default:
+        return {
+          greeting: ["Hey there! 😺", "Hello!", "Hi!"],
+          positive: ["That's great!", "Awesome!", "Perfect!"],
+          emoji: "😺",
+          sign: "- FloCat 😼"
+        };
+    }
+  };
+  
+  const personality = getCatPersonality();
+  const randomGreeting = personality.greeting[Math.floor(Math.random() * personality.greeting.length)];
+  const userName = preferredName || "User";
+  
+  // Current time context
+  const now = new Date();
+  const hour = now.getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  
+  // Summary/At-a-glance requests
+  if (lowerInput.includes("summary") || lowerInput.includes("at a glance") || lowerInput.includes("overview")) {
+    // Use actual data from contextData if available
+    const contextData = (global as any).currentContextData || {};
+    return generateIntelligentSummary(
+      timeGreeting, 
+      userName, 
+      personality, 
+      floCatStyle, 
+      notes, 
+      meetings, 
+      contextData.tasks || contextData.allTasks || [], 
+      contextData.events || contextData.allEvents || [], 
+      contextData.habits || [], 
+      contextData.habitCompletions || [], 
+      []
+    );
+  }
+  
+  // Help requests
+  if (lowerInput.includes("help") || lowerInput.includes("what can you do")) {
+    return `${randomGreeting} I'm FloCat, your productivity assistant! Here's what I can help you with:
+
+## 🎯 Core Features:
+- **📋 Task Management**: Create, view, and organize your tasks
+- **📅 Calendar Integration**: Schedule events and view your agenda  
+- **📝 Notes & Knowledge**: Organize your thoughts and information
+- **🎯 Habit Tracking**: Build and maintain positive routines
+- **📊 Daily Summaries**: Get overviews of your progress
+
+## 🗣️ How to Talk to Me:
+- Ask for a "summary" or "overview" to see your day
+- Say "my tasks" or "show tasks" for your todo items
+- Ask about "calendar" or "today's events" for your schedule
+- Say "my notes" to browse your saved information
+- Request "motivation" when you need encouragement
+
+I'm constantly learning to provide you with more personalized and helpful insights!
+
+${floCatStyle === "more_catty" ? "Purr-fect! What would you like to explore? 🐾" : "What would you like to explore today?"}
+
+${personality.sign}`;
+  }
+  
+  // Motivational requests
+  if (lowerInput.includes("motivat") || lowerInput.includes("productiv") || lowerInput.includes("focus")) {
+    const motivationalMessages: Record<string, string[]> = {
+      more_catty: [
+        "You're absolutely claw-some! Keep pouncing on those goals! 🐾",
+        "Every small step is a paw in the right direction! 😺",
+        "You've got this! Time to show the world your purr-fect skills! 💪"
+      ],
+      professional: [
+        "Maintain focus on your objectives and execute with precision.",
+        "Consistent effort compounds into extraordinary results.", 
+        "Your dedication to excellence will yield significant outcomes."
+      ],
+      default: [
+        "You're doing great! Keep pushing forward! 🌟",
+        "Every step counts towards your goals! 💪",
+        "Stay focused and keep making progress! ✨"
+      ]
+    };
+    
+    const messages = motivationalMessages[floCatStyle] || motivationalMessages.default;
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    
+    return `${randomMessage}
+
+Remember: Progress, not perfection! You're building something amazing one step at a time.
+
+${personality.sign}`;
+  }
+  
+  // Default helpful response
+  const defaultResponses: Record<string, string[]> = {
+    more_catty: [
+      "Meow! I'm here to help you stay paw-ductively organized! 😺 Ask me for a summary, or about your tasks and schedule!",
+      "Purr-fect! I can help you with summaries, tasks, calendar events, and more! What would you like to know? 🐾"
+    ],
+    professional: [
+      "I am here to assist with your productivity management. I can provide summaries, task updates, and schedule information.",
+      "Please let me know how I can help with your tasks, calendar, or organizational needs."
+    ],
+    default: [
+      "I'm here to help you stay organized! 😺 Ask me for a summary, or about your tasks, calendar, notes, and more!",
+      "How can I help you today? I can show you summaries, tasks, events, and provide productivity insights!"
+    ]
+  };
+  
+  const responses = defaultResponses[floCatStyle] || defaultResponses.default;
+  const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+  
+  return `${randomResponse}
+
+${personality.sign}`;
+}
+
+// Enhanced intelligent summary with prioritization insights
+function generateIntelligentSummary(
+  timeGreeting: string,
+  userName: string, 
+  personality: any,
+  floCatStyle: string,
+  notes: any[],
+  meetings: any[],
+  tasks: any[],
+  events: any[],
+  habits: any[],
+  habitCompletions: any[],
+  conversationHistory: any[]
+): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+  // Analyze tasks for prioritization
+  const incompleteTasks = tasks.filter(task => !task.completed);
+  const urgentTasks = incompleteTasks.filter(task => 
+    task.priority === 'high' || 
+    task.text?.toLowerCase().includes('urgent') ||
+    task.text?.toLowerCase().includes('asap') ||
+    (task.dueDate && new Date(task.dueDate) <= tomorrow)
+  );
+
+  // Analyze calendar events
+  const todayEvents = events.filter(event => {
+    const eventDate = new Date(event.start?.dateTime || event.start?.date);
+    return eventDate >= today && eventDate < tomorrow;
+  });
+
+  const tomorrowEvents = events.filter(event => {
+    const eventDate = new Date(event.start?.dateTime || event.start?.date);
+    return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+  });
+
+  const upcomingEvents = events.filter(event => {
+    const eventDate = new Date(event.start?.dateTime || event.start?.date);
+    return eventDate >= today && eventDate <= endOfWeek;
+  });
+
+  // Identify work vs personal events
+  const workEvents = upcomingEvents.filter(event => 
+    event.summary?.toLowerCase().includes('meeting') ||
+    event.summary?.toLowerCase().includes('standup') ||
+    event.summary?.toLowerCase().includes('review') ||
+    event.summary?.toLowerCase().includes('work') ||
+    event.description?.includes('teams.microsoft.com') ||
+    event.description?.includes('zoom.us')
+  );
+
+  const personalEvents = upcomingEvents.filter(event => 
+    !workEvents.includes(event) && (
+      event.summary?.toLowerCase().includes('personal') ||
+      event.summary?.toLowerCase().includes('family') ||
+      event.summary?.toLowerCase().includes('doctor') ||
+      event.summary?.toLowerCase().includes('appointment')
+    )
+  );
+
+  // Analyze habits
+  const todayHabits = habits.filter(habit => {
+    // Check if habit is scheduled for today
+    const dayOfWeek = now.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return habit.schedule?.includes(dayNames[dayOfWeek]) || habit.daily === true;
+  });
+
+  const completedTodayHabits = habitCompletions.filter(completion => {
+    const completionDate = new Date(completion.date);
+    return completionDate >= today && completionDate < tomorrow;
+  });
+
+  // Generate prioritization insights
+  let priorityInsights = [];
+  
+  if (urgentTasks.length > 0) {
+    priorityInsights.push(`⚠️ **Priority Alert**: ${urgentTasks.length} urgent task${urgentTasks.length > 1 ? 's' : ''} need${urgentTasks.length === 1 ? 's' : ''} immediate attention`);
+  }
+
+  if (workEvents.length > 0 && personalEvents.length > 0) {
+    priorityInsights.push(`⚖️ **Balance Tip**: You have ${workEvents.length} work event${workEvents.length > 1 ? 's' : ''} and ${personalEvents.length} personal event${personalEvents.length > 1 ? 's' : ''} this week. Consider time blocking for better balance.`);
+  }
+
+  if (todayEvents.length > 3) {
+    priorityInsights.push(`📅 **Schedule Alert**: Today is packed with ${todayEvents.length} events. Consider blocking 15-minute buffers between meetings.`);
+  }
+
+  if (incompleteTasks.length > 10) {
+    priorityInsights.push(`📋 **Task Load**: You have ${incompleteTasks.length} open tasks. Focus on completing 2-3 high-priority items today.`);
+  }
+
+  // Generate time-sensitive recommendations
+  let recommendations = [];
+  
+  const nextEvent = todayEvents.find(event => {
+    const eventTime = new Date(event.start?.dateTime || event.start?.date);
+    return eventTime > now;
+  });
+
+  if (nextEvent) {
+    const timeUntilNext = new Date(nextEvent.start?.dateTime || nextEvent.start?.date).getTime() - now.getTime();
+    const hoursUntil = Math.floor(timeUntilNext / (1000 * 60 * 60));
+    const minutesUntil = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hoursUntil === 0 && minutesUntil <= 15) {
+      recommendations.push(`🕐 **Heads Up**: "${nextEvent.summary}" starts in ${minutesUntil} minutes!`);
+    } else if (hoursUntil <= 1) {
+      recommendations.push(`⏰ **Prep Time**: "${nextEvent.summary}" is in ${hoursUntil > 0 ? `${hoursUntil}h ` : ''}${minutesUntil}m. Perfect time for a quick task.`);
+    }
+  }
+
+  if (urgentTasks.length > 0 && todayEvents.length === 0) {
+    recommendations.push(`🎯 **Focus Time**: No meetings scheduled. Great opportunity to tackle your urgent tasks!`);
+  }
+
+  // Smart habit reminders
+  const uncompletedHabits = todayHabits.filter(habit => 
+    !completedTodayHabits.some(completion => completion.habitId === habit.id)
+  );
+
+  if (uncompletedHabits.length > 0 && now.getHours() >= 18) {
+    recommendations.push(`🌟 **Evening Reminder**: ${uncompletedHabits.length} habit${uncompletedHabits.length > 1 ? 's' : ''} still pending for today.`);
+  }
+
+  // Generate the summary
+  let summary = `# ${timeGreeting}, ${userName}! ${personality.emoji}
+
+## Your Intelligent Dashboard
+
+${priorityInsights.length > 0 ? priorityInsights.join('\n\n') + '\n\n' : ''}
+
+### 📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''})
+${todayEvents.length > 0 ? 
+  todayEvents.slice(0, 5).map(event => {
+    const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    const isWork = workEvents.includes(event);
+    return `- ${time} **${event.summary}** ${isWork ? '💼' : '👤'}`;
+  }).join('\n') 
+  : '- No events scheduled for today'
+}
+
+### 📋 **Priority Tasks** (${incompleteTasks.length} total, ${urgentTasks.length} urgent)
+${incompleteTasks.length > 0 ? 
+  incompleteTasks.slice(0, 5).map((task, index) => {
+    const isUrgent = urgentTasks.includes(task);
+    return `${index + 1}. ${task.text || 'Untitled task'} ${isUrgent ? '⚠️' : ''}`;
+  }).join('\n')
+  : '- No pending tasks'
+}
+
+${recommendations.length > 0 ? `### 💡 **Smart Recommendations**
+${recommendations.join('\n\n')}
+
+` : ''}
+
+### 🎯 **Habit Progress** (${completedTodayHabits.length}/${todayHabits.length} completed)
+${todayHabits.length > 0 ? 
+  todayHabits.slice(0, 3).map(habit => {
+    const isCompleted = completedTodayHabits.some(completion => completion.habitId === habit.id);
+    return `- ${habit.name} ${isCompleted ? '✅' : '⭕'}`;
+  }).join('\n')
+  : '- No habits tracked for today'
+}
+
+### 📈 **Tomorrow's Preview** (${tomorrowEvents.length} event${tomorrowEvents.length !== 1 ? 's' : ''})
+${tomorrowEvents.length > 0 ? 
+  tomorrowEvents.slice(0, 3).map(event => {
+    const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    return `- ${time} **${event.summary}**`;
+  }).join('\n')
+  : '- Free day tomorrow'
+}
+
+---
+
+${floCatStyle === "more_catty" ? 
+  "Remember: You're paw-sitively capable of handling anything! 🐾" : 
+  floCatStyle === "professional" ? 
+    "Strategic focus and consistent execution yield optimal results." :
+    "You've got this! Take it one step at a time. ✨"
+}
+
+${personality.sign}`;
+
+  return summary;
 }

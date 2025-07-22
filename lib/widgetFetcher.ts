@@ -25,8 +25,14 @@ export const fetchUserSettings = async (url: string): Promise<CalendarSettings> 
 
 // Typed fetcher for calendar events
 export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promise<CalendarEvent[]> => {
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await fetch(url, { 
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
   if (!res.ok) {
+    console.error('Calendar fetch failed:', res.status, res.statusText);
     throw new Error('Not signed in');
   }
   const data = await res.json();
@@ -36,8 +42,14 @@ export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promi
 
 // Typed fetcher for tasks
 export const fetchTasks = async () => {
-  const res = await fetch('/api/tasks', { credentials: 'include' });
+  const res = await fetch('/api/tasks', { 
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
   if (!res.ok) {
+    console.error('Tasks fetch failed:', res.status, res.statusText);
     throw new Error('Not authorized');
   }
   return res.json();

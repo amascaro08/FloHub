@@ -81,16 +81,38 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<{ events: CalendarEvent[] } | ErrorRes>
 ) {
-  if (req.method === "GET") {
-    const decoded = auth(req);
-    if (!decoded) {
-      return res.status(401).json({ error: "Not signed in" });
-    }
-    
-    const user = await getUserById(decoded.userId);
-    if (!user?.email) {
-      return res.status(401).json({ error: "User not found" });
-    }
+  // Handle CORS for production
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://flohub.xyz',
+    'https://www.flohub.xyz',
+    'https://flohub.vercel.app'
+  ];
+
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PUT,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    if (req.method === "GET") {
+      const decoded = auth(req);
+      if (!decoded) {
+        return res.status(401).json({ error: "Not signed in" });
+      }
+      
+      const user = await getUserById(decoded.userId);
+      if (!user?.email) {
+        return res.status(401).json({ error: "User not found" });
+      }
 
     console.log('Calendar API request for user:', user.email);
 
@@ -154,43 +176,32 @@ export default async function handler(
     // If useCalendarSources is true, fetch user settings to get calendar sources
     if (useCalendarSources === "true") {
       try {
-        // Fetch user settings to get calendar sources
-        const userSettingsRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/userSettings`, {
-          headers: {
-            // Forward the Authorization header for internal API calls
-            Authorization: req.headers.authorization || "",
-            Cookie: req.headers.cookie || "",
-          },
+        // Use the userSettings from the database directly instead of making an HTTP call
+        const { db } = await import('../../lib/drizzle');
+        const { userSettings } = await import('../../db/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const userSettingsData = await db.query.userSettings.findFirst({
+          where: eq(userSettings.user_email, user.email),
         });
         
-        console.log('User settings fetch status:', userSettingsRes.status);
+        console.log('User settings loaded:', {
+          hasCalendarSources: !!userSettingsData?.calendarSources,
+          calendarSourcesCount: Array.isArray(userSettingsData?.calendarSources) ? userSettingsData.calendarSources.length : 0,
+          hasSelectedCals: !!userSettingsData?.selectedCals,
+          selectedCalsCount: Array.isArray(userSettingsData?.selectedCals) ? userSettingsData.selectedCals.length : 0,
+          hasPowerAutomateUrl: !!userSettingsData?.powerAutomateUrl
+        });
         
-        if (userSettingsRes.ok) {
-          const userSettings = await userSettingsRes.json();
-          console.log('User settings loaded:', {
-            hasCalendarSources: !!userSettings.calendarSources,
-            calendarSourcesCount: userSettings.calendarSources?.length || 0,
-            hasSelectedCals: !!userSettings.selectedCals,
-            selectedCalsCount: userSettings.selectedCals?.length || 0,
-            hasPowerAutomateUrl: !!userSettings.powerAutomateUrl
-          });
-          
-          if (userSettings.calendarSources && userSettings.calendarSources.length > 0) {
-            // Use only enabled calendar sources
-            calendarSources = userSettings.calendarSources.filter((source: CalendarSource) => source.isEnabled);
-            console.log('Enabled calendar sources:', calendarSources.length);
-          } else {
-            // Fall back to legacy settings
-            legacyCalendarIds = userSettings.selectedCals || ["primary"];
-            legacyO365Url = userSettings.powerAutomateUrl || null;
-            console.log('Using legacy settings:', { legacyCalendarIds, hasLegacyO365Url: !!legacyO365Url });
-          }
+        if (Array.isArray(userSettingsData?.calendarSources) && userSettingsData.calendarSources.length > 0) {
+          // Use only enabled calendar sources
+          calendarSources = (userSettingsData.calendarSources as CalendarSource[]).filter((source: CalendarSource) => source.isEnabled);
+          console.log('Enabled calendar sources:', calendarSources.length);
         } else {
-          const errorText = await userSettingsRes.text();
-          console.error("Failed to fetch user settings:", userSettingsRes.status, errorText);
-          // Fall back to query parameters or defaults
-          legacyCalendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
-          legacyO365Url = typeof o365Url === "string" ? o365Url : null;
+          // Fall back to legacy settings
+          legacyCalendarIds = Array.isArray(userSettingsData?.selectedCals) ? (userSettingsData.selectedCals as string[]) : ["primary"];
+          legacyO365Url = userSettingsData?.powerAutomateUrl || null;
+          console.log('Using legacy settings:', { legacyCalendarIds, hasLegacyO365Url: !!legacyO365Url });
         }
       } catch (e) {
         console.error("Error fetching user settings:", e);
@@ -245,8 +256,9 @@ export default async function handler(
     if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
       console.log("No calendar sources found");
       
-      // If no access token and no O365 URLs, provide helpful error
+      // If no access token and no O365 URLs, return empty events
       if (!accessToken) {
+        console.log("No access token available, returning empty events");
         return res.status(200).json({ events: [] });
       }
       
@@ -527,5 +539,9 @@ export default async function handler(
   } else {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method Not Allowed" });
+  }
+  } catch (error) {
+    console.error("Calendar API error:", error);
+    return res.status(200).json({ events: [] }); // Return empty events instead of 500 error
   }
 }

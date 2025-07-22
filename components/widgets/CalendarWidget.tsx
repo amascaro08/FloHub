@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { useEffect, useState, memo, useMemo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useUser } from '@/lib/hooks/useUser';
 import { formatInTimeZone } from 'date-fns-tz'; // Import formatInTimeZone
@@ -61,18 +61,42 @@ const extractTeamsLink = (description: string): string | null => {
 
 // Fetcher specifically for calendar events API
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
-  const res = await fetch(url, { credentials: 'include' });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error loading events');
-  
-  // Handle both formats: direct array or {events: [...]} object 
-  if (Array.isArray(data)) {
-    return data;
-  } else if (data && Array.isArray(data.events)) {
-    return data.events;
-  } else {
-    console.error("Unexpected response format from calendar API:", data);
-    return [];
+  try {
+    console.log("CalendarWidget: Fetching from URL:", url);
+    const res = await fetch(url, { credentials: 'include' });
+    
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      console.error("Calendar API JSON parse error:", parseError);
+      throw new Error(`Failed to parse response: ${res.status} ${res.statusText}`);
+    }
+    
+    if (!res.ok) {
+      console.error("Calendar API error details:", {
+        status: res.status,
+        statusText: res.statusText,
+        url: url,
+        response: data
+      });
+      throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    // Handle both formats: direct array or {events: [...]} object 
+    if (Array.isArray(data)) {
+      console.log("CalendarWidget: Received", data.length, "events directly");
+      return data;
+    } else if (data && Array.isArray(data.events)) {
+      console.log("CalendarWidget: Received", data.events.length, "events in events property");
+      return data.events;
+    } else {
+      console.error("CalendarWidget: Unexpected response format:", data);
+      return [];
+    }
+  } catch (error) {
+    console.error("CalendarWidget: Calendar fetch error:", error);
+    throw error;
   }
 };
 
@@ -81,7 +105,13 @@ function CalendarWidget() {
   const { mutate } = useSWRConfig();
 
   if (isLoading) { // Correctly check for loading status
-    return <div>Loading...</div>; // Or any other fallback UI
+    return <div>Loading calendar...</div>; // Or any other fallback UI
+  }
+
+  if (!user || !user.email) {
+    return <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+      Please sign in to view your calendar
+    </div>;
   }
 
   // Fetch persistent user settings via SWR
@@ -110,11 +140,18 @@ function CalendarWidget() {
   // Update local state when loadedSettings changes
   useEffect(() => {
     if (loadedSettings) {
-      console.log("CalendarWidget loaded settings:", loadedSettings);
+      console.log("CalendarWidget loaded settings:", {
+        selectedCals: loadedSettings.selectedCals,
+        defaultView: loadedSettings.defaultView,
+        hasPowerAutomateUrl: !!loadedSettings.powerAutomateUrl,
+        hasCalendarSources: !!loadedSettings.calendarSources
+      });
       if (Array.isArray(loadedSettings.selectedCals) && loadedSettings.selectedCals.length > 0) {
         setSelectedCals(loadedSettings.selectedCals);
+        console.log("CalendarWidget: Set selectedCals to:", loadedSettings.selectedCals);
       } else {
         setSelectedCals(['primary']); // Default if empty/invalid
+        console.log("CalendarWidget: No selectedCals found, using default ['primary']");
       }
       if (['today', 'tomorrow', 'week', 'month', 'custom'].includes(loadedSettings.defaultView)) {
         setActiveView(loadedSettings.defaultView);
@@ -159,14 +196,15 @@ function CalendarWidget() {
         break;
       case 'tomorrow':
         const t = new Date(now);
-        t.setDate(now.getDate() + 1);
+        t.setDate(t.getDate() + 1);
         minDate = startOfDay(t);
         maxDate = endOfDay(t);
         break;
       case 'week': {
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(now.setDate(diff));
+        const currentDate = new Date(now); // Don't mutate the original now
+        const day = currentDate.getDay();
+        const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(currentDate.setDate(diff));
         minDate = startOfDay(new Date(monday));
         maxDate = endOfDay(new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000));
         break;
@@ -192,51 +230,86 @@ function CalendarWidget() {
         break;
       }
       default:
-        console.log("Calculated timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
         // default to week
-        const ddd = now.getDay();
-        const diff3 = now.getDate() - ddd + (ddd === 0 ? -6 : 1);
-        const monday3 = new Date(now.setDate(diff3));
+        const defaultDate = new Date(now); // Don't mutate the original now
+        const ddd = defaultDate.getDay();
+        const diff3 = defaultDate.getDate() - ddd + (ddd === 0 ? -6 : 1);
+        const monday3 = new Date(defaultDate.setDate(diff3));
         minDate = startOfDay(new Date(monday3));
         maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
     }
-    console.log("Calculated minDate (local):", minDate);
-    console.log("Calculated maxDate (local):", maxDate);
-    setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
+            console.log("Calculated minDate (local):", minDate);
+        console.log("Calculated maxDate (local):", maxDate);
+        console.log("Setting timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
+        setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
   }, [activeView, customRange]);
 
   // Build API URL for calendar events
-  const apiUrl =
-    timeRange &&
-    `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
+  const apiUrl = useMemo(() => {
+    // Wait for user, settings, and timeRange to be ready
+    if (!user || !loadedSettings || !timeRange || !timeRange.timeMin || !timeRange.timeMax) {
+      console.log("CalendarWidget: Not ready yet:", {
+        hasUser: !!user,
+        hasSettings: !!loadedSettings,
+        hasTimeRange: !!timeRange,
+        timeRange: timeRange
+      });
+      return null;
+    }
+    
+    const url = `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
       timeRange.timeMax
     )}&useCalendarSources=true${
       powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
     }`;
+    
+    console.log("CalendarWidget: Built API URL:", url);
+    return url;
+  }, [user, loadedSettings, timeRange, powerAutomateUrl]);
 
-  // Fetch calendar events
-  const { data, error } = useSWR(apiUrl, calendarEventsFetcher);
+  // Fetch calendar events with error handling
+  const { data, error } = useSWR(
+    apiUrl, 
+    calendarEventsFetcher,
+    {
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+      errorRetryInterval: 5000,
+      onError: (error) => {
+        console.log("SWR calendar error:", error);
+      }
+    }
+  );
 
   // Debug logs for API URL and error
   useEffect(() => {
     if (apiUrl) {
-      console.log("Fetching calendar events from:", apiUrl);
+      console.log("CalendarWidget: Fetching calendar events from:", apiUrl);
     }
   }, [apiUrl]);
 
   useEffect(() => {
     if (error) {
-      console.error("Error fetching calendar events:", error);
+      console.error("CalendarWidget: Error fetching calendar events:", error);
     }
   }, [error]);
 
   useEffect(() => {
     if (data) {
-      console.log("Calendar events data:", data);
+      console.log("CalendarWidget: Calendar events data:", data);
     }
   }, [data]);
 
-  const hasValidCalendar = loadedSettings && loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0 && !loadedSettings.selectedCals.every(calId => calId === 'primary');
+  const hasValidCalendar = loadedSettings && (
+    (loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0) ||
+    (loadedSettings.calendarSources && Array.isArray(loadedSettings.calendarSources) && loadedSettings.calendarSources.length > 0)
+  );
+  
+  console.log("CalendarWidget: hasValidCalendar:", hasValidCalendar, {
+    hasSettings: !!loadedSettings,
+    selectedCals: loadedSettings?.selectedCals,
+    calendarSources: loadedSettings?.calendarSources
+  });
 
   // Filter out past events and find the next upcoming event
   const now = new Date();
@@ -476,7 +549,7 @@ function CalendarWidget() {
     <div className="relative">
       {!hasValidCalendar ? (
         <div className="text-neutral-500 dark:text-neutral-400 flex items-center justify-center py-8">
-          Please select a valid calendar in your <a href="/dashboard/settings-modular" className="text-teal-500 hover:text-teal-400 underline ml-1" target="_blank" rel="noopener noreferrer">settings</a>.
+          Please select a valid calendar in your <a href="/dashboard/settings" className="text-teal-500 hover:text-teal-400 underline ml-1" target="_blank" rel="noopener noreferrer">settings</a>.
         </div>
       ) : (
         <>
@@ -493,8 +566,241 @@ function CalendarWidget() {
               >
                 Today
               </button>
+              <button
+                onClick={() => setActiveView('tomorrow')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'tomorrow'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Tomorrow
+              </button>
+              <button
+                onClick={() => setActiveView('week')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'week'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+              >
+                Week
+              </button>
             </div>
           </div>
+
+          {/* Events Display */}
+          <div className="space-y-3">
+            {!apiUrl && (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                Loading calendar configuration...
+              </div>
+            )}
+            
+            {apiUrl && !data && !error && (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                Loading events...
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-amber-600 dark:text-amber-400 text-sm p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                <div className="font-medium mb-1">Calendar Temporarily Unavailable</div>
+                <div className="text-xs">
+                  We're having trouble connecting to your calendar right now. This could be due to:
+                  <ul className="mt-1 ml-4 list-disc">
+                    <li>Authentication needs to be refreshed</li>
+                    <li>Network connectivity issues</li>
+                    <li>Calendar service maintenance</li>
+                  </ul>
+                </div>
+                <div className="mt-2">
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="text-blue-600 hover:text-blue-700 underline text-xs"
+                  >
+                    Try reloading the page
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!error && data && upcomingEvents.length === 0 && (
+              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
+                No upcoming events found
+              </div>
+            )}
+            
+            {!error && data && upcomingEvents.length > 0 && 
+              upcomingEvents.slice(0, 5).map((event, index) => {
+                const teamsLink = event.description ? extractTeamsLink(event.description) : null;
+                const isNextUpcoming = event === nextUpcomingEvent;
+                
+                                 return (
+                   <div
+                     key={`${event.id}-${index}`}
+                     className={`p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${
+                       isNextUpcoming ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : ''
+                     }`}
+                     onClick={() => setViewingEvent(event)}
+                   >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                          {isNextUpcoming && <span className="text-teal-600 mr-2">📍</span>}
+                          {event.summary || "Untitled Event"}
+                        </h3>
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                          {formatEvent(event)}
+                        </p>
+                        {event.calendarName && (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+                            {event.calendarName}
+                            {event.source === "work" && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Work
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      
+                                             {/* Teams Link Button */}
+                       {teamsLink && (
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             window.open(teamsLink, '_blank');
+                           }}
+                           className="ml-3 flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                           title="Join Teams Meeting"
+                         >
+                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
+                          </svg>
+                          Teams
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                                 );
+               })
+             }
+          </div>
+
+          {/* Add Event Button */}
+          <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+            <button
+              onClick={openAdd}
+              className="w-full px-3 py-2 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+            >
+              + Add Event
+            </button>
+          </div>
+
+          {/* Add/Edit Event Modal */}
+          {modalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
+                <h3 className="text-lg font-medium mb-4">
+                  {editingEvent ? 'Edit Event' : 'Add Event'}
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={form.summary}
+                      onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                      placeholder="Event title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Start</label>
+                    <input
+                      type="datetime-local"
+                      value={form.start}
+                      onChange={(e) => setForm({ ...form, start: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">End</label>
+                    <input
+                      type="datetime-local"
+                      value={form.end}
+                      onChange={(e) => setForm({ ...form, end: e.target.value })}
+                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={handleSaveEvent}
+                    className="flex-1 bg-teal-500 text-white py-2 rounded-md hover:bg-teal-600 transition-colors"
+                  >
+                    {editingEvent ? 'Update' : 'Create'}
+                  </button>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Event Details Modal */}
+          {viewingEvent && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
+                <h3 className="text-lg font-medium mb-4">{viewingEvent.summary}</h3>
+                <div className="space-y-2">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                    {formatEvent(viewingEvent)}
+                  </p>
+                  {viewingEvent.description && (
+                    <p className="text-sm">{viewingEvent.description}</p>
+                  )}
+                  {/* Teams Link in Modal */}
+                  {extractTeamsLink(viewingEvent.description || '') && (
+                    <button
+                      onClick={() => window.open(extractTeamsLink(viewingEvent.description || '') || '', '_blank')}
+                      className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
+                      </svg>
+                      Join Teams Meeting
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={() => openEdit(viewingEvent)}
+                    className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)}
+                    className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setViewingEvent(null)}
+                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
