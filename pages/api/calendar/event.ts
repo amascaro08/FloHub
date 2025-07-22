@@ -203,17 +203,23 @@ export default async function handler(
     }
 
     if (start) {
+      // Convert datetime-local format to ISO string for Google Calendar API
+      const startDate = new Date(start);
       payload.start = {
-        dateTime: start, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        dateTime: startDate.toISOString(),
+        timeZone: timeZone || 'UTC',
       };
+      console.log("[API] Converted start time:", start, "->", startDate.toISOString());
     }
 
     if (end) {
+      // Convert datetime-local format to ISO string for Google Calendar API
+      const endDate = new Date(end);
       payload.end = {
-        dateTime: end, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        dateTime: endDate.toISOString(),
+        timeZone: timeZone || 'UTC',
       };
+      console.log("[API] Converted end time:", end, "->", endDate.toISOString());
     }
 
     // Check if user has permission to create events in this calendar
