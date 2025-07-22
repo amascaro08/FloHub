@@ -27,9 +27,17 @@ export default async function handler(
 
   if (req.method === "GET") {
     try {
+      console.log("Querying user settings for email:", user_email);
       const data = await db.query.userSettings.findFirst({
         where: eq(userSettings.user_email, user_email),
       });
+
+      console.log("Raw user settings data from DB:", data);
+      if (data) {
+        console.log("activeWidgets from DB:", data.activeWidgets);
+        console.log("activeWidgets type:", typeof data.activeWidgets);
+        console.log("activeWidgets length:", Array.isArray(data.activeWidgets) ? data.activeWidgets.length : 'not an array');
+      }
 
       if (!data) {
         const defaultSettings: UserSettings = {
@@ -65,7 +73,9 @@ export default async function handler(
         customRange: (data.customRange as any) || { start: "", end: "" }, // Ensure it's an object
         powerAutomateUrl: data.powerAutomateUrl || "",
         globalTags: (data.globalTags as string[]) || [],
-        activeWidgets: (data.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        activeWidgets: (data.activeWidgets as string[]) && (data.activeWidgets as string[]).length > 0 
+          ? (data.activeWidgets as string[]) 
+          : ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
         floCatStyle: data.floCatStyle as UserSettings['floCatStyle'] || "default",
         floCatPersonality: (data.floCatPersonality as string[]) || [],
         preferredName: data.preferredName || "",
@@ -79,14 +89,33 @@ export default async function handler(
         layouts: (data.layouts as any) || {},
       };
 
-      console.log("User settings loaded for", user_email, settings);
+      console.log("User settings loaded for", user_email, "activeWidgets:", settings.activeWidgets);
       return res.status(200).json(settings);
     } catch (error) {
       console.error("Error fetching user settings for", user_email, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
+  } else if (req.method === "POST") {
+    try {
+      const defaultWidgets = ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+      
+      // Update the user settings with default widgets
+      await db.insert(userSettings).values({
+        user_email: user_email,
+        activeWidgets: defaultWidgets,
+      }).onConflictDoUpdate({
+        target: userSettings.user_email,
+        set: { activeWidgets: defaultWidgets },
+      });
+
+      console.log("Updated user settings with default widgets for", user_email);
+      return res.status(200).json({ message: "User settings updated with default widgets" });
+    } catch (error) {
+      console.error("Error updating user settings for", user_email, error);
+      return res.status(500).json({ error: "Failed to update user settings" });
+    }
   } else {
-    res.setHeader("Allow", ["GET"]);
+    res.setHeader("Allow", ["GET", "POST"]);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 }

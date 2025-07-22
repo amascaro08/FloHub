@@ -317,13 +317,37 @@ const DashboardGrid = () => {
 
   console.log("DashboardGrid: Rendering with activeWidgets", activeWidgets);
 
+  const fixWidgets = async () => {
+    try {
+      const response = await fetch('/api/userSettings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        console.log("Widgets fixed successfully");
+        // Reload the page to refresh the widgets
+        window.location.reload();
+      } else {
+        console.error("Failed to fix widgets");
+      }
+    } catch (e) {
+      console.error("Error fixing widgets:", e);
+    }
+  };
+
   return (
     <div className="grid-bg">
       {activeWidgets.length === 0 ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">No widgets configured</h2>
-            <p className="text-gray-600 dark:text-gray-400">Please visit settings to configure your dashboard widgets.</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Please visit settings to configure your dashboard widgets.</p>
+            <button 
+              onClick={fixWidgets}
+              className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              Fix Widgets (Temporary)
+            </button>
           </div>
         </div>
       ) : (
