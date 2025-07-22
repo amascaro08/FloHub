@@ -146,24 +146,82 @@ export default async function handler(
     }
   }
 
-  // ── Add Calendar Event Detection ───────────────────
+  // ── Enhanced Calendar Event Detection ───────────────────
   if (
     lowerPrompt.includes("add event") ||
     lowerPrompt.includes("new event") ||
-    lowerPrompt.includes("schedule event")
+    lowerPrompt.includes("schedule event") ||
+    lowerPrompt.includes("create event") ||
+    lowerPrompt.includes("book meeting") ||
+    lowerPrompt.includes("schedule meeting")
   ) {
-    const eventMatch = userInput.match(/(?:add|new|schedule) event (.+)/i);
+    // Enhanced regex to capture more event details
+    const eventMatch = userInput.match(/(?:add|new|schedule|create|book)\s+(?:event|meeting)\s+(.+?)(?:\s+(?:on|at|for)\s+(.+))?$/i);
     if (eventMatch && eventMatch[1]) {
       const summary = eventMatch[1].trim();
-      const now = new Date();
-      const start = now.toISOString();
-      const end = new Date(now.getTime() + 3600000).toISOString();
-      const success = await callInternalApi("/api/calendar", "POST", { summary, start, end }, req);
+      const timeInfo = eventMatch[2]?.trim();
+      
+      // Parse time information if provided
+      let start = new Date();
+      let end = new Date(start.getTime() + 3600000); // Default 1 hour duration
+      
+      if (timeInfo) {
+        // Simple time parsing - can be enhanced
+        const timeMatch = timeInfo.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          const period = timeMatch[3]?.toLowerCase();
+          
+          if (period === 'pm' && hours !== 12) hours += 12;
+          if (period === 'am' && hours === 12) hours = 0;
+          
+          start.setHours(hours, minutes, 0, 0);
+          end = new Date(start.getTime() + 3600000);
+        }
+      }
+      
+      const eventData = {
+        summary,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        source: 'personal'
+      };
+      
+      const success = await callInternalApi("/api/assistant/calendar", "POST", {
+        action: 'create',
+        event: eventData
+      }, req);
+      
       if (success) {
-        return res.status(200).json({ reply: `📅 Event "${summary}" scheduled.` });
+        return res.status(200).json({ reply: `📅 Event "${summary}" scheduled successfully!` });
       } else {
         return res.status(500).json({ error: "Sorry, I couldn't schedule the event. There was an internal error." });
       }
+    }
+  }
+
+  // ── Calendar Event Management ───────────────────
+  if (
+    lowerPrompt.includes("list events") ||
+    lowerPrompt.includes("show events") ||
+    lowerPrompt.includes("my events") ||
+    lowerPrompt.includes("calendar events")
+  ) {
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    
+    const success = await callInternalApi("/api/assistant/calendar", "POST", {
+      action: 'list',
+      timeMin,
+      timeMax
+    }, req);
+    
+    if (success) {
+      return res.status(200).json({ reply: `📅 I've retrieved your calendar events for this month. You can view them in your calendar page!` });
+    } else {
+      return res.status(500).json({ error: "Sorry, I couldn't retrieve your events. There was an internal error." });
     }
   }
 
