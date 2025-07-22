@@ -9,12 +9,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log("[API] Event API called with method:", req.method);
+  
   const decoded = auth(req);
   if (!decoded) {
+    console.log("[API] Authentication failed");
     return res.status(401).json({ error: "Not signed in" });
   }
   const user = await getUserById(decoded.userId);
   if (!user) {
+    console.log("[API] User not found");
     return res.status(401).json({ error: "User not found" });
   }
   const googleAccount = user.accounts?.find(account => account.provider === 'google');
@@ -32,6 +36,16 @@ export default async function handler(
 
   // POST = create, PUT = update
   if (req.method === "POST") {
+    console.log("[API] POST request received");
+    console.log("[API] Request body:", req.body);
+    console.log("[API] Request body type:", typeof req.body);
+    console.log("[API] Request headers:", req.headers);
+    
+    if (!req.body) {
+      console.error("[API] No request body received");
+      return res.status(400).json({ error: "No request body" });
+    }
+    
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, description, tags, source });
     
