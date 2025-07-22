@@ -248,7 +248,7 @@ export default async function handler(
       } catch (error) {
         console.log("[API] Primary calendar attempt failed:", error);
       }
-    
+    }
 
     // Call Google API to create event
     console.log("[API] Calling Google Calendar API with URL:", url);
