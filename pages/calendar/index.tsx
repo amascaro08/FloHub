@@ -4,6 +4,7 @@ import { useUser } from "@/lib/hooks/useUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -43,15 +44,31 @@ const CalendarPage = () => {
   const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('month');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  // Calculate date range for current view
+  const getDateRange = useCallback(() => {
+    if (currentView === 'day') {
+      const start = new Date(currentDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(currentDate);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    } else if (currentView === 'week') {
+      const start = startOfWeek(currentDate);
+      const end = endOfWeek(currentDate);
+      return { start, end };
+    } else {
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
+      return { start, end };
+    }
+  }, [currentDate, currentView]);
 
   const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
     user ? '/api/userSettings' : null,
@@ -60,59 +77,55 @@ const CalendarPage = () => {
   );
 
   // Fetch all available calendars
-  const { data: calendarList, error: calendarListError } = useSWR<any[]>(
+  const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
     user ? '/api/calendar/list' : null,
     fetcher
   );
+
+  const { start: startDate, end: endDate } = getDateRange();
+
+  // Use cached calendar events hook
+  const {
+    events,
+    isLoading,
+    error: fetchError,
+    addEvent,
+    updateEvent,
+    removeEvent,
+    invalidateCache,
+    refetch
+  } = useCalendarEvents({
+    startDate,
+    endDate,
+    enabled: !!user && !!settings?.selectedCals
+  });
+
+  // Handle errors gracefully
+  useEffect(() => {
+    if (fetchError) {
+      console.error('Calendar events error:', fetchError);
+    }
+  }, [fetchError]);
 
   // Log available calendars for debugging
   useEffect(() => {
     if (calendarList) {
       console.log('Available calendars:', calendarList);
+      console.log('Calendar list length:', calendarList.length);
+      if (calendarList.length > 0) {
+        console.log('First calendar:', calendarList[0]);
+      }
+    } else if (calendarListError) {
+      console.error('Calendar list error:', calendarListError);
     }
-  }, [calendarList]);
+    
+    if (settings) {
+      console.log('Settings:', settings);
+      console.log('Selected calendars:', settings.selectedCals);
+    }
+  }, [calendarList, calendarListError, settings]);
 
-  // Memoize the API URL to prevent unnecessary re-fetching
-  const calendarApiUrl = useMemo(() => {
-    if (!user || !settings?.selectedCals) return null;
-    
-    const now = new Date();
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
-    
-    return `/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true`;
-  }, [user, settings?.selectedCals]);
-  
-  // Use SWR for calendar data with optimized settings
-  const { data: calendarData, error: calendarError } = useSWR(
-    calendarApiUrl,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 300000, // 5 minutes
-      onSuccess: () => setFetchError(null)
-    }
-  );
-  
-  // Process events when calendar data changes
-  useEffect(() => {
-    setIsLoading(true);
-    
-    if (calendarError) {
-      console.error('Error fetching events:', calendarError);
-      setFetchError('Failed to load calendar events. Please try again later.');
-      setIsLoading(false);
-      return;
-    }
 
-    if (calendarData?.events) {
-      setEvents(calendarData.events);
-    } else {
-      setEvents([]);
-    }
-    
-    setIsLoading(false);
-  }, [calendarData, calendarError]);
 
   const getEventDate = (event: CalendarEvent): Date => {
     if (event.start instanceof Date) {
@@ -144,12 +157,24 @@ const CalendarPage = () => {
     return format(date, 'MMM d, yyyy h:mm a');
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(prev => subMonths(prev, 1));
+  const goToPrevious = () => {
+    if (currentView === 'month') {
+      setCurrentDate(prev => subMonths(prev, 1));
+    } else if (currentView === 'week') {
+      setCurrentDate(prev => addDays(prev, -7));
+    } else if (currentView === 'day') {
+      setCurrentDate(prev => addDays(prev, -1));
+    }
   };
 
-  const goToNextMonth = () => {
-    setCurrentDate(prev => addMonths(prev, 1));
+  const goToNext = () => {
+    if (currentView === 'month') {
+      setCurrentDate(prev => addMonths(prev, 1));
+    } else if (currentView === 'week') {
+      setCurrentDate(prev => addDays(prev, 7));
+    } else if (currentView === 'day') {
+      setCurrentDate(prev => addDays(prev, 1));
+    }
   };
 
   const goToToday = () => {
@@ -184,11 +209,37 @@ const CalendarPage = () => {
   // Handle event form submission
   const handleEventSubmit = async (eventData: any) => {
     try {
+      console.log('Calendar page received event data:', eventData);
+      
       const url = editingEvent 
         ? `/api/calendar/event?id=${editingEvent.id}`
         : '/api/calendar/event';
       
       const method = editingEvent ? 'PUT' : 'POST';
+      
+      console.log('Making request to:', url, 'with method:', method);
+      
+      // First, let's test if the API is reachable with a simple test
+      const testResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-mode': 'true'
+        },
+        credentials: 'include',
+        body: JSON.stringify(eventData),
+      });
+      
+      console.log('Test response status:', testResponse.status);
+      if (testResponse.ok) {
+        const testResult = await testResponse.json();
+        console.log('Test response:', testResult);
+        // If test succeeds, proceed with real request
+      } else {
+        const testError = await testResponse.text();
+        console.error('Test request failed:', testError);
+        throw new Error(`Test request failed: ${testError}`);
+      }
       
       const response = await fetch(url, {
         method,
@@ -199,12 +250,44 @@ const CalendarPage = () => {
         body: JSON.stringify(eventData),
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to save event');
+        let errorText = '';
+        try {
+          const errorJson = await response.json();
+          errorText = errorJson.error || JSON.stringify(errorJson);
+        } catch (e) {
+          errorText = await response.text();
+        }
+        console.error('Response error text:', errorText);
+        throw new Error(errorText || `Failed to save event: ${response.status}`);
       }
 
-      // Refresh calendar data
-      window.location.reload();
+      const result = await response.json();
+      console.log('Event saved successfully:', result);
+
+      // Add the new event to the cached events instead of reloading
+      const newEvent: CalendarEvent = {
+        id: result.id,
+        summary: eventData.summary,
+        description: eventData.description,
+        start: { dateTime: eventData.start },
+        end: { dateTime: eventData.end },
+        calendarId: eventData.calendarId,
+        source: eventData.source,
+        tags: eventData.tags || [],
+        location: eventData.location,
+        htmlLink: result.htmlLink,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      };
+      
+      addEvent(newEvent);
+      
+      // Close the form
+      setIsEventFormOpen(false);
+      setEditingEvent(null);
     } catch (error) {
       console.error('Error saving event:', error);
       throw error;
@@ -227,8 +310,8 @@ const CalendarPage = () => {
         throw new Error('Failed to delete event');
       }
 
-      // Refresh calendar data
-      window.location.reload();
+      // Remove the event from cached events instead of reloading
+      removeEvent(event.id);
     } catch (error) {
       console.error('Error deleting event:', error);
       alert('Failed to delete event');
@@ -236,7 +319,43 @@ const CalendarPage = () => {
   };
 
   // Handle authentication and loading states with better UI
-  if (!user || isLoading) {
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Please sign in</h1>
+              <p className="text-gray-600 dark:text-gray-400">You need to be signed in to view your calendar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Error Loading Calendar</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Failed to load calendar events. Please try refreshing the page.</p>
+              <button 
+                onClick={() => refetch()} 
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto py-8 px-4">
@@ -369,9 +488,9 @@ const CalendarPage = () => {
               {/* Navigation */}
               <div className="flex items-center space-x-4">
                 <button
-                  onClick={goToPreviousMonth}
+                  onClick={goToPrevious}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label="Previous month"
+                  aria-label={`Previous ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -379,13 +498,18 @@ const CalendarPage = () => {
                 </button>
                 
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {format(currentDate, 'MMMM yyyy')}
+                  {currentView === 'day' 
+                    ? format(currentDate, 'MMMM d, yyyy')
+                    : currentView === 'week'
+                    ? `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
+                    : format(currentDate, 'MMMM yyyy')
+                  }
                 </h2>
                 
                 <button
-                  onClick={goToNextMonth}
+                  onClick={goToNext}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label="Next month"
+                  aria-label={`Next ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -903,7 +1027,17 @@ const CalendarPage = () => {
           setEditingEvent(null);
         }}
         onSubmit={handleEventSubmit}
-        availableCalendars={calendarList || []}
+        availableCalendars={
+          Array.isArray(calendarList)
+            ? (Array.isArray(settings?.selectedCals) && settings.selectedCals.length > 0
+                ? calendarList.filter(cal => {
+                    console.log('Checking calendar:', cal.id, 'against selectedCals:', settings.selectedCals);
+                    return settings.selectedCals.includes(cal.id);
+                  })
+                : // Temporarily show all calendars for debugging
+                  calendarList)
+            : []
+        }
       />
     </div>
   );

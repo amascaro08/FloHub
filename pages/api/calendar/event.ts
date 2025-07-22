@@ -9,20 +9,63 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log("[API] Event API called with method:", req.method);
+  
+  // Simple test endpoint
+  if (req.method === "GET") {
+    return res.status(200).json({ message: "Event API is working", method: req.method });
+  }
+  
   const decoded = auth(req);
   if (!decoded) {
+    console.log("[API] Authentication failed");
     return res.status(401).json({ error: "Not signed in" });
   }
   const user = await getUserById(decoded.userId);
   if (!user) {
+    console.log("[API] User not found");
     return res.status(401).json({ error: "User not found" });
   }
   const googleAccount = user.accounts?.find(account => account.provider === 'google');
   const accessToken = googleAccount?.access_token;
+  
+  console.log("[API] User:", user.email);
+  console.log("[API] Google account found:", !!googleAccount);
+  console.log("[API] Access token exists:", !!accessToken);
+  console.log("[API] Access token length:", accessToken?.length);
+  
+  if (!accessToken) {
+    console.error("[API] No access token available");
+    return res.status(401).json({ error: "Google Calendar not connected. Please reconnect your Google account." });
+  }
 
   // POST = create, PUT = update
   if (req.method === "POST") {
-    const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
+    console.log("[API] POST request received");
+    console.log("[API] Request body:", req.body);
+    console.log("[API] Request body type:", typeof req.body);
+    console.log("[API] Request headers:", req.headers);
+    
+    if (!req.body) {
+      console.error("[API] No request body received");
+      return res.status(400).json({ error: "No request body" });
+    }
+    
+    // Log the raw request for debugging
+    console.log("[API] Raw request body:", JSON.stringify(req.body, null, 2));
+    
+    // Simple test - just echo back the data to see if we can receive it
+    const { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source } = req.body;
+    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source });
+    
+    // Test: Just return the received data to see if the request is working
+    if (req.headers['x-test-mode'] === 'true') {
+      return res.status(200).json({ 
+        message: "Test mode - request received successfully",
+        receivedData: { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source }
+      });
+    }
+    
     if (!calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });
       return res.status(400).json({ error: "Missing required fields for create" });
@@ -139,7 +182,7 @@ export default async function handler(
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       calendarId
     )}/events`;
-
+    
     // Prepare payload for Google Calendar API
     const payload: any = {
       summary,
@@ -160,40 +203,244 @@ export default async function handler(
     }
 
     if (start) {
+      // datetime-local inputs are in local time, so we need to create the ISO string correctly
+      const userTimezone = timeZone || 'Australia/Sydney';
+      
+      // Create a date object from the datetime-local string (which is in local time)
+      const [datePart, timePart] = start.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      
+      // Create date in local timezone - this is the key fix
+      // We need to create the date as if it's in the user's timezone
+      const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Adjust for timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        localDate.setMinutes(localDate.getMinutes() - timezoneOffset);
+      }
+      
+      // Convert to ISO string for Google API
+      const startISO = localDate.toISOString();
+      
       payload.start = {
-        dateTime: start, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        dateTime: startISO,
+        timeZone: userTimezone,
       };
+      console.log("[API] Converted start time:", start, "->", startISO, "in timezone:", userTimezone, "offset:", timezoneOffset);
     }
 
     if (end) {
+      // datetime-local inputs are in local time, so we need to create the ISO string correctly
+      const userTimezone = timeZone || 'Australia/Sydney';
+      
+      // Create a date object from the datetime-local string (which is in local time)
+      const [datePart, timePart] = end.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      
+      // Create date in local timezone - this is the key fix
+      // We need to create the date as if it's in the user's timezone
+      const localDate = new Date(year, month - 1, day, hour, minute);
+      
+      // Adjust for timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        localDate.setMinutes(localDate.getMinutes() - timezoneOffset);
+      }
+      
+      // Convert to ISO string for Google API
+      const endISO = localDate.toISOString();
+      
       payload.end = {
-        dateTime: end, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        dateTime: endISO,
+        timeZone: userTimezone,
       };
+      console.log("[API] Converted end time:", end, "->", endISO, "in timezone:", userTimezone, "offset:", timezoneOffset);
+    }
+
+    // Check if user has permission to create events in this calendar
+    console.log("[API] Creating event in calendar:", calendarId);
+    console.log("[API] User email:", user.email);
+    console.log("[API] Is primary calendar:", calendarId === 'primary');
+    console.log("[API] Is user's own calendar:", calendarId === user.email);
+    
+    // Test the access token by making a simple API call
+    try {
+      const testUrl = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
+      const testRes = await fetch(testUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      console.log("[API] Access token test status:", testRes.status);
+      if (!testRes.ok) {
+        const testError = await testRes.json();
+        console.error("[API] Access token test failed:", testError);
+      }
+    } catch (testError) {
+      console.error("[API] Access token test error:", testError);
+    }
+    
+    // If it's a shared calendar, try the user's personal calendar first, then primary
+    if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
+      console.log("[API] Shared calendar detected, trying user's personal calendar first");
+      const originalCalendarId = calendarId;
+      
+      // Try user's personal calendar first
+      const personalUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(user.email)}/events`;
+      console.log("[API] Trying personal calendar:", personalUrl);
+      
+      try {
+        console.log("[API] Attempting to create event in personal calendar with payload:", JSON.stringify(payload, null, 2));
+        const personalRes = await fetch(personalUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        console.log("[API] Personal calendar response status:", personalRes.status);
+        if (personalRes.ok) {
+          const data = await personalRes.json();
+          console.log("[API] Successfully created event in personal calendar:", data);
+          return res.status(200).json({ ...data, message: "Event created in personal calendar (shared calendar access denied)" });
+        } else {
+          const personalError = await personalRes.json();
+          console.error("[API] Personal calendar failed:", personalError);
+          console.log("[API] Personal calendar failed, trying primary calendar");
+        }
+      } catch (error) {
+        console.log("[API] Personal calendar attempt failed:", error);
+      }
+      
+      // If personal calendar failed, try primary calendar
+      const primaryUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
+      
+      try {
+        console.log("[API] Attempting to create event in primary calendar with payload:", JSON.stringify(payload, null, 2));
+        const primaryRes = await fetch(primaryUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        console.log("[API] Primary calendar response status:", primaryRes.status);
+        if (primaryRes.ok) {
+          const data = await primaryRes.json();
+          console.log("[API] Successfully created event in primary calendar:", data);
+          return res.status(200).json({ ...data, message: "Event created in primary calendar (shared calendar access denied)" });
+        } else {
+          const primaryError = await primaryRes.json();
+          console.error("[API] Primary calendar failed:", primaryError);
+          console.log("[API] Primary calendar also failed, trying original calendar");
+        }
+      } catch (error) {
+        console.log("[API] Primary calendar attempt failed:", error);
+      }
     }
 
     // Call Google API to create event
-    const apiRes = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    console.log("[API] Calling Google Calendar API with URL:", url);
+    console.log("[API] Payload:", JSON.stringify(payload, null, 2));
+    console.log("[API] Access token (first 20 chars):", accessToken?.substring(0, 20) + "...");
+    
+    try {
+      const apiRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (!apiRes.ok) {
-      const err = await apiRes.json();
-      console.error("Google Calendar API create error:", apiRes.status, err);
-      return res.status(apiRes.status).json({ error: err.error?.message || "Google API create error" });
+      console.log("[API] Google API response status:", apiRes.status);
+      console.log("[API] Google API response headers:", Object.fromEntries(apiRes.headers.entries()));
+      
+      if (!apiRes.ok) {
+        let errorText = '';
+        try {
+          const err = await apiRes.json();
+          console.error("Google Calendar API create error:", apiRes.status, err);
+          
+          // Provide more specific error messages
+          let errorMessage = "Google API create error";
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err.error?.errors && err.error.errors.length > 0) {
+            errorMessage = err.error.errors[0].message || errorMessage;
+          }
+          
+          console.error("[API] Detailed Google API error:", {
+            status: apiRes.status,
+            error: err,
+            calendarId: calendarId,
+            userEmail: user.email
+          });
+          
+          // Return more detailed error information to the client
+          return res.status(apiRes.status).json({ 
+            error: errorMessage,
+            details: {
+              status: apiRes.status,
+              calendarId: calendarId,
+              userEmail: user.email,
+              isSharedCalendar: calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com'),
+              googleApiError: err
+            }
+          });
+        } catch (parseError) {
+          errorText = await apiRes.text();
+          console.error("Failed to parse Google API error response:", errorText);
+          
+          // If this is a shared calendar and it failed, try the primary calendar
+          if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
+            console.log("[API] Shared calendar failed, trying primary calendar as fallback");
+            try {
+              const primaryUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
+              const primaryRes = await fetch(primaryUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              });
+              
+              if (primaryRes.ok) {
+                const data = await primaryRes.json();
+                console.log("[API] Successfully created event in primary calendar as fallback:", data);
+                return res.status(200).json({ 
+                  ...data, 
+                  message: "Event created in primary calendar (shared calendar access denied)" 
+                });
+              }
+            } catch (fallbackError) {
+              console.error("[API] Primary calendar fallback also failed:", fallbackError);
+            }
+          }
+          
+          return res.status(apiRes.status).json({ error: `Google API error: ${apiRes.status} - ${errorText}` });
+        }
+      }
+
+      // Success case
+      const data = await apiRes.json();
+      console.log("[API] Successfully created event:", data);
+      return res.status(200).json(data);
+    } catch (fetchError) {
+      console.error("[API] Fetch error:", fetchError);
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown network error';
+      return res.status(500).json({ error: `Network error: ${errorMessage}` });
     }
-
-    const data = await apiRes.json();
-    return res.status(200).json(data);
   }
 
-  if (req.method === "PUT") {
+  if ((req.method as string) === "PUT") {
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     const { id } = req.query; // Get eventId from query parameters
 
@@ -368,7 +615,7 @@ export default async function handler(
   }
 
   // DELETE = delete
-  if (req.method === "DELETE") {
+  if ((req.method as string) === "DELETE") {
     const { id, calendarId } = req.query;
 
     if (!id || !calendarId) {
