@@ -222,6 +222,23 @@ export default async function handler(
     console.log("[API] Is primary calendar:", calendarId === 'primary');
     console.log("[API] Is user's own calendar:", calendarId === user.email);
     
+    // Test the access token by making a simple API call
+    try {
+      const testUrl = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
+      const testRes = await fetch(testUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      console.log("[API] Access token test status:", testRes.status);
+      if (!testRes.ok) {
+        const testError = await testRes.json();
+        console.error("[API] Access token test failed:", testError);
+      }
+    } catch (testError) {
+      console.error("[API] Access token test error:", testError);
+    }
+    
     // If it's a shared calendar, try the primary calendar instead
     if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
       console.log("[API] Shared calendar detected, trying primary calendar instead");
@@ -296,7 +313,8 @@ export default async function handler(
               status: apiRes.status,
               calendarId: calendarId,
               userEmail: user.email,
-              isSharedCalendar: calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')
+              isSharedCalendar: calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com'),
+              googleApiError: err
             }
           });
         } catch (parseError) {
