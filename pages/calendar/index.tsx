@@ -100,6 +100,13 @@ const CalendarPage = () => {
     enabled: !!user && !!settings?.selectedCals
   });
 
+  // Handle errors gracefully
+  useEffect(() => {
+    if (fetchError) {
+      console.error('Calendar events error:', fetchError);
+    }
+  }, [fetchError]);
+
   // Log available calendars for debugging
   useEffect(() => {
     if (calendarList) {
@@ -312,7 +319,43 @@ const CalendarPage = () => {
   };
 
   // Handle authentication and loading states with better UI
-  if (!user || isLoading) {
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Please sign in</h1>
+              <p className="text-gray-600 dark:text-gray-400">You need to be signed in to view your calendar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Error Loading Calendar</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Failed to load calendar events. Please try refreshing the page.</p>
+              <button 
+                onClick={() => refetch()} 
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto py-8 px-4">

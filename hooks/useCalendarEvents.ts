@@ -30,7 +30,7 @@ const isCacheValid = (cachedEvent: CachedEvent) => {
 
 // Helper to fetch events from API
 const fetchEvents = async (startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
-  const response = await fetch(`/api/calendar?start=${startDate.toISOString()}&end=${endDate.toISOString()}`, {
+  const response = await fetch(`/api/calendar?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&useCalendarSources=true`, {
     credentials: 'include',
   });
   
@@ -38,7 +38,8 @@ const fetchEvents = async (startDate: Date, endDate: Date): Promise<CalendarEven
     throw new Error('Failed to fetch calendar events');
   }
   
-  return response.json();
+  const data = await response.json();
+  return data.events || [];
 };
 
 export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCalendarEventsOptions) => {
