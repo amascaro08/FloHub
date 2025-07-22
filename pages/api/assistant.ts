@@ -443,7 +443,7 @@ ${personality.sign}`;
   
   // Motivational requests
   if (lowerInput.includes("motivat") || lowerInput.includes("productiv") || lowerInput.includes("focus")) {
-    const motivationalMessages = {
+    const motivationalMessages: Record<string, string[]> = {
       more_catty: [
         "You're absolutely claw-some! Keep pouncing on those goals! 🐾",
         "Every small step is a paw in the right direction! 😺",
@@ -472,7 +472,7 @@ ${personality.sign}`;
   }
   
   // Default helpful response
-  const defaultResponses = {
+  const defaultResponses: Record<string, string[]> = {
     more_catty: [
       "Meow! I'm here to help you stay paw-ductively organized! 😺 Ask me for a summary, or about your tasks and schedule!",
       "Purr-fect! I can help you with summaries, tasks, calendar events, and more! What would you like to know? 🐾"
