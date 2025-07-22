@@ -126,6 +126,11 @@ const DashboardGrid = () => {
   }
 
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
+  
+  // Debug activeWidgets changes
+  useEffect(() => {
+    console.log("DashboardGrid: activeWidgets changed to", activeWidgets);
+  }, [activeWidgets]);
   const memoizedWidgetComponents = useMemo(() => {
     console.log("DashboardGrid: Creating memoized widget components");
     return widgetComponents;
@@ -163,27 +168,34 @@ const DashboardGrid = () => {
   useEffect(() => {
     const fetchUserSettings = async () => {
       console.log("DashboardGrid: User object", user);
-      const userEmail = user?.email || user?.primaryEmail;
-      if (isClient && userEmail) {
+      if (isClient && user) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${userEmail}`);
+          console.log("DashboardGrid: Fetching user settings");
+          const response = await fetch(`/api/userSettings`);
+          console.log("DashboardGrid: Response status", response.status);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             console.log("DashboardGrid: Loaded user settings", userSettings);
-            setActiveWidgets(userSettings.activeWidgets || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+            const widgets = userSettings.activeWidgets || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+            console.log("DashboardGrid: Setting activeWidgets to", widgets);
+            setActiveWidgets(widgets);
           } else {
-            console.log("DashboardGrid: Failed to fetch user settings, using defaults");
-            setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+            const errorText = await response.text();
+            console.log("DashboardGrid: Failed to fetch user settings, status:", response.status, "error:", errorText);
+            const defaultWidgets = ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+            setActiveWidgets(defaultWidgets);
           }
         } catch (e) {
           console.log("DashboardGrid: Error fetching user settings, using defaults", e);
-          setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+          const defaultWidgets = ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+          setActiveWidgets(defaultWidgets);
         } finally {
           setLoadedSettings(true);
         }
       } else {
-        console.log("DashboardGrid: No user email found, using defaults");
-        setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+        console.log("DashboardGrid: No user found, using defaults");
+        const defaultWidgets = ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+        setActiveWidgets(defaultWidgets);
         setLoadedSettings(true);
       }
     };
@@ -191,7 +203,8 @@ const DashboardGrid = () => {
     if (isClient) {
       fetchUserSettings();
     } else {
-      setActiveWidgets(["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"]);
+      const defaultWidgets = ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"];
+      setActiveWidgets(defaultWidgets);
       setLoadedSettings(true);
     }
   }, [user, isClient]);
@@ -199,10 +212,9 @@ const DashboardGrid = () => {
   // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
-      const userEmail = user?.email || user?.primaryEmail;
-      if (isClient && userEmail) {
+      if (isClient && user) {
         try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${userEmail}`);
+          const response = await fetch(`/api/userSettings/layouts`);
           if (response.ok) {
             const { layouts: savedLayouts } = await response.json();
             if (savedLayouts) {
@@ -223,7 +235,7 @@ const DashboardGrid = () => {
           setLayouts(defaultLayouts);
         }
       } else {
-        console.log("DashboardGrid: No user email for layout loading, using defaults");
+        console.log("DashboardGrid: No user for layout loading, using defaults");
         setLayouts(defaultLayouts);
       }
     };
@@ -239,6 +251,7 @@ const DashboardGrid = () => {
 
   // Effect to update layouts when activeWidgets changes
   useEffect(() => {
+    console.log("DashboardGrid: Layout effect triggered with activeWidgets", activeWidgets);
     if (activeWidgets.length > 0 && Object.keys(layouts).length > 0) {
       const newLayouts: any = {};
       (Object.keys(layouts) as Array<keyof typeof layouts>).forEach(breakpoint => {
@@ -246,6 +259,7 @@ const DashboardGrid = () => {
           (item: any) => activeWidgets.includes(item.i)
         );
       });
+      console.log("DashboardGrid: Setting new layouts", newLayouts);
       setLayouts(newLayouts);
     }
   }, [activeWidgets]);
@@ -270,8 +284,7 @@ const DashboardGrid = () => {
       }
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          const userEmail = user?.email || user?.primaryEmail;
-          if (isClient && userEmail) {
+          if (isClient && user) {
             await fetch('/api/userSettings/layouts', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
