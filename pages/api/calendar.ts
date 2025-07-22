@@ -413,7 +413,7 @@ export default async function handler(
     }
 
     console.log(`Total events fetched: ${allEvents.length}`);
-    return res.status(200).json(allEvents);
+    return res.status(200).json({ events: allEvents });
   } else if (req.method === "POST") {
     // Handle event creation
     const decodedPOST = auth(req);
