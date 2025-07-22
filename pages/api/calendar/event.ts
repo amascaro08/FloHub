@@ -239,13 +239,45 @@ export default async function handler(
       console.error("[API] Access token test error:", testError);
     }
     
-    // If it's a shared calendar, try the primary calendar instead
+    // If it's a shared calendar, try the user's personal calendar first, then primary
     if (calendarId.includes('@group.calendar.google.com') || calendarId.includes('@resource.calendar.google.com')) {
-      console.log("[API] Shared calendar detected, trying primary calendar instead");
+      console.log("[API] Shared calendar detected, trying user's personal calendar first");
       const originalCalendarId = calendarId;
+      
+      // Try user's personal calendar first
+      const personalUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(user.email)}/events`;
+      console.log("[API] Trying personal calendar:", personalUrl);
+      
+      try {
+        console.log("[API] Attempting to create event in personal calendar with payload:", JSON.stringify(payload, null, 2));
+        const personalRes = await fetch(personalUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        console.log("[API] Personal calendar response status:", personalRes.status);
+        if (personalRes.ok) {
+          const data = await personalRes.json();
+          console.log("[API] Successfully created event in personal calendar:", data);
+          return res.status(200).json({ ...data, message: "Event created in personal calendar (shared calendar access denied)" });
+        } else {
+          const personalError = await personalRes.json();
+          console.error("[API] Personal calendar failed:", personalError);
+          console.log("[API] Personal calendar failed, trying primary calendar");
+        }
+      } catch (error) {
+        console.log("[API] Personal calendar attempt failed:", error);
+      }
+      
+      // If personal calendar failed, try primary calendar
       const primaryUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
       
       try {
+        console.log("[API] Attempting to create event in primary calendar with payload:", JSON.stringify(payload, null, 2));
         const primaryRes = await fetch(primaryUrl, {
           method: 'POST',
           headers: {
@@ -255,11 +287,14 @@ export default async function handler(
           body: JSON.stringify(payload),
         });
         
+        console.log("[API] Primary calendar response status:", primaryRes.status);
         if (primaryRes.ok) {
           const data = await primaryRes.json();
           console.log("[API] Successfully created event in primary calendar:", data);
-          return res.status(200).json(data);
+          return res.status(200).json({ ...data, message: "Event created in primary calendar (shared calendar access denied)" });
         } else {
+          const primaryError = await primaryRes.json();
+          console.error("[API] Primary calendar failed:", primaryError);
           console.log("[API] Primary calendar also failed, trying original calendar");
         }
       } catch (error) {
