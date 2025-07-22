@@ -108,8 +108,20 @@ const DashboardGrid = () => {
     );
   }
 
-  // Locking: If you store this per user, add logic here. Otherwise, just default to false.
-  const isLocked = false;
+  // === LOCK STATE: local, persistent ===
+  const [isLocked, setIsLocked] = useState(false);
+  useEffect(() => {
+    if (isClient) {
+      const saved = localStorage.getItem("isLocked");
+      setIsLocked(saved === "true");
+    }
+  }, [isClient]);
+  const toggleLock = () => {
+    setIsLocked(l => {
+      localStorage.setItem("isLocked", String(!l));
+      return !l;
+    });
+  };
 
   // If no user, show a message
   if (!user) {
@@ -337,6 +349,18 @@ const DashboardGrid = () => {
 
   return (
     <div className="grid-bg">
+      {/* Lock/Unlock Dashboard Button */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={toggleLock}
+          className={`rounded-full px-4 py-2 text-xs font-bold ${
+            isLocked ? "bg-red-500 text-white" : "bg-green-500 text-white"
+          }`}
+        >
+          {isLocked ? "Unlock Dashboard" : "Lock Dashboard"}
+        </button>
+      </div>
+      
       {activeWidgets.length === 0 ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">

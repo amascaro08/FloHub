@@ -184,6 +184,12 @@ export default async function handler(
             legacyCalendarIds = userSettings.selectedCals || ["primary"];
             legacyO365Url = userSettings.powerAutomateUrl || null;
             console.log('Using legacy settings:', { legacyCalendarIds, hasLegacyO365Url: !!legacyO365Url });
+            
+            // If no calendar sources are configured, use primary calendar as default
+            if (legacyCalendarIds.length === 0) {
+              legacyCalendarIds = ["primary"];
+              console.log('No calendar sources configured, using primary calendar as default');
+            }
           }
         } else {
           const errorText = await userSettingsRes.text();
@@ -191,12 +197,24 @@ export default async function handler(
           // Fall back to query parameters or defaults
           legacyCalendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
           legacyO365Url = typeof o365Url === "string" ? o365Url : null;
+          
+          // If no calendar IDs are provided, use primary as default
+          if (legacyCalendarIds.length === 0) {
+            legacyCalendarIds = ["primary"];
+            console.log('No calendar IDs provided, using primary calendar as default');
+          }
         }
       } catch (e) {
         console.error("Error fetching user settings:", e);
         // Fall back to query parameters or defaults
         legacyCalendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
         legacyO365Url = typeof o365Url === "string" ? o365Url : null;
+        
+        // If no calendar IDs are provided, use primary as default
+        if (legacyCalendarIds.length === 0) {
+          legacyCalendarIds = ["primary"];
+          console.log('No calendar IDs provided, using primary calendar as default');
+        }
       }
     } else {
       // Use query parameters directly
@@ -247,6 +265,7 @@ export default async function handler(
       
       // If no access token and no O365 URLs, provide helpful error
       if (!accessToken) {
+        console.log("No access token available, returning empty events");
         return res.status(200).json({ events: [] });
       }
       
