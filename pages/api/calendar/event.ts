@@ -54,8 +54,17 @@ export default async function handler(
     // Log the raw request for debugging
     console.log("[API] Raw request body:", JSON.stringify(req.body, null, 2));
     
+    // Simple test - just echo back the data to see if we can receive it
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, description, tags, source });
+    
+    // Test: Just return the received data to see if the request is working
+    if (req.headers['x-test-mode'] === 'true') {
+      return res.status(200).json({ 
+        message: "Test mode - request received successfully",
+        receivedData: { calendarId, summary, start, end, timeZone, description, tags, source }
+      });
+    }
     
     if (!calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });

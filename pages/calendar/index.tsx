@@ -217,6 +217,28 @@ const CalendarPage = () => {
       
       console.log('Making request to:', url, 'with method:', method);
       
+      // First, let's test if the API is reachable with a simple test
+      const testResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-mode': 'true'
+        },
+        credentials: 'include',
+        body: JSON.stringify(eventData),
+      });
+      
+      console.log('Test response status:', testResponse.status);
+      if (testResponse.ok) {
+        const testResult = await testResponse.json();
+        console.log('Test response:', testResult);
+        // If test succeeds, proceed with real request
+      } else {
+        const testError = await testResponse.text();
+        console.error('Test request failed:', testError);
+        throw new Error(`Test request failed: ${testError}`);
+      }
+      
       const response = await fetch(url, {
         method,
         headers: {
