@@ -11,6 +11,11 @@ export default async function handler(
 ) {
   console.log("[API] Event API called with method:", req.method);
   
+  // Simple test endpoint
+  if (req.method === "GET") {
+    return res.status(200).json({ message: "Event API is working", method: req.method });
+  }
+  
   const decoded = auth(req);
   if (!decoded) {
     console.log("[API] Authentication failed");
@@ -45,6 +50,9 @@ export default async function handler(
       console.error("[API] No request body received");
       return res.status(400).json({ error: "No request body" });
     }
+    
+    // Log the raw request for debugging
+    console.log("[API] Raw request body:", JSON.stringify(req.body, null, 2));
     
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, description, tags, source });
