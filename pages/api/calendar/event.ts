@@ -308,7 +308,7 @@ export default async function handler(
     }
   }
 
-  if (req.method === "PUT") {
+  if ((req.method as string) === "PUT") {
     const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
     const { id } = req.query; // Get eventId from query parameters
 
