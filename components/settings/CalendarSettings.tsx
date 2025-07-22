@@ -116,14 +116,24 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 {connectionStatus.google === 'connected' ? 'Connected' : 
                  connectionStatus.google === 'error' ? 'Not Connected' : 'Checking...'}
               </span>
-              {connectionStatus.google === 'error' && (
+              {connectionStatus.google === 'error' ? (
                 <button
                   onClick={testGoogleConnection}
                   className="text-xs text-blue-600 hover:text-blue-800 underline"
                 >
                   Retry
                 </button>
-              )}
+              ) : connectionStatus.google === 'connected' ? (
+                <button
+                  onClick={() => {
+                    const refreshUrl = `/api/calendar/connect?provider=google&refresh=true`;
+                    window.location.href = refreshUrl;
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Refresh Calendars
+                </button>
+              ) : null}
             </div>
           </div>
           {settings.calendarSources?.filter(s => s.type === 'o365').map(source => (

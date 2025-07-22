@@ -30,13 +30,15 @@ export default async function handler(
   try {
     console.log('✅ Authorization code received');
     
-    // Decode the state parameter to get user email
+    // Decode the state parameter to get user email and refresh flag
     let userEmail = '';
+    let isRefresh = false;
     if (state && typeof state === 'string') {
       try {
         const decodedState = JSON.parse(Buffer.from(state, 'base64').toString());
         userEmail = decodedState.email;
-        console.log('✅ State decoded, user email:', userEmail);
+        isRefresh = decodedState.refresh || false;
+        console.log('✅ State decoded, user email:', userEmail, 'refresh:', isRefresh);
       } catch (e) {
         console.error('❌ Error decoding state:', e);
       }
@@ -116,19 +118,47 @@ export default async function handler(
       console.log('✅ Created new Google account');
     }
 
-    // Create a new calendar source for Google Calendar
-    const newGoogleSource: CalendarSource = {
-      id: `google_${Date.now()}`,
-      name: "Google Calendar", 
-      type: "google",
-      sourceId: "primary",
-      tags: ["personal"],
-      isEnabled: true,
-    };
-    
-    console.log('🔄 Updating user settings with Google Calendar source...');
-    // Update user settings with the new calendar source
+    console.log('🔄 Fetching all available Google calendars...');
+    // Fetch all available calendars and create sources for each
     try {
+      const calendarListRes = await fetch(
+        "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+        { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+      );
+      
+      let newGoogleSources: CalendarSource[] = [];
+      
+      if (calendarListRes.ok) {
+        const calendarList = await calendarListRes.json();
+        console.log('✅ Found', calendarList.items?.length || 0, 'Google calendars');
+        
+        if (calendarList.items && Array.isArray(calendarList.items)) {
+          newGoogleSources = calendarList.items.map((calendar: any, index: number) => ({
+            id: `google_${calendar.id}_${Date.now() + index}`,
+            name: calendar.summary || calendar.id,
+            type: "google" as const,
+            sourceId: calendar.id,
+            tags: calendar.id === "primary" ? ["personal"] : ["shared"],
+            isEnabled: true,
+          }));
+          
+          console.log('Created calendar sources:', newGoogleSources.map(s => `${s.name} (${s.sourceId})`));
+        }
+      } else {
+        console.warn('Failed to fetch calendar list, creating primary calendar source only');
+        // Fallback to primary calendar only
+        newGoogleSources = [{
+          id: `google_primary_${Date.now()}`,
+          name: "Google Calendar (Primary)",
+          type: "google" as const,
+          sourceId: "primary",
+          tags: ["personal"],
+          isEnabled: true,
+        }];
+      }
+    
+      console.log('🔄 Updating user settings with Google Calendar sources...');
+      // Update user settings with the new calendar sources
       const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
       console.log('Making request to:', `${baseUrl}/api/userSettings`);
       
@@ -142,32 +172,26 @@ export default async function handler(
         const userSettings = await userSettingsRes.json();
         console.log('Current calendar sources:', userSettings.calendarSources?.length || 0);
         
-        // Check if Google source already exists
-        const existingGoogleSource = userSettings.calendarSources?.find((source: any) => source.type === 'google');
-        if (existingGoogleSource) {
-          console.log('✅ Google Calendar source already exists, skipping addition');
+        // Remove existing Google sources and add new ones
+        const nonGoogleSources = userSettings.calendarSources?.filter((source: any) => source.type !== 'google') || [];
+        const updatedSources = [...nonGoogleSources, ...newGoogleSources];
+        
+        const updateRes = await fetch(`${baseUrl}/api/userSettings/update`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            Cookie: req.headers.cookie || "",
+          },
+          body: JSON.stringify({
+            ...userSettings,
+            calendarSources: updatedSources,
+          }),
+        });
+        
+        if (updateRes.ok) {
+          console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources');
         } else {
-          const updatedSources = userSettings.calendarSources 
-            ? [...userSettings.calendarSources, newGoogleSource]
-            : [newGoogleSource];
-            
-          const updateRes = await fetch(`${baseUrl}/api/userSettings/update`, {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-              Cookie: req.headers.cookie || "",
-            },
-            body: JSON.stringify({
-              ...userSettings,
-              calendarSources: updatedSources,
-            }),
-          });
-          
-          if (updateRes.ok) {
-            console.log('✅ Successfully added Google Calendar source');
-          } else {
-            console.error('❌ Failed to update user settings:', updateRes.status);
-          }
+          console.error('❌ Failed to update user settings:', updateRes.status);
         }
       } else {
         console.error('❌ Failed to fetch user settings:', userSettingsRes.status);
@@ -178,7 +202,8 @@ export default async function handler(
     }
 
     console.log('🎉 Google OAuth flow completed successfully');
-    return res.redirect("/dashboard/settings?tab=calendar&success=google_connected");
+    const successMessage = isRefresh ? 'calendars_refreshed' : 'google_connected';
+    return res.redirect(`/dashboard/settings?tab=calendar&success=${successMessage}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
     return res.redirect("/dashboard/settings?tab=calendar&error=oauth_failed");

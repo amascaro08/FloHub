@@ -23,14 +23,17 @@ export default async function handler(
   
   console.log('✅ User authenticated:', user.email);
 
-  const { provider } = req.query;
+  const { provider, refresh } = req.query;
 
   if (provider === "google") {
     try {
       console.log('🔄 Generating Google OAuth URL...');
       
-      // Encode user information in state parameter
-      const state = Buffer.from(JSON.stringify({ email: user.email })).toString('base64');
+      // Encode user information in state parameter (include refresh flag)
+      const state = Buffer.from(JSON.stringify({ 
+        email: user.email, 
+        refresh: refresh === 'true' 
+      })).toString('base64');
       console.log('✅ State parameter created for user:', user.email);
 
       // Use the robust OAuth URL generator from googleMultiAuth
