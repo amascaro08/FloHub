@@ -34,6 +34,7 @@ type ChatRequest = {
     habitCompletions?: any[];
     allEvents?: any[];
     allTasks?: any[];
+    calendarEvents?: any[];
   };
 };
 
@@ -137,6 +138,41 @@ export default async function handler(
 
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
+  
+  // Check for calendar/schedule queries first and fetch fresh calendar data
+  if (lowerPrompt.includes("calendar") || lowerPrompt.includes("schedule") || 
+      lowerPrompt.includes("event") || lowerPrompt.includes("today") ||
+      lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
+      lowerPrompt.includes("upcoming")) {
+    try {
+      // Fetch fresh calendar events for calendar-related queries
+      const now = new Date();
+      const timeMin = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24 hours ago
+      const timeMax = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days from now
+      
+      const calendarResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`, {
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        },
+      });
+      
+      if (calendarResponse.ok) {
+        const calendarData = await calendarResponse.json();
+        const freshCalendarEvents = calendarData.events || [];
+        
+        // Load smart assistant with fresh calendar data
+        await smartAssistant.loadUserContext(freshCalendarEvents);
+        const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+        if (queryResponse && !queryResponse.includes("I can help you with:")) {
+          return res.status(200).json({ reply: queryResponse });
+        }
+      }
+    } catch (error) {
+      console.error("Error processing calendar query:", error);
+      // Continue with normal processing
+    }
+  }
+
   // Check for proactive suggestion requests
   if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
     try {
@@ -168,7 +204,7 @@ export default async function handler(
     }
   }
 
-  // Check for natural language queries first
+  // Check for other natural language queries
   if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
       lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
