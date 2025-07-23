@@ -663,6 +663,14 @@ export class SmartAIAssistant {
       return this.handleHabitQueries(query);
     }
 
+    // Calendar/Schedule queries - add these BEFORE note queries to prioritize calendar events
+    if (lowerQuery.includes('schedule') || lowerQuery.includes('calendar') || 
+        lowerQuery.includes('next event') || lowerQuery.includes('upcoming') ||
+        (lowerQuery.includes('what') && (lowerQuery.includes('next') || lowerQuery.includes('today'))) ||
+        lowerQuery.includes('event')) {
+      return this.handleCalendarQueries(query);
+    }
+
     // Note-related queries
     if (lowerQuery.includes('note') && lowerQuery.includes('about')) {
       return this.handleNoteQueries(query);
@@ -766,6 +774,172 @@ export class SmartAIAssistant {
     }
 
     return "I can help you track habit consistency, identify struggling habits, or find your most successful ones. What would you like to know?";
+  }
+
+  private handleCalendarQueries(query: string): string {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const lowerQuery = query.toLowerCase();
+
+    // Get calendar events from context
+    const calendarEvents = this.context?.calendarEvents || [];
+    
+    // Filter and sort upcoming events
+    const upcomingEvents = calendarEvents
+      .filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= now;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.start?.dateTime || a.start?.date || a.createdAt);
+        const dateB = new Date(b.start?.dateTime || b.start?.date || b.createdAt);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    // Handle specific query types
+    if (lowerQuery.includes('next') || lowerQuery.includes('upcoming')) {
+      if (upcomingEvents.length === 0) {
+        return "You don't have any upcoming events scheduled. Your calendar is clear! 📅";
+      }
+
+      const nextEvent = upcomingEvents[0];
+      const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.createdAt);
+      const timeUntil = this.formatTimeUntil(eventDate);
+      
+      return `📅 Your next event is "${nextEvent.summary || nextEvent.title || 'Untitled Event'}" ${timeUntil}. ${eventDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+    }
+
+    if (lowerQuery.includes('today')) {
+      const todayEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= today && eventDate < tomorrow;
+      });
+
+      if (todayEvents.length === 0) {
+        return "You don't have any events scheduled for today. Enjoy your free time! ✨";
+      }
+
+      const eventList = todayEvents.slice(0, 5).map(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const time = eventDate.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        return `• ${time} - ${event.summary || event.title || 'Untitled Event'}`;
+      }).join('\n');
+
+      return `📅 Today's events (${todayEvents.length} total):\n\n${eventList}`;
+    }
+
+    if (lowerQuery.includes('tomorrow')) {
+      const tomorrowEnd = new Date(tomorrow);
+      tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+      
+      const tomorrowEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= tomorrow && eventDate < tomorrowEnd;
+      });
+
+      if (tomorrowEvents.length === 0) {
+        return "You don't have any events scheduled for tomorrow. 📅";
+      }
+
+      const eventList = tomorrowEvents.slice(0, 5).map(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const time = eventDate.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        return `• ${time} - ${event.summary || event.title || 'Untitled Event'}`;
+      }).join('\n');
+
+      return `📅 Tomorrow's events (${tomorrowEvents.length} total):\n\n${eventList}`;
+    }
+
+    if (lowerQuery.includes('week')) {
+      const weekEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= today && eventDate <= nextWeek;
+      });
+
+      if (weekEvents.length === 0) {
+        return "You don't have any events scheduled for this week. 📅";
+      }
+
+      const groupedEvents = weekEvents.reduce((acc, event) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const dayKey = eventDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        
+        if (!acc[dayKey]) acc[dayKey] = [];
+        acc[dayKey].push(event);
+        return acc;
+      }, {} as { [key: string]: any[] });
+
+      let weekSummary = `📅 This week's events (${weekEvents.length} total):\n\n`;
+      Object.entries(groupedEvents).forEach(([day, events]) => {
+        weekSummary += `**${day}:**\n`;
+        (events as any[]).slice(0, 3).forEach((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+          const time = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          weekSummary += `• ${time} - ${event.summary || event.title || 'Untitled Event'}\n`;
+        });
+        weekSummary += '\n';
+      });
+
+      return weekSummary;
+    }
+
+    // Default calendar overview
+    if (upcomingEvents.length === 0) {
+      return "Your calendar is currently empty. No upcoming events scheduled! 📅";
+    }
+
+    const next3Events = upcomingEvents.slice(0, 3);
+    const eventList = next3Events.map(event => {
+      const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+      const timeUntil = this.formatTimeUntil(eventDate);
+      return `• ${event.summary || event.title || 'Untitled Event'} ${timeUntil}`;
+    }).join('\n');
+
+    return `📅 Your upcoming events:\n\n${eventList}${upcomingEvents.length > 3 ? `\n\n...and ${upcomingEvents.length - 3} more` : ''}`;
+  }
+
+  private formatTimeUntil(date: Date): string {
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 60) {
+      return diffMinutes <= 0 ? 'starting now' : `in ${diffMinutes} minutes`;
+    } else if (diffHours < 24) {
+      return `in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+    } else if (diffDays === 1) {
+      return 'tomorrow';
+    } else if (diffDays < 7) {
+      return `in ${diffDays} days`;
+    } else {
+      return `on ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
   }
 
   private handleNoteQueries(query: string): string {

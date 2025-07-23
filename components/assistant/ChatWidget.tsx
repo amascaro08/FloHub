@@ -96,7 +96,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
   ];
 
   return (
-    <div role="dialog" aria-label="FloCat chat" className="h-full flex flex-col">
+    <div role="dialog" aria-label="FloCat chat" className="h-full flex flex-col p-4">
       {/* Chat messages area */}
       <div className="flex-1 overflow-y-auto space-y-3 mb-4 text-[var(--fg)] dark:text-gray-100" ref={messagesEndRef}>
         {/* Welcome message and quick actions */}

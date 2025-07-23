@@ -26,7 +26,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
-  const [topInput, setTopInput] = useState('');
 
   // -- AUTH --
   const { user } = useUser();
@@ -81,18 +80,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
 
-  // Send from header input (now triggers side panel)
-  const handleTopInputSend = async () => {
-    if (topInput.trim() && send) {
-      try {
-        await send(topInput.trim());
-        setTopInput('');
-        setIsChatOpen(true);
-      } catch (error) {
-        console.error("Error sending message:", error);
-      }
-    }
-  };
+
 
   // Loading state for user (optional, depends if you want to delay render)
   if (user === undefined) {
@@ -249,26 +237,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
             />
           </div>
 
-          {/* FloCat Quick Input */}
-          <div className="flex-1 flex justify-center relative">
-            <div className="w-full max-w-md relative">
-              <input
-                type="text"
-                placeholder="Ask FloCat anything... 🐱"
-                className="w-full p-2.5 pl-4 pr-10 rounded-full border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800"
-                value={topInput}
-                onChange={(e) => setTopInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && topInput.trim()) {
-                    handleTopInputSend();
-                  }
-                }}
-              />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
-              </div>
-            </div>
-          </div>
+          {/* Spacer for centering */}
+          <div className="flex-1"></div>
 
           <div className="flex items-center space-x-2">
             {/* Chat toggle button */}
@@ -339,13 +309,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
 
         {/* Chat widget container */}
-        <div className="h-full flex flex-col">
-          <div className="flex-1 p-4">
-            <ChatWidget
-              onClose={() => setIsChatOpen(false)}
-              key="sidebar-chatwidget"
-            />
-          </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ChatWidget
+            onClose={() => setIsChatOpen(false)}
+            key="sidebar-chatwidget"
+          />
         </div>
       </div>
     </div>
