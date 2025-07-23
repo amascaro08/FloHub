@@ -2,20 +2,17 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-// Import types
-import type { Note, UserSettings, Action } from "@/types/app"; // Import Note, UserSettings, and Action types
-import type { CalendarEvent, CalendarSettings } from "@/types/calendar"; // Import CalendarEvent and CalendarSettings types
-import { parseISO } from 'date-fns'; // Import parseISO
-// Import meeting notes components
+import type { Note, UserSettings, Action } from "@/types/app";
+import type { CalendarEvent, CalendarSettings } from "@/types/calendar";
+import { parseISO } from 'date-fns';
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
 import { useUser } from "@/lib/hooks/useUser";
 
-// Define the response type for fetching meeting notes (will create this API later)
+// Define the response type for fetching meeting notes
 type GetMeetingNotesResponse = {
   meetingNotes: Note[];
 };
@@ -32,20 +29,13 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
 };
 
 export default function MeetingsPage() {
-   const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
-
   const router = useRouter();
 
   if (!user) {
-    return <div>Loading...</div>; // Or any other fallback UI
+    return <div>Loading...</div>;
   }
-
-
-
-
-
-
 
   const shouldFetch = status === "authenticated";
 
@@ -64,8 +54,8 @@ export default function MeetingsPage() {
     shouldFetch ? "/api/userSettings" : null,
     fetcher,
     {
-      revalidateOnFocus: false, // Don't revalidate on window focus
-      dedupingInterval: 60000 // Dedupe requests within 1 minute 
+      revalidateOnFocus: false,
+      dedupingInterval: 60000
     }
   );
 
@@ -82,8 +72,8 @@ export default function MeetingsPage() {
     shouldFetch ? "/api/meetings" : null,
     fetcher,
     {
-      revalidateOnFocus: false, // Don't revalidate on window focus
-      dedupingInterval: 30000 // Dedupe requests within 30 seconds
+      revalidateOnFocus: false,
+      dedupingInterval: 30000
     }
   );
 
@@ -92,8 +82,8 @@ export default function MeetingsPage() {
     apiUrl,
     calendarEventsFetcher,
     {
-      revalidateOnFocus: false, // Don't revalidate on window focus
-      dedupingInterval: 60000 // Dedupe requests within 1 minute
+      revalidateOnFocus: false,
+      dedupingInterval: 60000
     }
   );
 
@@ -115,17 +105,18 @@ export default function MeetingsPage() {
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
-  const [showModal, setShowModal] = useState(false); // State to control modal visibility
-  const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
+  const [showModal, setShowModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Combine unique tags from meeting notes and global tags from settings
   const allAvailableTags = useMemo(() => {
     const meetingNoteTags = meetingNotesResponse?.meetingNotes?.flatMap(note => note.tags) || [];
     const globalTags = userSettings?.globalTags || [];
     const combinedTags = [...meetingNoteTags, ...globalTags];
-    return Array.from(new Set(combinedTags)).sort(); // Get unique tags and sort them
-  }, [meetingNotesResponse, userSettings]); // Add userSettings to dependency array
+    return Array.from(new Set(combinedTags)).sort();
+  }, [meetingNotesResponse, userSettings]);
 
   const filteredMeetingNotes = useMemo(() => {
     const notesArray = meetingNotesResponse?.meetingNotes || [];
@@ -135,8 +126,8 @@ export default function MeetingsPage() {
     if (searchContent.trim() !== "") {
       filtered = filtered.filter((note: Note) =>
         note.content.toLowerCase().includes(searchContent.toLowerCase()) ||
-        (note.title && note.title.toLowerCase().includes(searchContent.toLowerCase())) || // Include title in search
-        (note.eventTitle && note.eventTitle.toLowerCase().includes(searchContent.toLowerCase())) // Include event title in search
+        (note.title && note.title.toLowerCase().includes(searchContent.toLowerCase())) ||
+        (note.eventTitle && note.eventTitle.toLowerCase().includes(searchContent.toLowerCase()))
       );
     }
 
@@ -147,20 +138,18 @@ export default function MeetingsPage() {
       );
     }
 
-
-
     return filtered;
   }, [meetingNotesResponse, searchContent, filterTag]);
+
   // Find the selected note object
   const selectedNote = useMemo(() => {
     if (!selectedNoteId || !filteredMeetingNotes) return null;
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
 
-  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => { // Add actions and agenda to type
+  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => {
     setIsSaving(true);
     try {
-      // Call the new create meeting note API
       const response = await fetch("/api/meetings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,7 +157,8 @@ export default function MeetingsPage() {
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch meeting notes to update the list
+        mutate();
+        setShowModal(false);
       } else {
         const errorData = await response.json();
         console.error("Failed to save meeting note:", errorData.error);
@@ -180,8 +170,7 @@ export default function MeetingsPage() {
     }
   };
 
-  // Implement handleUpdateMeetingNote
-  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string): Promise<void> => { // Add updatedActions and updatedAgenda to type
+  const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string): Promise<void> => {
     console.log("meetings.tsx - handleUpdateMeetingNote called with:", {
       noteId,
       updatedTitle,
@@ -196,7 +185,6 @@ export default function MeetingsPage() {
     
     setIsSaving(true);
     try {
-      // Call the new update meeting note API
       console.log("meetings.tsx - Sending update request to API");
       const requestBody = {
         id: noteId,
@@ -206,13 +194,13 @@ export default function MeetingsPage() {
         eventId: updatedEventId,
         eventTitle: updatedEventTitle,
         isAdhoc: updatedIsAdhoc,
-        actions: updatedActions, // Include actions
-        agenda: updatedAgenda, // Include agenda
+        actions: updatedActions,
+        agenda: updatedAgenda,
       };
       console.log("meetings.tsx - Request body:", requestBody);
       
       const response = await fetch(`/api/meetings/update`, {
-        method: "PUT", // Or PATCH, depending on API design
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
@@ -221,10 +209,8 @@ export default function MeetingsPage() {
       
       if (response.ok) {
         console.log("meetings.tsx - Update successful, mutating data");
-        // Force a refresh of the data to ensure we get the latest version with AI summary
-        await mutate(undefined, { revalidate: true }); // Force revalidation to get fresh data
+        await mutate(undefined, { revalidate: true });
         console.log("meetings.tsx - Data revalidation completed");
-        // Don't return anything to match the Promise<void> return type
       } else {
         const errorData = await response.json();
         console.error("Failed to update meeting note:", errorData.error);
@@ -232,17 +218,15 @@ export default function MeetingsPage() {
       }
     } catch (error) {
       console.error("Error updating meeting note:", error);
-      throw error; // Re-throw the error so the component can handle it
+      throw error;
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Implement handleDeleteMeetingNote
   const handleDeleteMeetingNote = async (noteId: string) => {
     setIsSaving(true);
     try {
-      // Call the new delete meeting note API
       const response = await fetch(`/api/meetings/delete`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -250,8 +234,8 @@ export default function MeetingsPage() {
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch meeting notes to update the list
-        setSelectedNoteId(null); // Deselect the note after deletion
+        mutate();
+        setSelectedNoteId(null);
       } else {
         const errorData = await response.json();
         console.error("Failed to delete meeting note:", errorData.error);
@@ -263,11 +247,9 @@ export default function MeetingsPage() {
     }
   };
 
-  // Implement handleDeleteSelectedMeetingNotes for the list component
   const handleDeleteSelectedMeetingNotes = async (noteIds: string[]) => {
     setIsSaving(true);
     try {
-      // Call the delete API for each selected note
       await Promise.all(noteIds.map(id =>
         fetch(`/api/meetings/delete`, {
           method: "DELETE",
@@ -275,8 +257,8 @@ export default function MeetingsPage() {
           body: JSON.stringify({ id: id }),
         })
       ));
-      mutate(); // Re-fetch meeting notes to update the list
-      setSelectedNoteId(null); // Deselect any potentially selected note
+      mutate();
+      setSelectedNoteId(null);
     } catch (error) {
       console.error("Error deleting selected meeting notes:", error);
     } finally {
@@ -284,97 +266,215 @@ export default function MeetingsPage() {
     }
   };
 
-
   // Show loading state if needed
   if (!user && status === 'unauthenticated') {
-    return <p>Loading meeting notes, calendar events, and settings…</p>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div>
+        <p className="ml-3 text-[var(--neutral-600)]">Loading meeting notes...</p>
+      </div>
+    );
   }
 
   if (!user) {
-    return <p>Please sign in to see your meeting notes.</p>;
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--neutral-100)] flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Sign in required</h3>
+        <p className="text-[var(--neutral-600)]">Please sign in to access your meeting notes.</p>
+      </div>
+    );
   }
 
   // Show error state if notes, calendar events, or settings failed to load
-  if (meetingNotesError || calendarError || settingsError) { // Use settingsError
-    return <p>Error loading data.</p>;
+  if (meetingNotesError || calendarError || settingsError) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Error loading data</h3>
+        <p className="text-[var(--neutral-600)]">There was an error loading your meeting notes. Please try refreshing the page.</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-4 bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
   }
 
   // Show message if powerAutomateUrl is not configured
   if (!userSettings?.powerAutomateUrl) {
-    return <p>Please configure your Power Automate URL in settings to see work calendar events.</p>;
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Configuration needed</h3>
+        <p className="text-[var(--neutral-600)] mb-4">Please configure your Power Automate URL in settings to access work calendar events.</p>
+        <button 
+          onClick={() => router.push('/dashboard/settings')} 
+          className="bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
+        >
+          Go to Settings
+        </button>
+      </div>
+    );
   }
 
-
   return (
-    <div className="p-4 flex flex-col md:flex-row h-full"> {/* Use flex-col for mobile, flex-row for larger screens */}
-      {/* Left Column: Meeting Note List */}
-      <div className="w-full md:w-80 md:border-r border-[var(--neutral-300)] md:pr-4 overflow-y-auto flex-shrink-0 mb-6 md:mb-0"> {/* Full width on mobile, fixed width on larger screens */}
-        <h1 className="text-2xl font-semibold mb-4">Meeting Notes</h1>
-
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 w-full" // Make button full width
-          onClick={() => setShowModal(true)} // Open modal on button click
-        >
-          Add Meeting Note
-        </button>
-
-        {/* Add the modal component */}
-        <AddMeetingNoteModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveMeetingNote}
-          isSaving={isSaving}
-          existingTags={allAvailableTags} // Pass allAvailableTags
-          workCalendarEvents={workCalendarEvents} // Pass filtered work calendar events
-        />
-
-
-        <div className="flex gap-4 mb-4">
-          <input
-            type="text"
-            className="input-modern"
-            placeholder="Search meeting notes…"
-            value={searchContent}
-            onChange={(e) => setSearchContent(e.target.value)}
-          />
-           <select
-            className="input-modern"
-            value={filterTag}
-            onChange={(e) => setFilterTag(e.target.value)}
-           >
-             <option value="">All Tags</option> {/* Option to show all notes */}
-             {allAvailableTags.map(tag => ( // Use allAvailableTags for filter
-               <option key={tag} value={tag}>{tag}</option>
-             ))}
-           </select>
+    <div className="min-h-screen bg-[var(--surface)]">
+      {/* Header Section */}
+      <div className="bg-white border-b border-[var(--neutral-200)] px-6 py-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--neutral-900)] flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mr-3 text-[var(--primary-color)]" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+              Meeting Notes
+            </h1>
+            <p className="text-[var(--neutral-600)] mt-1">Capture meetings, track actions, and stay organized</p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              className="btn-primary flex items-center justify-center"
+              onClick={() => setShowModal(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              New Meeting Note
+            </button>
+          </div>
         </div>
 
-        {/* Render the MeetingNoteList component */}
-        <MeetingNoteList
-          notes={filteredMeetingNotes}
-          selectedNoteId={selectedNoteId}
-          onSelectNote={setSelectedNoteId}
-          onDeleteNotes={handleDeleteSelectedMeetingNotes} // Pass the delete handler for selected notes
-          isSaving={isSaving} // Pass isSaving state
-        />
+        {/* Search and Filter Bar */}
+        <div className="mt-6 flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+            <input
+              type="text"
+              className="input-modern pl-10"
+              placeholder="Search meeting notes by title, content, or event..."
+              value={searchContent}
+              onChange={(e) => setSearchContent(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3">
+            <select
+              className="input-modern min-w-[150px]"
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+            >
+              <option value="">All Tags</option>
+              {allAvailableTags.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+            <div className="flex rounded-lg overflow-hidden border border-[var(--neutral-300)]">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'list' 
+                    ? 'bg-[var(--primary-color)] text-white' 
+                    : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--neutral-50)]'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'grid' 
+                    ? 'bg-[var(--primary-color)] text-white' 
+                    : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--neutral-50)]'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Right Column: Meeting Note Detail */}
-      <div className="flex-1 p-3 md:p-6 overflow-y-auto"> {/* Smaller padding on mobile */}
-        {selectedNote ? (
-          // Render the MeetingNoteDetail component if a note is selected
-          <MeetingNoteDetail
-            note={selectedNote}
-            onSave={handleUpdateMeetingNote}
-            onDelete={handleDeleteMeetingNote}
-            isSaving={isSaving}
-            existingTags={allAvailableTags} // Pass allAvailableTags
-            calendarEvents={calendarEvents || []} // Keep all calendar events for detail view if needed, or filter here too
-          />
-        ) : (
-          <p className="text-[var(--neutral-500)]">Select a meeting note to view details.</p>
-        )}
+      {/* Main Content */}
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-180px)]">
+        {/* Left Column: Meeting Note List */}
+        <div className="w-full lg:w-96 border-r border-[var(--neutral-200)] bg-white overflow-y-auto">
+          <div className="p-6">
+            <MeetingNoteList
+              notes={filteredMeetingNotes}
+              selectedNoteId={selectedNoteId}
+              onSelectNote={setSelectedNoteId}
+              onDeleteNotes={handleDeleteSelectedMeetingNotes}
+              isSaving={isSaving}
+              viewMode={viewMode}
+            />
+          </div>
+        </div>
+
+        {/* Right Column: Meeting Note Detail */}
+        <div className="flex-1 bg-[var(--surface)] overflow-y-auto">
+          {selectedNote ? (
+            <div className="p-6">
+              <MeetingNoteDetail
+                note={selectedNote}
+                onSave={handleUpdateMeetingNote}
+                onDelete={handleDeleteMeetingNote}
+                isSaving={isSaving}
+                existingTags={allAvailableTags}
+                calendarEvents={calendarEvents || []}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[var(--neutral-100)] flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Select a meeting note</h3>
+                <p className="text-[var(--neutral-600)] mb-6">Choose a meeting note from the list to view and edit its details</p>
+                <button
+                  className="btn-primary"
+                  onClick={() => setShowModal(true)}
+                >
+                  Create your first meeting note
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Add Meeting Note Modal */}
+      <AddMeetingNoteModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={handleSaveMeetingNote}
+        isSaving={isSaving}
+        existingTags={allAvailableTags}
+        workCalendarEvents={workCalendarEvents}
+      />
     </div>
   );
 }
