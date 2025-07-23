@@ -14,6 +14,8 @@ import {
   fetchUserConversations,
 } from "@/lib/contextService";
 import { ChatCompletionMessageParam } from "openai/resources";
+import { SmartAIAssistant } from "@/lib/aiAssistant";
+import { findMatchingCapability } from "@/lib/floCatCapabilities";
 
 // Types
 type ChatRequest = {
@@ -120,8 +122,9 @@ export default async function handler(
     contextData = {}
   } = req.body as ChatRequest;
 
-  // Store contextData globally for use in generateLocalResponse
+  // Store contextData globally for use in generateLocalResponse and capabilities
   (global as any).currentContextData = contextData;
+  (global as any).currentUserId = email;
 
   // Use either prompt or message, with message taking precedence, or bodyUserInput
   const userInput = bodyUserInput || message || prompt || "";
@@ -131,6 +134,70 @@ export default async function handler(
   }
 
   const lowerPrompt = userInput.toLowerCase();
+
+  // Initialize Smart AI Assistant for pattern analysis and suggestions
+  const smartAssistant = new SmartAIAssistant(email);
+
+  // Check for proactive suggestion requests
+  if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
+    try {
+      await smartAssistant.loadUserContext();
+      const suggestions = await smartAssistant.generateProactiveSuggestions();
+      
+      if (suggestions.length > 0) {
+        const topSuggestions = suggestions.slice(0, 3);
+        let suggestionText = "💡 **Here are some personalized suggestions based on your patterns:**\n\n";
+        
+        topSuggestions.forEach((suggestion, index) => {
+          const priorityEmoji = suggestion.priority === 'high' ? '🔴' : 
+                               suggestion.priority === 'medium' ? '🟡' : '🟢';
+          suggestionText += `${index + 1}. ${priorityEmoji} **${suggestion.title}**\n`;
+          suggestionText += `   ${suggestion.message}\n`;
+          if (suggestion.actionable) {
+            suggestionText += `   💫 *This suggestion is actionable - I can help implement it!*\n`;
+          }
+          suggestionText += `\n`;
+        });
+        
+        return res.status(200).json({ reply: suggestionText });
+      } else {
+        return res.status(200).json({ reply: "Great job! I don't have any specific suggestions right now. You seem to be managing your tasks and habits well! 🌟" });
+      }
+    } catch (error) {
+      console.error("Error generating suggestions:", error);
+      // Continue with normal processing
+    }
+  }
+
+  // Check for natural language queries first
+  if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
+      lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
+      lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
+    try {
+      const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+      if (queryResponse && !queryResponse.includes("I can help you with:")) {
+        return res.status(200).json({ reply: queryResponse });
+      }
+    } catch (error) {
+      console.error("Error processing natural language query:", error);
+      // Continue with normal processing
+    }
+  }
+
+  // Try to match with capabilities for action-based commands
+  const capabilityMatch = findMatchingCapability(userInput);
+  if (capabilityMatch) {
+    try {
+      const capabilityResponse = await capabilityMatch.capability.handler(
+        capabilityMatch.command, 
+        capabilityMatch.args
+      );
+      return res.status(200).json({ reply: capabilityResponse });
+    } catch (error) {
+      console.error("Error in capability handler:", error);
+      return res.status(500).json({ error: "Sorry, there was an error processing your request." });
+    }
+  }
 
   const callInternalApi = async (path: string, method: string, body: any, originalReq: NextApiRequest) => {
     const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
@@ -273,11 +340,11 @@ export default async function handler(
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
     const meetings = bodyMeetings.length > 0 ? bodyMeetings : await fetchUserMeetingNotes(email).catch(() => []);
 
-    // If no OpenAI API key, use local AI
+    // If no OpenAI API key, use local AI with smart assistance
     if (!openai) {
       console.log("Using local AI (no OpenAI API key found)");
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
     
@@ -348,7 +415,7 @@ export default async function handler(
       if (!aiReply) {
         console.log("OpenAI returned empty response, using local AI");
         return res.status(200).json({ 
-          reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+          reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
         });
       }
 
@@ -356,13 +423,36 @@ export default async function handler(
     } catch (err: any) {
       console.error("OpenAI API error, falling back to local AI:", err.message);
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
   } catch (err: any) {
     console.error("Assistant error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
+}
+
+// Enhanced local AI response generator with smart assistance
+async function generateEnhancedLocalResponse(
+  input: string, 
+  floCatStyle: string, 
+  preferredName: string, 
+  notes: any[], 
+  meetings: any[],
+  smartAssistant: SmartAIAssistant
+): Promise<string> {
+  // First try the smart assistant for natural language queries
+  try {
+    const smartResponse = await smartAssistant.processNaturalLanguageQuery(input);
+    if (smartResponse && !smartResponse.includes("I can help you with:")) {
+      return smartResponse;
+    }
+  } catch (error) {
+    console.error("Error in smart assistant:", error);
+    // Continue with local response
+  }
+
+  return generateLocalResponse(input, floCatStyle, preferredName, notes, meetings);
 }
 
 // Local AI response generator (no external API required)

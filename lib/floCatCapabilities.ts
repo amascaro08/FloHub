@@ -1,5 +1,6 @@
 // lib/floCatCapabilities.ts
 import { habitCapability } from './capabilities/habitCapability';
+import { taskCapability } from './capabilities/taskCapability';
 
 /**
  * Defines the structure for a FloCat capability.
@@ -19,6 +20,7 @@ export interface FloCatCapability {
 // Register all capabilities here
 export const floCatCapabilities: FloCatCapability[] = [
   habitCapability,
+  taskCapability,
   // Add more capabilities as they are developed
 ];
 
