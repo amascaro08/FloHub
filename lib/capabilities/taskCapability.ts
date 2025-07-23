@@ -162,20 +162,53 @@ async function addTask(args: string, userId: string): Promise<string> {
     return "Please specify what task you'd like to add. For example: 'add task: Review presentation due tomorrow'";
   }
 
-  // Parse the arguments to extract task details
-  const dueDateMatch = args.match(/\bdue\s+(.+?)(?:\s|$)/i);
-  const duePhrase = dueDateMatch ? dueDateMatch[1].trim() : null;
-  const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+  // Parse the arguments to extract task details with improved pattern matching
+  let taskText = args;
+  let dueDate: Date | undefined;
+  let duePhrase: string | null = null;
+
+  // Handle different patterns of due date specification
+  const dueDatePatterns = [
+    // "for tomorrow called [task]" or "due tomorrow called [task]"
+    /^(?:for|due)\s+(\w+)\s+called\s+(.+)$/i,
+    // "[task] for tomorrow" or "[task] due tomorrow"
+    /^(.+?)\s+(?:for|due)\s+(\w+)$/i,
+    // "called [task] for tomorrow" or "called [task] due tomorrow"
+    /^called\s+(.+?)\s+(?:for|due)\s+(\w+)$/i,
+    // Standard "due [date]" anywhere in the text
+    /\bdue\s+(.+?)(?:\s|$)/i
+  ];
+
+  for (const pattern of dueDatePatterns) {
+    const match = args.match(pattern);
+    if (match) {
+      if (pattern.source.includes('called')) {
+        // Patterns that separate task name and due date
+        if (match[2] && match[1]) {
+          taskText = match[2].trim();
+          duePhrase = match[1].trim();
+        } else if (match[1] && match[2]) {
+          taskText = match[1].trim();
+          duePhrase = match[2].trim();
+        }
+      } else {
+        // Standard due date pattern
+        duePhrase = match[1].trim();
+        taskText = taskText.replace(match[0], '').trim();
+      }
+      
+      if (duePhrase) {
+        dueDate = parseDueDate(duePhrase);
+        break;
+      }
+    }
+  }
 
   // Extract tags and priority
-  const tags = extractTags(args);
-  const priority = extractPriority(args);
+  const tags = extractTags(taskText);
+  const priority = extractPriority(taskText);
 
   // Clean the task text
-  let taskText = args;
-  if (dueDateMatch) {
-    taskText = taskText.replace(dueDateMatch[0], '').trim();
-  }
   taskText = cleanTaskText(taskText);
 
   if (!taskText) {

@@ -103,13 +103,19 @@ function extractArgsAfterPhrase(userInput: string, phrase: string): string {
 function extractTaskFromInput(userInput: string): string {
   const lowerInput = userInput.toLowerCase();
   
-  // Common patterns to look for
+  // Advanced patterns to handle complex natural language
   const patterns = [
-    /add\s+(?:a\s+)?task:?\s*(.+)/i,
-    /create\s+(?:a\s+)?task:?\s*(.+)/i,
-    /new\s+task:?\s*(.+)/i,
-    /make\s+(?:a\s+)?task:?\s*(.+)/i,
-    /add\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
+    // "add a task for tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+for\s+\w+\s+called\s+(.+)/i,
+    // "add a task due tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+due\s+\w+\s+called\s+(.+)/i,
+    // "add a task called [task name] for tomorrow"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+?)\s+(?:for|due)\s+\w+/i,
+    // "add a task called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+)/i,
+    // Standard patterns
+    /(?:add|create|new|make)\s+(?:a\s+)?task:?\s*(.+)/i,
+    /(?:add|create|new|make)\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
     /task:?\s*(.+)/i
   ];
   
@@ -117,13 +123,19 @@ function extractTaskFromInput(userInput: string): string {
   for (const pattern of patterns) {
     const match = userInput.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      let extracted = match[1].trim();
+      
+      // Clean up common time expressions that might have been included
+      extracted = extracted.replace(/\s+(?:for|due)\s+(?:today|tomorrow|yesterday|\w+day|\d+\s+days?)\s*$/i, '');
+      extracted = extracted.replace(/^(?:for|due)\s+(?:today|tomorrow|yesterday|\w+day|\d+\s+days?)\s+called\s+/i, '');
+      
+      return extracted.trim();
     }
   }
   
   // Fallback: remove common command words and extract the rest
   let taskText = userInput;
-  const commandWords = ["add", "create", "new", "make", "a", "an", "the", "task", "todo", "item"];
+  const commandWords = ["add", "create", "new", "make", "a", "an", "the", "task", "todo", "item", "called"];
   
   let words = taskText.split(' ');
   let startIndex = 0;

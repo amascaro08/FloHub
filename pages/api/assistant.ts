@@ -223,6 +223,15 @@ export default async function handler(
   // ── Enhanced Add Task Detection ─────────────────────────────
   // More flexible task detection patterns
   const taskPatterns = [
+    // "add a task for tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+for\s+(\w+)\s+called\s+(.+)/i,
+    // "add a task due tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+due\s+(\w+)\s+called\s+(.+)/i,
+    // "add a task called [task name] for tomorrow"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+?)\s+(?:for|due)\s+(\w+)/i,
+    // "add a task called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+)/i,
+    // Standard patterns
     /(?:add|create|new|make)\s+(?:a\s+)?task:?\s*(.+)/i,
     /(?:add|create|new|make)\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
     /task:?\s*(.+)/i
@@ -230,26 +239,52 @@ export default async function handler(
   
   for (const pattern of taskPatterns) {
     const taskMatch = userInput.match(pattern);
-    if (taskMatch && taskMatch[1]) {
-      const taskText = taskMatch[1].trim();
+    if (taskMatch) {
+      let finalTaskText = '';
+      let duePhrase: string | null = null;
       
-      // Check for due date in the task text
-      const dueMatch = taskText.match(/(.+?)\s+due\s+(.+)$/i);
-      const finalTaskText = dueMatch ? dueMatch[1].trim() : taskText;
-      const duePhrase = dueMatch ? dueMatch[2].trim().toLowerCase() : null;
-      const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+      // Handle different capture groups based on pattern
+      if (pattern.source.includes('called')) {
+        if (taskMatch[2] && taskMatch[1]) {
+          // Pattern with due date first, then task name
+          finalTaskText = taskMatch[2].trim();
+          duePhrase = taskMatch[1].trim();
+        } else if (taskMatch[1] && taskMatch[2]) {
+          // Pattern with task name first, then due date
+          finalTaskText = taskMatch[1].trim();
+          duePhrase = taskMatch[2].trim();
+        } else if (taskMatch[1]) {
+          // Simple "called [task]" pattern
+          finalTaskText = taskMatch[1].trim();
+        }
+      } else if (taskMatch[1]) {
+        // Standard patterns
+        const taskText = taskMatch[1].trim();
+        
+        // Check for due date in the task text
+        const dueMatch = taskText.match(/(.+?)\s+(?:for|due)\s+(.+)$/i);
+        if (dueMatch) {
+          finalTaskText = dueMatch[1].trim();
+          duePhrase = dueMatch[2].trim();
+        } else {
+          finalTaskText = taskText;
+        }
+      }
+      
+      if (finalTaskText) {
+        const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+        const payload: any = { text: finalTaskText };
+        if (dueDate) payload.dueDate = dueDate;
 
-      const payload: any = { text: finalTaskText };
-      if (dueDate) payload.dueDate = dueDate;
-
-      console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}`);
-      const success = await callInternalApi("/api/tasks", "POST", payload, req);
-      if (success) {
-        return res.status(200).json({
-          reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
-        });
-      } else {
-        return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
+        const success = await callInternalApi("/api/tasks", "POST", payload, req);
+        if (success) {
+          return res.status(200).json({
+            reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+          });
+        } else {
+          return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+        }
       }
     }
   }
