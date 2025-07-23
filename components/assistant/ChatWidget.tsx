@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, memo, useState } from 'react';
 import { mutate } from 'swr';
 import { useChat } from './ChatContext';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { 
   Plus, 
   List, 
@@ -117,11 +115,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
               
               <div className="grid grid-cols-2 gap-2">
                 {quickActions.map((action, index) => (
-                  <Button
+                  <button
                     key={index}
-                    variant="ghost"
-                    size="sm"
-                    className={`h-auto p-2 flex flex-col items-center gap-1 text-white ${action.color} border-0`}
+                    className={`h-auto p-2 flex flex-col items-center gap-1 text-white rounded-lg text-xs font-medium transition-all duration-200 ${action.color} border-0 disabled:opacity-50`}
                     onClick={() => {
                       if (action.fillsInput) {
                         setInput(action.message);
@@ -133,7 +129,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
                   >
                     {action.icon}
                     <span className="text-xs font-medium">{action.label}</span>
-                  </Button>
+                  </button>
                 ))}
               </div>
               
