@@ -39,13 +39,13 @@ export default function MeetingsPage() {
 
   const shouldFetch = status === "authenticated";
 
-  // Calculate time range for fetching events (e.g., next month)
+  // Calculate time range for fetching events (optimized for meetings - next 2 weeks)
   const timeRange = useMemo(() => {
     const now = new Date();
     const timeMin = now.toISOString();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(now.getMonth() + 1);
-    const timeMax = nextMonth.toISOString();
+    const twoWeeksFromNow = new Date(now);
+    twoWeeksFromNow.setDate(now.getDate() + 14); // Reduced from 1 month to 2 weeks for faster loading
+    const timeMax = twoWeeksFromNow.toISOString();
     return { timeMin, timeMax };
   }, []);
 
@@ -78,12 +78,15 @@ export default function MeetingsPage() {
   );
 
   // Fetch calendar events using the combined API endpoint
-  const { data: calendarEvents, error: calendarError } = useSWR<CalendarEvent[]>(
+  const { data: calendarEvents, error: calendarError, isLoading: calendarLoading } = useSWR<CalendarEvent[]>(
     apiUrl,
     calendarEventsFetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000
+      dedupingInterval: 300000, // 5 minutes - longer caching for calendar events
+      refreshInterval: 300000, // Refresh every 5 minutes
+      errorRetryCount: 2,
+      errorRetryInterval: 5000,
     }
   );
 
@@ -99,6 +102,7 @@ export default function MeetingsPage() {
     console.log("User settings error:", settingsError);
     console.log("PowerAutomate URL configured:", userSettings?.powerAutomateUrl);
     console.log("Calendar sources:", userSettings?.calendarSources);
+    console.log("Calendar loading state:", calendarLoading);
     console.log("Fetched calendar events (raw):", calendarEvents);
     console.log("Calendar events error:", calendarError);
     console.log("Filtered work calendar events:", workCalendarEvents);
@@ -127,6 +131,8 @@ export default function MeetingsPage() {
       if (workEvents.length === 0 && calendarEvents.length > 0) {
         console.warn("⚠️ No work events found! All events have source:", calendarEvents.map(e => e.source));
       }
+    } else if (calendarLoading) {
+      console.log("📅 Calendar events are still loading...");
     } else {
       console.log("No calendar events fetched");
     }
@@ -134,7 +140,7 @@ export default function MeetingsPage() {
     console.log("Fetched meeting notes:", meetingNotesResponse);
     console.log("Meeting notes error:", meetingNotesError);
     console.log("=== END DEBUG ===");
-  }, [userSettings, settingsError, calendarEvents, calendarError, workCalendarEvents, meetingNotesResponse, meetingNotesError]);
+  }, [userSettings, settingsError, calendarEvents, calendarError, workCalendarEvents, meetingNotesResponse, meetingNotesError, calendarLoading]);
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
@@ -384,11 +390,22 @@ export default function MeetingsPage() {
             <button
               className="btn-primary flex items-center justify-center"
               onClick={() => setShowModal(true)}
+              title={calendarLoading ? "Loading calendar events..." : "Create new meeting note"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
+              {calendarLoading ? (
+                <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              )}
               New Meeting Note
+              {calendarLoading && (
+                <span className="ml-2 text-xs opacity-80">(Loading...)</span>
+              )}
             </button>
           </div>
         </div>
@@ -507,6 +524,7 @@ export default function MeetingsPage() {
         isSaving={isSaving}
         existingTags={allAvailableTags}
         workCalendarEvents={workCalendarEvents}
+        calendarLoading={calendarLoading}
       />
     </div>
   );
