@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { mutate } from 'swr';
 import { useChat } from './ChatContext'; // Make sure we're using the context version
+import { Plus, Calendar, FileText, BarChart3, Target, BookOpen, Repeat } from 'lucide-react';
 
 interface ChatWidgetProps {
   onClose: () => void;
@@ -32,6 +33,50 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
       setInput(''); // Clear input after sending
     }
   };
+
+  // Quick action handlers
+  const handleQuickAction = async (action: string) => {
+    await send(action);
+  };
+
+  const quickActions = [
+    {
+      label: 'Add Task',
+      icon: Plus,
+      action: 'add task',
+      color: 'bg-blue-500 hover:bg-blue-600',
+    },
+    {
+      label: 'Schedule',
+      icon: Calendar,
+      action: 'schedule event',
+      color: 'bg-green-500 hover:bg-green-600',
+    },
+    {
+      label: 'Summary',
+      icon: BarChart3,
+      action: 'daily summary',
+      color: 'bg-purple-500 hover:bg-purple-600',
+    },
+    {
+      label: 'My Tasks',
+      icon: Target,
+      action: 'show my tasks',
+      color: 'bg-orange-500 hover:bg-orange-600',
+    },
+    {
+      label: 'My Notes',
+      icon: BookOpen,
+      action: 'show my notes',
+      color: 'bg-teal-500 hover:bg-teal-600',
+    },
+    {
+      label: 'My Habits',
+      icon: Target,
+      action: 'list habits',
+      color: 'bg-indigo-500 hover:bg-indigo-600',
+    },
+  ];
 
   return (
     <div role="dialog" aria-label="FloCat chat" className="h-full flex flex-col">
@@ -74,6 +119,30 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="border-t border-neutral-200 dark:border-neutral-700 p-3">
+        <div className="mb-2">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">Quick Actions:</p>
+          <div className="grid grid-cols-2 gap-2">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => handleQuickAction(action.action)}
+                disabled={loading}
+                className={`
+                  flex items-center justify-center space-x-1 px-2 py-2 rounded-lg text-white text-xs font-medium
+                  transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                  ${action.color}
+                `}
+              >
+                <action.icon className="w-3 h-3" />
+                <span>{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Input area */}

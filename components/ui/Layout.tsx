@@ -212,12 +212,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
             />
           </div>
 
-          {/* Simplified header - removed the chat input */}
-          <div className="flex-1 flex justify-center">
-            <div className="text-lg font-semibold text-neutral-700 dark:text-neutral-300">
-              FloHub Dashboard
-            </div>
-          </div>
+          {/* Clean header - no text */}
+          <div className="flex-1"></div>
 
           <div className="flex items-center">
             <button
