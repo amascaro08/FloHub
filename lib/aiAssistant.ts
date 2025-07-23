@@ -903,4 +903,4 @@ Try asking me something specific about your tasks, notes, meetings, or habits!`;
   }
 }
 
-export { SmartAIAssistant, type ProactiveSuggestion, type UserContext, type PatternAnalysis };
+export { type ProactiveSuggestion, type UserContext, type PatternAnalysis };
