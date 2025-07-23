@@ -155,7 +155,26 @@ export default async function handler(
       
       console.log(`[DEBUG] Fetching calendar from: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`);
       
-      const calendarResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`, {
+      // First, get user settings to include O365 URL if needed
+      const userSettingsResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/userSettings`, {
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        },
+      });
+      
+      let calendarUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`;
+      
+      if (userSettingsResponse.ok) {
+        const userSettings = await userSettingsResponse.json();
+        const o365Url = userSettings?.calendarSources?.find((source: any) => source.type === 'o365')?.url;
+        if (o365Url) {
+          calendarUrl += `&o365Url=${encodeURIComponent(o365Url)}`;
+        }
+      }
+      
+      console.log(`[DEBUG] Final calendar URL: ${calendarUrl}`);
+      
+      const calendarResponse = await fetch(calendarUrl, {
         headers: {
           'Cookie': req.headers.cookie || '',
         },
@@ -233,8 +252,14 @@ export default async function handler(
   if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
       lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
+    
+    console.log(`[DEBUG] Natural language query detected: "${userInput}"`);
+    
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+      
+      console.log(`[DEBUG] Natural language query response:`, queryResponse);
+      
       if (queryResponse && !queryResponse.includes("I can help you with:")) {
         return res.status(200).json({ reply: queryResponse });
       }

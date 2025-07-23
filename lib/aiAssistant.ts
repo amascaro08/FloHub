@@ -668,6 +668,7 @@ export class SmartAIAssistant {
         lowerQuery.includes('next event') || lowerQuery.includes('upcoming') ||
         (lowerQuery.includes('what') && (lowerQuery.includes('next') || lowerQuery.includes('today'))) ||
         lowerQuery.includes('event')) {
+      console.log(`[DEBUG] SmartAIAssistant detected calendar query: "${query}"`);
       return this.handleCalendarQueries(query);
     }
 
@@ -788,6 +789,10 @@ export class SmartAIAssistant {
 
     // Get calendar events from context
     const calendarEvents = this.context?.calendarEvents || [];
+    
+    console.log(`[DEBUG] SmartAIAssistant handleCalendarQueries called with: "${query}"`);
+    console.log(`[DEBUG] Calendar events available:`, calendarEvents.length);
+    console.log(`[DEBUG] First few calendar events:`, calendarEvents.slice(0, 3));
     
     // Filter and sort upcoming events
     const upcomingEvents = calendarEvents
