@@ -289,8 +289,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
         className={`
           fixed inset-y-0 right-0 w-80 bg-[var(--surface)] shadow-2xl border-l border-neutral-200 dark:border-neutral-700 z-50 transform transition-all duration-300 ease-in-out
           ${isChatOpen ? 'translate-x-0' : 'translate-x-full'}
-          md:static md:h-full
+          md:static md:h-screen
           ${isChatOpen ? 'md:block' : 'md:hidden'}
+          flex flex-col
         `}
       >
         {/* Chat panel header */}
@@ -309,7 +310,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
 
         {/* Chat widget container */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <ChatWidget
             onClose={() => setIsChatOpen(false)}
             key="sidebar-chatwidget"
