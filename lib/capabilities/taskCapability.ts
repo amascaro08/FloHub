@@ -116,6 +116,7 @@ const cleanTaskText = (text: string): string => {
 };
 
 async function handleTaskCommand(command: string, args: string, userId: string): Promise<string> {
+  console.log(`[DEBUG] handleTaskCommand called with command: "${command}", args: "${args}", userId: "${userId}"`);
   try {
     switch (command.toLowerCase()) {
       case "add":
@@ -156,6 +157,7 @@ async function handleTaskCommand(command: string, args: string, userId: string):
 }
 
 async function addTask(args: string, userId: string): Promise<string> {
+  console.log(`[DEBUG] addTask called with args: "${args}", userId: "${userId}"`);
   if (!args.trim()) {
     return "Please specify what task you'd like to add. For example: 'add task: Review presentation due tomorrow'";
   }
@@ -475,17 +477,19 @@ export const taskCapability: FloCatCapability = {
   featureName: "Task Management",
   supportedCommands: ["add", "create", "new", "list", "show", "view", "complete", "done", "finish", "delete", "remove", "search", "find", "update", "edit", "modify"],
   triggerPhrases: [
-    "add task", "create task", "new task",
-    "list tasks", "show tasks", "view tasks", "my tasks",
-    "complete task", "finish task", "done task",
-    "delete task", "remove task",
-    "search tasks", "find task",
-    "update task", "edit task", "modify task"
+    "add task", "create task", "new task", "add a task", "create a task", "make a task",
+    "list tasks", "show tasks", "view tasks", "my tasks", "show my tasks",
+    "complete task", "finish task", "done task", "mark task complete",
+    "delete task", "remove task", "delete a task",
+    "search tasks", "find task", "find tasks",
+    "update task", "edit task", "modify task", "change task"
   ],
   handler: async (command: string, args: string) => {
-    // In a real implementation, you'd get the user ID from the session/auth context
-    // For now, we'll need this to be passed in somehow
-    const userId = (global as any).currentUserId || 'user@example.com';
+    // Get the user ID from the global context set by the API endpoint
+    const userId = (global as any).currentUserId;
+    if (!userId) {
+      return "Sorry, I need to know who you are to manage tasks. Please make sure you're logged in.";
+    }
     return await handleTaskCommand(command, args, userId);
   }
 };

@@ -187,10 +187,12 @@ export default async function handler(
   const capabilityMatch = findMatchingCapability(userInput);
   if (capabilityMatch) {
     try {
+      console.log(`[DEBUG] Capability matched: ${capabilityMatch.capability.featureName}, Command: ${capabilityMatch.command}, Args: "${capabilityMatch.args}"`);
       const capabilityResponse = await capabilityMatch.capability.handler(
         capabilityMatch.command, 
         capabilityMatch.args
       );
+      console.log(`[DEBUG] Capability response: ${capabilityResponse}`);
       return res.status(200).json({ reply: capabilityResponse });
     } catch (error) {
       console.error("Error in capability handler:", error);
@@ -218,23 +220,37 @@ export default async function handler(
     return response.ok;
   };
 
-  // ── Add Task Detection ─────────────────────────────
-  const taskMatch = userInput.match(/(?:add|new) task(?: called)? (.+?)(?: due ([\w\s]+))?$/i);
-  if (taskMatch && taskMatch[1]) {
-    const taskText = taskMatch[1].trim();
-    const duePhrase = taskMatch[2]?.trim().toLowerCase();
-    const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+  // ── Enhanced Add Task Detection ─────────────────────────────
+  // More flexible task detection patterns
+  const taskPatterns = [
+    /(?:add|create|new|make)\s+(?:a\s+)?task:?\s*(.+)/i,
+    /(?:add|create|new|make)\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
+    /task:?\s*(.+)/i
+  ];
+  
+  for (const pattern of taskPatterns) {
+    const taskMatch = userInput.match(pattern);
+    if (taskMatch && taskMatch[1]) {
+      const taskText = taskMatch[1].trim();
+      
+      // Check for due date in the task text
+      const dueMatch = taskText.match(/(.+?)\s+due\s+(.+)$/i);
+      const finalTaskText = dueMatch ? dueMatch[1].trim() : taskText;
+      const duePhrase = dueMatch ? dueMatch[2].trim().toLowerCase() : null;
+      const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
 
-    const payload: any = { text: taskText };
-    if (dueDate) payload.dueDate = dueDate;
+      const payload: any = { text: finalTaskText };
+      if (dueDate) payload.dueDate = dueDate;
 
-    const success = await callInternalApi("/api/tasks", "POST", payload, req);
-    if (success) {
-      return res.status(200).json({
-        reply: `✅ Task "${taskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
-      });
-    } else {
-      return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+      console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}`);
+      const success = await callInternalApi("/api/tasks", "POST", payload, req);
+      if (success) {
+        return res.status(200).json({
+          reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+        });
+      } else {
+        return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+      }
     }
   }
 
