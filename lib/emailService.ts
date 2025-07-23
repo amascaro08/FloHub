@@ -30,7 +30,7 @@ class EmailService {
 
     try {
       if (emailProvider === 'gmail') {
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
             user: process.env.EMAIL_USER!,
@@ -38,7 +38,7 @@ class EmailService {
           },
         });
       } else if (emailProvider === 'smtp') {
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST!,
           port: parseInt(process.env.SMTP_PORT || '587'),
           secure: process.env.SMTP_SECURE === 'true',
