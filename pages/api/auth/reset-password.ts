@@ -3,6 +3,7 @@ import { db } from '../../../lib/drizzle';
 import { users } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
+import { emailService } from '../../../lib/emailService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -41,12 +42,33 @@ export default async function handler(
       })
       .where(eq(users.email, email));
 
-    // In a real application, you would send an email here
-    // For now, we'll just return the token (in production, send via email)
+    // Generate reset URL
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
-    // TODO: Send email with resetUrl
-    console.log('Password reset URL:', resetUrl);
+    // Send password reset email
+    try {
+      const emailSent = await emailService.sendPasswordResetEmail(
+        email, 
+        resetUrl, 
+        user[0].firstName || undefined
+      );
+      
+      if (emailSent) {
+        console.log('Password reset email sent successfully to:', email);
+      } else {
+        console.warn('Failed to send password reset email to:', email);
+        // For development, log the reset URL
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Development: Password reset URL:', resetUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      // For development, log the reset URL as fallback
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Development fallback: Password reset URL:', resetUrl);
+      }
+    }
 
     return res.status(200).json({ 
       message: 'If an account with that email exists, a password reset link has been sent.' 
