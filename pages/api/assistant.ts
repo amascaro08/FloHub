@@ -144,11 +144,16 @@ export default async function handler(
       lowerPrompt.includes("event") || lowerPrompt.includes("today") ||
       lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
       lowerPrompt.includes("upcoming")) {
+    
+    console.log(`[DEBUG] Calendar query detected: "${userInput}"`);
+    
     try {
       // Fetch fresh calendar events for calendar-related queries
       const now = new Date();
       const timeMin = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24 hours ago
       const timeMax = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days from now
+      
+      console.log(`[DEBUG] Fetching calendar from: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`);
       
       const calendarResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`, {
         headers: {
@@ -156,17 +161,28 @@ export default async function handler(
         },
       });
       
+      console.log(`[DEBUG] Calendar API response status: ${calendarResponse.status}`);
+      
       if (calendarResponse.ok) {
         const calendarData = await calendarResponse.json();
         const freshCalendarEvents = calendarData.events || [];
         
+        console.log(`[DEBUG] Fresh calendar events count: ${freshCalendarEvents.length}`);
+        console.log(`[DEBUG] First few events:`, freshCalendarEvents.slice(0, 3));
+        
         // Load smart assistant with fresh calendar data
         await smartAssistant.loadUserContext(freshCalendarEvents);
         const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+        
+        console.log(`[DEBUG] Smart assistant response:`, queryResponse);
+        
         if (queryResponse && !queryResponse.includes("I can help you with:")) {
           return res.status(200).json({ reply: queryResponse });
         }
       } else {
+        const errorText = await calendarResponse.text();
+        console.log(`[DEBUG] Calendar API error: ${calendarResponse.status} - ${errorText}`);
+        
         // If calendar fetch fails, still try with cached data but inform user
         await smartAssistant.loadUserContext();
         const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
