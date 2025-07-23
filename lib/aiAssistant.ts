@@ -818,7 +818,7 @@ export class SmartAIAssistant {
     }, {} as { [key: string]: number });
 
     const summaryText = Object.entries(summary)
-      .map(([type, count]: [string, number]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+      .map(([type, count]) => `${count as number} ${type}${(count as number) > 1 ? 's' : ''}`)
       .join(', ');
 
     return `I found ${taggedItems.length} items related to "${tag}": ${summaryText}. Would you like me to list them?`;
