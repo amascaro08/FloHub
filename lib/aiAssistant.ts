@@ -106,7 +106,7 @@ export class SmartAIAssistant {
     this.userId = userId;
   }
 
-  async loadUserContext(): Promise<UserContext> {
+  async loadUserContext(freshCalendarEvents?: any[]): Promise<UserContext> {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -206,7 +206,7 @@ export class SmartAIAssistant {
         habitCompletions: userHabitCompletions,
         journalEntries: userJournalEntries,
         journalMoods: userJournalMoods,
-        calendarEvents: userCalendarEvents,
+        calendarEvents: freshCalendarEvents || userCalendarEvents,
         conversations: userConversations,
         userSettings: settings[0] || null
       };
@@ -909,6 +909,22 @@ export class SmartAIAssistant {
 
     // Default calendar overview
     if (upcomingEvents.length === 0) {
+      // Check if we have any related meeting notes to provide context
+      const meetings = this.context?.meetings || [];
+      const recentMeetings = meetings.filter(meeting => {
+        const meetingDate = new Date(meeting.createdAt);
+        const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+        return meetingDate >= twoDaysAgo;
+      });
+
+      if (recentMeetings.length > 0) {
+        const meetingList = recentMeetings.slice(0, 3).map(meeting => 
+          `• ${meeting.eventTitle || meeting.title || 'Meeting'} (${this.formatTimeAgo(new Date(meeting.createdAt))})`
+        ).join('\n');
+        
+        return `📅 Your calendar is currently empty. No upcoming events scheduled!\n\n📝 However, I found some recent meeting notes that might be relevant:\n\n${meetingList}\n\n*These are from your meeting notes, not scheduled calendar events.*`;
+      }
+      
       return "Your calendar is currently empty. No upcoming events scheduled! 📅";
     }
 
@@ -919,7 +935,27 @@ export class SmartAIAssistant {
       return `• ${event.summary || event.title || 'Untitled Event'} ${timeUntil}`;
     }).join('\n');
 
-    return `📅 Your upcoming events:\n\n${eventList}${upcomingEvents.length > 3 ? `\n\n...and ${upcomingEvents.length - 3} more` : ''}`;
+    // Check for related meeting notes that might provide additional context
+    const meetings = this.context?.meetings || [];
+    const relevantMeetings = meetings.filter(meeting => {
+      const meetingTitle = (meeting.eventTitle || meeting.title || '').toLowerCase();
+      return next3Events.some(event => {
+        const eventTitle = (event.summary || event.title || '').toLowerCase();
+        return meetingTitle.includes(eventTitle) || eventTitle.includes(meetingTitle);
+      });
+    });
+
+    let response = `📅 Your upcoming events:\n\n${eventList}${upcomingEvents.length > 3 ? `\n\n...and ${upcomingEvents.length - 3} more` : ''}`;
+    
+    if (relevantMeetings.length > 0) {
+      const relatedNotes = relevantMeetings.slice(0, 2).map(meeting => 
+        `• ${meeting.eventTitle || meeting.title} - ${meeting.content?.substring(0, 100)}${meeting.content?.length > 100 ? '...' : ''}`
+      ).join('\n');
+      
+      response += `\n\n📝 **Related meeting notes:**\n${relatedNotes}`;
+    }
+
+    return response;
   }
 
   private formatTimeUntil(date: Date): string {

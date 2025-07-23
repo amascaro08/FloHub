@@ -166,6 +166,15 @@ export default async function handler(
         if (queryResponse && !queryResponse.includes("I can help you with:")) {
           return res.status(200).json({ reply: queryResponse });
         }
+      } else {
+        // If calendar fetch fails, still try with cached data but inform user
+        await smartAssistant.loadUserContext();
+        const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+        if (queryResponse && !queryResponse.includes("I can help you with:")) {
+          return res.status(200).json({ 
+            reply: queryResponse + "\n\n*Note: I used cached calendar data as I couldn't fetch your latest events.*" 
+          });
+        }
       }
     } catch (error) {
       console.error("Error processing calendar query:", error);

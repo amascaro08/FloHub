@@ -145,7 +145,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
               ? 'bg-[var(--primary)] text-white ml-4' 
               : 'bg-[var(--neutral-100)] dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100 mr-4'
           }`}>
-            {message.htmlContent ? (
+            {message.isLoading ? (
+              <div className="flex items-center gap-3">
+                <div className="animate-spin w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
+                <span className="text-sm text-[var(--fg-muted)] dark:text-gray-300">
+                  {message.loadingMessage || 'FloCat is thinking...'}
+                </span>
+              </div>
+            ) : message.htmlContent ? (
               <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} className="prose prose-sm dark:prose-invert max-w-none" />
             ) : (
               <p className="text-sm leading-relaxed">{message.content}</p>
