@@ -389,18 +389,18 @@ export default function MeetingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface)]">
+    <div className="min-h-screen bg-[var(--surface)] dark:bg-gray-900">
       {/* Header Section */}
-      <div className="bg-white border-b border-[var(--neutral-200)] px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-[var(--neutral-200)] dark:border-gray-700 px-6 py-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--neutral-900)] flex items-center">
+            <h1 className="text-2xl font-bold text-[var(--neutral-900)] dark:text-white flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mr-3 text-[var(--primary-color)]" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
               </svg>
               Meeting Notes
             </h1>
-            <p className="text-[var(--neutral-600)] mt-1">Capture meetings, track actions, and stay organized</p>
+            <p className="text-[var(--neutral-600)] dark:text-gray-300 mt-1">Capture meetings, track actions, and stay organized</p>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3">
@@ -483,10 +483,10 @@ export default function MeetingsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-180px)]">
+      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-180px)]">
         {/* Left Column: Meeting Note List */}
-        <div className="w-full lg:w-96 border-r border-[var(--neutral-200)] bg-white overflow-y-auto">
-          <div className="p-6">
+        <div className={`w-full lg:w-96 border-r lg:border-r border-b lg:border-b-0 border-[var(--neutral-200)] dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto ${selectedNote ? 'hidden lg:block' : ''}`}>
+          <div className="p-4 lg:p-6">
             <MeetingNoteList
               notes={filteredMeetingNotes}
               selectedNoteId={selectedNoteId}
@@ -499,9 +499,22 @@ export default function MeetingsPage() {
         </div>
 
         {/* Right Column: Meeting Note Detail */}
-        <div className="flex-1 bg-[var(--surface)] overflow-y-auto">
+        <div className="flex-1 bg-[var(--surface)] dark:bg-gray-900 overflow-y-auto">
           {selectedNote ? (
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
+              {/* Mobile Back Button */}
+              <div className="lg:hidden mb-4">
+                <button
+                  onClick={() => setSelectedNoteId(null)}
+                  className="flex items-center text-[var(--primary-color)] hover:text-[var(--primary-hover)] transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Meeting Notes
+                </button>
+              </div>
+              
               <MeetingNoteDetail
                 note={selectedNote}
                 onSave={handleUpdateMeetingNote}
@@ -512,15 +525,15 @@ export default function MeetingsPage() {
               />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-full min-h-[400px] p-6">
               <div className="text-center">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[var(--neutral-100)] flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[var(--neutral-100)] dark:bg-gray-700 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[var(--neutral-400)] dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Select a meeting note</h3>
-                <p className="text-[var(--neutral-600)] mb-6">Choose a meeting note from the list to view and edit its details</p>
+                <h3 className="text-lg font-medium text-[var(--neutral-900)] dark:text-white mb-2">Select a meeting note</h3>
+                <p className="text-[var(--neutral-600)] dark:text-gray-300 mb-6">Choose a meeting note from the list to view and edit its details</p>
                 <button
                   className="btn-primary"
                   onClick={() => setShowModal(true)}

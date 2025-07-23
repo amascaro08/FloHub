@@ -248,7 +248,7 @@ export default function MeetingNoteDetail({
   }, [selectedTags]);
 
   return (
-    <div className="bg-white rounded-xl border border-[var(--neutral-200)] overflow-hidden shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-[var(--neutral-200)] dark:border-gray-700 overflow-hidden shadow-sm">
       {/* Header */}
       <div className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-color)]/80 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -306,7 +306,7 @@ export default function MeetingNoteDetail({
               </svg>
               AI Summary
             </h3>
-            <p className="text-[var(--neutral-700)] leading-relaxed">{note.aiSummary}</p>
+            <p className="text-[var(--neutral-700)] dark:text-gray-300 leading-relaxed">{note.aiSummary}</p>
           </div>
         )}
 
@@ -314,7 +314,7 @@ export default function MeetingNoteDetail({
           {/* Title and Basic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="meeting-note-detail-title" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+              <label htmlFor="meeting-note-detail-title" className="block text-sm font-medium text-[var(--neutral-700)] dark:text-gray-300 mb-2">
                 Meeting Title
               </label>
               <input
@@ -429,8 +429,8 @@ export default function MeetingNoteDetail({
           </div>
 
           {/* Actions Section */}
-          <div className="border border-[var(--neutral-200)] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
+          <div className="border border-[var(--neutral-200)] dark:border-gray-700 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center text-[var(--neutral-900)] dark:text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary-color)]" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -494,9 +494,9 @@ export default function MeetingNoteDetail({
             {/* Add New Action */}
             <div className="border-t border-[var(--neutral-200)] pt-4">
               <div className="space-y-3">
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <textarea
-                    className="input-modern flex-1 min-h-[80px] resize-y"
+                    className="input-modern flex-1 sm:flex-[3] min-h-[80px] resize-y"
                     placeholder="Describe the action item..."
                     value={newActionDescription}
                     onChange={(e) => setNewActionDescription(e.target.value)}
@@ -504,7 +504,7 @@ export default function MeetingNoteDetail({
                     rows={2}
                   />
                   <select
-                    className="input-modern w-40"
+                    className="input-modern w-full sm:w-32 sm:flex-shrink-0"
                     value={newActionAssignedTo}
                     onChange={(e) => {
                       setNewActionAssignedTo(e.target.value);
@@ -514,8 +514,8 @@ export default function MeetingNoteDetail({
                     }}
                     disabled={isSaving}
                   >
-                    <option value="Me">Assign to Me</option>
-                    <option value="Other">Assign to Other</option>
+                    <option value="Me">Me</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 

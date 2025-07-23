@@ -387,7 +387,8 @@
   @apply bg-white border border-[var(--neutral-300)] text-[var(--neutral-700)] px-4 py-2 rounded-lg font-medium
     hover:bg-[var(--neutral-50)] hover:border-[var(--neutral-400)] transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-opacity-50
-    active:scale-95 shadow-sm hover:shadow;
+    active:scale-95 shadow-sm hover:shadow
+    dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600;
 }
 
 /* Text truncation utilities */

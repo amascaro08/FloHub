@@ -190,7 +190,7 @@ export default function AddMeetingNoteModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-color)]/80 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -236,20 +236,23 @@ export default function AddMeetingNoteModal({
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] mb-2">Meeting Setup</h3>
-                  <p className="text-[var(--neutral-600)]">Choose your meeting type and provide basic details</p>
+                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] dark:text-white mb-2">Meeting Setup</h3>
+                  <p className="text-[var(--neutral-600)] dark:text-gray-300">Choose your meeting type and provide basic details</p>
                 </div>
 
                 {/* Meeting Type Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className={`
                     relative border-2 rounded-xl p-4 cursor-pointer transition-all
-                    ${!isAdhoc && selectedEventId ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5' : 'border-[var(--neutral-200)] hover:border-[var(--neutral-300)]'}
+                    ${!isAdhoc && selectedEventId 
+                      ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5 dark:bg-[var(--primary-color)]/10' 
+                      : 'border-[var(--neutral-200)] dark:border-gray-600 hover:border-[var(--neutral-300)] dark:hover:border-gray-500'
+                    }
                   `}>
                     <div className="flex items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-[var(--neutral-900)]">Scheduled Meeting</h4>
-                        <p className="text-sm text-[var(--neutral-600)] mt-1">Link to an existing calendar event</p>
+                        <h4 className="font-medium text-[var(--neutral-900)] dark:text-white">Scheduled Meeting</h4>
+                        <p className="text-sm text-[var(--neutral-600)] dark:text-gray-300 mt-1">Link to an existing calendar event</p>
                         
                                                  {calendarLoading ? (
                            <div className="mt-3">
@@ -317,14 +320,17 @@ export default function AddMeetingNoteModal({
                   <div 
                     className={`
                       relative border-2 rounded-xl p-4 cursor-pointer transition-all
-                      ${isAdhoc ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5' : 'border-[var(--neutral-200)] hover:border-[var(--neutral-300)]'}
+                      ${isAdhoc 
+                        ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5 dark:bg-[var(--primary-color)]/10' 
+                        : 'border-[var(--neutral-200)] dark:border-gray-600 hover:border-[var(--neutral-300)] dark:hover:border-gray-500'
+                      }
                     `}
                     onClick={() => handleAdhocChange({ target: { checked: !isAdhoc } } as any)}
                   >
                     <div className="flex items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-[var(--neutral-900)]">Ad-hoc Meeting</h4>
-                        <p className="text-sm text-[var(--neutral-600)] mt-1">For unscheduled meetings and quick notes</p>
+                        <h4 className="font-medium text-[var(--neutral-900)] dark:text-white">Ad-hoc Meeting</h4>
+                        <p className="text-sm text-[var(--neutral-600)] dark:text-gray-300 mt-1">For unscheduled meetings and quick notes</p>
                       </div>
                       <div className={`
                         w-6 h-6 rounded-full border-2 flex items-center justify-center
@@ -387,8 +393,8 @@ export default function AddMeetingNoteModal({
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] mb-2">Meeting Details</h3>
-                  <p className="text-[var(--neutral-600)]">Add basic details (you can add action items after creating the note)</p>
+                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] dark:text-white mb-2">Meeting Details</h3>
+                  <p className="text-[var(--neutral-600)] dark:text-gray-300">Add basic details (you can add action items after creating the note)</p>
                 </div>
 
                 {/* Agenda */}
@@ -416,11 +422,11 @@ export default function AddMeetingNoteModal({
                     <RichTextEditor
                       content={content}
                       onChange={setContent}
-                      placeholder="Write your meeting notes here. Use the toolbar to format text, add lists, and more..."
+                      placeholder="Add meeting notes here (optional - you can edit this later)..."
                     />
                   </div>
                   <p className="text-xs text-[var(--neutral-500)] mt-2">
-                    Rich text formatting is supported. Your notes will be automatically saved.
+                    Meeting notes are optional. You can add or edit them later in the main view.
                   </p>
                 </div>
               </div>
