@@ -1,9 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '@/lib/drizzle';
-import { meetings } from '@/db/schema';
+import { notes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import PdfPrinter from 'pdfmake'; // Example using pdfmake
-import vfsFonts from 'pdfmake/build/vfs_fonts';
+import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/user";
+import PdfPrinter from 'pdfmake';
+const vfsFonts = require('pdfmake/build/vfs_fonts');
 import { Action } from '@/types/app';
 
 interface MeetingNote {
@@ -40,25 +42,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: 'A Meeting Note ID is required' });
   }
 
+  // Authenticate user
+  const decoded = auth(req);
+  if (!decoded) {
+    return res.status(401).json({ message: "Not signed in" });
+  }
+
+  const user = await getUserById(decoded.userId);
+  if (!user?.email) {
+    return res.status(401).json({ message: "User not found" });
+  }
+
   try {
-    // Fetch the selected meeting note from Firestore
-    const [meetingNote] = await db.select().from(meetings).where(eq(meetings.id, Number(id)));
+    // Fetch the selected meeting note from the notes table
+    const [meetingNote] = await db.select().from(notes).where(eq(notes.id, Number(id)));
 
     if (!meetingNote) {
       return res.status(404).json({ message: 'Meeting note not found' });
     }
 
-    // Implement PDF generation logic here using pdfmake
+    // Implement PDF generation logic here using pdfmake with built-in fonts
     const fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italics.ttf',
-        bolditalics: 'Roboto-MediumItalics.ttf'
+      Helvetica: {
+        normal: 'Helvetica',
+        bold: 'Helvetica-Bold',
+        italics: 'Helvetica-Oblique',
+        bolditalics: 'Helvetica-BoldOblique'
       }
     };
-
-    const printer = new PdfPrinter(fonts); // Use the printer initialized with fonts
+    
+    const printer = new PdfPrinter(fonts);
 
     const content: any[] = [];
 
@@ -80,11 +93,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         content.push({ text: `Tags: ${(meetingNote.tags as string[]).join(', ')}`, style: 'tags' });
     }
 
+    // Add Agenda
+    if (meetingNote.agenda) {
+      content.push({ text: '\nAgenda:', style: 'heading' });
+      content.push({ text: meetingNote.agenda, style: 'body' });
+    }
 
     // Add Content/Minutes
     if (meetingNote.content) {
       content.push({ text: '\nMeeting Minutes:', style: 'heading' });
-      content.push({ text: meetingNote.content, style: 'body' });
+      content.push({ text: meetingNote.content.replace(/<[^>]*>/g, ''), style: 'body' });
+    }
+
+    // Add AI Summary
+    if (meetingNote.aiSummary) {
+      content.push({ text: '\nAI Summary:', style: 'heading' });
+      content.push({ text: meetingNote.aiSummary, style: 'body' });
     }
 
     // Add Actions
@@ -136,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       },
       defaultStyle: {
-        font: 'Roboto'
+        font: 'Helvetica'
       }
     };
 

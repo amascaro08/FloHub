@@ -1,53 +1,62 @@
 // components/meetings/AddMeetingNoteModal.tsx
 "use client";
 
-import { useState, FormEvent, useEffect } from "react"; // Import useEffect
+import { useState, FormEvent, useEffect } from "react";
 import CreatableSelect from 'react-select/creatable';
-import useSWR from "swr"; // Import useSWR
-import type { CalendarEvent } from "@/types/calendar.d.ts"; // Import CalendarEvent type
-import type { Action } from "@/types/app"; // Import Action type
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique IDs
+import useSWR from "swr";
+import type { CalendarEvent } from "@/types/calendar.d.ts";
+import type { Action } from "@/types/app";
+import { v4 as uuidv4 } from 'uuid';
+import RichTextEditor from '../journal/RichTextEditor';
 
 type AddMeetingNoteModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  // Update onSave type to include new fields and actions
   onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => Promise<void>;
   isSaving: boolean;
-  existingTags: string[]; // Add existingTags prop
-  workCalendarEvents: CalendarEvent[]; // Add workCalendarEvents prop
+  existingTags: string[];
+  workCalendarEvents: CalendarEvent[];
+  calendarLoading?: boolean;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json()); // Define fetcher
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving, existingTags, workCalendarEvents }: AddMeetingNoteModalProps) { // Receive workCalendarEvents prop
+export default function AddMeetingNoteModal({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  isSaving, 
+  existingTags, 
+  workCalendarEvents,
+  calendarLoading = false
+}: AddMeetingNoteModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [agenda, setAgenda] = useState(""); // Add state for agenda
+  const [agenda, setAgenda] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined); // State for selected event ID
-  const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined); // State for selected event title
-  const [isAdhoc, setIsAdhoc] = useState(false); // State for ad-hoc flag
-  const [actions, setActions] = useState<Action[]>([]); // State for actions
-  const [newActionDescription, setNewActionDescription] = useState(""); // State for new action input
-  const [assignedToType, setAssignedToType] = useState("Me"); // State for assigned to type (Me or Other)
-  const [otherAssignedToName, setOtherAssignedToName] = useState(""); // State for the name when assigned to Other
-
+  const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined);
+  const [selectedEventTitle, setSelectedEventTitle] = useState<string | undefined>(undefined);
+  const [isAdhoc, setIsAdhoc] = useState(false);
+  const [actions, setActions] = useState<Action[]>([]);
+  const [newActionDescription, setNewActionDescription] = useState("");
+  const [assignedToType, setAssignedToType] = useState("Me");
+  const [otherAssignedToName, setOtherAssignedToName] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
 
   const handleAddAction = async () => {
     const assignedTo = assignedToType === "Me" ? "Me" : otherAssignedToName.trim();
-    if (newActionDescription.trim() && assignedTo) { // Ensure description and assignedTo are not empty
+    if (newActionDescription.trim() && assignedTo) {
       const newAction: Action = {
-        id: uuidv4(), // Generate a unique ID
+        id: uuidv4(),
         description: newActionDescription.trim(),
-        assignedTo: assignedTo, // Use the determined assigned person
-        status: "todo", // Default status
-        createdAt: new Date().toISOString(), // Timestamp
+        assignedTo: assignedTo,
+        status: "todo",
+        createdAt: new Date().toISOString(),
       };
       setActions([...actions, newAction]);
-      setNewActionDescription(""); // Clear the input field
-      setAssignedToType("Me"); // Reset assigned to type
-      setOtherAssignedToName(""); // Clear other assigned to name
+      setNewActionDescription("");
+      setAssignedToType("Me");
+      setOtherAssignedToName("");
       
       // If assignedTo is "Me", automatically add to tasks list as a work task
       if (assignedTo === "Me") {
@@ -57,7 +66,7 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text: newAction.description,
-              source: "work", // Tag as a work task
+              source: "work",
             }),
           });
           
@@ -74,7 +83,6 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Content is required, and either an event must be selected or it must be ad-hoc
     if (!content.trim() || isSaving || (!selectedEventId && !isAdhoc)) {
       return;
     }
@@ -86,36 +94,35 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
       eventId: selectedEventId,
       eventTitle: selectedEventTitle,
       isAdhoc: isAdhoc,
-      actions: actions, // Include actions in the saved note
-      agenda: agenda, // Include agenda in the saved note
+      actions: actions,
+      agenda: agenda,
     });
 
     // Clear form after saving
     setTitle("");
     setContent("");
-    setAgenda(""); // Clear agenda
+    setAgenda("");
     setSelectedTags([]);
     setSelectedEventId(undefined);
     setSelectedEventTitle(undefined);
     setIsAdhoc(false);
-    setActions([]); // Clear actions
-    setNewActionDescription(""); // Clear new action input
-    setAssignedToType("Me"); // Reset assigned to type
-    setOtherAssignedToName(""); // Clear other assigned to name
-    onClose(); // Close modal after saving
+    setActions([]);
+    setNewActionDescription("");
+    setAssignedToType("Me");
+    setOtherAssignedToName("");
+    setCurrentStep(1);
+    onClose();
   };
 
   const tagOptions = existingTags.map(tag => ({ value: tag, label: tag }));
   const eventOptions = workCalendarEvents.map(event => {
-    // Check if event has the required properties
     if (!event || !event.id || !event.summary) {
       console.warn("Invalid event format:", event);
-      return null; // Skip this event
+      return null;
     }
     return { value: event.id, label: event.summary };
-  }).filter(option => option !== null) as { value: string; label: string }[]; // Filter out null values and cast to the correct type
+  }).filter(option => option !== null) as { value: string; label: string }[];
 
-  // Log passed-in events and generated options for debugging
   useEffect(() => {
     console.log("Passed-in work calendar events:", workCalendarEvents);
     console.log("Generated event options:", eventOptions);
@@ -131,15 +138,18 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
 
   const handleEventChange = (selectedOption: any) => {
     if (selectedOption) {
-      const selectedEvent = workCalendarEvents.find(event => event.id === selectedOption.value); // Use workCalendarEvents
+      const selectedEvent = workCalendarEvents.find(event => event.id === selectedOption.value);
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
       setTitle(selectedOption.label); // Set title to event summary
-      setIsAdhoc(false); // If an event is selected, it's not ad-hoc
+      setIsAdhoc(false);
     } else {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setTitle(""); // Clear title
+      // Don't clear title if user typed something - only clear if it was auto-populated
+      if (selectedEventId) {
+        setTitle(""); // Only clear if we had an event selected before
+      }
     }
   };
 
@@ -148,271 +158,352 @@ export default function AddMeetingNoteModal({ isOpen, onClose, onSave, isSaving,
     if (e.target.checked) {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setTitle(""); // Clear title for ad-hoc
+      // Don't auto-clear title when switching to ad-hoc, let user keep what they typed
     }
   };
 
+  const removeAction = (actionId: string) => {
+    setActions(actions.filter(action => action.id !== actionId));
+  };
+
+  const nextStep = () => {
+    if (currentStep < 3) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const canProceedToStep2 = () => {
+    // Allow proceeding if:
+    // 1. Ad-hoc is selected and title is provided, OR
+    // 2. An event is selected and title is provided, OR  
+    // 3. Calendar is still loading but ad-hoc is selected with title
+    return (isAdhoc && title.trim()) || (selectedEventId && title.trim());
+  };
+
+  const canCreateNote = () => {
+    return title.trim(); // Just need a title to create the note
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--surface)] p-5 md:p-6 rounded-xl shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-neutral-200 dark:border-neutral-700 animate-slide-up">
-        <h2 className="text-xl font-semibold mb-5 pb-2 border-b border-neutral-200 dark:border-neutral-700 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-          </svg>
-          Add New Meeting Note
-        </h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label htmlFor="note-title" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Title</label>
-            <input
-              type="text"
-              id="note-title"
-              className="input-modern"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isSaving || selectedEventId !== undefined}
-              placeholder="Meeting title"
-            />
-          </div>
-          
-          {/* New fields for meeting notes */}
-          {workCalendarEvents.length > 0 && (
-            <div>
-              <label htmlFor="event-select" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-color)]/80 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
-                Select Event (Optional)
-              </label>
-              <CreatableSelect
-                options={eventOptions}
-                onChange={handleEventChange}
-                placeholder="Select an event..."
-                isDisabled={isSaving || eventOptions.length === 0}
-                isClearable
-                isSearchable
-                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
-                classNamePrefix="react-select"
-                theme={(theme) => ({
-                  ...theme,
-                  colors: {
-                    ...theme.colors,
-                    primary: '#14B8A6',
-                    primary25: '#99F6E4',
-                  },
-                })}
-              />
-              {workCalendarEvents.length === 0 &&
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  No work calendar events found for the selected time range.
-                </p>
-              }
-            </div>
-          )}
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="adhoc-meeting"
-              className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-              checked={isAdhoc}
-              onChange={handleAdhocChange}
-              disabled={isSaving || selectedEventId !== undefined}
-            />
-            <label htmlFor="adhoc-meeting" className="ml-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              Ad-hoc Meeting
-            </label>
-          </div>
-          
-          {/* Agenda Input Field */}
-          <div>
-            <label htmlFor="meeting-note-agenda" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-              </svg>
-              Agenda
-            </label>
-            <textarea
-              id="meeting-note-agenda"
-              className="input-modern"
-              rows={3}
-              placeholder="Enter meeting agenda here..."
-              value={agenda}
-              onChange={(e) => setAgenda(e.target.value)}
-              disabled={isSaving}
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="note-content" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-              </svg>
-              Content
-            </label>
-            <textarea
-              id="note-content"
-              className="input-modern"
-              rows={4}
-              placeholder="Write your meeting notes here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={isSaving}
-            />
-          </div>
-          {/* Actions Section */}
-          <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl p-4">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Actions
-            </label>
-            
-            <div className="space-y-3 mb-3">
-              <input
-                type="text"
-                className="input-modern"
-                placeholder="Action item description..."
-                value={newActionDescription}
-                onChange={(e) => setNewActionDescription(e.target.value)}
-                disabled={isSaving}
-              />
-              
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  className="input-modern"
-                  value={assignedToType}
-                  onChange={(e) => {
-                    setAssignedToType(e.target.value);
-                    if (e.target.value !== "Other") {
-                      setOtherAssignedToName("");
-                    }
-                  }}
-                  disabled={isSaving}
-                >
-                  <option value="Me">Me</option>
-                  <option value="Other">Other</option>
-                </select>
-                
-                {assignedToType === "Other" && (
-                  <input
-                    type="text"
-                    className="input-modern"
-                    placeholder="Enter name..."
-                    value={otherAssignedToName}
-                    onChange={(e) => setOtherAssignedToName(e.target.value)}
-                    disabled={isSaving}
-                  />
-                )}
               </div>
-              
-              <button
-                type="button"
-                className="btn-primary flex items-center justify-center w-full"
-                onClick={handleAddAction}
-                disabled={isSaving || !newActionDescription.trim() || (assignedToType === "Other" && !otherAssignedToName.trim())}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-                Add Action
-              </button>
+              <div>
+                <h2 className="text-xl font-bold text-white">Create Meeting Note</h2>
+                <p className="text-white/80 text-sm">Step {currentStep} of 2</p>
+              </div>
             </div>
-            
-            {actions.length > 0 ? (
-              <div className="space-y-2 mt-3 border-t border-neutral-200 dark:border-neutral-700 pt-3">
-                <h4 className="font-medium text-sm text-neutral-700 dark:text-neutral-300">Added Actions:</h4>
-                <ul className="space-y-2">
-                  {actions.map((action) => (
-                    <li key={action.id} className="flex items-start bg-neutral-50 dark:bg-neutral-800 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414l.793.793 2.293-2.293a1 1 0 011.414 1.414z" clipRule="evenodd" />
-                      </svg>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{action.description}</p>
-                        {action.assignedTo && (
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                            Assigned to: <span className="font-medium">{action.assignedTo}</span>
-                          </p>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+              disabled={isSaving}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-4 flex space-x-2">
+            {[1, 2].map((step) => (
+              <div
+                key={step}
+                className={`flex-1 h-2 rounded-full transition-all ${
+                  step <= currentStep ? 'bg-white' : 'bg-white/30'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+          <form onSubmit={handleSubmit} className="p-6">
+            {/* Step 1: Meeting Setup */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] dark:text-white mb-2">Meeting Setup</h3>
+                  <p className="text-[var(--neutral-600)] dark:text-gray-300">Choose your meeting type and provide basic details</p>
+                </div>
+
+                {/* Meeting Type Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`
+                    relative border-2 rounded-xl p-4 cursor-pointer transition-all
+                    ${!isAdhoc && selectedEventId 
+                      ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5 dark:bg-[var(--primary-color)]/10' 
+                      : 'border-[var(--neutral-200)] dark:border-gray-600 hover:border-[var(--neutral-300)] dark:hover:border-gray-500'
+                    }
+                  `}>
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-[var(--neutral-900)] dark:text-white">Scheduled Meeting</h4>
+                        <p className="text-sm text-[var(--neutral-600)] dark:text-gray-300 mt-1">Link to an existing calendar event</p>
+                        
+                                                 {calendarLoading ? (
+                           <div className="mt-3">
+                             <div className="animate-pulse">
+                               <div className="h-10 bg-[var(--neutral-200)] rounded-lg"></div>
+                             </div>
+                             <p className="text-sm text-[var(--neutral-500)] mt-2 flex items-center">
+                               <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                               </svg>
+                               Loading calendar events...
+                             </p>
+                           </div>
+                                                   ) : workCalendarEvents.length > 0 ? (
+                            <div className="mt-3">
+                              <CreatableSelect
+                                options={eventOptions}
+                                onChange={handleEventChange}
+                                placeholder={`Select from ${workCalendarEvents.length} available events...`}
+                                isDisabled={isSaving || isAdhoc}
+                                isClearable
+                                isSearchable
+                                value={selectedEventId ? { value: selectedEventId, label: selectedEventTitle || '' } : null}
+                                className="text-sm"
+                                classNamePrefix="react-select"
+                                theme={(theme) => ({
+                                  ...theme,
+                                  colors: {
+                                    ...theme.colors,
+                                    primary: '#00C9A7',
+                                    primary25: '#00C9A7',
+                                  },
+                                })}
+                              />
+                              <p className="text-xs text-green-600 mt-1 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                {workCalendarEvents.length} work calendar events loaded
+                              </p>
+                            </div>
+                          ) : (
+                           <p className="text-sm text-[var(--neutral-500)] mt-2 flex items-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                             </svg>
+                             No work calendar events found
+                           </p>
+                         )}
+                      </div>
+                      <div className={`
+                        w-6 h-6 rounded-full border-2 flex items-center justify-center
+                        ${!isAdhoc && selectedEventId ? 'border-[var(--primary-color)] bg-[var(--primary-color)]' : 'border-[var(--neutral-300)]'}
+                      `}>
+                        {!isAdhoc && selectedEventId && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
                         )}
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`
+                      relative border-2 rounded-xl p-4 cursor-pointer transition-all
+                      ${isAdhoc 
+                        ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5 dark:bg-[var(--primary-color)]/10' 
+                        : 'border-[var(--neutral-200)] dark:border-gray-600 hover:border-[var(--neutral-300)] dark:hover:border-gray-500'
+                      }
+                    `}
+                    onClick={() => handleAdhocChange({ target: { checked: !isAdhoc } } as any)}
+                  >
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-[var(--neutral-900)] dark:text-white">Ad-hoc Meeting</h4>
+                        <p className="text-sm text-[var(--neutral-600)] dark:text-gray-300 mt-1">For unscheduled meetings and quick notes</p>
+                      </div>
+                      <div className={`
+                        w-6 h-6 rounded-full border-2 flex items-center justify-center
+                        ${isAdhoc ? 'border-[var(--primary-color)] bg-[var(--primary-color)]' : 'border-[var(--neutral-300)]'}
+                      `}>
+                        {isAdhoc && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label htmlFor="note-title" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+                    Meeting Title
+                  </label>
+                  <input
+                    type="text"
+                    id="note-title"
+                    className="input-modern"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    disabled={isSaving || (selectedEventId !== undefined && !isAdhoc)}
+                    placeholder={selectedEventId ? "Title from calendar event" : "Enter meeting title"}
+                  />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label htmlFor="note-tags" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+                    Tags
+                  </label>
+                  <CreatableSelect
+                    isMulti
+                    options={tagOptions}
+                    onChange={handleTagChange}
+                    placeholder="Select or create tags..."
+                    isDisabled={isSaving}
+                    isSearchable
+                    className="text-sm"
+                    classNamePrefix="react-select"
+                    theme={(theme) => ({
+                      ...theme,
+                      colors: {
+                        ...theme.colors,
+                        primary: '#00C9A7',
+                        primary25: '#00C9A7',
+                      },
+                    })}
+                  />
+                </div>
               </div>
-            ) : (
-              <p className="text-center text-sm text-neutral-500 dark:text-neutral-400 italic mt-2">
-                No actions added yet
-              </p>
             )}
-          </div>
-          <div>
-            <label htmlFor="note-tags" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-              Tags
-            </label>
-            <CreatableSelect
-              isMulti
-              options={tagOptions}
-              onChange={handleTagChange}
-              placeholder="Select or create tags..."
-              isDisabled={isSaving}
-              isSearchable
-              classNamePrefix="react-select"
-              theme={(theme) => ({
-                ...theme,
-                colors: {
-                  ...theme.colors,
-                  primary: '#14B8A6',
-                  primary25: '#99F6E4',
-                },
-              })}
-            />
-          </div>
-          
-          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={`btn-primary flex items-center justify-center ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={isSaving || (!content.trim() || (!selectedEventId && !isAdhoc))}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Save Note
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+
+            {/* Step 2: Agenda & Content */}
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] dark:text-white mb-2">Meeting Details</h3>
+                  <p className="text-[var(--neutral-600)] dark:text-gray-300">Add basic details (you can add action items after creating the note)</p>
+                </div>
+
+                {/* Agenda */}
+                <div>
+                  <label htmlFor="meeting-note-agenda" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+                    Meeting Agenda
+                  </label>
+                  <textarea
+                    id="meeting-note-agenda"
+                    className="input-modern"
+                    rows={4}
+                    placeholder="Outline the key topics and objectives for this meeting..."
+                    value={agenda}
+                    onChange={(e) => setAgenda(e.target.value)}
+                    disabled={isSaving}
+                  />
+                </div>
+
+                {/* Content with Rich Text Editor */}
+                <div>
+                  <label htmlFor="note-content" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+                    Meeting Notes
+                  </label>
+                  <div className="rounded-lg border border-[var(--neutral-200)] overflow-hidden">
+                    <RichTextEditor
+                      content={content}
+                      onChange={setContent}
+                      placeholder="Add meeting notes here (optional - you can edit this later)..."
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--neutral-500)] mt-2">
+                    Meeting notes are optional. You can add or edit them later in the main view.
+                  </p>
+                </div>
+              </div>
+            )}
+
+
+
+            {/* Navigation */}
+            <div className="flex justify-between items-center pt-6 border-t border-[var(--neutral-200)] mt-6">
+              <div>
+                {currentStep > 1 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={prevStep}
+                    disabled={isSaving}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={onClose}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+                
+                {currentStep < 2 ? (
+                  <button
+                    type="button"
+                    className={`btn-primary ${
+                      !canProceedToStep2() ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    onClick={nextStep}
+                    disabled={isSaving || !canProceedToStep2()}
+                  >
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className={`btn-primary ${isSaving || !canCreateNote() ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={isSaving || !canCreateNote()}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Create Meeting Note
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
