@@ -122,11 +122,11 @@ class ApiCache {
    */
   cleanup(): void {
     // Clean memory cache
-    for (const [key, entry] of this.memoryCache.entries()) {
+    this.memoryCache.forEach((entry, key) => {
       if (!this.isValid(entry)) {
         this.memoryCache.delete(key);
       }
-    }
+    });
   }
 }
 
