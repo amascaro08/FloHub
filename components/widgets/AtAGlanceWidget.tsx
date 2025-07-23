@@ -460,11 +460,16 @@ const AtAGlanceWidget = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user settings with SWR for caching
+  // Fetch user settings with SWR for caching - optimized
   const { data: loadedSettings, error: settingsError } = useSWR(
     user ? "/api/userSettings" : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60000 }
+    { 
+      revalidateOnFocus: false, 
+      dedupingInterval: 300000, // 5 minutes
+      errorRetryCount: 1,
+      errorRetryInterval: 10000
+    }
   );
 
   useEffect(() => {
@@ -493,12 +498,21 @@ const AtAGlanceWidget = () => {
         const timeMax = oneWeekFromNow.toISOString();
         let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
 
-        // Fetch data in parallel
+        // Fetch data in parallel with timeout for better performance
+        const fetchWithTimeout = async (promise: Promise<any>, timeout: number = 5000) => {
+          return Promise.race([
+            promise,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout')), timeout)
+            )
+          ]);
+        };
+
         const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
-          fetchCalendarEvents(`/api/calendar?${apiUrlParams}`).catch(() => []),
-          fetchTasks().catch(() => ({ tasks: [] })),
-          fetchNotes().catch(() => ({ notes: [] })),
-          fetchMeetings().catch(() => ({ meetings: [] }))
+          fetchWithTimeout(fetchCalendarEvents(`/api/calendar?${apiUrlParams}`)).catch(() => []),
+          fetchWithTimeout(fetchTasks()).catch(() => ({ tasks: [] })),
+          fetchWithTimeout(fetchNotes()).catch(() => ({ notes: [] })),
+          fetchWithTimeout(fetchMeetings()).catch(() => ({ meetings: [] }))
         ]);
 
         const eventsData = eventsResponse || [];
