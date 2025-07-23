@@ -255,7 +255,7 @@ export class SmartAIAssistant {
     // Analyze common tags
     const tagCounts: { [tag: string]: number } = {};
     tasks.forEach(task => {
-      if (task.tags) {
+      if (task.tags && Array.isArray(task.tags)) {
         task.tags.forEach((tag: string) => {
           tagCounts[tag] = (tagCounts[tag] || 0) + 1;
         });
@@ -403,7 +403,7 @@ export class SmartAIAssistant {
     // Analyze tag usage patterns
     const tagUsagePatterns: { [tag: string]: number } = {};
     [...notes, ...tasks].forEach(item => {
-      if (item.tags) {
+      if (item.tags && Array.isArray(item.tags)) {
         item.tags.forEach((tag: string) => {
           tagUsagePatterns[tag] = (tagUsagePatterns[tag] || 0) + 1;
         });
@@ -801,10 +801,10 @@ export class SmartAIAssistant {
     const tag = tagMatch[1].toLowerCase();
     const taggedItems = [
       ...this.context!.tasks.filter(task => 
-        task.tags && task.tags.some((t: string) => t.toLowerCase().includes(tag))
+        task.tags && Array.isArray(task.tags) && task.tags.some((t: string) => t.toLowerCase().includes(tag))
       ).map(item => ({ ...item, type: 'task' })),
       ...this.context!.notes.filter(note => 
-        note.tags && note.tags.some((t: string) => t.toLowerCase().includes(tag))
+        note.tags && Array.isArray(note.tags) && note.tags.some((t: string) => t.toLowerCase().includes(tag))
       ).map(item => ({ ...item, type: 'note' }))
     ];
 

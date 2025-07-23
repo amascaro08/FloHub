@@ -263,7 +263,7 @@ async function listTasks(args: string, userId: string): Promise<string> {
       taskStr += ` (Due: ${dueStr}${isOverdue ? " ⚠️ OVERDUE" : ""})`;
     }
     
-    if (task.tags && task.tags.length > 0) {
+    if (task.tags && Array.isArray(task.tags) && task.tags.length > 0) {
       taskStr += ` [${task.tags.map((tag: string) => `#${tag}`).join(', ')}]`;
     }
     
