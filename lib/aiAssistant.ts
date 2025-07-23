@@ -793,11 +793,15 @@ export class SmartAIAssistant {
     console.log(`[DEBUG] SmartAIAssistant handleCalendarQueries called with: "${query}"`);
     console.log(`[DEBUG] Calendar events available:`, calendarEvents.length);
     console.log(`[DEBUG] First few calendar events:`, calendarEvents.slice(0, 3));
+    console.log(`[DEBUG] All calendar events:`, calendarEvents);
+    console.log(`[DEBUG] Current time:`, now);
+    console.log(`[DEBUG] Today date:`, today);
     
     // Filter and sort upcoming events
     const upcomingEvents = calendarEvents
       .filter(event => {
         const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        console.log(`[DEBUG] Event: "${event.summary || event.title}" - Date: ${eventDate} - Now: ${now} - Future: ${eventDate >= now}`);
         return eventDate >= now;
       })
       .sort((a, b) => {
@@ -805,6 +809,8 @@ export class SmartAIAssistant {
         const dateB = new Date(b.start?.dateTime || b.start?.date || b.createdAt);
         return dateA.getTime() - dateB.getTime();
       });
+    
+    console.log(`[DEBUG] Upcoming events after filtering:`, upcomingEvents.length);
 
     // Handle specific query types
     if (lowerQuery.includes('next') || lowerQuery.includes('upcoming')) {
@@ -829,8 +835,13 @@ export class SmartAIAssistant {
     if (lowerQuery.includes('today')) {
       const todayEvents = upcomingEvents.filter(event => {
         const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
-        return eventDate >= today && eventDate < tomorrow;
+        const isToday = eventDate >= today && eventDate < tomorrow;
+        console.log(`[DEBUG] Today filter - Event: "${event.summary || event.title}" - Date: ${eventDate} - Today: ${today} - Tomorrow: ${tomorrow} - IsToday: ${isToday}`);
+        return isToday;
       });
+
+      console.log(`[DEBUG] Today events after filtering:`, todayEvents.length);
+      console.log(`[DEBUG] Today events:`, todayEvents);
 
       if (todayEvents.length === 0) {
         return "You don't have any events scheduled for today. Enjoy your free time! ✨";
