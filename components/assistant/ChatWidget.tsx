@@ -101,14 +101,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
       glass p-4 rounded-xl shadow-elevate-lg
       flex flex-col
     ">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)]" ref={messagesEndRef}>
+        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)] dark:text-gray-100" ref={messagesEndRef}>
           {/* Welcome message and quick actions */}
           {showQuickActions && (
             <div className="space-y-3">
               <div className="text-center py-2">
                 <Brain className="w-8 h-8 mx-auto mb-2 text-[var(--primary)]" />
-                <h3 className="font-semibold text-sm">Hey! I'm FloCat 😺</h3>
-                <p className="text-xs text-[var(--fg-muted)] mt-1">
+                <h3 className="font-semibold text-sm text-[var(--fg)] dark:text-gray-100">Hey! I'm FloCat 😺</h3>
+                <p className="text-xs text-[var(--fg-muted)] dark:text-gray-300 mt-1">
                   Your AI productivity assistant. What can I help you with?
                 </p>
               </div>
@@ -133,19 +133,23 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
                 ))}
               </div>
               
-              <div className="text-center">
-                <p className="text-xs text-[var(--fg-muted)]">
-                  Or type your question below...
-                </p>
-              </div>
+                              <div className="text-center">
+                  <p className="text-xs text-[var(--fg-muted)] dark:text-gray-300">
+                    Or type your question below...
+                  </p>
+                </div>
             </div>
           )}
 
           {/* Chat history */}
           {history.map((message, index) => (
-            <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-[var(--neutral-200)]' : 'bg-[var(--neutral-100)]'}`}>
+            <div key={index} className={`p-2 rounded ${
+              message.role === 'user' 
+                ? 'bg-[var(--neutral-200)] dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100' 
+                : 'bg-[var(--neutral-100)] dark:bg-gray-600 text-[var(--fg)] dark:text-gray-100'
+            }`}>
               {message.htmlContent ? (
-                <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} />
+                <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} className="prose prose-sm dark:prose-invert max-w-none" />
               ) : (
                 <p>{message.content}</p>
               )}
@@ -154,18 +158,20 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
 
           {/* Loading indicator */}
           {loading && (
-            <div className="flex items-center gap-2 p-2 bg-[var(--neutral-100)] rounded">
+            <div className="flex items-center gap-2 p-2 bg-[var(--neutral-100)] dark:bg-gray-600 rounded">
               <div className="animate-spin w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
-              <span className="text-sm text-[var(--fg-muted)]">FloCat is thinking...</span>
+              <span className="text-sm text-[var(--fg-muted)] dark:text-gray-300">FloCat is thinking...</span>
             </div>
           )}
         </div>
-        <div className="flex border-t border-[var(--neutral-300)] pt-2">
+        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 pt-2">
           <input
             className="
-              flex-1 border border-[var(--neutral-300)]
+              flex-1 border border-[var(--neutral-300)] dark:border-gray-600
               rounded-l px-2 py-1 focus:outline-none
               focus:ring-2 focus:ring-[var(--primary)]
+              bg-white dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100
+              placeholder-gray-400 dark:placeholder-gray-400
             "
             placeholder="Type a message…"
             value={input}
@@ -187,7 +193,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
         <button
           onClick={onClose}
           aria-label="Close chat"
-          className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+          className="mt-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
         >
           Close
         </button>
