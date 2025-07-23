@@ -50,7 +50,7 @@ export default async function handler(
       const emailSent = await emailService.sendPasswordResetEmail(
         email, 
         resetUrl, 
-        user[0].firstName || undefined
+        user[0].name || undefined
       );
       
       if (emailSent) {
