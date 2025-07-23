@@ -14,8 +14,8 @@ import {
   fetchUserConversations,
 } from "@/lib/contextService";
 import { ChatCompletionMessageParam } from "openai/resources";
-// import { SmartAIAssistant } from "@/lib/aiAssistant";
-// import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { SmartAIAssistant } from "@/lib/aiAssistant";
+import { findMatchingCapability } from "@/lib/floCatCapabilities";
 
 // Types
 type ChatRequest = {
@@ -136,10 +136,7 @@ export default async function handler(
   const lowerPrompt = userInput.toLowerCase();
 
   // Initialize Smart AI Assistant for pattern analysis and suggestions
-  // const smartAssistant = new SmartAIAssistant(email);
-
-  // TODO: Re-enable smart features after testing basic functionality
-  /*
+  const smartAssistant = new SmartAIAssistant(email);
   // Check for proactive suggestion requests
   if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
     try {
@@ -200,7 +197,6 @@ export default async function handler(
       return res.status(500).json({ error: "Sorry, there was an error processing your request." });
     }
   }
-  */
 
   const callInternalApi = async (path: string, method: string, body: any, originalReq: NextApiRequest) => {
     const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
@@ -343,11 +339,11 @@ export default async function handler(
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
     const meetings = bodyMeetings.length > 0 ? bodyMeetings : await fetchUserMeetingNotes(email).catch(() => []);
 
-    // If no OpenAI API key, use local AI
+    // If no OpenAI API key, use local AI with smart assistance
     if (!openai) {
       console.log("Using local AI (no OpenAI API key found)");
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
     
@@ -418,7 +414,7 @@ export default async function handler(
       if (!aiReply) {
         console.log("OpenAI returned empty response, using local AI");
         return res.status(200).json({ 
-          reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+          reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
         });
       }
 
@@ -426,7 +422,7 @@ export default async function handler(
     } catch (err: any) {
       console.error("OpenAI API error, falling back to local AI:", err.message);
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
   } catch (err: any) {
@@ -436,8 +432,6 @@ export default async function handler(
 }
 
 // Enhanced local AI response generator with smart assistance
-// TODO: Re-enable after testing basic functionality
-/*
 async function generateEnhancedLocalResponse(
   input: string, 
   floCatStyle: string, 
@@ -459,7 +453,6 @@ async function generateEnhancedLocalResponse(
 
   return generateLocalResponse(input, floCatStyle, preferredName, notes, meetings);
 }
-*/
 
 // Local AI response generator (no external API required)
 function generateLocalResponse(
