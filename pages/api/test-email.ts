@@ -5,8 +5,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Only allow in development
-  if (process.env.NODE_ENV !== 'development') {
+  // Only allow in development for security
+  if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ message: 'Not found' });
   }
 

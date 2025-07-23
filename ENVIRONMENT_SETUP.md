@@ -22,8 +22,9 @@ NEON_DATABASE_URL=your-actual-neon-database-url-here
 
 # Email Configuration (for password reset emails)
 EMAIL_PROVIDER=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
+EMAIL_USER=flohubofficial@gmail.com
+EMAIL_PASS=your-gmail-app-password
+EMAIL_FROM=FloHub <flohubofficial@gmail.com>
 
 # Node Environment
 NODE_ENV=development
