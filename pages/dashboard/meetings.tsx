@@ -25,7 +25,19 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   const res = await fetch(url, { credentials: 'include' });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error loading events');
-  return data;
+  
+  // Calendar API returns { events: CalendarEvent[] }, extract the events array
+  if (data && typeof data === 'object' && Array.isArray(data.events)) {
+    return data.events;
+  }
+  
+  // Fallback for unexpected response format
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
+  console.warn("Unexpected calendar API response format:", data);
+  return [];
 };
 
 export default function MeetingsPage() {
@@ -92,7 +104,11 @@ export default function MeetingsPage() {
 
   // Filter fetched events to include only "work" events
   const workCalendarEvents = useMemo(() => {
-    return calendarEvents?.filter(event => event.source === 'work') || [];
+    if (!calendarEvents || !Array.isArray(calendarEvents)) {
+      console.warn("Calendar events is not an array:", calendarEvents);
+      return [];
+    }
+    return calendarEvents.filter(event => event.source === 'work');
   }, [calendarEvents]);
 
   // Log the fetched data and errors for debugging
@@ -104,11 +120,12 @@ export default function MeetingsPage() {
     console.log("Calendar sources:", userSettings?.calendarSources);
     console.log("Calendar loading state:", calendarLoading);
     console.log("Fetched calendar events (raw):", calendarEvents);
+    console.log("Calendar events type:", typeof calendarEvents, "isArray:", Array.isArray(calendarEvents));
     console.log("Calendar events error:", calendarError);
     console.log("Filtered work calendar events:", workCalendarEvents);
     
     // Debug: Show all events with their source property
-    if (calendarEvents && calendarEvents.length > 0) {
+    if (calendarEvents && Array.isArray(calendarEvents) && calendarEvents.length > 0) {
       console.log("All calendar events with sources:");
       calendarEvents.forEach((event, index) => {
         console.log(`Event ${index + 1}:`, {
