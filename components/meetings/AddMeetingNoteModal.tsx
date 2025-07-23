@@ -182,8 +182,8 @@ export default function AddMeetingNoteModal({
     return (isAdhoc && title.trim()) || (selectedEventId && title.trim());
   };
 
-  const canProceedToStep3 = () => {
-    return agenda.trim() || content.trim();
+  const canCreateNote = () => {
+    return title.trim(); // Just need a title to create the note
   };
 
   if (!isOpen) return null;
@@ -202,7 +202,7 @@ export default function AddMeetingNoteModal({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">Create Meeting Note</h2>
-                <p className="text-white/80 text-sm">Step {currentStep} of 3</p>
+                <p className="text-white/80 text-sm">Step {currentStep} of 2</p>
               </div>
             </div>
             <button
@@ -218,7 +218,7 @@ export default function AddMeetingNoteModal({
 
           {/* Progress Bar */}
           <div className="mt-4 flex space-x-2">
-            {[1, 2, 3].map((step) => (
+            {[1, 2].map((step) => (
               <div
                 key={step}
                 className={`flex-1 h-2 rounded-full transition-all ${
@@ -387,8 +387,8 @@ export default function AddMeetingNoteModal({
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] mb-2">Agenda & Notes</h3>
-                  <p className="text-[var(--neutral-600)]">Plan your meeting and capture detailed notes</p>
+                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] mb-2">Meeting Details</h3>
+                  <p className="text-[var(--neutral-600)]">Add basic details (you can add action items after creating the note)</p>
                 </div>
 
                 {/* Agenda */}
@@ -426,120 +426,7 @@ export default function AddMeetingNoteModal({
               </div>
             )}
 
-            {/* Step 3: Actions */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-[var(--neutral-900)] mb-2">Action Items</h3>
-                  <p className="text-[var(--neutral-600)]">Track follow-up tasks and assignments</p>
-                </div>
 
-                {/* Actions List */}
-                <div className="border border-[var(--neutral-200)] rounded-xl p-4">
-                  <h4 className="font-medium text-[var(--neutral-900)] mb-4 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[var(--primary-color)]" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Action Items ({actions.length})
-                  </h4>
-                  
-                  {/* Add new action */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        className="input-modern flex-1"
-                        placeholder="Add action item..."
-                        value={newActionDescription}
-                        onChange={(e) => setNewActionDescription(e.target.value)}
-                        disabled={isSaving}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && newActionDescription.trim()) {
-                            e.preventDefault();
-                            handleAddAction();
-                          }
-                        }}
-                      />
-                      <select
-                        className="input-modern w-32"
-                        value={assignedToType}
-                        onChange={(e) => {
-                          setAssignedToType(e.target.value);
-                          if (e.target.value !== "Other") {
-                            setOtherAssignedToName("");
-                          }
-                        }}
-                        disabled={isSaving}
-                      >
-                        <option value="Me">Me</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    
-                    {assignedToType === "Other" && (
-                      <input
-                        type="text"
-                        className="input-modern"
-                        placeholder="Enter assignee name..."
-                        value={otherAssignedToName}
-                        onChange={(e) => setOtherAssignedToName(e.target.value)}
-                        disabled={isSaving}
-                      />
-                    )}
-                    
-                    <button
-                      type="button"
-                      className="btn-primary w-full"
-                      onClick={handleAddAction}
-                      disabled={isSaving || !newActionDescription.trim() || (assignedToType === "Other" && !otherAssignedToName.trim())}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Add Action Item
-                    </button>
-                  </div>
-                  
-                  {/* Action items list */}
-                  {actions.length > 0 ? (
-                    <div className="space-y-2">
-                      {actions.map((action) => (
-                        <div key={action.id} className="flex items-center justify-between bg-[var(--neutral-50)] p-3 rounded-lg">
-                          <div className="flex items-start flex-1 min-w-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-[var(--primary-color)] flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414l.793.793 2.293-2.293a1 1 0 011.414 1.414z" clipRule="evenodd" />
-                            </svg>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-[var(--neutral-800)]">{action.description}</p>
-                              <p className="text-xs text-[var(--neutral-500)] mt-1">
-                                Assigned to: <span className="font-medium">{action.assignedTo}</span>
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeAction(action.id)}
-                            className="ml-2 text-red-500 hover:text-red-700 transition-colors p-1"
-                            disabled={isSaving}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-[var(--neutral-500)]">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-[var(--neutral-400)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      <p className="text-sm">No action items yet</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Navigation */}
             <div className="flex justify-between items-center pt-6 border-t border-[var(--neutral-200)] mt-6">
@@ -569,21 +456,14 @@ export default function AddMeetingNoteModal({
                   Cancel
                 </button>
                 
-                {currentStep < 3 ? (
+                {currentStep < 2 ? (
                   <button
                     type="button"
                     className={`btn-primary ${
-                      (currentStep === 1 && !canProceedToStep2()) || 
-                      (currentStep === 2 && !canProceedToStep3()) 
-                        ? "opacity-50 cursor-not-allowed" 
-                        : ""
+                      !canProceedToStep2() ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                     onClick={nextStep}
-                    disabled={
-                      isSaving || 
-                      (currentStep === 1 && !canProceedToStep2()) || 
-                      (currentStep === 2 && !canProceedToStep3())
-                    }
+                    disabled={isSaving || !canProceedToStep2()}
                   >
                     Next
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -593,8 +473,8 @@ export default function AddMeetingNoteModal({
                 ) : (
                   <button
                     type="submit"
-                    className={`btn-primary ${isSaving || !content.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
-                    disabled={isSaving || !content.trim()}
+                    className={`btn-primary ${isSaving || !canCreateNote() ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={isSaving || !canCreateNote()}
                   >
                     {isSaving ? (
                       <>

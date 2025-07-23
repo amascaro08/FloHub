@@ -34,6 +34,7 @@ export default function MeetingNoteDetail({
   const [actions, setActions] = useState<Action[]>(note.actions || []);
   const [newActionDescription, setNewActionDescription] = useState("");
   const [newActionAssignedTo, setNewActionAssignedTo] = useState("Me");
+  const [customAssigneeName, setCustomAssigneeName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Update state when a different note is selected
@@ -48,6 +49,7 @@ export default function MeetingNoteDetail({
     setActions(note.actions || []);
     setNewActionDescription("");
     setNewActionAssignedTo("Me");
+    setCustomAssigneeName("");
     
     console.log("Note loaded with AI summary:", note.aiSummary ? "Yes" : "No");
     if (note.aiSummary) {
@@ -105,6 +107,10 @@ export default function MeetingNoteDetail({
       emailContent += `Meeting Minutes:\n${note.content.replace(/<[^>]*>/g, '')}\n\n`;
     }
 
+    if (note.aiSummary) {
+      emailContent += `AI Summary:\n${note.aiSummary}\n\n`;
+    }
+
     if (note.actions && note.actions.length > 0) {
       emailContent += `Action Items:\n`;
       note.actions.forEach(action => {
@@ -127,17 +133,21 @@ export default function MeetingNoteDetail({
 
   const handleAddAction = async () => {
     if (newActionDescription.trim() === "") return;
+    if (newActionAssignedTo === "Other" && customAssigneeName.trim() === "") return;
+
+    const assignedTo = newActionAssignedTo === "Other" ? customAssigneeName.trim() : newActionAssignedTo;
 
     const newAction: Action = {
       id: uuidv4(),
       description: newActionDescription.trim(),
-      assignedTo: newActionAssignedTo,
+      assignedTo: assignedTo,
       status: "todo",
       createdAt: new Date().toISOString(),
     };
 
     setActions([...actions, newAction]);
     setNewActionDescription("");
+    setCustomAssigneeName("");
 
     if (newActionAssignedTo === "Me") {
       try {
@@ -260,10 +270,10 @@ export default function MeetingNoteDetail({
           <div className="flex gap-2">
             <button
               type="button"
-              className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+              className="bg-white/20 hover:bg-white/30 text-white transition-colors p-3 rounded-lg shadow-lg border border-white/20 hover:border-white/40"
               onClick={handleExportPdf}
               disabled={isSaving}
-              title="Export PDF"
+              title="Export to PDF"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
@@ -271,7 +281,7 @@ export default function MeetingNoteDetail({
             </button>
             <button
               type="button"
-              className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+              className="bg-white/20 hover:bg-white/30 text-white transition-colors p-3 rounded-lg shadow-lg border border-white/20 hover:border-white/40"
               onClick={handleCopyForEmail}
               disabled={isSaving}
               title="Copy for Email"
@@ -483,39 +493,53 @@ export default function MeetingNoteDetail({
             
             {/* Add New Action */}
             <div className="border-t border-[var(--neutral-200)] pt-4">
-              <div className="flex gap-3 mb-3">
-                <input
-                  type="text"
-                  className="input-modern flex-1"
-                  placeholder="Add new action item..."
-                  value={newActionDescription}
-                  onChange={(e) => setNewActionDescription(e.target.value)}
-                  disabled={isSaving}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && newActionDescription.trim()) {
-                      e.preventDefault();
-                      handleAddAction();
-                    }
-                  }}
-                />
-                <select
-                  className="input-modern w-32"
-                  value={newActionAssignedTo}
-                  onChange={(e) => setNewActionAssignedTo(e.target.value)}
-                  disabled={isSaving}
-                >
-                  <option value="Me">Me</option>
-                  <option value="Other">Other</option>
-                </select>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <textarea
+                    className="input-modern flex-1 min-h-[80px] resize-y"
+                    placeholder="Describe the action item..."
+                    value={newActionDescription}
+                    onChange={(e) => setNewActionDescription(e.target.value)}
+                    disabled={isSaving}
+                    rows={2}
+                  />
+                  <select
+                    className="input-modern w-40"
+                    value={newActionAssignedTo}
+                    onChange={(e) => {
+                      setNewActionAssignedTo(e.target.value);
+                      if (e.target.value !== "Other") {
+                        setCustomAssigneeName("");
+                      }
+                    }}
+                    disabled={isSaving}
+                  >
+                    <option value="Me">Assign to Me</option>
+                    <option value="Other">Assign to Other</option>
+                  </select>
+                </div>
+                
+                {newActionAssignedTo === "Other" && (
+                  <input
+                    type="text"
+                    className="input-modern w-full"
+                    placeholder="Enter assignee name..."
+                    value={customAssigneeName}
+                    onChange={(e) => setCustomAssigneeName(e.target.value)}
+                    disabled={isSaving}
+                  />
+                )}
+                
                 <button
                   type="button"
                   onClick={handleAddAction}
-                  className="btn-primary px-4"
-                  disabled={isSaving || newActionDescription.trim() === ""}
+                  className="btn-primary w-full flex items-center justify-center"
+                  disabled={isSaving || newActionDescription.trim() === "" || (newActionAssignedTo === "Other" && customAssigneeName.trim() === "")}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
                   </svg>
+                  Add Action Item
                 </button>
               </div>
             </div>
