@@ -16,6 +16,24 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+// Function to detect if content contains HTML
+const containsHTML = (content: string): boolean => {
+  if (!content) return false;
+  return content.includes('<html>') ||
+         content.includes('<body>') ||
+         content.includes('<div>') ||
+         content.includes('<meta') ||
+         content.includes('<p>') ||
+         content.includes('<br>') ||
+         content.includes('<span>') ||
+         content.includes('<a ') ||
+         content.includes('<table') ||
+         content.includes('&nbsp;') ||
+         content.includes('&amp;') ||
+         content.includes('&lt;') ||
+         content.includes('&gt;');
+};
+
 // Function to extract Microsoft Teams meeting link from event description
 const extractTeamsLink = (description: string): string | null => {
   if (!description) return null;
@@ -980,10 +998,7 @@ const CalendarPage = () => {
                     <span className="font-medium">Description:</span>
                   </div>
                   <div className="mt-1 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-300">
-                    {selectedEvent.description.includes('<html>') ||
-                     selectedEvent.description.includes('<body>') ||
-                     selectedEvent.description.includes('<div>') ||
-                     selectedEvent.description.includes('<meta') ? (
+                    {containsHTML(selectedEvent.description) ? (
                       <div
                         className="prose prose-sm max-w-none dark:prose-invert"
                         dangerouslySetInnerHTML={{ __html: selectedEvent.description }}

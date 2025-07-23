@@ -22,6 +22,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@neondatabase/serverless": "^1.0.1",
     "@octokit/rest": "^22.0.0",
+    "@tailwindcss/typography": "^0.5.16",
     "@tiptap/extension-blockquote": "^2.12.0",
     "@tiptap/extension-bullet-list": "^2.12.0",
     "@tiptap/extension-code-block": "^2.12.0",
