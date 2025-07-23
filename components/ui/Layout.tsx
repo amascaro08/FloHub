@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/router';
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText, MessageCircle, X } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ChatWidget from '../assistant/ChatWidget';
@@ -64,11 +64,24 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const isChatOpen = chatContext?.isChatOpen || false;
   const setIsChatOpen = chatContext?.setIsChatOpen || (() => {});
 
+  // Keyboard shortcut to toggle chat (Ctrl/Cmd + K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsChatOpen(!isChatOpen);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isChatOpen, setIsChatOpen]);
+
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
 
-  // Send from header input
+  // Send from header input (now triggers side panel)
   const handleTopInputSend = async () => {
     if (topInput.trim() && send) {
       try {
@@ -95,7 +108,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="flex h-screen bg-[var(--bg)] text-[var(--fg)]">
-      {/* backdrop */}
+      {/* Mobile sidebar backdrop */}
       <div
         className={`
           fixed inset-0 bg-black/60 backdrop-blur-sm z-20 transition-opacity duration-300
@@ -103,6 +116,16 @@ const Layout = ({ children }: { children: ReactNode }) => {
           md:hidden
         `}
         onClick={() => setMobileSidebarOpen(false)}
+      />
+
+      {/* Chat panel backdrop for mobile */}
+      <div
+        className={`
+          fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300
+          ${isChatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+          md:hidden
+        `}
+        onClick={() => setIsChatOpen(false)}
       />
 
       {/* sidebar */}
@@ -203,8 +226,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
       </aside>
 
-      {/* main */}
-      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
+      {/* main content area - adjusts width based on chat panel state */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${isChatOpen ? 'md:mr-80' : ''}`}>
         {/* header */}
         <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center">
@@ -226,18 +249,17 @@ const Layout = ({ children }: { children: ReactNode }) => {
             />
           </div>
 
-          {/* FloCat Chat Bubble */}
+          {/* FloCat Quick Input */}
           <div className="flex-1 flex justify-center relative">
             <div className="w-full max-w-md relative">
               <input
                 type="text"
-                placeholder="FloCat is here to help you... 🐱"
+                placeholder="Ask FloCat anything... 🐱"
                 className="w-full p-2.5 pl-4 pr-10 rounded-full border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800"
                 value={topInput}
                 onChange={(e) => setTopInput(e.target.value)}
-                onFocus={() => setIsChatOpen(true)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isChatOpen && topInput.trim()) {
+                  if (e.key === 'Enter' && topInput.trim()) {
                     handleTopInputSend();
                   }
                 }}
@@ -246,19 +268,30 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
               </div>
             </div>
-            {isChatOpen && (
-              <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-                <ChatWidget
-                  onClose={() => setIsChatOpen(false)}
-                  key="chatwidget"
-                />
-              </div>
-            )}
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
+            {/* Chat toggle button */}
             <button
-              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ml-2 relative group"
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className={`p-2 rounded-lg transition-all duration-200 relative group ${
+                isChatOpen 
+                  ? 'bg-primary-500 text-white shadow-lg' 
+                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+              }`}
+              aria-label="Toggle FloCat chat"
+            >
+              <MessageCircle className="w-5 h-5" />
+              {history.length > 0 && !isChatOpen && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse"></div>
+              )}
+              <span className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                {isChatOpen ? "Close FloCat" : "Open FloCat"} (⌘K)
+              </span>
+            </button>
+
+            <button
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors relative group"
               onClick={() => toggleLock()}
               aria-label={isLocked ? "Unlock layout" : "Lock layout"}
             >
@@ -279,6 +312,41 @@ const Layout = ({ children }: { children: ReactNode }) => {
             {children}
           </div>
         </main>
+      </div>
+
+      {/* Chat Side Panel */}
+      <div
+        className={`
+          fixed inset-y-0 right-0 w-80 bg-[var(--surface)] shadow-2xl border-l border-neutral-200 dark:border-neutral-700 z-50 transform transition-all duration-300 ease-in-out
+          ${isChatOpen ? 'translate-x-0' : 'translate-x-full'}
+          md:static md:h-full
+          ${isChatOpen ? 'md:block' : 'md:hidden'}
+        `}
+      >
+        {/* Chat panel header */}
+        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700 bg-[var(--surface)]">
+          <div className="flex items-center space-x-2">
+            <MessageCircle className="w-5 h-5 text-primary-500" />
+            <h3 className="font-semibold text-[var(--fg)]">FloCat Assistant</h3>
+          </div>
+          <button
+            onClick={() => setIsChatOpen(false)}
+            className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            aria-label="Close chat"
+          >
+            <X className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+          </button>
+        </div>
+
+        {/* Chat widget container */}
+        <div className="h-full flex flex-col">
+          <div className="flex-1 p-4">
+            <ChatWidget
+              onClose={() => setIsChatOpen(false)}
+              key="sidebar-chatwidget"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
