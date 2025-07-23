@@ -35,6 +35,24 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+// Function to detect if content contains HTML
+const containsHTML = (content: string): boolean => {
+  if (!content) return false;
+  return content.includes('<html>') ||
+         content.includes('<body>') ||
+         content.includes('<div>') ||
+         content.includes('<meta') ||
+         content.includes('<p>') ||
+         content.includes('<br>') ||
+         content.includes('<span>') ||
+         content.includes('<a ') ||
+         content.includes('<table') ||
+         content.includes('&nbsp;') ||
+         content.includes('&amp;') ||
+         content.includes('&lt;') ||
+         content.includes('&gt;');
+};
+
 // Function to extract Microsoft Teams meeting link from event description
 const extractTeamsLink = (description: string): string | null => {
   if (!description) return null;
@@ -813,7 +831,16 @@ function CalendarWidget() {
                     {formatEvent(viewingEvent)}
                   </p>
                   {viewingEvent.description && (
-                    <p className="text-sm">{viewingEvent.description}</p>
+                    <div className="text-sm">
+                      {containsHTML(viewingEvent.description) ? (
+                        <div
+                          className="prose prose-sm max-w-none dark:prose-invert text-sm"
+                          dangerouslySetInnerHTML={{ __html: viewingEvent.description }}
+                        />
+                      ) : (
+                        <div className="whitespace-pre-wrap text-sm">{viewingEvent.description}</div>
+                      )}
+                    </div>
                   )}
                   {/* Teams Link in Modal */}
                   {extractTeamsLink(viewingEvent.description || '') && (

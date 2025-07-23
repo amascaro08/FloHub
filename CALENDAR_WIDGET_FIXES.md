@@ -38,14 +38,37 @@
 - **Better Error Handling**: More user-friendly error messages and loading states
 - **View Toggles**: Today/Tomorrow/Week view toggles work correctly
 
+### 5. Work Event HTML Content Formatting Fix
+**Problem**: Work events with HTML content in descriptions were showing raw HTML instead of formatted content
+
+**Root Cause**: CalendarWidget was displaying event descriptions as plain text without HTML detection/parsing
+
+**Fix**:
+- Added `containsHTML()` helper function to detect HTML content in event descriptions
+- Enhanced HTML detection to include common tags: `<p>`, `<br>`, `<span>`, `<a>`, `<table>`, and HTML entities
+- Added Tailwind Typography plugin (`@tailwindcss/typography`) for proper prose styling
+- Updated CalendarWidget event details modal to render HTML content using `dangerouslySetInnerHTML` with prose styling
+- Applied same fix to main calendar page for consistency
+- HTML content now renders with proper formatting while plain text uses `whitespace-pre-wrap` for line breaks
+
+**Technical Details**:
+- Installed `@tailwindcss/typography` package
+- Updated `tailwind.config.js` to include typography plugin
+- Added comprehensive HTML detection for tags and entities
+- Used `prose prose-sm max-w-none dark:prose-invert` classes for styled HTML rendering
+
 ## Key Fixes Applied
 1. **AtAGlanceWidget API Call**: Now includes proper timeMin/timeMax parameters
 2. **CalendarWidget URL Construction**: Uses useMemo with validation
 3. **Tomorrow Event Filtering**: Improved date boundary calculations
 4. **Visual Enhancements**: Highlighted upcoming events and Teams integration
+5. **HTML Content Rendering**: Proper formatting for work events with HTML descriptions
 
 ## Files Modified
 - `components/widgets/CalendarWidget.tsx`
 - `components/widgets/AtAGlanceWidget.tsx`
+- `pages/calendar/index.tsx`
+- `tailwind.config.js`
+- `package.json` (added @tailwindcss/typography)
 
-Both widgets now share a consistent approach to calendar API integration and provide a better user experience.
+Both widgets now share a consistent approach to calendar API integration, HTML content rendering, and provide a better user experience.
