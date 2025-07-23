@@ -13,6 +13,7 @@ FloHub brings together your day-to-day tools into a single modular workspace:
 - 💬 **AI Assistant FloCat** powered by OpenAI for summaries, Q&A, and planning help  
 - 🧱 **Customizable Widgets** for a dashboard that works your way  
 - 💭 **GitHub Feedback Integration** that converts user feedback into trackable GitHub issues  
+- 📧 **Email System** for password resets, welcome messages, and notifications  
 - 🔐 **Secure Auth + DB** via [Neon](https://neon.tech) and custom jwt auth  
 - 📱 Fully responsive: use it on desktop, tablet, or mobile  
 

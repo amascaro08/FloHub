@@ -5,7 +5,13 @@ The "Remember Me" login functionality is causing internal server errors because 
 
 ## Required Environment Variables
 
-Create a `.env.local` file in the root directory with the following variables:
+Create a `.env.local` file in the root directory. You can copy from the template:
+
+```bash
+cp .env.example .env.local
+```
+
+Then update the following required variables:
 
 ```bash
 # Authentication Configuration
@@ -14,9 +20,18 @@ JWT_SECRET=4e2554bd3b511513d3be970405fa60eb1818a6327bf0d4f0ca24b0071dd08e89e4671
 # Database Configuration
 NEON_DATABASE_URL=your-actual-neon-database-url-here
 
+# Email Configuration (for password reset emails)
+EMAIL_PROVIDER=gmail
+EMAIL_USER=flohubofficial@gmail.com
+EMAIL_PASS=your-gmail-app-password
+EMAIL_FROM=FloHub <flohubofficial@gmail.com>
+
 # Node Environment
 NODE_ENV=development
 ```
+
+### Email Setup (Optional but Recommended)
+For password reset emails to work, you need to configure email settings. See [EMAIL_SETUP.md](./EMAIL_SETUP.md) for detailed instructions.
 
 ## Steps to Fix the Login Issue
 

@@ -3,6 +3,7 @@ import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { emailService } from '@/lib/emailService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -31,6 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email,
       password: hashedPassword,
     });
+
+    // Send welcome email
+    try {
+      const emailSent = await emailService.sendWelcomeEmail(email, name);
+      if (emailSent) {
+        console.log('Welcome email sent successfully to:', email);
+      } else {
+        console.warn('Failed to send welcome email to:', email);
+      }
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
+      // Don't fail registration if email fails
+    }
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
