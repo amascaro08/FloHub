@@ -59,11 +59,33 @@ const extractTeamsLink = (description: string): string | null => {
   return null;
 };
 
-// Fetcher specifically for calendar events API
+// Optimized fetcher specifically for calendar events API with smart caching
 const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
   try {
     console.log("CalendarWidget: Fetching from URL:", url);
-    const res = await fetch(url, { credentials: 'include' });
+    
+    // Check if we have a cached version first
+    const cacheKey = `calendar_events_${btoa(url)}`;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Use cache if less than 2 minutes old
+        if (Date.now() - timestamp < 120000) {
+          console.log("CalendarWidget: Using cached data");
+          return data;
+        }
+      }
+    } catch (e) {
+      // Invalid cache or sessionStorage unavailable, continue to fetch
+    }
+    
+    const res = await fetch(url, { 
+      credentials: 'include',
+      headers: {
+        'Cache-Control': 'max-age=60'
+      }
+    });
     
     let data;
     try {
@@ -84,16 +106,30 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
     }
     
     // Handle both formats: direct array or {events: [...]} object 
+    let events;
     if (Array.isArray(data)) {
       console.log("CalendarWidget: Received", data.length, "events directly");
-      return data;
+      events = data;
     } else if (data && Array.isArray(data.events)) {
       console.log("CalendarWidget: Received", data.events.length, "events in events property");
-      return data.events;
+      events = data.events;
     } else {
       console.error("CalendarWidget: Unexpected response format:", data);
-      return [];
+      events = [];
     }
+
+    // Cache the result
+    try {
+      const cacheKey = `calendar_events_${btoa(url)}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        data: events,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // SessionStorage full or unavailable, continue without caching
+    }
+
+    return events;
   } catch (error) {
     console.error("CalendarWidget: Calendar fetch error:", error);
     throw error;
@@ -114,9 +150,18 @@ function CalendarWidget() {
     </div>;
   }
 
-  // Fetch persistent user settings via SWR
+  // Fetch persistent user settings via SWR with optimized caching
   const { data: loadedSettings, error: settingsError } =
-    useSWR<CalendarSettings>(user ? "/api/userSettings" : null, fetcher);
+    useSWR<CalendarSettings>(
+      user ? "/api/userSettings" : null, 
+      fetcher,
+      {
+        revalidateOnFocus: false,
+        dedupingInterval: 300000, // 5 minutes
+        errorRetryCount: 1,
+        errorRetryInterval: 10000,
+      }
+    );
 
   // Local state derived from loadedSettings or defaults
   const [selectedCals, setSelectedCals] = useState<string[]>(['primary']);
@@ -173,8 +218,8 @@ function CalendarWidget() {
     }
   }, [loadedSettings]);
 
-  // Calculate time range when view or customRange changes
-  useEffect(() => {
+  // Memoize time range calculation to prevent unnecessary recalculations
+  const calculatedTimeRange = useMemo(() => {
     const now = new Date();
     let minDate = new Date();
     let maxDate = new Date();
@@ -238,11 +283,14 @@ function CalendarWidget() {
         minDate = startOfDay(new Date(monday3));
         maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
     }
-            console.log("Calculated minDate (local):", minDate);
-        console.log("Calculated maxDate (local):", maxDate);
-        console.log("Setting timeRange:", { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
-        setTimeRange({ timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() });
+    
+    return { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() };
   }, [activeView, customRange]);
+
+  // Update timeRange when calculatedTimeRange changes
+  useEffect(() => {
+    setTimeRange(calculatedTimeRange);
+  }, [calculatedTimeRange]);
 
   // Build API URL for calendar events
   const apiUrl = useMemo(() => {
@@ -267,7 +315,7 @@ function CalendarWidget() {
     return url;
   }, [user, loadedSettings, timeRange, powerAutomateUrl]);
 
-  // Fetch calendar events with error handling
+  // Fetch calendar events with optimized error handling and caching
   const { data, error } = useSWR(
     apiUrl, 
     calendarEventsFetcher,
@@ -275,6 +323,8 @@ function CalendarWidget() {
       revalidateOnFocus: false,
       errorRetryCount: 2,
       errorRetryInterval: 5000,
+      dedupingInterval: 120000, // 2 minutes
+      refreshInterval: 300000, // 5 minutes
       onError: (error) => {
         console.log("SWR calendar error:", error);
       }

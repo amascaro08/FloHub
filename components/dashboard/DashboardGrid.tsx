@@ -9,12 +9,10 @@ import {
   Clock,
   FileText,
 } from 'lucide-react';
+import OptimizedSkeleton from '@/components/ui/OptimizedSkeleton';
 
-const WidgetSkeleton = () => (
-  <div className="animate-pulse w-full h-full flex flex-col">
-    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded"></div>
-  </div>
+const WidgetSkeleton = ({ type }: { type?: string }) => (
+  <OptimizedSkeleton variant={type as any} />
 );
 
 // Lazy load widgets
@@ -33,13 +31,13 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
 
-// Define widget components with Suspense
+// Define widget components with Suspense and specific skeletons
 const widgetComponents: Record<WidgetType, ReactElement> = {
-  tasks: <Suspense fallback={<WidgetSkeleton />}><TaskWidget /></Suspense>,
-  calendar: <Suspense fallback={<WidgetSkeleton />}><CalendarWidget /></Suspense>,
-  ataglance: <Suspense fallback={<WidgetSkeleton />}><AtAGlanceWidget /></Suspense>,
-  quicknote: <Suspense fallback={<WidgetSkeleton />}><QuickNoteWidget /></Suspense>,
-  "habit-tracker": <Suspense fallback={<WidgetSkeleton />}><HabitTrackerWidget /></Suspense>,
+  tasks: <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>,
+  calendar: <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget /></Suspense>,
+  ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><AtAGlanceWidget /></Suspense>,
+  quicknote: <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>,
+  "habit-tracker": <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>,
 };
 
 // Helper function to recursively remove undefined values from an object
@@ -87,6 +85,10 @@ const DashboardGrid = () => {
 
   // Use Stack Auth
   const { user, isLoading } = useUser();
+
+  // Progressive loading state
+  const [visibleWidgets, setVisibleWidgets] = useState<string[]>([]);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Not signed in? Show loading or redirect to login
   if (isLoading) {
@@ -155,15 +157,38 @@ const DashboardGrid = () => {
   const [layouts, setLayouts] = useState(defaultLayouts);
   const [loadedSettings, setLoadedSettings] = useState(false);
 
-  // Fetch user settings to get active widgets (client-side only)
+  // Fetch user settings to get active widgets (client-side only) with caching
   useEffect(() => {
     const fetchUserSettings = async () => {
       if (isClient && user?.email) {
         try {
+          // Check cache first
+          const cacheKey = `userSettings_${user.email}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            try {
+              const cachedData = JSON.parse(cached);
+              if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
+                setActiveWidgets(cachedData.activeWidgets || []);
+                setLoadedSettings(true);
+                return;
+              }
+            } catch (e) {
+              // Invalid cache, continue to fetch
+            }
+          }
+
           const response = await fetch(`/api/userSettings?userId=${user.email}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
-            setActiveWidgets(userSettings.activeWidgets || []);
+            const activeWidgets = userSettings.activeWidgets || [];
+            setActiveWidgets(activeWidgets);
+            
+            // Cache the result
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+              activeWidgets,
+              timestamp: Date.now()
+            }));
           } else {
             setActiveWidgets([]);
           }
@@ -231,6 +256,30 @@ const DashboardGrid = () => {
       setLayouts(newLayouts);
     }
   }, [activeWidgets]);
+
+  // Progressive loading effect - prioritize important widgets
+  useEffect(() => {
+    if (!loadedSettings || activeWidgets.length === 0) return;
+
+    // Priority order for widget loading
+    const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
+    const sortedWidgets = activeWidgets.sort((a, b) => {
+      const aIndex = priority.indexOf(a);
+      const bIndex = priority.indexOf(b);
+      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    });
+
+    setVisibleWidgets([]);
+    setLoadingProgress(0);
+
+    // Load widgets progressively
+    sortedWidgets.forEach((widget, index) => {
+      setTimeout(() => {
+        setVisibleWidgets(prev => [...prev, widget]);
+        setLoadingProgress(((index + 1) / sortedWidgets.length) * 100);
+      }, index * 200); // 200ms delay between widgets
+    });
+  }, [activeWidgets, loadedSettings]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     try {
@@ -303,7 +352,11 @@ const DashboardGrid = () => {
               {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
             </h2>
             <div className="widget-content">
-              {memoizedWidgetComponents[key as WidgetType]}
+              {visibleWidgets.includes(key) ? (
+                memoizedWidgetComponents[key as WidgetType]
+              ) : (
+                <WidgetSkeleton type={key} />
+              )}
             </div>
           </div>
         ))}

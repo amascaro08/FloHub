@@ -269,8 +269,8 @@ export default async function handler(
       }
     }
 
-    // Process Google Calendar sources
-    for (const id of googleCalendarIds) {
+    // Process Google Calendar sources in parallel for better performance
+    const googlePromises = googleCalendarIds.map(async (id) => {
       const source = googleSources.find(s => s.sourceId === id);
       const tags = source?.tags || [];
       const sourceName = source?.name || "Google Calendar";
@@ -278,7 +278,7 @@ export default async function handler(
       // Skip Google Calendar requests if no access token is available
       if (!accessToken) {
         console.warn(`Skipping Google Calendar ${id} - no access token available`);
-        continue;
+        return [];
       }
       
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
@@ -287,13 +287,16 @@ export default async function handler(
         safeTimeMin
       )}&timeMax=${encodeURIComponent(
         safeTimeMax
-      )}&singleEvents=true&orderBy=startTime`;
+      )}&singleEvents=true&orderBy=startTime&maxResults=250`; // Limit results for performance
 
       console.log(`Fetching Google Calendar events for ${id}...`);
 
       try {
         const gres = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { 
+            Authorization: `Bearer ${accessToken}`,
+            'Cache-Control': 'max-age=60' // Cache for 60 seconds
+          },
         });
 
         if (!gres.ok) {
@@ -316,7 +319,7 @@ export default async function handler(
                   const isPersonal = tags.includes("personal") || (!isWork && tags.length === 0);
                   const eventSource = isWork ? "work" : "personal";
                   
-                  allEvents.push(...retryBody.items.map((item: any) => ({
+                  const events = retryBody.items.map((item: any) => ({
                     id: item.id,
                     calendarId: id,
                     summary: item.summary || "No Title",
@@ -326,13 +329,14 @@ export default async function handler(
                     description: item.description || "",
                     calendarName: sourceName,
                     tags,
-                  })));
+                  }));
                   console.log(`Successfully fetched ${retryBody.items.length} events for ${id} after token refresh`);
+                  return events;
                 }
               }
             }
           }
-          continue;
+          return [];
         }
 
         const body = await gres.json();
@@ -343,7 +347,7 @@ export default async function handler(
           const eventSource = isWork ? "work" : "personal";
           
           // Tag and normalize fields
-          allEvents.push(...body.items.map((item: any) => ({
+          const events = body.items.map((item: any) => ({
             id: item.id,
             calendarId: id, // Include the calendarId
             summary: item.summary || "No Title",
@@ -353,13 +357,20 @@ export default async function handler(
             description: item.description || "",
             calendarName: sourceName,
             tags,
-          })));
+          }));
           console.log(`Successfully fetched ${body.items.length} events for ${id}`);
+          return events;
         }
+        return [];
       } catch (e) {
         console.error(`Error fetching events for calendar ${id}:`, e);
+        return [];
       }
-    }
+    });
+
+    // Wait for all Google Calendar requests to complete
+    const googleResults = await Promise.all(googlePromises);
+    googleResults.forEach(events => allEvents.push(...events));
 
     // Process O365/Power Automate URLs
     for (const url of o365Urls) {
