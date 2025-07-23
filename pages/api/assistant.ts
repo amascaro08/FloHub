@@ -136,16 +136,28 @@ export default async function handler(
 
   const lowerPrompt = userInput.toLowerCase();
 
+  console.log(`[DEBUG] Assistant API received query: "${userInput}"`);
+  console.log(`[DEBUG] Lower prompt: "${lowerPrompt}"`);
+
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
   
   // Check for calendar/schedule queries first and fetch fresh calendar data
-  if (lowerPrompt.includes("calendar") || lowerPrompt.includes("schedule") || 
+  const isCalendarQuery = lowerPrompt.includes("calendar") || lowerPrompt.includes("schedule") || 
       lowerPrompt.includes("event") || lowerPrompt.includes("today") ||
       lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
-      lowerPrompt.includes("upcoming")) {
+      lowerPrompt.includes("upcoming");
+      
+  console.log(`[DEBUG] Is calendar query? ${isCalendarQuery} - Query: "${userInput}"`);
+  
+  if (isCalendarQuery) {
     
     console.log(`[DEBUG] Calendar query detected: "${userInput}"`);
+    
+    // Temporary debug response to confirm path is taken
+    if (userInput.toLowerCase().includes('schedule')) {
+      return res.status(200).json({ reply: `🔧 DEBUG: Calendar query detected! Query was: "${userInput}". About to fetch fresh calendar data...` });
+    }
     
     try {
       // Fetch fresh calendar events for calendar-related queries
