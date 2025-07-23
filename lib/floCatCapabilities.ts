@@ -1,5 +1,6 @@
 // lib/floCatCapabilities.ts
 import { habitCapability } from './capabilities/habitCapability';
+import { taskCapability } from './capabilities/taskCapability';
 
 /**
  * Defines the structure for a FloCat capability.
@@ -19,6 +20,7 @@ export interface FloCatCapability {
 // Register all capabilities here
 export const floCatCapabilities: FloCatCapability[] = [
   habitCapability,
+  taskCapability,
   // Add more capabilities as they are developed
 ];
 
@@ -37,26 +39,115 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
     return null;
   }
   
-  const lowerInput = userInput.toLowerCase();
+  const lowerInput = userInput.toLowerCase().trim();
+  console.log(`[DEBUG] Matching capability for input: "${userInput}"`);
 
   for (const capability of floCatCapabilities) {
-    // Check for trigger phrases first
-    const matchingPhrase = capability.triggerPhrases.find(phrase => lowerInput.includes(phrase.toLowerCase()));
-
-    if (matchingPhrase) {
-      // If a trigger phrase is found, try to match a command
-      for (const command of capability.supportedCommands) {
-        // Simple check: does the input contain the command after the trigger phrase?
-        if (lowerInput.includes(command.toLowerCase(), lowerInput.indexOf(matchingPhrase.toLowerCase()))) {
-           // Extract arguments (simple approach: everything after the command)
-           const commandIndex = lowerInput.indexOf(command.toLowerCase(), lowerInput.indexOf(matchingPhrase.toLowerCase()));
-           const args = userInput.substring(commandIndex + command.length).trim();
-
-          return { capability, command, args };
-        }
+    console.log(`[DEBUG] Checking capability: ${capability.featureName}`);
+    
+    // Flexible matching for common variations (check this first for better results)
+    if (capability.featureName === "Task Management") {
+      // Handle variations like "add a task", "create new task", etc.
+      if ((lowerInput.includes("add") || lowerInput.includes("create") || lowerInput.includes("new") || lowerInput.includes("make")) && 
+          (lowerInput.includes("task"))) {
+        const command = "add";
+        const args = extractTaskFromInput(userInput);
+        console.log(`[DEBUG] Task add match found. Args: "${args}"`);
+        return { capability, command, args };
+      }
+      
+      // Handle "my tasks", "show tasks", "list tasks"
+      if ((lowerInput.includes("my") || lowerInput.includes("show") || lowerInput.includes("list")) && 
+          lowerInput.includes("task")) {
+        const command = "list";
+        const args = "";
+        console.log(`[DEBUG] Task list match found`);
+        return { capability, command, args };
+      }
+    }
+    
+    // Check for trigger phrases with more flexible matching
+    for (const phrase of capability.triggerPhrases) {
+      const lowerPhrase = phrase.toLowerCase();
+      
+      // Direct match
+      if (lowerInput.includes(lowerPhrase)) {
+        const command = extractCommandFromPhrase(phrase);
+        const args = extractArgsAfterPhrase(userInput, phrase);
+        console.log(`[DEBUG] Direct phrase match: "${phrase}", command: ${command}, args: "${args}"`);
+        return { capability, command, args };
       }
     }
   }
 
   return null; // No matching capability found
+}
+
+function extractCommandFromPhrase(phrase: string): string {
+  const words = phrase.toLowerCase().split(' ');
+  return words[0]; // First word is usually the command
+}
+
+function extractArgsAfterPhrase(userInput: string, phrase: string): string {
+  const lowerInput = userInput.toLowerCase();
+  const lowerPhrase = phrase.toLowerCase();
+  const phraseIndex = lowerInput.indexOf(lowerPhrase);
+  
+  if (phraseIndex !== -1) {
+    return userInput.substring(phraseIndex + phrase.length).trim();
+  }
+  
+  return "";
+}
+
+function extractTaskFromInput(userInput: string): string {
+  const lowerInput = userInput.toLowerCase();
+  
+  // Advanced patterns to handle complex natural language
+  const patterns = [
+    // "add a task for tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+for\s+\w+\s+called\s+(.+)/i,
+    // "add a task due tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+due\s+\w+\s+called\s+(.+)/i,
+    // "add a task called [task name] for tomorrow"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+?)\s+(?:for|due)\s+\w+/i,
+    // "add a task called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+)/i,
+    // Standard patterns
+    /(?:add|create|new|make)\s+(?:a\s+)?task:?\s*(.+)/i,
+    /(?:add|create|new|make)\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
+    /task:?\s*(.+)/i
+  ];
+  
+  // Try each pattern
+  for (const pattern of patterns) {
+    const match = userInput.match(pattern);
+    if (match && match[1]) {
+      let extracted = match[1].trim();
+      
+      // Clean up common time expressions that might have been included
+      extracted = extracted.replace(/\s+(?:for|due)\s+(?:today|tomorrow|yesterday|\w+day|\d+\s+days?)\s*$/i, '');
+      extracted = extracted.replace(/^(?:for|due)\s+(?:today|tomorrow|yesterday|\w+day|\d+\s+days?)\s+called\s+/i, '');
+      
+      return extracted.trim();
+    }
+  }
+  
+  // Fallback: remove common command words and extract the rest
+  let taskText = userInput;
+  const commandWords = ["add", "create", "new", "make", "a", "an", "the", "task", "todo", "item", "called"];
+  
+  let words = taskText.split(' ');
+  let startIndex = 0;
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i].toLowerCase();
+    if (!commandWords.includes(word) && word !== ':') {
+      startIndex = i;
+      break;
+    }
+  }
+  
+  const result = words.slice(startIndex).join(' ').trim();
+  return result.replace(/^(task:?|todo:?|item:?)\s*/i, '').trim();
 }

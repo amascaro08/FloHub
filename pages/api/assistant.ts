@@ -14,6 +14,8 @@ import {
   fetchUserConversations,
 } from "@/lib/contextService";
 import { ChatCompletionMessageParam } from "openai/resources";
+import { SmartAIAssistant } from "@/lib/aiAssistant";
+import { findMatchingCapability } from "@/lib/floCatCapabilities";
 
 // Types
 type ChatRequest = {
@@ -120,8 +122,9 @@ export default async function handler(
     contextData = {}
   } = req.body as ChatRequest;
 
-  // Store contextData globally for use in generateLocalResponse
+  // Store contextData globally for use in generateLocalResponse and capabilities
   (global as any).currentContextData = contextData;
+  (global as any).currentUserId = email;
 
   // Use either prompt or message, with message taking precedence, or bodyUserInput
   const userInput = bodyUserInput || message || prompt || "";
@@ -131,6 +134,71 @@ export default async function handler(
   }
 
   const lowerPrompt = userInput.toLowerCase();
+
+  // Initialize Smart AI Assistant for pattern analysis and suggestions
+  const smartAssistant = new SmartAIAssistant(email);
+  // Check for proactive suggestion requests
+  if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
+    try {
+      await smartAssistant.loadUserContext();
+      const suggestions = await smartAssistant.generateProactiveSuggestions();
+      
+      if (suggestions.length > 0) {
+        const topSuggestions = suggestions.slice(0, 3);
+        let suggestionText = "💡 **Here are some personalized suggestions based on your patterns:**\n\n";
+        
+        topSuggestions.forEach((suggestion, index) => {
+          const priorityEmoji = suggestion.priority === 'high' ? '🔴' : 
+                               suggestion.priority === 'medium' ? '🟡' : '🟢';
+          suggestionText += `${index + 1}. ${priorityEmoji} **${suggestion.title}**\n`;
+          suggestionText += `   ${suggestion.message}\n`;
+          if (suggestion.actionable) {
+            suggestionText += `   💫 *This suggestion is actionable - I can help implement it!*\n`;
+          }
+          suggestionText += `\n`;
+        });
+        
+        return res.status(200).json({ reply: suggestionText });
+      } else {
+        return res.status(200).json({ reply: "Great job! I don't have any specific suggestions right now. You seem to be managing your tasks and habits well! 🌟" });
+      }
+    } catch (error) {
+      console.error("Error generating suggestions:", error);
+      // Continue with normal processing
+    }
+  }
+
+  // Check for natural language queries first
+  if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
+      lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
+      lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
+    try {
+      const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+      if (queryResponse && !queryResponse.includes("I can help you with:")) {
+        return res.status(200).json({ reply: queryResponse });
+      }
+    } catch (error) {
+      console.error("Error processing natural language query:", error);
+      // Continue with normal processing
+    }
+  }
+
+  // Try to match with capabilities for action-based commands
+  const capabilityMatch = findMatchingCapability(userInput);
+  if (capabilityMatch) {
+    try {
+      console.log(`[DEBUG] Capability matched: ${capabilityMatch.capability.featureName}, Command: ${capabilityMatch.command}, Args: "${capabilityMatch.args}"`);
+      const capabilityResponse = await capabilityMatch.capability.handler(
+        capabilityMatch.command, 
+        capabilityMatch.args
+      );
+      console.log(`[DEBUG] Capability response: ${capabilityResponse}`);
+      return res.status(200).json({ reply: capabilityResponse });
+    } catch (error) {
+      console.error("Error in capability handler:", error);
+      return res.status(500).json({ error: "Sorry, there was an error processing your request." });
+    }
+  }
 
   const callInternalApi = async (path: string, method: string, body: any, originalReq: NextApiRequest) => {
     const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
@@ -152,23 +220,72 @@ export default async function handler(
     return response.ok;
   };
 
-  // ── Add Task Detection ─────────────────────────────
-  const taskMatch = userInput.match(/(?:add|new) task(?: called)? (.+?)(?: due ([\w\s]+))?$/i);
-  if (taskMatch && taskMatch[1]) {
-    const taskText = taskMatch[1].trim();
-    const duePhrase = taskMatch[2]?.trim().toLowerCase();
-    const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+  // ── Enhanced Add Task Detection ─────────────────────────────
+  // More flexible task detection patterns
+  const taskPatterns = [
+    // "add a task for tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+for\s+(\w+)\s+called\s+(.+)/i,
+    // "add a task due tomorrow called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+due\s+(\w+)\s+called\s+(.+)/i,
+    // "add a task called [task name] for tomorrow"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+?)\s+(?:for|due)\s+(\w+)/i,
+    // "add a task called [task name]"
+    /(?:add|create|new|make)\s+(?:a\s+)?task\s+called\s+(.+)/i,
+    // Standard patterns
+    /(?:add|create|new|make)\s+(?:a\s+)?task:?\s*(.+)/i,
+    /(?:add|create|new|make)\s+(.+?)\s+(?:to\s+)?(?:my\s+)?(?:task\s+)?list/i,
+    /task:?\s*(.+)/i
+  ];
+  
+  for (const pattern of taskPatterns) {
+    const taskMatch = userInput.match(pattern);
+    if (taskMatch) {
+      let finalTaskText = '';
+      let duePhrase: string | null = null;
+      
+      // Handle different capture groups based on pattern
+      if (pattern.source.includes('called')) {
+        if (taskMatch[2] && taskMatch[1]) {
+          // Pattern with due date first, then task name
+          finalTaskText = taskMatch[2].trim();
+          duePhrase = taskMatch[1].trim();
+        } else if (taskMatch[1] && taskMatch[2]) {
+          // Pattern with task name first, then due date
+          finalTaskText = taskMatch[1].trim();
+          duePhrase = taskMatch[2].trim();
+        } else if (taskMatch[1]) {
+          // Simple "called [task]" pattern
+          finalTaskText = taskMatch[1].trim();
+        }
+      } else if (taskMatch[1]) {
+        // Standard patterns
+        const taskText = taskMatch[1].trim();
+        
+        // Check for due date in the task text
+        const dueMatch = taskText.match(/(.+?)\s+(?:for|due)\s+(.+)$/i);
+        if (dueMatch) {
+          finalTaskText = dueMatch[1].trim();
+          duePhrase = dueMatch[2].trim();
+        } else {
+          finalTaskText = taskText;
+        }
+      }
+      
+      if (finalTaskText) {
+        const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+        const payload: any = { text: finalTaskText };
+        if (dueDate) payload.dueDate = dueDate;
 
-    const payload: any = { text: taskText };
-    if (dueDate) payload.dueDate = dueDate;
-
-    const success = await callInternalApi("/api/tasks", "POST", payload, req);
-    if (success) {
-      return res.status(200).json({
-        reply: `✅ Task "${taskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
-      });
-    } else {
-      return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
+        const success = await callInternalApi("/api/tasks", "POST", payload, req);
+        if (success) {
+          return res.status(200).json({
+            reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+          });
+        } else {
+          return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+        }
+      }
     }
   }
 
@@ -273,11 +390,11 @@ export default async function handler(
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
     const meetings = bodyMeetings.length > 0 ? bodyMeetings : await fetchUserMeetingNotes(email).catch(() => []);
 
-    // If no OpenAI API key, use local AI
+    // If no OpenAI API key, use local AI with smart assistance
     if (!openai) {
       console.log("Using local AI (no OpenAI API key found)");
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
     
@@ -348,7 +465,7 @@ export default async function handler(
       if (!aiReply) {
         console.log("OpenAI returned empty response, using local AI");
         return res.status(200).json({ 
-          reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+          reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
         });
       }
 
@@ -356,13 +473,36 @@ export default async function handler(
     } catch (err: any) {
       console.error("OpenAI API error, falling back to local AI:", err.message);
       return res.status(200).json({ 
-        reply: generateLocalResponse(userInput, floCatStyle, preferredName, notes, meetings) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
       });
     }
   } catch (err: any) {
     console.error("Assistant error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
+}
+
+// Enhanced local AI response generator with smart assistance
+async function generateEnhancedLocalResponse(
+  input: string, 
+  floCatStyle: string, 
+  preferredName: string, 
+  notes: any[], 
+  meetings: any[],
+  smartAssistant: SmartAIAssistant
+): Promise<string> {
+  // First try the smart assistant for natural language queries
+  try {
+    const smartResponse = await smartAssistant.processNaturalLanguageQuery(input);
+    if (smartResponse && !smartResponse.includes("I can help you with:")) {
+      return smartResponse;
+    }
+  } catch (error) {
+    console.error("Error in smart assistant:", error);
+    // Continue with local response
+  }
+
+  return generateLocalResponse(input, floCatStyle, preferredName, notes, meetings);
 }
 
 // Local AI response generator (no external API required)
