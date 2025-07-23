@@ -139,12 +139,15 @@ export default function AddMeetingNoteModal({
       const selectedEvent = workCalendarEvents.find(event => event.id === selectedOption.value);
       setSelectedEventId(selectedOption.value);
       setSelectedEventTitle(selectedOption.label);
-      setTitle(selectedOption.label);
+      setTitle(selectedOption.label); // Set title to event summary
       setIsAdhoc(false);
     } else {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setTitle("");
+      // Don't clear title if user typed something - only clear if it was auto-populated
+      if (selectedEventId) {
+        setTitle(""); // Only clear if we had an event selected before
+      }
     }
   };
 
@@ -153,7 +156,7 @@ export default function AddMeetingNoteModal({
     if (e.target.checked) {
       setSelectedEventId(undefined);
       setSelectedEventTitle(undefined);
-      setTitle("");
+      // Don't auto-clear title when switching to ad-hoc, let user keep what they typed
     }
   };
 
@@ -325,8 +328,8 @@ export default function AddMeetingNoteModal({
                     className="input-modern"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    disabled={isSaving || selectedEventId !== undefined}
-                    placeholder="Enter meeting title"
+                    disabled={isSaving || (selectedEventId !== undefined && !isAdhoc)}
+                    placeholder={selectedEventId ? "Title from calendar event" : "Enter meeting title"}
                   />
                 </div>
 

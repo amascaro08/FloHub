@@ -94,13 +94,46 @@ export default function MeetingsPage() {
 
   // Log the fetched data and errors for debugging
   useEffect(() => {
+    console.log("=== MEETINGS PAGE DEBUG ===");
     console.log("Fetched user settings:", userSettings);
     console.log("User settings error:", settingsError);
-    console.log("Fetched calendar events:", calendarEvents);
+    console.log("PowerAutomate URL configured:", userSettings?.powerAutomateUrl);
+    console.log("Calendar sources:", userSettings?.calendarSources);
+    console.log("Fetched calendar events (raw):", calendarEvents);
     console.log("Calendar events error:", calendarError);
     console.log("Filtered work calendar events:", workCalendarEvents);
+    
+    // Debug: Show all events with their source property
+    if (calendarEvents && calendarEvents.length > 0) {
+      console.log("All calendar events with sources:");
+      calendarEvents.forEach((event, index) => {
+        console.log(`Event ${index + 1}:`, {
+          id: event.id,
+          summary: event.summary,
+          source: event.source,
+          calendarName: event.calendarName,
+          tags: event.tags
+        });
+      });
+      
+      const workEvents = calendarEvents.filter(event => event.source === 'work');
+      const personalEvents = calendarEvents.filter(event => event.source === 'personal');
+      const noSourceEvents = calendarEvents.filter(event => !event.source);
+      
+      console.log(`Work events count: ${workEvents.length}`);
+      console.log(`Personal events count: ${personalEvents.length}`);
+      console.log(`Events without source: ${noSourceEvents.length}`);
+      
+      if (workEvents.length === 0 && calendarEvents.length > 0) {
+        console.warn("⚠️ No work events found! All events have source:", calendarEvents.map(e => e.source));
+      }
+    } else {
+      console.log("No calendar events fetched");
+    }
+    
     console.log("Fetched meeting notes:", meetingNotesResponse);
     console.log("Meeting notes error:", meetingNotesError);
+    console.log("=== END DEBUG ===");
   }, [userSettings, settingsError, calendarEvents, calendarError, workCalendarEvents, meetingNotesResponse, meetingNotesError]);
 
   const [searchContent, setSearchContent] = useState("");
