@@ -87,9 +87,7 @@ export default function MobileDashboard() {
       setIsLoading(true);
       if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch('/api/userSettings', {
-            credentials: 'include'
-          });
+          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
@@ -122,12 +120,11 @@ export default function MobileDashboard() {
   const saveWidgetOrder = async () => {
     if (isClient && user?.primaryEmail) {
       try {
-        const response = await fetch("/api/userSettings", {
-          method: "PUT",
+        const response = await fetch("/api/userSettings/update", {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: 'include',
           body: JSON.stringify({ activeWidgets: activeWidgets }),
         });
 

@@ -360,7 +360,7 @@ const AtAGlanceWidget = () => {
 
   // Use SWR for efficient data fetching with caching
   const { data: userSettings } = useSWR(
-    user ? `/api/userSettings` : null,
+    user ? `/api/userSettings?userId=${user.primaryEmail}` : null,
     fetcher,
     {
       dedupingInterval: 300000, // 5 minutes

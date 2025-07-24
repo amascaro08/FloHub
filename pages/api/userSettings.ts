@@ -7,11 +7,10 @@ import { eq } from "drizzle-orm";
 import { UserSettings } from "../../types/app"; // Import UserSettings from typese
 
 type ErrorRes = { error: string };
-type SuccessRes = { success: boolean };
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UserSettings | ErrorRes | SuccessRes>
+  res: NextApiResponse<UserSettings | ErrorRes>
 ) {
   // Handle CORS for production
   const origin = req.headers.origin;
@@ -36,21 +35,12 @@ export default async function handler(
 
   // Disable caching to always return freshest data
   res.setHeader('Cache-Control', 'no-store');
-  console.log("[userSettings] Request cookies:", req.cookies);
-  console.log("[userSettings] Auth token:", req.cookies['auth-token']);
   const decoded = auth(req);
-  console.log("[userSettings] Auth decoded:", decoded);
-  
   if (!decoded) {
-    console.log("[userSettings] No auth token found");
     return res.status(401).json({ error: "Not authenticated" });
   }
-  
   const user = await getUserById(decoded.userId);
-  console.log("[userSettings] User from database:", user);
-  
   if (!user?.email) {
-    console.log("[userSettings] User not found in database for userId:", decoded.userId);
     return res.status(401).json({ error: "User not found" });
   }
   const user_email = user.email;
@@ -120,42 +110,8 @@ export default async function handler(
       console.error("Error fetching user settings for", user_email, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
-  } else if (req.method === "PUT") {
-    try {
-      const updateData = req.body;
-      console.log("Updating user settings for", user_email, updateData);
-
-      // Check if user settings exist
-      const existingSettings = await db.query.userSettings.findFirst({
-        where: eq(userSettings.user_email, user_email),
-      });
-
-      if (existingSettings) {
-        // Update existing settings - exclude savedLayouts if it doesn't exist in schema yet
-        const { savedLayouts, ...updateDataWithoutSavedLayouts } = updateData;
-        await db.update(userSettings)
-          .set({
-            ...updateDataWithoutSavedLayouts,
-            user_email: user_email,
-          })
-          .where(eq(userSettings.user_email, user_email));
-      } else {
-        // Create new settings - exclude savedLayouts if it doesn't exist in schema yet
-        const { savedLayouts, ...updateDataWithoutSavedLayouts } = updateData;
-        await db.insert(userSettings).values({
-          user_email: user_email,
-          ...updateDataWithoutSavedLayouts,
-        });
-      }
-
-      console.log("User settings updated successfully for", user_email);
-      return res.status(200).json({ success: true });
-    } catch (error) {
-      console.error("Error updating user settings for", user_email, error);
-      return res.status(500).json({ error: "Failed to update user settings" });
-    }
   } else {
-    res.setHeader("Allow", ["GET", "PUT"]);
+    res.setHeader("Allow", ["GET"]);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 }
