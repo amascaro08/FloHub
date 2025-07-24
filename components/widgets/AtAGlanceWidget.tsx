@@ -112,7 +112,7 @@ function generateDashboardWidget(
   );
 
   // Find next meeting
-  const now = new Date();
+  const currentTime = new Date();
   const nextMeeting = todayEvents
     .filter(event => {
       let eventTime;
@@ -121,7 +121,7 @@ function generateDashboardWidget(
       } else {
         eventTime = new Date(event.start?.dateTime || event.start?.date || '');
       }
-      return eventTime > now;
+      return eventTime > currentTime;
     })
     .sort((a, b) => {
       let aTime = a.start instanceof Date ? a.start : new Date(a.start?.dateTime || a.start?.date || '');
