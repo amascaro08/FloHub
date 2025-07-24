@@ -87,6 +87,7 @@
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1rem;
   box-shadow:
     0 4px 6px var(--shadow-color),
     0 1px 3px var(--shadow-color-darker);
@@ -103,6 +104,7 @@
 .dark .glass {
   background: rgba(31, 41, 55, 0.75);
   border: 1px solid rgba(55, 65, 81, 0.5);
+  border-radius: 1rem;
   box-shadow:
     0 4px 6px var(--shadow-color),
     0 1px 3px var(--shadow-color-darker);
@@ -117,14 +119,14 @@
 
 /* Modern button styles */
 .btn-primary {
-  @apply bg-primary-500 text-white px-4 py-2 rounded-lg font-medium
+  @apply bg-primary-500 text-white px-4 py-2 rounded-2xl font-medium
     hover:bg-primary-600 transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50
     active:bg-primary-700 shadow-sm hover:shadow;
 }
 
 .btn-secondary {
-  @apply bg-neutral-200 text-neutral-800 px-4 py-2 rounded-lg font-medium
+  @apply bg-neutral-200 text-neutral-800 px-4 py-2 rounded-2xl font-medium
     hover:bg-neutral-300 transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-opacity-50
     active:bg-neutral-400 shadow-sm hover:shadow dark:bg-neutral-700 dark:text-neutral-100
@@ -133,7 +135,7 @@
 
 /* Modern input styles */
 .input-modern {
-  @apply border border-neutral-300 rounded-lg px-3 py-2 w-full
+  @apply border border-neutral-300 rounded-2xl px-3 py-2 w-full
     focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
     transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800
     dark:border-neutral-600 dark:text-white placeholder-neutral-400;
@@ -240,7 +242,7 @@
 /* Widget header styles */
 .widget-header {
   @apply font-heading font-semibold text-lg mb-3 pb-2 border-b border-neutral-200
-    dark:border-neutral-700 flex items-center;
+    dark:border-neutral-700 flex items-center text-[var(--fg)];
 }
 
 .widget-header svg {
@@ -377,14 +379,14 @@
 
 /* Enhanced button styles following brand guidelines */
 .btn-primary {
-  @apply bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg font-medium
+  @apply bg-[var(--primary-color)] text-white px-4 py-2 rounded-2xl font-medium
     hover:bg-[var(--primary-hover)] transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-opacity-50
     active:scale-95 shadow-sm hover:shadow;
 }
 
 .btn-secondary {
-  @apply bg-white border border-[var(--neutral-300)] text-[var(--neutral-700)] px-4 py-2 rounded-lg font-medium
+  @apply bg-white border border-[var(--neutral-300)] text-[var(--neutral-700)] px-4 py-2 rounded-2xl font-medium
     hover:bg-[var(--neutral-50)] hover:border-[var(--neutral-400)] transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-opacity-50
     active:scale-95 shadow-sm hover:shadow
@@ -409,6 +411,7 @@
 /* Meeting card hover effects */
 .meeting-card {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 1rem;
 }
 
 .meeting-card:hover {

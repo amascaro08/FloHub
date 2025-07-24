@@ -26,8 +26,8 @@ const FeedbackPage: NextPage = () => {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4">Submit Feedback</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h1 className="text-2xl font-semibold mb-4 text-[var(--fg)]">Submit Feedback</h1>
+          <p className="text-neutral-600 dark:text-neutral-400">
             You must be signed in to submit feedback.
           </p>
         </div>
@@ -124,8 +124,8 @@ const FeedbackPage: NextPage = () => {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Submit Feedback</h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Submit Feedback</h1>
+        <p className="text-neutral-600 dark:text-neutral-400">
           Help us improve the app by sharing your feedback. Your submission will create a GitHub issue for tracking.
         </p>
       </div>
@@ -193,14 +193,14 @@ const FeedbackPage: NextPage = () => {
             onChange={(e) => setFeedbackText(e.target.value)}
             placeholder="Please provide detailed information about your feedback..."
             required
-            className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="input-modern"
           />
         </div>
 
         {/* Tags Section */}
         <div>
           <label className="block text-sm font-medium mb-3">Tags (optional)</label>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
             Add tags to help categorize your feedback
           </p>
           
@@ -232,13 +232,13 @@ const FeedbackPage: NextPage = () => {
               onChange={(e) => setCustomTag(e.target.value)}
               placeholder="Add custom tag..."
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomTag())}
-              className="flex-1 p-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="input-modern flex-1"
             />
             <button
               type="button"
               onClick={handleAddCustomTag}
               disabled={!customTag.trim()}
-              className="px-4 py-2 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+              className="btn-secondary px-4 py-2 text-sm"
             >
               Add
             </button>
@@ -247,7 +247,7 @@ const FeedbackPage: NextPage = () => {
           {/* Selected Tags */}
           {selectedTags.length > 0 && (
             <div className="mt-3">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Selected tags:</div>
+              <div className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Selected tags:</div>
               <div className="flex flex-wrap gap-2">
                 {selectedTags.map((tag) => (
                   <span
@@ -274,7 +274,7 @@ const FeedbackPage: NextPage = () => {
           <button
             type="submit"
             disabled={isSubmitting || !feedbackText.trim()}
-            className="w-full md:w-auto px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+            className="btn-primary w-full md:w-auto"
           >
             {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
           </button>

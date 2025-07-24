@@ -295,7 +295,7 @@ function TaskWidget() {
                     type="checkbox"
                     checked={t.done}
                     onChange={() => toggleComplete(t)}
-                    className="mr-3 h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="mr-3 h-5 w-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="font-medium truncate">
                     {t.text}

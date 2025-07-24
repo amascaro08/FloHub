@@ -62,20 +62,20 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-[var(--fg)]">
               Invalid Reset Link
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-neutral-600">
               The password reset link is invalid or has expired.
             </p>
           </div>
           <div className="text-center">
             <button
               onClick={() => router.push('/login')}
-              className="text-indigo-600 hover:text-indigo-500"
+              className="text-primary-600 hover:text-primary-500"
             >
               Return to Login
             </button>
@@ -90,13 +90,13 @@ export default function ResetPassword() {
       <Head>
         <title>Reset Password - FloHub</title>
       </Head>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-[var(--fg)]">
               Reset Your Password
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-neutral-600">
               Enter your new password below
             </p>
           </div>
@@ -115,7 +115,7 @@ export default function ResetPassword() {
               <div>
                 <label
                   htmlFor="new-password"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
                 >
                   New Password
                 </label>
@@ -126,14 +126,14 @@ export default function ResetPassword() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="input-modern"
                   placeholder="Enter your new password"
                 />
               </div>
               <div>
                 <label
                   htmlFor="confirm-password"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
                 >
                   Confirm New Password
                 </label>
@@ -144,7 +144,7 @@ export default function ResetPassword() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="input-modern"
                   placeholder="Confirm your new password"
                 />
               </div>
@@ -154,7 +154,7 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="btn-primary w-full"
               >
                 {isLoading ? 'Resetting...' : 'Reset Password'}
               </button>
@@ -164,7 +164,7 @@ export default function ResetPassword() {
               <button
                 type="button"
                 onClick={() => router.push('/login')}
-                className="text-indigo-600 hover:text-indigo-500 text-sm"
+                className="text-primary-600 hover:text-primary-500 text-sm"
               >
                 Back to Login
               </button>

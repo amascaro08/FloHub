@@ -97,7 +97,7 @@ function LandingPage() {
               <span className="text-primary-500 font-medium">Organise everything.</span>  <span className="italic">Finally, for real.</span>
             </p>
             <Link href="/login" passHref>
-              <button className="px-8 py-4 rounded-2xl text-lg font-bold bg-primary-600 hover:bg-primary-700 shadow-xl text-white transition-colors duration-150 mb-6 w-full md:w-auto">
+              <button className="btn-primary px-8 py-4 text-lg font-bold mb-6 w-full md:w-auto">
                 Login to FloHub
               </button>
             </Link>
@@ -143,7 +143,7 @@ function LandingPage() {
             Join FloHub and get more done — with less stress. The future of work-life productivity starts now.
           </p>
           <Link href="/login" passHref>
-            <button className="px-8 py-4 rounded-2xl text-lg font-bold bg-primary-600 hover:bg-primary-700 shadow-xl text-white transition-colors duration-150">
+            <button className="btn-primary px-8 py-4 text-lg font-bold">
               Login to FloHub
             </button>
           </Link>
