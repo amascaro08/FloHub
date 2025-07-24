@@ -112,88 +112,160 @@ export class SmartAIAssistant {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     try {
-      // Fetch all user data in parallel for better performance
-      const [
-        userTasks,
-        userNotes,
-        userHabits,
-        userHabitCompletions,
-        userJournalEntries,
-        userJournalMoods,
-        userCalendarEvents,
-        userMeetings,
-        userConversations,
-        settings
-      ] = await Promise.all([
+      // If we have fresh calendar events, we can try a minimal context load for calendar queries
+      if (freshCalendarEvents && freshCalendarEvents.length > 0) {
+        try {
+          // Minimal context with just calendar events for faster calendar queries
+          this.context = {
+            userId: this.userId,
+            tasks: [],
+            completedTasks: [],
+            notes: [],
+            meetings: [],
+            habits: [],
+            habitCompletions: [],
+            journalEntries: [],
+            journalMoods: [],
+            calendarEvents: freshCalendarEvents,
+            conversations: [],
+            userSettings: null
+          };
+          return this.context;
+        } catch (calendarError) {
+          console.error('Error creating minimal calendar context, falling back to full load:', calendarError);
+        }
+      }
+              // Fetch all user data in parallel for better performance, with individual error handling
+        const fetchWithFallback = async <T>(queryPromise: Promise<T>, fallback: T, description: string): Promise<T> => {
+          try {
+            return await queryPromise;
+          } catch (error) {
+            console.error(`Error fetching ${description}:`, error);
+            return fallback;
+          }
+        };
+
+        const [
+          userTasks,
+          userNotes,
+          userHabits,
+          userHabitCompletions,
+          userJournalEntries,
+          userJournalMoods,
+          userCalendarEvents,
+          userMeetings,
+          userConversations,
+          settings
+        ] = await Promise.all([
         // Tasks (last 30 days)
-        db.select().from(tasks)
-          .where(and(
-            eq(tasks.user_email, this.userId),
-            gte(tasks.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(tasks.createdAt)),
+        fetchWithFallback(
+          db.select().from(tasks)
+            .where(and(
+              eq(tasks.user_email, this.userId),
+              gte(tasks.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(tasks.createdAt)),
+          [],
+          'tasks'
+        ),
 
         // Notes (last 30 days)
-        db.select().from(notes)
-          .where(and(
-            eq(notes.user_email, this.userId),
-            gte(notes.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(notes.createdAt)),
+        fetchWithFallback(
+          db.select().from(notes)
+            .where(and(
+              eq(notes.user_email, this.userId),
+              gte(notes.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(notes.createdAt)),
+          [],
+          'notes'
+        ),
 
         // Habits
-        db.select().from(habits)
-          .where(eq(habits.userId, this.userId))
-          .orderBy(desc(habits.createdAt)),
+        fetchWithFallback(
+          db.select().from(habits)
+            .where(eq(habits.userId, this.userId))
+            .orderBy(desc(habits.createdAt)),
+          [],
+          'habits'
+        ),
 
         // Habit completions (last 30 days)
-        db.select().from(habitCompletions)
-          .where(and(
-            eq(habitCompletions.userId, this.userId),
-            gte(habitCompletions.timestamp, thirtyDaysAgo)
-          ))
-          .orderBy(desc(habitCompletions.timestamp)),
+        fetchWithFallback(
+          db.select().from(habitCompletions)
+            .where(and(
+              eq(habitCompletions.userId, this.userId),
+              gte(habitCompletions.timestamp, thirtyDaysAgo)
+            ))
+            .orderBy(desc(habitCompletions.timestamp)),
+          [],
+          'habit completions'
+        ),
 
         // Journal entries (last 30 days)
-        db.select().from(journalEntries)
-          .where(and(
-            eq(journalEntries.user_email, this.userId),
-            gte(journalEntries.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(journalEntries.createdAt)),
+        fetchWithFallback(
+          db.select().from(journalEntries)
+            .where(and(
+              eq(journalEntries.user_email, this.userId),
+              gte(journalEntries.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(journalEntries.createdAt)),
+          [],
+          'journal entries'
+        ),
 
         // Journal moods (last 30 days)
-        db.select().from(journalMoods)
-          .where(and(
-            eq(journalMoods.user_email, this.userId),
-            gte(journalMoods.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(journalMoods.createdAt)),
+        fetchWithFallback(
+          db.select().from(journalMoods)
+            .where(and(
+              eq(journalMoods.user_email, this.userId),
+              gte(journalMoods.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(journalMoods.createdAt)),
+          [],
+          'journal moods'
+        ),
 
         // Calendar events (last 7 days + next 7 days)
-        db.select().from(calendarEvents)
-          .where(eq(calendarEvents.userId, this.userId)),
+        fetchWithFallback(
+          db.select().from(calendarEvents)
+            .where(eq(calendarEvents.userId, this.userId)),
+          [],
+          'calendar events'
+        ),
 
         // Meetings (last 30 days)
-        db.select().from(meetings)
-          .where(and(
-            eq(meetings.userId, this.userId),
-            gte(meetings.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(meetings.createdAt)),
+        fetchWithFallback(
+          db.select().from(meetings)
+            .where(and(
+              eq(meetings.userId, this.userId),
+              gte(meetings.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(meetings.createdAt)),
+          [],
+          'meetings'
+        ),
 
         // Conversations (last 30 days)
-        db.select().from(conversations)
-          .where(and(
-            eq(conversations.userId, this.userId),
-            gte(conversations.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(conversations.createdAt)),
+        fetchWithFallback(
+          db.select().from(conversations)
+            .where(and(
+              eq(conversations.userId, this.userId),
+              gte(conversations.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(conversations.createdAt)),
+          [],
+          'conversations'
+        ),
 
         // User settings
-        db.select().from(userSettings)
-          .where(eq(userSettings.user_email, this.userId))
-          .limit(1)
+        fetchWithFallback(
+          db.select().from(userSettings)
+            .where(eq(userSettings.user_email, this.userId))
+            .limit(1),
+          [],
+          'user settings'
+        )
       ]);
 
       this.context = {
@@ -213,8 +285,16 @@ export class SmartAIAssistant {
 
       return this.context;
     } catch (error) {
-      console.error('Error loading user context:', error);
-      throw new Error('Failed to load user context');
+      console.error('Error loading user context for userId:', this.userId);
+      console.error('Specific error:', error);
+      
+      // Try to provide more context about which query failed
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      throw new Error(`Failed to load user context: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
