@@ -259,11 +259,17 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                 
                 const icalUrl = prompt(
                   "Please enter your iCal URL:\n\n" +
-                  "This should be a public iCal (.ics) feed URL.\n" +
-                  "Examples:\n" +
-                  "• https://calendar.google.com/calendar/ical/.../basic.ics\n" +
-                  "• webcal://outlook.live.com/calendar/.../calendar.ics\n" +
-                  "• https://your-server.com/calendar.ics"
+                  "📅 GOOGLE CALENDAR SECRET URL:\n" +
+                  "Go to Google Calendar Settings → [Calendar Name] → Integrate Calendar → Copy 'Secret address in iCal format'\n" +
+                  "Format: https://calendar.google.com/calendar/ical/[email]/private-[secret]/basic.ics\n\n" +
+                  "🏢 OUTLOOK/OFFICE 365:\n" +
+                  "Go to Outlook Calendar Settings → Shared Calendars → Publish → Copy ICS link\n" +
+                  "Format: https://outlook.live.com/calendar/published/[id]/calendar.ics\n\n" +
+                  "🔗 OTHER ICAL FEEDS:\n" +
+                  "• PowerAutomate Logic Apps: https://[region].logic.azure.com/workflows/.../invoke\n" +
+                  "• Public calendars: https://example.com/calendar.ics\n" +
+                  "• Webcal links: webcal://example.com/calendar.ics\n\n" +
+                  "⚠️ IMPORTANT: Use SECRET/PRIVATE URLs for your own calendars for security!"
                 );
                 if (icalUrl && icalUrl.trim()) {
                   let processedUrl = icalUrl.trim();
@@ -278,6 +284,25 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     return;
                   }
                   
+                  // Detect calendar provider and set appropriate defaults
+                  let calendarProvider = "other";
+                  let defaultTags = ["personal"];
+                  
+                  if (processedUrl.includes('calendar.google.com')) {
+                    calendarProvider = "Google Calendar (iCal)";
+                    if (processedUrl.includes('/private-')) {
+                      defaultTags = ["personal", "google-secret"];
+                    } else {
+                      defaultTags = ["personal", "google-public"];
+                    }
+                  } else if (processedUrl.includes('outlook.live.com') || processedUrl.includes('outlook.office365.com')) {
+                    calendarProvider = "Outlook Calendar (iCal)";
+                    defaultTags = ["personal", "outlook"];
+                  } else if (processedUrl.includes('logic.azure.com')) {
+                    calendarProvider = "PowerAutomate (iCal)";
+                    defaultTags = ["work", "powerautomate"];
+                  }
+                  
                   // Create a new calendar source for the iCal URL
                   const newSource: CalendarSource = {
                     id: `ical_${Date.now()}`,
@@ -285,7 +310,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     type: "ical",
                     sourceId: "default",
                     connectionData: processedUrl,
-                    tags: ["personal"], // Default to personal, user can change later
+                    tags: defaultTags,
                     isEnabled: true,
                   };
                   
@@ -295,6 +320,15 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     ...settings,
                     calendarSources: updatedSources,
                   });
+                  
+                  // Show helpful message based on provider
+                  if (processedUrl.includes('calendar.google.com') && processedUrl.includes('/private-')) {
+                    alert(`✅ Google Calendar secret URL added successfully!\n\nThis is a secure private feed that only you can access. Your calendar events will sync automatically.\n\nNote: If you regenerate the secret URL in Google Calendar, you'll need to update it here.`);
+                  } else if (processedUrl.includes('outlook.live.com') || processedUrl.includes('outlook.office365.com')) {
+                    alert(`✅ Outlook Calendar URL added successfully!\n\nYour Outlook calendar events will sync automatically.\n\nNote: If you change the publishing settings in Outlook, you may need to update the URL here.`);
+                  } else if (processedUrl.includes('logic.azure.com')) {
+                    alert(`✅ PowerAutomate iCal URL added successfully!\n\nThis Logic App will generate your calendar events in iCal format.\n\nNote: Make sure your Logic App is published and publicly accessible.`);
+                  }
                 }
               }}
               className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
@@ -418,7 +452,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               <div className="space-y-2 text-sm">
                 <p>• <strong>Google Calendar:</strong> Full sync with your Google events</p>
                 <p>• <strong>Power Automate:</strong> Connect Office 365 or other calendar systems</p>
-                <p>• <strong>iCal Feed:</strong> Subscribe to any public iCal (.ics) calendar feed</p>
+                <p>• <strong>iCal Feed:</strong> Subscribe to private/secret iCal URLs (Google, Outlook) or public feeds</p>
               </div>
               <div className="mt-6 space-x-2">
                 <button
@@ -484,7 +518,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p><strong>Google Calendar:</strong> If you see "Not Connected", click "Add Google Calendar" to authorize access.</p>
           <p><strong>Power Automate URL:</strong> Make sure your URL returns JSON data and is accessible from the internet. Use the "Test URL" button to verify.</p>
-          <p><strong>iCal Calendar:</strong> Enter a public iCal (.ics) feed URL. Supports both http/https and webcal:// URLs. Use the "Test URL" button to verify the feed.</p>
+          <p><strong>iCal Calendar:</strong> Use SECRET/PRIVATE iCal URLs for your own calendars (Google, Outlook) or public feeds. Supports http/https and webcal:// URLs. For Google Calendar, use the "Secret address in iCal format" from calendar settings for security.</p>
           <p><strong>No Events Showing:</strong> Check that your calendar sources are enabled and that you have events in the selected date range.</p>
         </div>
       </section>

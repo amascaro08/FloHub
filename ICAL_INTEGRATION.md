@@ -1,10 +1,10 @@
 # iCal Integration for FloHub
 
-This document describes the new iCal calendar integration feature that allows users to subscribe to any public iCal (.ics) calendar feed.
+This document describes the new iCal calendar integration feature that allows users to subscribe to iCal (.ics) calendar feeds, including private/secret calendar URLs from Google Calendar, Outlook, and other providers.
 
 ## Features
 
-- **Read-only calendar feeds**: Subscribe to any public iCal/ICS URL
+- **Read-only calendar feeds**: Subscribe to public and private/secret iCal/ICS URLs
 - **WebCal support**: Automatically converts webcal:// URLs to https://
 - **Real-time testing**: Test calendar feeds before adding them
 - **Event synchronization**: Events from iCal feeds appear alongside Google Calendar and PowerAutomate events
@@ -17,11 +17,37 @@ This document describes the new iCal calendar integration feature that allows us
 2. Click the **"Add iCal Calendar"** button
 3. Enter a name for your calendar (e.g., "Team Events", "Holiday Calendar")
 4. Enter the iCal URL (supports multiple formats):
-   - `https://calendar.google.com/calendar/ical/.../basic.ics`
-   - `webcal://outlook.live.com/calendar/.../calendar.ics`
-   - `https://your-server.com/calendar.ics`
+   - **Google Calendar Secret URL**: `https://calendar.google.com/calendar/ical/[email]/private-[secret]/basic.ics`
+   - **Outlook Published Calendar**: `https://outlook.live.com/calendar/published/[id]/calendar.ics`
+   - **PowerAutomate Logic App**: `https://[region].logic.azure.com/workflows/.../invoke`
+   - **WebCal URLs**: `webcal://example.com/calendar.ics`
+   - **Standard HTTPS**: `https://your-server.com/calendar.ics`
 5. Click **"Test URL"** to verify the feed works
 6. Configure tags and enable/disable as needed
+
+## Secret/Private Calendar URLs
+
+### Google Calendar Secret URLs
+For secure access to your personal Google Calendar:
+1. Open Google Calendar → Settings
+2. Click on the calendar name under "Settings for my calendars"
+3. Click **"Integrate calendar"**
+4. Copy the **"Secret address in iCal format"**
+5. ⚠️ **Important**: Keep this URL private - it provides full read access to your calendar
+
+### Outlook Calendar URLs
+For Outlook/Office 365 calendars:
+1. Open Outlook Calendar → Settings → Shared Calendars
+2. Select your calendar and permission level
+3. Click **"Publish"** and copy the ICS link
+4. Use this URL in FloHub for automatic synchronization
+
+### PowerAutomate Logic Apps
+PowerAutomate can generate iCal feeds dynamically:
+1. Create a Logic App with HTTP trigger
+2. Format the response as valid iCal/ICS content
+3. Use the trigger URL as your iCal feed
+4. Ensure the Logic App is publicly accessible
 
 ## Supported URL Formats
 
