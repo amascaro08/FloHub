@@ -128,11 +128,11 @@ class PerformanceOptimizer {
    */
   cleanupCache(): void {
     const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
+    this.cache.forEach((entry, key) => {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
       }
-    }
+    });
   }
 
   /**
