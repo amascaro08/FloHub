@@ -129,6 +129,13 @@ function generateDashboardWidget(
       return aTime.getTime() - bTime.getTime();
     })[0];
 
+  // Debug: Log next meeting info
+  console.log('[AtAGlanceWidget] Next meeting:', nextMeeting ? {
+    summary: nextMeeting.summary,
+    start: nextMeeting.start,
+    currentTime: currentTime
+  } : 'No next meeting found');
+
   // Generate FloCat insights with brand voice
   let floCatInsights = [];
   let priorityLevel = "calm";
@@ -160,6 +167,9 @@ function generateDashboardWidget(
       meetingTime = new Date(nextMeeting.start?.dateTime || nextMeeting.start?.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
     floCatInsights.push(`⏰ **Next Meeting:** "${nextMeeting.summary}" at ${meetingTime}`);
+  } else {
+    // Add a fallback message if no next meeting found
+    floCatInsights.push(`📅 **Schedule:** No upcoming meetings for today.`);
   }
 
   if (tomorrowEvents.length > 0) {
@@ -518,6 +528,14 @@ const AtAGlanceWidget = () => {
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const preferredName = userSettings?.preferredName || user.primaryEmail?.split('@')[0] || 'User';
       
+      // Debug: Log the data being processed
+      console.log('[AtAGlanceWidget] Processing data:', {
+        tasks: processedData.tasks?.length || 0,
+        events: processedData.events?.length || 0,
+        habits: processedData.habits?.length || 0,
+        habitCompletions: processedData.habitCompletions?.length || 0
+      });
+      
       const dashboardContent = generateDashboardWidget(
         processedData.tasks,
         processedData.events,
@@ -582,10 +600,13 @@ const AtAGlanceWidget = () => {
 
   return (
     <div 
-      className="at-a-glance-widget"
+      className="at-a-glance-widget h-full flex flex-col"
       onClick={() => trackInteraction('view_summary')}
     >
-      <div dangerouslySetInnerHTML={{ __html: formattedHtml }} />
+      <div 
+        className="flex-1 overflow-auto"
+        dangerouslySetInnerHTML={{ __html: formattedHtml }} 
+      />
     </div>
   );
 };

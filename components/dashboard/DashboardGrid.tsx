@@ -362,7 +362,7 @@ const DashboardGrid = () => {
         {activeWidgets.map((widgetKey) => (
           <div 
             key={widgetKey} 
-            className="widget-container"
+            className="widget-container h-full"
           >
             {visibleWidgets.includes(widgetKey) ? (
               widgetComponents[widgetKey]
