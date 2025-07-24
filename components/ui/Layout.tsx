@@ -5,7 +5,9 @@ import { useRouter } from 'next/router';
 import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import ChatWidget from '../assistant/ChatWidget';
+import ChatSideModal from './ChatSideModal';
+import ChatToggleButton from './ChatToggleButton';
+import WeatherWidget from './WeatherWidget';
 import ThemeToggle from './ThemeToggle'
 import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
@@ -55,12 +57,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   // -- CHAT --
   const chatContext = useChat();
-  const history = chatContext?.history || [];
-  const send = chatContext?.send || (async () => {});
-  const status = chatContext?.status || 'idle';
-  const loading = chatContext?.loading || false;
-  const chatInput = chatContext?.input || '';
-  const setChatInput = chatContext?.setInput || (() => {});
   const isChatOpen = chatContext?.isChatOpen || false;
   const setIsChatOpen = chatContext?.setIsChatOpen || (() => {});
 
@@ -68,17 +64,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
 
-  // Send from header input
-  const handleTopInputSend = async () => {
-    if (topInput.trim() && send) {
-      try {
-        await send(topInput.trim());
-        setTopInput('');
-        setIsChatOpen(true);
-      } catch (error) {
-        console.error("Error sending message:", error);
-      }
-    }
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen);
   };
 
   // Loading state for user (optional, depends if you want to delay render)
