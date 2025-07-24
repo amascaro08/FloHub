@@ -346,7 +346,7 @@ const DashboardGrid = () => {
         margin={[16, 16]}
       >
         {activeWidgets.map((key) => (
-          <div key={key} className="glass p-5 rounded-xl flex flex-col">
+          <div key={key} className="glass p-5 rounded-2xl flex flex-col">
             <h2 className="widget-header">
               {getWidgetIcon(key)}
               {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}

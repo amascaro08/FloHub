@@ -15,22 +15,22 @@ const HabitTrackerPage = () => {
       
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Habit Tracker</h1>
-          <p className="text-gray-400">
+          <h1 className="text-3xl font-bold text-[var(--fg)] mb-2">Habit Tracker</h1>
+          <p className="text-neutral-600 dark:text-neutral-400">
             Build better habits by tracking your daily, weekly, or custom routines. 
             Visualize your progress and maintain streaks to stay motivated.
           </p>
         </div>
         
         {!user ? (
-          <div className="bg-gray-800 rounded-lg p-8 text-center">
-            <h2 className="text-xl font-semibold text-white mb-4">Sign in to use the Habit Tracker</h2>
-            <p className="text-gray-400 mb-6">
+          <div className="glass rounded-2xl p-8 text-center">
+            <h2 className="text-xl font-semibold text-[var(--fg)] mb-4">Sign in to use the Habit Tracker</h2>
+            <p className="text-neutral-600 dark:text-neutral-400 mb-6">
               You need to be signed in to create and track your habits.
             </p>
             <button 
               onClick={() => {}} // 
-              className="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-medium"
+              className="btn-primary"
             >
               Sign In
             </button>

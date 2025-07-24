@@ -628,7 +628,7 @@ function CalendarWidget() {
                 onClick={() => setActiveView('today')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   activeView === 'today'
-                    ? 'bg-teal-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -638,7 +638,7 @@ function CalendarWidget() {
                 onClick={() => setActiveView('tomorrow')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   activeView === 'tomorrow'
-                    ? 'bg-teal-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -648,7 +648,7 @@ function CalendarWidget() {
                 onClick={() => setActiveView('week')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   activeView === 'week'
-                    ? 'bg-teal-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -708,14 +708,14 @@ function CalendarWidget() {
                    <div
                      key={`${event.id}-${index}`}
                      className={`p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${
-                       isNextUpcoming ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : ''
+                       isNextUpcoming ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''
                      }`}
                      onClick={() => setViewingEvent(event)}
                    >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                          {isNextUpcoming && <span className="text-teal-600 mr-2">📍</span>}
+                          {isNextUpcoming && <span className="text-primary-600 mr-2">📍</span>}
                           {event.summary || "Untitled Event"}
                         </h3>
                         <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
@@ -760,7 +760,7 @@ function CalendarWidget() {
           <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700">
             <button
               onClick={openAdd}
-              className="w-full px-3 py-2 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+              className="w-full px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
             >
               + Add Event
             </button>
@@ -780,7 +780,7 @@ function CalendarWidget() {
                       type="text"
                       value={form.summary}
                       onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                      className="input-modern"
                       placeholder="Event title"
                     />
                   </div>
@@ -790,7 +790,7 @@ function CalendarWidget() {
                       type="datetime-local"
                       value={form.start}
                       onChange={(e) => setForm({ ...form, start: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                      className="input-modern"
                     />
                   </div>
                   <div>
@@ -799,20 +799,20 @@ function CalendarWidget() {
                       type="datetime-local"
                       value={form.end}
                       onChange={(e) => setForm({ ...form, end: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
+                      className="input-modern"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 mt-6">
                   <button
                     onClick={handleSaveEvent}
-                    className="flex-1 bg-teal-500 text-white py-2 rounded-md hover:bg-teal-600 transition-colors"
+                    className="btn-primary flex-1"
                   >
                     {editingEvent ? 'Update' : 'Create'}
                   </button>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                    className="btn-secondary flex-1"
                   >
                     Cancel
                   </button>
@@ -858,7 +858,7 @@ function CalendarWidget() {
                 <div className="flex gap-2 mt-6">
                   <button
                     onClick={() => openEdit(viewingEvent)}
-                    className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
+                    className="btn-secondary flex-1"
                   >
                     Edit
                   </button>
@@ -870,7 +870,7 @@ function CalendarWidget() {
                   </button>
                   <button
                     onClick={() => setViewingEvent(null)}
-                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
+                    className="btn-secondary flex-1"
                   >
                     Close
                   </button>

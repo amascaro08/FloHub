@@ -31,11 +31,11 @@ const AuthLayout = ({ children, title }: AuthLayoutProps) => {
             </Link>
           </div>
 
-          <div className="overflow-hidden rounded-lg bg-[var(--surface)] shadow-lg">
+          <div className="overflow-hidden rounded-2xl bg-[var(--surface)] shadow-lg">
             <div className="flex border-b border-neutral-200 dark:border-neutral-800">
               <Link
                 href="/login"
-                className={`flex-1 px-4 py-3 text-center font-medium ${
+                className={`flex-1 px-4 py-3 text-center font-medium transition-colors ${
                   isLoginPage
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
                     : 'text-neutral-600 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800/50'
@@ -45,7 +45,7 @@ const AuthLayout = ({ children, title }: AuthLayoutProps) => {
               </Link>
               <Link
                 href="/register"
-                className={`flex-1 px-4 py-3 text-center font-medium ${
+                className={`flex-1 px-4 py-3 text-center font-medium transition-colors ${
                   isRegisterPage
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
                     : 'text-neutral-600 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800/50'
