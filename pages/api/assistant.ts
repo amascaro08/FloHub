@@ -146,7 +146,7 @@ export default async function handler(
   const isCalendarQuery = lowerPrompt.includes("calendar") || lowerPrompt.includes("schedule") || 
       lowerPrompt.includes("event") || lowerPrompt.includes("today") ||
       lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
-      lowerPrompt.includes("upcoming");
+      lowerPrompt.includes("upcoming") || lowerPrompt.includes("meeting");
       
   console.log(`[DEBUG] Is calendar query? ${isCalendarQuery} - Query: "${userInput}"`);
   
@@ -155,8 +155,8 @@ export default async function handler(
     console.log(`[DEBUG] Calendar query detected: "${userInput}"`);
     
     // Temporary debug response to confirm path is taken
-    if (userInput.toLowerCase().includes('schedule')) {
-      return res.status(200).json({ reply: `🔧 DEBUG: Calendar query detected! Query was: "${userInput}". About to fetch fresh calendar data...` });
+    if (userInput.toLowerCase().includes('meeting') || userInput.toLowerCase().includes('schedule')) {
+      return res.status(200).json({ reply: `🔧 DEBUG: Calendar query detected! Query was: "${userInput}". Calendar query detection working. Checking if we can fetch calendar events...` });
     }
     
     try {
