@@ -164,7 +164,9 @@ const DashboardGrid = () => {
       setIsLoadingSettings(true);
       if (isClient && user?.primaryEmail) {
         try {
-          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
+          const response = await fetch('/api/userSettings', {
+            credentials: 'include'
+          });
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
             if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
@@ -173,9 +175,14 @@ const DashboardGrid = () => {
               ) as WidgetType[];
               setActiveWidgets(validWidgets);
             }
-            // Load saved layouts if they exist
+            // Load saved layouts if they exist (fallback to layouts if savedLayouts doesn't exist)
             if (userSettings.savedLayouts) {
               setSavedLayouts(userSettings.savedLayouts);
+              console.log("[DashboardGrid] Loaded saved layouts:", userSettings.savedLayouts);
+            } else if (userSettings.layouts) {
+              // Fallback to layouts if savedLayouts doesn't exist in the database yet
+              setSavedLayouts(userSettings.layouts);
+              console.log("[DashboardGrid] Loaded layouts as saved layouts:", userSettings.layouts);
             }
           } else {
             console.error("[DashboardGrid] Failed to fetch user settings, using defaults.");
@@ -220,19 +227,22 @@ const DashboardGrid = () => {
     if (!user?.primaryEmail) return;
 
     try {
-      const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`, {
+      const response = await fetch('/api/userSettings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           activeWidgets: activeWidgets,
-          savedLayouts: savedLayouts
+          layouts: savedLayouts
         })
       });
 
       if (!response.ok) {
         console.error("[DashboardGrid] Failed to save widget order and layouts");
+      } else {
+        console.log("[DashboardGrid] Successfully saved widget order and layouts");
       }
     } catch (error) {
       console.error("[DashboardGrid] Error saving widget order and layouts:", error);
@@ -327,6 +337,8 @@ const DashboardGrid = () => {
   const onLayoutChange = (layout: any, allLayouts: any) => {
     if (isLocked) return;
     
+    console.log("[DashboardGrid] Layout changed:", { layout, allLayouts });
+    
     // Update active widgets based on layout order
     const newWidgetOrder = layout.map((item: any) => item.i) as WidgetType[];
     setActiveWidgets(newWidgetOrder);
@@ -338,6 +350,7 @@ const DashboardGrid = () => {
     });
     setSavedLayouts(newSavedLayouts);
     
+    console.log("[DashboardGrid] Saving new layouts:", newSavedLayouts);
     saveWidgetOrder();
   };
 

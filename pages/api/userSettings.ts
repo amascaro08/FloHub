@@ -75,7 +75,6 @@ export default async function handler(
           timezone: "UTC",
           floCatSettings: { enabledCapabilities: [] },
           layouts: {},
-        };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
       }
@@ -110,8 +109,42 @@ export default async function handler(
       console.error("Error fetching user settings for", user_email, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
+  } else if (req.method === "PUT") {
+    try {
+      const updateData = req.body;
+      console.log("Updating user settings for", user_email, updateData);
+
+      // Check if user settings exist
+      const existingSettings = await db.query.userSettings.findFirst({
+        where: eq(userSettings.user_email, user_email),
+      });
+
+      if (existingSettings) {
+        // Update existing settings - exclude savedLayouts if it doesn't exist in schema yet
+        const { savedLayouts, ...updateDataWithoutSavedLayouts } = updateData;
+        await db.update(userSettings)
+          .set({
+            ...updateDataWithoutSavedLayouts,
+            user_email: user_email,
+          })
+          .where(eq(userSettings.user_email, user_email));
+      } else {
+        // Create new settings - exclude savedLayouts if it doesn't exist in schema yet
+        const { savedLayouts, ...updateDataWithoutSavedLayouts } = updateData;
+        await db.insert(userSettings).values({
+          user_email: user_email,
+          ...updateDataWithoutSavedLayouts,
+        });
+      }
+
+      console.log("User settings updated successfully for", user_email);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error updating user settings for", user_email, error);
+      return res.status(500).json({ error: "Failed to update user settings" });
+    }
   } else {
-    res.setHeader("Allow", ["GET"]);
+    res.setHeader("Allow", ["GET", "PUT"]);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 }
