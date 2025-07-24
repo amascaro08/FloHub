@@ -256,7 +256,7 @@ export default async function handler(
           console.log('Enabled calendar sources:', calendarSources.length);
         } else {
           // Fall back to legacy settings
-          legacyCalendarIds = Array.isArray(userSettingsData?.selectedCals) ? (userSettingsData.selectedCals as string[]) : ["primary"];
+          legacyCalendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
           legacyO365Url = userSettingsData?.powerAutomateUrl || null;
           console.log('Using legacy settings:', { legacyCalendarIds, hasLegacyO365Url: !!legacyO365Url });
         }
@@ -419,30 +419,87 @@ export default async function handler(
             : o365Data.value || []; // Some APIs return data in 'value' field
             
           console.log("O365 raw events count:", o365EventsRaw.length);
-          const o365Events: any[] = o365EventsRaw
+          
+          // Process recurring events - some Power Automate flows return series info
+          const expandedEvents: any[] = [];
+          
+          o365EventsRaw.forEach((e: any) => {
+            // Handle both single events and recurring event instances
+            if (e.recurrence || e.isRecurring || e.seriesMasterId) {
+              // This is a recurring event or part of a series
+              console.log("Processing recurring event:", e.title || e.subject);
+              
+              // Check if this is a series master or instance
+              if (e.seriesMasterId && e.seriesMasterId !== e.id) {
+                // This is an instance of a recurring series
+                expandedEvents.push(e);
+              } else if (!e.seriesMasterId) {
+                // This might be a series master or single occurrence
+                // Add it as-is, Power Automate should have already expanded instances
+                expandedEvents.push(e);
+              }
+            } else {
+              // Regular single event
+              expandedEvents.push(e);
+            }
+          });
+          
+          console.log("Expanded events count:", expandedEvents.length);
+          
+          const o365Events: any[] = expandedEvents
             .map((e: any) => ({
-              id: `o365_${e.startTime || e.title || e.subject}_${Math.random().toString(36).substring(7)}`,
+              id: `o365_${e.startTime || e.start?.dateTime || e.title || e.subject}_${Math.random().toString(36).substring(7)}`,
               calendarId: `o365_${source?.id || "default"}`,
               summary: e.title || e.subject || "No Title (Work)",
-              start: { dateTime: e.startTime || e.start?.dateTime },
-              end: { dateTime: e.endTime || e.end?.dateTime },
+              start: { 
+                dateTime: e.startTime || e.start?.dateTime || e.start?.date,
+                date: e.start?.date // Handle all-day events
+              },
+              end: { 
+                dateTime: e.endTime || e.end?.dateTime || e.end?.date,
+                date: e.end?.date // Handle all-day events
+              },
               source: isWork ? "work" : "personal",
               description: e.description || e.body || "",
               calendarName: sourceName,
               tags,
+              // Preserve recurring event metadata
+              isRecurring: e.recurrence || e.isRecurring || !!e.seriesMasterId,
+              seriesMasterId: e.seriesMasterId,
+              recurrence: e.recurrence
             }))
             .filter((event: any) => {
-              // Filter O365 events by timeMin and timeMax
-              const eventStartTime = event.start.dateTime ? parseISO(event.start.dateTime) : null;
-              const eventEndTime = event.end?.dateTime ? parseISO(event.end.dateTime) : null;
+              // Enhanced filtering for O365 events by timeMin and timeMax
+              const eventStart = event.start.dateTime || event.start.date;
+              const eventEnd = event.end?.dateTime || event.end?.date;
+              
+              if (!eventStart) {
+                console.warn("Event missing start time:", event.summary);
+                return false; // Event must have a start time
+              }
 
-              if (!eventStartTime) return false; // Event must have a start time
+              const eventStartTime = parseISO(eventStart);
+              const eventEndTime = eventEnd ? parseISO(eventEnd) : null;
 
+              if (isNaN(eventStartTime.getTime())) {
+                console.warn("Invalid start time format:", eventStart, "for event:", event.summary);
+                return false;
+              }
+
+              // More flexible date filtering for recurring events
               const startsAfterMin = eventStartTime.getTime() >= minDate.getTime();
-              const endsBeforeMax = eventEndTime ? eventEndTime.getTime() <= maxDate.getTime() : true;
-              const startsBeforeMinEndsAfterMin = eventStartTime.getTime() < minDate.getTime() && eventEndTime && eventEndTime.getTime() > minDate.getTime();
+              const startsBeforeMax = eventStartTime.getTime() <= maxDate.getTime();
+              const endsAfterMin = eventEndTime ? eventEndTime.getTime() >= minDate.getTime() : true;
+              const overlapsRange = startsAfterMin || (startsBeforeMax && endsAfterMin);
 
-              return (startsAfterMin && endsBeforeMax) || startsBeforeMinEndsAfterMin;
+              // For recurring events, we want to be more inclusive
+              if (event.isRecurring) {
+                // Include if the event starts before our max date and doesn't end before our min date
+                return startsBeforeMax && endsAfterMin;
+              }
+
+              // For single events, use the existing logic but more flexible
+              return overlapsRange;
             });
             
           console.log("O365 mapped and filtered events count:", o365Events.length);
