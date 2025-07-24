@@ -438,7 +438,7 @@ function CalendarWidget() {
   };
 
   const joinMeeting = (event: any) => {
-    const link = event.teamsLink || event.zoomLink;
+    const link = event.teamsLink || event.zoomLink || extractTeamsLink(event.description || '');
     if (link) {
       window.open(link, '_blank');
     }
@@ -532,7 +532,7 @@ function CalendarWidget() {
                       {event.startTime}
                       {event.endTime && event.endTime !== event.startTime && ` - ${event.endTime}`}
                     </span>
-                    {event.hasMeetingLink && (
+                    {(event.teamsLink || event.zoomLink || extractTeamsLink(event.description || '')) && (
                       <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
                         📹 Meeting
                       </span>
@@ -553,7 +553,7 @@ function CalendarWidget() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                  {event.hasMeetingLink && (
+                  {(event.teamsLink || event.zoomLink || extractTeamsLink(event.description || '')) && (
                     <button
                       onClick={() => joinMeeting(event)}
                       className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -692,7 +692,7 @@ function CalendarWidget() {
                 </div>
               )}
 
-              {selectedEvent.hasMeetingLink && (
+              {(selectedEvent.teamsLink || selectedEvent.zoomLink || extractTeamsLink(selectedEvent.description || '')) && (
                 <div>
                   <h5 className="font-semibold text-gray-900 dark:text-white mb-1">🎥 Meeting Link</h5>
                   <button
