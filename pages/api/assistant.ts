@@ -47,6 +47,31 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
 
+// Extract tags and determine source from task text
+function extractTagsAndSource(text: string): { text: string; source?: "work" | "personal"; tags: string[] } {
+  const tagRegex = /#(\w+)/g;
+  const tags: string[] = [];
+  let match;
+  
+  // Extract all tags
+  while ((match = tagRegex.exec(text)) !== null) {
+    tags.push(match[1].toLowerCase());
+  }
+  
+  // Remove tags from text
+  const cleanText = text.replace(/#\w+/g, '').trim().replace(/\s+/g, ' ');
+  
+  // Determine source based on tags
+  let source: "work" | "personal" | undefined;
+  if (tags.includes('work')) {
+    source = 'work';
+  } else if (tags.includes('personal')) {
+    source = 'personal';
+  }
+  
+  return { text: cleanText, source, tags };
+}
+
 // Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
 const parseDueDate = (phrase: string): string | undefined => {
   const now = new Date();
@@ -360,14 +385,19 @@ export default async function handler(
       
       if (finalTaskText) {
         const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
-        const payload: any = { text: finalTaskText };
+        
+        // Extract tags and determine source
+        const { text: cleanText, source, tags } = extractTagsAndSource(finalTaskText);
+        
+        const payload: any = { text: cleanText };
         if (dueDate) payload.dueDate = dueDate;
-
+        if (source) payload.source = source;
 
         const success = await callInternalApi("/api/tasks", "POST", payload, req);
         if (success) {
+          const sourceInfo = source ? ` #${source}` : '';
           return res.status(200).json({
-            reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+            reply: `✅ Task "${cleanText}" added successfully!${dueDate ? ` Due: ${new Date(dueDate).toLocaleDateString()}` : ''}${sourceInfo ? ` Tags: ${sourceInfo}` : ''}`,
           });
         } else {
           return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });

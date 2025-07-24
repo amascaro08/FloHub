@@ -115,6 +115,25 @@ export class SmartAIAssistant {
       // If we have fresh calendar events, we can try a minimal context load for calendar queries
       if (freshCalendarEvents && freshCalendarEvents.length > 0) {
         try {
+          // Helper function for this minimal context
+          const fetchWithFallback = async <T>(queryPromise: Promise<T>, fallback: T, description: string): Promise<T> => {
+            try {
+              return await queryPromise;
+            } catch (error) {
+              console.error(`Error fetching ${description}:`, error);
+              return fallback;
+            }
+          };
+
+          // Still need to fetch user settings for timezone
+          const settings = await fetchWithFallback(
+            db.select().from(userSettings)
+              .where(eq(userSettings.user_email, this.userId))
+              .limit(1),
+            [],
+            'user settings for calendar context'
+          );
+          
           // Minimal context with just calendar events for faster calendar queries
           this.context = {
             userId: this.userId,
@@ -128,7 +147,7 @@ export class SmartAIAssistant {
             journalMoods: [],
             calendarEvents: freshCalendarEvents,
             conversations: [],
-            userSettings: null
+            userSettings: settings[0] || null
           };
           return this.context;
         } catch (calendarError) {
@@ -891,14 +910,7 @@ export class SmartAIAssistant {
       const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.createdAt);
       const timeUntil = this.formatTimeUntil(eventDate);
       
-      return `📅 Your next event is "${nextEvent.summary || nextEvent.title || 'Untitled Event'}" ${timeUntil}. ${eventDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'short', 
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })}`;
+      return `📅 Your next event is "${nextEvent.summary || nextEvent.title || 'Untitled Event'}" ${timeUntil}. ${this.formatEventDate(eventDate)}`;
     }
 
     if (lowerQuery.includes('today')) {
@@ -914,11 +926,7 @@ export class SmartAIAssistant {
 
       const eventList = todayEvents.slice(0, 5).map(event => {
         const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
-        const time = eventDate.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
+        const time = this.formatEventTime(eventDate);
         return `• ${time} - ${event.summary || event.title || 'Untitled Event'}`;
       }).join('\n');
 
@@ -1056,6 +1064,56 @@ export class SmartAIAssistant {
       return `in ${diffDays} days`;
     } else {
       return `on ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+  }
+
+  private getUserTimezone(): string {
+    return this.context?.userSettings?.timezone || 'UTC';
+  }
+
+  private formatEventDate(date: Date): string {
+    const timezone = this.getUserTimezone();
+    try {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone
+      });
+    } catch (error) {
+      // Fallback to UTC if timezone is invalid
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'UTC'
+      });
+    }
+  }
+
+  private formatEventTime(date: Date): string {
+    const timezone = this.getUserTimezone();
+    try {
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true,
+        timeZone: timezone
+      });
+    } catch (error) {
+      // Fallback to UTC if timezone is invalid
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true,
+        timeZone: 'UTC'
+      });
     }
   }
 
