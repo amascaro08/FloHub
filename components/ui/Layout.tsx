@@ -80,8 +80,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
     setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
   };
 
-
-
   // Loading state for user (optional, depends if you want to delay render)
   if (user === undefined) {
     return (
@@ -95,7 +93,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <div className="flex h-screen bg-[var(--bg)] text-[var(--fg)]">
+    <div className="flex h-screen bg-[var(--bg)] text-[var(--fg)] overflow-hidden">
       {/* Mobile sidebar backdrop */}
       <div
         className={`
@@ -116,14 +114,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
         onClick={() => setIsChatOpen(false)}
       />
 
-      {/* sidebar */}
+      {/* Sidebar - Fixed width and position */}
       <aside
         className={`
-          bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
-          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
-          md:static md:translate-x-0 md:shadow-none
+          fixed md:static inset-y-0 left-0 z-30
+          bg-[var(--surface)] shadow-glass border-r border-neutral-200 dark:border-neutral-700
+          transform transition-all duration-300 ease-in-out
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
-          border-r border-neutral-200 dark:border-neutral-700
         `}
       >
         <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
@@ -214,10 +212,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
       </aside>
 
-      {/* main content area - adjusts width based on chat panel state */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${isChatOpen ? 'md:mr-80' : ''}`}>
-        {/* header */}
-        <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm border-b border-neutral-200 dark:border-neutral-700">
+      {/* Main content area - Consistent layout regardless of sidebar state */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header - Fixed height */}
+        <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm border-b border-neutral-200 dark:border-neutral-700 h-16">
           <div className="flex items-center">
             <button
               onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -277,14 +275,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 max-w-full">
-          <div className="w-full max-w-[100vw]">
+        {/* Main content - Scrollable area */}
+        <main className="flex-1 overflow-auto p-4">
+          <div className="w-full max-w-none">
             {children}
           </div>
         </main>
       </div>
 
-      {/* Chat Side Panel */}
+      {/* Chat Side Panel - Fixed width and position */}
       <div
         className={`
           fixed inset-y-0 right-0 w-80 bg-[var(--surface)] shadow-2xl border-l border-neutral-200 dark:border-neutral-700 z-50 transform transition-all duration-300 ease-in-out

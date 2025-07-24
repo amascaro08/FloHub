@@ -101,788 +101,521 @@ const calendarEventsFetcher = async (url: string): Promise<CalendarEvent[]> => {
     const res = await fetch(url, { 
       credentials: 'include',
       headers: {
-        'Cache-Control': 'max-age=60'
+        'Content-Type': 'application/json',
       }
     });
     
-    let data;
-    try {
-      data = await res.json();
-    } catch (parseError) {
-      console.error("Calendar API JSON parse error:", parseError);
-      throw new Error(`Failed to parse response: ${res.status} ${res.statusText}`);
-    }
-    
     if (!res.ok) {
-      console.error("Calendar API error details:", {
-        status: res.status,
-        statusText: res.statusText,
-        url: url,
-        response: data
-      });
-      throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+      console.error('Calendar fetch failed:', res.status, res.statusText);
+      throw new Error('Calendar fetch failed');
     }
     
-    // Handle both formats: direct array or {events: [...]} object 
-    let events;
-    if (Array.isArray(data)) {
-      console.log("CalendarWidget: Received", data.length, "events directly");
-      events = data;
-    } else if (data && Array.isArray(data.events)) {
-      console.log("CalendarWidget: Received", data.events.length, "events in events property");
-      events = data.events;
-    } else {
-      console.error("CalendarWidget: Unexpected response format:", data);
-      events = [];
-    }
-
+    const data = await res.json();
+    const events = Array.isArray(data) ? data : (data.events || []);
+    
     // Cache the result
     try {
-      const cacheKey = `calendar_events_${btoa(url)}`;
       sessionStorage.setItem(cacheKey, JSON.stringify({
         data: events,
         timestamp: Date.now()
       }));
     } catch (e) {
-      // SessionStorage full or unavailable, continue without caching
+      // SessionStorage might be full or unavailable
+      console.warn('Could not cache calendar data:', e);
     }
-
+    
     return events;
   } catch (error) {
-    console.error("CalendarWidget: Calendar fetch error:", error);
+    console.error('CalendarWidget: Error fetching events:', error);
     throw error;
   }
 };
 
 function CalendarWidget() {
-  const { user, isLoading } = useUser();
+  const { user } = useUser();
   const { mutate } = useSWRConfig();
-
-  if (isLoading) { // Correctly check for loading status
-    return <div>Loading calendar...</div>; // Or any other fallback UI
-  }
-
-  if (!user || !user.email) {
-    return <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-      Please sign in to view your calendar
-    </div>;
-  }
-
-  // Fetch persistent user settings via SWR with optimized caching
-  const { data: loadedSettings, error: settingsError } =
-    useSWR<CalendarSettings>(
-      user ? "/api/userSettings" : null, 
-      fetcher,
-      {
-        revalidateOnFocus: false,
-        dedupingInterval: 300000, // 5 minutes
-        errorRetryCount: 1,
-        errorRetryInterval: 10000,
-      }
-    );
-
-  // Local state derived from loadedSettings or defaults
-  const [selectedCals, setSelectedCals] = useState<string[]>(['primary']);
-  const [activeView, setActiveView] = useState<ViewType>('week');
+  
+  const [viewType, setViewType] = useState<ViewType>('today');
   const [customRange, setCustomRange] = useState<CustomRange>({ start: '', end: '' });
-  const [powerAutomateUrl, setPowerAutomateUrl] = useState<string>("");
+  const [isAddingEvent, setIsAddingEvent] = useState(false);
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [newEvent, setNewEvent] = useState({
+    summary: '',
+    description: '',
+    start: '',
+    end: '',
+    location: ''
+  });
 
-  // Other local state
-  const [timeRange, setTimeRange] = useState<{ timeMin: string; timeMax: string } | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
-  const [form, setForm] = useState<{
-    calendarId: string;
-    summary: string;
-    start: string;
-    end: string;
-    timeZone?: string; // Add timezone field
-  }>({ calendarId: '', summary: '', start: '', end: '' });
-
-  // Update local state when loadedSettings changes
-  useEffect(() => {
-    if (loadedSettings) {
-      console.log("CalendarWidget loaded settings:", {
-        selectedCals: loadedSettings.selectedCals,
-        defaultView: loadedSettings.defaultView,
-        hasPowerAutomateUrl: !!loadedSettings.powerAutomateUrl,
-        hasCalendarSources: !!loadedSettings.calendarSources
-      });
-      if (Array.isArray(loadedSettings.selectedCals) && loadedSettings.selectedCals.length > 0) {
-        setSelectedCals(loadedSettings.selectedCals);
-        console.log("CalendarWidget: Set selectedCals to:", loadedSettings.selectedCals);
-      } else {
-        setSelectedCals(['primary']); // Default if empty/invalid
-        console.log("CalendarWidget: No selectedCals found, using default ['primary']");
-      }
-      if (['today', 'tomorrow', 'week', 'month', 'custom'].includes(loadedSettings.defaultView)) {
-        setActiveView(loadedSettings.defaultView);
-      } else {
-        setActiveView('week'); // Default
-      }
-      if (
-        loadedSettings.customRange &&
-        typeof loadedSettings.customRange.start === 'string' &&
-        typeof loadedSettings.customRange.end === 'string'
-      ) {
-        setCustomRange(loadedSettings.customRange);
-      } else {
-        // Initialize with default if needed
-        const today = new Date().toISOString().slice(0, 10);
-        setCustomRange({ start: today, end: today });
-      }
-      setPowerAutomateUrl(loadedSettings.powerAutomateUrl || "");
-    }
-  }, [loadedSettings]);
-
-  // Memoize time range calculation to prevent unnecessary recalculations
-  const calculatedTimeRange = useMemo(() => {
+  // Memoized date calculations
+  const dateRange = useMemo(() => {
     const now = new Date();
-    let minDate = new Date();
-    let maxDate = new Date();
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     const startOfDay = (d: Date): Date => {
-      const newDate = new Date(d);
-      newDate.setHours(0, 0, 0, 0);
-      return newDate;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     };
+    
     const endOfDay = (d: Date): Date => {
-      const newDate = new Date(d);
-      newDate.setHours(23, 59, 59, 999);
-      return newDate;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
     };
 
-    switch (activeView) {
+    let start: Date;
+    let end: Date;
+
+    switch (viewType) {
       case 'today':
-        minDate = startOfDay(new Date(now));
-        maxDate = endOfDay(new Date(now));
+        start = startOfDay(now);
+        end = endOfDay(now);
         break;
       case 'tomorrow':
-        const t = new Date(now);
-        t.setDate(t.getDate() + 1);
-        minDate = startOfDay(t);
-        maxDate = endOfDay(t);
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        start = startOfDay(tomorrow);
+        end = endOfDay(tomorrow);
         break;
-      case 'week': {
-        const currentDate = new Date(now); // Don't mutate the original now
-        const day = currentDate.getDay();
-        const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(currentDate.setDate(diff));
-        minDate = startOfDay(new Date(monday));
-        maxDate = endOfDay(new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000));
+      case 'week':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        start = startOfDay(startOfWeek);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        end = endOfDay(endOfWeek);
         break;
-      }
       case 'month':
-        minDate = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
-        maxDate = endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         break;
-      case 'custom': {
-        const cs = new Date(customRange.start);
-        const ce = new Date(customRange.end);
-        if (!isNaN(cs.getTime()) && !isNaN(ce.getTime()) && cs <= ce) {
-          minDate = startOfDay(cs);
-          maxDate = endOfDay(ce);
-        } else {
-          // Fallback to week
-          const dd = now.getDay();
-          const diff2 = now.getDate() - dd + (dd === 0 ? -6 : 1);
-          const monday2 = new Date(now.setDate(diff2));
-          minDate = startOfDay(new Date(monday2));
-          maxDate = endOfDay(new Date(monday2.getTime() + 6 * 24 * 60 * 60 * 1000));
-        }
+      case 'custom':
+        start = customRange.start ? new Date(customRange.start) : now;
+        end = customRange.end ? new Date(customRange.end) : now;
         break;
-      }
       default:
-        // default to week
-        const defaultDate = new Date(now); // Don't mutate the original now
-        const ddd = defaultDate.getDay();
-        const diff3 = defaultDate.getDate() - ddd + (ddd === 0 ? -6 : 1);
-        const monday3 = new Date(defaultDate.setDate(diff3));
-        minDate = startOfDay(new Date(monday3));
-        maxDate = endOfDay(new Date(monday3.getTime() + 6 * 24 * 60 * 60 * 1000));
+        start = startOfDay(now);
+        end = endOfDay(now);
     }
-    
-    return { timeMin: minDate.toISOString(), timeMax: maxDate.toISOString() };
-  }, [activeView, customRange]);
 
-  // Update timeRange when calculatedTimeRange changes
-  useEffect(() => {
-    setTimeRange(calculatedTimeRange);
-  }, [calculatedTimeRange]);
+    return {
+      start: formatInTimeZone(start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'),
+      end: formatInTimeZone(end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'),
+      userTimezone
+    };
+  }, [viewType, customRange]);
 
-  // Build API URL for calendar events
-  const apiUrl = useMemo(() => {
-    // Wait for user, settings, and timeRange to be ready
-    if (!user || !loadedSettings || !timeRange || !timeRange.timeMin || !timeRange.timeMax) {
-      console.log("CalendarWidget: Not ready yet:", {
-        hasUser: !!user,
-        hasSettings: !!loadedSettings,
-        hasTimeRange: !!timeRange,
-        timeRange: timeRange
-      });
-      return null;
-    }
-    
-    const url = `/api/calendar?timeMin=${encodeURIComponent(timeRange.timeMin)}&timeMax=${encodeURIComponent(
-      timeRange.timeMax
-    )}&useCalendarSources=true${
-      powerAutomateUrl ? `&o365Url=${encodeURIComponent(powerAutomateUrl)}` : ''
-    }`;
-    
-    console.log("CalendarWidget: Built API URL:", url);
-    return url;
-  }, [user, loadedSettings, timeRange, powerAutomateUrl]);
-
-  // Fetch calendar events with optimized error handling and caching
-  const { data, error } = useSWR(
-    apiUrl, 
+  // SWR for calendar events with optimized caching
+  const { data: events, error, isLoading, mutate: refreshEvents } = useSWR(
+    user ? `/api/calendar?timeMin=${encodeURIComponent(dateRange.start)}&timeMax=${encodeURIComponent(dateRange.end)}&useCalendarSources=true&userTimezone=${encodeURIComponent(dateRange.userTimezone)}` : null,
     calendarEventsFetcher,
     {
+      dedupingInterval: 120000, // 2 minutes
       revalidateOnFocus: false,
       errorRetryCount: 2,
       errorRetryInterval: 5000,
-      dedupingInterval: 120000, // 2 minutes
       refreshInterval: 300000, // 5 minutes
-      onError: (error) => {
-        console.log("SWR calendar error:", error);
+    }
+  );
+
+  // SWR for user settings
+  const { data: userSettings } = useSWR(
+    user ? `/api/userSettings?userId=${user.primaryEmail}` : null,
+    fetcher,
+    {
+      dedupingInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+    }
+  );
+
+  // Memoized event processing
+  const processedEvents = useMemo(() => {
+    if (!events) return [];
+    
+    return events.map((event: CalendarEvent) => {
+      // Process event times
+      let startTime: string;
+      let endTime: string;
+      
+      if (event.start instanceof Date) {
+        startTime = formatInTimeZone(event.start, dateRange.userTimezone, 'h:mm a');
+      } else if (event.start?.dateTime) {
+        startTime = formatInTimeZone(parseISO(event.start.dateTime), dateRange.userTimezone, 'h:mm a');
+      } else {
+        startTime = 'All day';
       }
-    }
-  );
+      
+      if (event.end instanceof Date) {
+        endTime = formatInTimeZone(event.end, dateRange.userTimezone, 'h:mm a');
+      } else if (event.end?.dateTime) {
+        endTime = formatInTimeZone(parseISO(event.end.dateTime), dateRange.userTimezone, 'h:mm a');
+      } else {
+        endTime = '';
+      }
 
-  // Debug logs for API URL and error
-  useEffect(() => {
-    if (apiUrl) {
-      console.log("CalendarWidget: Fetching calendar events from:", apiUrl);
-    }
-  }, [apiUrl]);
+      // Extract meeting links
+      const teamsLink = event.description ? extractTeamsLink(event.description) : null;
+      const zoomLink = event.description?.includes('zoom.us') ? 
+        event.description.match(/https:\/\/[^\s]+zoom\.us[^\s]+/)?.[0] : null;
 
-  useEffect(() => {
-    if (error) {
-      console.error("CalendarWidget: Error fetching calendar events:", error);
-    }
-  }, [error]);
+      return {
+        ...event,
+        startTime,
+        endTime,
+        teamsLink,
+        zoomLink,
+        hasMeetingLink: !!(teamsLink || zoomLink)
+      };
+    }).sort((a, b) => {
+      // Sort by start time
+      const aStart = a.start instanceof Date ? a.start : new Date(a.start?.dateTime || a.start?.date || '');
+      const bStart = b.start instanceof Date ? b.start : new Date(b.start?.dateTime || b.start?.date || '');
+      return aStart.getTime() - bStart.getTime();
+    });
+  }, [events, dateRange.userTimezone]);
 
-  useEffect(() => {
-    if (data) {
-      console.log("CalendarWidget: Calendar events data:", data);
-    }
-  }, [data]);
-
-  const hasValidCalendar = loadedSettings && (
-    (loadedSettings.selectedCals && loadedSettings.selectedCals.length > 0) ||
-    (loadedSettings.calendarSources && Array.isArray(loadedSettings.calendarSources) && loadedSettings.calendarSources.length > 0)
-  );
-  
-  console.log("CalendarWidget: hasValidCalendar:", hasValidCalendar, {
-    hasSettings: !!loadedSettings,
-    selectedCals: loadedSettings?.selectedCals,
-    calendarSources: loadedSettings?.calendarSources
-  });
-
-  // Filter out past events and find the next upcoming event
-  const now = new Date();
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const upcomingEvents = data
-    ? data
-        .filter((event, index, self) => // Filter out duplicates based on ID
-          index === self.findIndex((e) => e.id === event.id)
-        )
-        .filter(ev => {
-          // Get start date based on type
-          let eventStartDate: Date | null = null;
-          let eventEndDate: Date | null = null;
-          
-          if (isDate(ev.start)) {
-            eventStartDate = ev.start;
-          } else if (isCalendarEventDateTime(ev.start)) {
-            eventStartDate = ev.start.dateTime ? parseISO(ev.start.dateTime) :
-                            (ev.start.date ? parseISO(ev.start.date) : null);
-          }
-          
-          if (ev.end) {
-            if (isDate(ev.end)) {
-              eventEndDate = ev.end;
-            } else if (isCalendarEventDateTime(ev.end)) {
-              eventEndDate = ev.end.dateTime ? parseISO(ev.end.dateTime) :
-                            (ev.end.date ? parseISO(ev.end.date) : null);
-            }
-          }
-
-          console.log("Filtering event:", ev.summary, "Start:", eventStartDate, "End:", eventEndDate);
-          console.log("Current time (local):", now);
-          console.log("Start of today (local):", startOfToday);
-          console.log("Active view:", activeView);
-
-          if (!eventStartDate) return false; // Must have a start time/date
-
-          // For 'today' and 'tomorrow' views, filter out events that have already ended relative to the current time.
-          // For other views, assume the API has provided events within the requested range,
-          // and we only need to ensure the event hasn't ended before the start of the *current* day.
-          if (activeView === 'today' || activeView === 'tomorrow') {
-             if (eventEndDate) {
-               return eventEndDate.getTime() >= now.getTime();
-             } else if (isCalendarEventDateTime(ev.start)) {
-                const start = ev.start as CalendarEventDateTime;
-                if (start.date && !start.dateTime) {
-                  // All-day event today/tomorrow
-                  const date = start.date;
-                  const allDayEndDate = date ? new Date(date) : null;
-                  if (!allDayEndDate) return false;
-                  allDayEndDate.setHours(23, 59, 59, 999);
-                  return allDayEndDate.getTime() >= now.getTime();
-                } else {
-                  return false;
-                }
-             } else {
-                // Timed event with no end time? Assume it's ongoing from start time
-                return eventStartDate.getTime() >= now.getTime();
-             }
-          } else {
-            // For week, month, custom, show events that start on or after the start of today,
-            // and are within the API's fetched range (which is handled by timeRange).
-            // This prevents showing events from the past days of the current week/month/custom range.
-            return eventStartDate.getTime() >= startOfToday.getTime();
-          }
-        })
-    : [];
-
-  // The next upcoming event is the first one in the sorted, filtered list
-  // Note: Sorting is handled by the API, but we re-sort here just in case or for client-side additions
-  upcomingEvents.sort((a, b) => {
-    let dateA = 0;
-    let dateB = 0;
-    
-    if (isDate(a.start)) {
-      dateA = a.start.getTime();
-    } else if (isCalendarEventDateTime(a.start)) {
-      dateA = a.start.dateTime ? new Date(a.start.dateTime).getTime() :
-             (a.start.date ? new Date(a.start.date).getTime() : 0);
-    }
-    
-    if (isDate(b.start)) {
-      dateB = b.start.getTime();
-    } else if (isCalendarEventDateTime(b.start)) {
-      dateB = b.start.dateTime ? new Date(b.start.dateTime).getTime() :
-             (b.start.date ? new Date(b.start.date).getTime() : 0);
-    }
-    
-    return dateA - dateB;
-  });
-
-  const nextUpcomingEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
-
-
-  // Format event for display
   const formatEvent = (ev: CalendarEvent) => {
-   if (isCalendarEventDateTime(ev.start)) {
-     const start = ev.start as CalendarEventDateTime;
-     if (start.date && !start.dateTime) {
-      const date = start.date;
-      const d = date ? new Date(date) : null;
-      return d ? d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : "Unknown date format";
-    }
-    const dateTime = start.dateTime;
-    const date = start.date;
-    const dt = dateTime ? new Date(dateTime) : date ? new Date(date) : null;
-    return dt ? dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : "Unknown date format";
-  } else if (isDate(ev.start)) {
-    return (ev.start as Date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  }
-  return "Unknown date format";
-};
+    const startTime = ev.start instanceof Date ? 
+      formatInTimeZone(ev.start, dateRange.userTimezone, 'h:mm a') :
+      ev.start?.dateTime ? 
+        formatInTimeZone(parseISO(ev.start.dateTime), dateRange.userTimezone, 'h:mm a') : 
+        'All day';
+    
+    const endTime = ev.end instanceof Date ? 
+      formatInTimeZone(ev.end, dateRange.userTimezone, 'h:mm a') :
+      ev.end?.dateTime ? 
+        formatInTimeZone(parseISO(ev.end.dateTime), dateRange.userTimezone, 'h:mm a') : 
+        '';
 
-  // Handlers for opening modal
+    return {
+      ...ev,
+      startTime,
+      endTime
+    };
+  };
+
   const openAdd = () => {
-    setEditingEvent(null);
-    setForm({
-      calendarId: selectedCals[0] || '',
+    setNewEvent({
       summary: '',
+      description: '',
       start: '',
       end: '',
+      location: ''
     });
-    setModalOpen(true);
+    setIsAddingEvent(true);
+    setIsEditingEvent(false);
   };
+
   const openEdit = (ev: CalendarEvent) => {
-    setEditingEvent(ev);
-    
-    let startStr = '';
-    let endStr = '';
-    
-    if (isCalendarEventDateTime(ev.start)) {
-      const start = ev.start as CalendarEventDateTime;
-      startStr = start.dateTime || (start.date ? `${start.date}T00:00` : '');
-    } else if (isDate(ev.start)) {
-      startStr = (ev.start as Date).toISOString().substring(0, 16);
-    }
-    
-    if (ev.end) {
-      if (isCalendarEventDateTime(ev.end)) {
-        const end = ev.end as CalendarEventDateTime;
-        endStr = end.dateTime || (end.date ? `${end.date}T00:00` : '');
-      } else if (isDate(ev.end)) {
-        endStr = (ev.end as Date).toISOString().substring(0, 16);
-      }
-    }
-    
-    setForm({
-      calendarId: selectedCals[0] || '',
-      summary: ev.summary || '',
-      start: startStr,
-      end: endStr,
+    const formattedEvent = formatEvent(ev);
+    setSelectedEvent(ev);
+    setNewEvent({
+      summary: formattedEvent.summary || '',
+      description: formattedEvent.description || '',
+      start: formattedEvent.start instanceof Date ? 
+        formatInTimeZone(formattedEvent.start, dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm') :
+        formattedEvent.start?.dateTime ? 
+          formatInTimeZone(parseISO(formattedEvent.start.dateTime), dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm') :
+          formatInTimeZone(new Date(), dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm'),
+      end: formattedEvent.end instanceof Date ? 
+        formatInTimeZone(formattedEvent.end, dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm') :
+        formattedEvent.end?.dateTime ? 
+          formatInTimeZone(parseISO(formattedEvent.end.dateTime), dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm') :
+          formatInTimeZone(new Date(), dateRange.userTimezone, 'yyyy-MM-dd\'T\'HH:mm'),
+      location: formattedEvent.location || ''
     });
-    setModalOpen(true);
+    setIsEditingEvent(true);
+    setIsAddingEvent(false);
   };
 
-  // Handlers for saving/deleting events (simplified for now)
   const handleSaveEvent = async () => {
-    console.log("Saving event:", form);
     try {
-      const method = editingEvent ? 'PUT' : 'POST';
-      const url = editingEvent ? `/api/calendar/event?id=${editingEvent.id}` : '/api/calendar/event';
+      const eventData = {
+        summary: newEvent.summary,
+        description: newEvent.description,
+        start: {
+          dateTime: newEvent.start,
+          timeZone: dateRange.userTimezone
+        },
+        end: {
+          dateTime: newEvent.end,
+          timeZone: dateRange.userTimezone
+        },
+        location: newEvent.location
+      };
 
-      // Parse start and end times from datetime-local strings and convert to UTC ISO strings
-      // new Date('YYYY-MM-DDTHH:mm') is parsed as local time
-      const startLocal = form.start ? new Date(form.start) : undefined;
-      const endLocal = form.end ? new Date(form.end) : undefined;
+      const url = isEditingEvent && selectedEvent ? 
+        `/api/calendar/${selectedEvent.id}` : 
+        '/api/calendar';
 
-      const startUtc = startLocal && !isNaN(startLocal.getTime()) ? startLocal.toISOString() : undefined;
-      const endUtc = endLocal && !isNaN(endLocal.getTime()) ? endLocal.toISOString() : undefined;
+      const method = isEditingEvent ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
-        method: method,
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          calendarId: form.calendarId,
-          summary: form.summary,
-          start: startUtc, // Send UTC ISO string
-          end: endUtc,     // Send UTC ISO string
-          // No need to send timezone if backend expects UTC
-        }),
+        credentials: 'include',
+        body: JSON.stringify(eventData)
       });
 
-      if (!res.ok) {
-        const errorInfo = await res.json();
-        throw new Error(errorInfo.error || `HTTP error! status: ${res.status}`);
+      if (!response.ok) {
+        throw new Error('Failed to save event');
       }
 
-      const savedEvent = await res.json();
-      console.log("Event saved successfully:", savedEvent);
-
-      setModalOpen(false);
-      // Trigger revalidation after potential save
-      if (apiUrl) mutate(apiUrl);
-
+      // Refresh events and clear form
+      await refreshEvents();
+      setIsAddingEvent(false);
+      setIsEditingEvent(false);
+      setSelectedEvent(null);
+      setNewEvent({
+        summary: '',
+        description: '',
+        start: '',
+        end: '',
+        location: ''
+      });
     } catch (error) {
-      console.error("Failed to save event:", error);
-      // TODO: Show error message to user
+      console.error('Error saving event:', error);
+      alert('Failed to save event. Please try again.');
     }
   };
 
   const handleDeleteEvent = async (eventId: string, calendarId?: string) => {
-    console.log("Deleting event:", eventId, "from calendar:", calendarId);
-    if (!viewingEvent) return; // Should not happen if button is visible, but for safety
-    
-    try {
-      // Use the provided calendarId or fall back to a default if not available
-      const effectiveCalendarId = calendarId || viewingEvent.calendarId || 'primary';
-      const url = `/api/calendar/event?id=${eventId}&calendarId=${effectiveCalendarId}`;
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
 
-      const res = await fetch(url, {
+    try {
+      const response = await fetch(`/api/calendar/${eventId}`, {
         method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ calendarId })
       });
 
-      if (!res.ok) {
-        const errorInfo = await res.json();
-        throw new Error(errorInfo.error || `HTTP error! status: ${res.status}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete event');
       }
 
-      console.log("Event deleted successfully:", eventId);
-
-      setViewingEvent(null); // Close the details modal
-      // Trigger revalidation after successful delete
-      if (apiUrl) mutate(apiUrl);
-
+      // Refresh events
+      await refreshEvents();
     } catch (error) {
-      console.error("Failed to delete event:", error);
-      // TODO: Show error message to user
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event. Please try again.');
     }
   };
 
+  const joinMeeting = (event: any) => {
+    const link = event.teamsLink || event.zoomLink;
+    if (link) {
+      window.open(link, '_blank');
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="p-4 border rounded-lg shadow-sm">
+        <div className="text-red-600 dark:text-red-400 mb-3">
+          <h3 className="font-medium">Calendar Unavailable</h3>
+          <p className="text-sm mt-1">
+            Unable to load calendar events. Please check your connection and try again.
+          </p>
+        </div>
+        <button 
+          onClick={() => refreshEvents()}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
-      {!hasValidCalendar ? (
-        <div className="text-neutral-500 dark:text-neutral-400 flex items-center justify-center py-8">
-          Please select a valid calendar in your <a href="/dashboard/settings" className="text-teal-500 hover:text-teal-400 underline ml-1" target="_blank" rel="noopener noreferrer">settings</a>.
+    <div className="calendar-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            Calendar
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
+            {viewType === 'today' ? 'Today\'s Events' : 
+             viewType === 'tomorrow' ? 'Tomorrow\'s Events' :
+             viewType === 'week' ? 'This Week' :
+             viewType === 'month' ? 'This Month' : 'Custom Range'}
+          </p>
         </div>
-      ) : (
-        <>
-          {/* Time Frame Selector */}
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button
-                onClick={() => setActiveView('today')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'today'
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setActiveView('tomorrow')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'tomorrow'
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
-              >
-                Tomorrow
-              </button>
-              <button
-                onClick={() => setActiveView('week')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'week'
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
-              >
-                Week
-              </button>
-            </div>
-          </div>
+        <button
+          onClick={openAdd}
+          className="px-4 py-2 bg-gradient-to-r from-[#00C9A7] to-[#00A8A7] text-white rounded-lg hover:from-[#00A8A7] hover:to-[#009A8A] transition-all duration-200 font-medium"
+        >
+          + Add Event
+        </button>
+      </div>
 
-          {/* Events Display */}
-          <div className="space-y-3">
-            {!apiUrl && (
-              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-                Loading calendar configuration...
-              </div>
-            )}
-            
-            {apiUrl && !data && !error && (
-              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-                Loading events...
-              </div>
-            )}
-            
-            {error && (
-              <div className="text-amber-600 dark:text-amber-400 text-sm p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                <div className="font-medium mb-1">Calendar Temporarily Unavailable</div>
-                <div className="text-xs">
-                  We're having trouble connecting to your calendar right now. This could be due to:
-                  <ul className="mt-1 ml-4 list-disc">
-                    <li>Authentication needs to be refreshed</li>
-                    <li>Network connectivity issues</li>
-                    <li>Calendar service maintenance</li>
-                  </ul>
-                </div>
-                <div className="mt-2">
-                  <button 
-                    onClick={() => window.location.reload()} 
-                    className="text-blue-600 hover:text-blue-700 underline text-xs"
-                  >
-                    Try reloading the page
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {!error && data && upcomingEvents.length === 0 && (
-              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-                No upcoming events found
-              </div>
-            )}
-            
-            {!error && data && upcomingEvents.length > 0 && 
-              upcomingEvents.slice(0, 5).map((event, index) => {
-                const teamsLink = event.description ? extractTeamsLink(event.description) : null;
-                const isNextUpcoming = event === nextUpcomingEvent;
-                
-                                 return (
-                   <div
-                     key={`${event.id}-${index}`}
-                     className={`p-3 border rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer ${
-                       isNextUpcoming ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : ''
-                     }`}
-                     onClick={() => setViewingEvent(event)}
-                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                          {isNextUpcoming && <span className="text-teal-600 mr-2">📍</span>}
-                          {event.summary || "Untitled Event"}
-                        </h3>
-                        <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                          {formatEvent(event)}
-                        </p>
-                        {event.calendarName && (
-                          <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                            {event.calendarName}
-                            {event.source === "work" && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                Work
-                              </span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                      
-                                             {/* Teams Link Button */}
-                       {teamsLink && (
-                         <button
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             window.open(teamsLink, '_blank');
-                           }}
-                           className="ml-3 flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                           title="Join Teams Meeting"
-                         >
-                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
-                          </svg>
-                          Teams
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                                 );
-               })
-             }
-          </div>
+      {/* View Controls */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {(['today', 'tomorrow', 'week', 'month'] as ViewType[]).map((view) => (
+          <button
+            key={view}
+            onClick={() => setViewType(view)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewType === view
+                ? 'bg-[#00C9A7] text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            {view.charAt(0).toUpperCase() + view.slice(1)}
+          </button>
+        ))}
+      </div>
 
-          {/* Add Event Button */}
-          <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-            <button
-              onClick={openAdd}
-              className="w-full px-3 py-2 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+      {/* Events List */}
+      <div className="space-y-3">
+        {isLoading ? (
+          <div className="animate-pulse space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            ))}
+          </div>
+        ) : processedEvents.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-3">📅</div>
+            <p className="text-gray-500 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
+              No events scheduled for this period
+            </p>
+          </div>
+        ) : (
+          processedEvents.map((event, index) => (
+            <div
+              key={`${event.id}-${index}`}
+              className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200"
             >
-              + Add Event
-            </button>
-          </div>
-
-          {/* Add/Edit Event Modal */}
-          {modalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
-                <h3 className="text-lg font-medium mb-4">
-                  {editingEvent ? 'Edit Event' : 'Add Event'}
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={form.summary}
-                      onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
-                      placeholder="Event title"
-                    />
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {event.startTime}
+                      {event.endTime && event.endTime !== event.startTime && ` - ${event.endTime}`}
+                    </span>
+                    {event.hasMeetingLink && (
+                      <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                        📹 Meeting
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Start</label>
-                    <input
-                      type="datetime-local"
-                      value={form.start}
-                      onChange={(e) => setForm({ ...form, start: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">End</label>
-                    <input
-                      type="datetime-local"
-                      value={form.end}
-                      onChange={(e) => setForm({ ...form, end: e.target.value })}
-                      className="w-full p-2 border rounded-md dark:bg-neutral-700 dark:border-neutral-600"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-6">
-                  <button
-                    onClick={handleSaveEvent}
-                    className="flex-1 bg-teal-500 text-white py-2 rounded-md hover:bg-teal-600 transition-colors"
-                  >
-                    {editingEvent ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Event Details Modal */}
-          {viewingEvent && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md">
-                <h3 className="text-lg font-medium mb-4">{viewingEvent.summary}</h3>
-                <div className="space-y-2">
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    {formatEvent(viewingEvent)}
-                  </p>
-                  {viewingEvent.description && (
-                    <div className="text-sm">
-                      {containsHTML(viewingEvent.description) ? (
-                        <div
-                          className="prose prose-sm max-w-none dark:prose-invert text-sm"
-                          dangerouslySetInnerHTML={{ __html: viewingEvent.description }}
-                        />
-                      ) : (
-                        <div className="whitespace-pre-wrap text-sm">{viewingEvent.description}</div>
-                      )}
-                    </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {event.summary}
+                  </h3>
+                  {event.location && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      📍 {event.location}
+                    </p>
                   )}
-                  {/* Teams Link in Modal */}
-                  {extractTeamsLink(viewingEvent.description || '') && (
+                  {event.description && !containsHTML(event.description) && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      {event.description}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  {event.hasMeetingLink && (
                     <button
-                      onClick={() => window.open(extractTeamsLink(viewingEvent.description || '') || '', '_blank')}
-                      className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                      onClick={() => joinMeeting(event)}
+                      className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                      title="Join Meeting"
                     >
-                      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20.16 12a4.16 4.16 0 0 1-4.16 4.16H12v4a4 4 0 0 1-8 0v-4H2.16A2.16 2.16 0 0 1 0 13.84V2.16A2.16 2.16 0 0 1 2.16 0h11.68A2.16 2.16 0 0 1 16 2.16v7.68a2.16 2.16 0 0 1 2.16-2.16h2A2.16 2.16 0 0 1 22.32 9.84v2.16a2.16 2.16 0 0 1-2.16 2.16Z"/>
-                      </svg>
-                      Join Teams Meeting
+                      🎥
                     </button>
                   )}
-                </div>
-                <div className="flex gap-2 mt-6">
                   <button
-                    onClick={() => openEdit(viewingEvent)}
-                    className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
+                    onClick={() => openEdit(event)}
+                    className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    title="Edit Event"
                   >
-                    Edit
+                    ✏️
                   </button>
                   <button
-                    onClick={() => handleDeleteEvent(viewingEvent.id, viewingEvent.calendarId)}
-                    className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors"
+                    onClick={() => handleDeleteEvent(event.id!, event.calendarId)}
+                    className="p-2 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                    title="Delete Event"
                   >
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => setViewingEvent(null)}
-                    className="flex-1 bg-neutral-200 dark:bg-neutral-600 py-2 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-500 transition-colors"
-                  >
-                    Close
+                    🗑️
                   </button>
                 </div>
               </div>
             </div>
-          )}
-        </>
+          ))
+        )}
+      </div>
+
+      {/* Add/Edit Event Modal */}
+      {(isAddingEvent || isEditingEvent) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {isAddingEvent ? 'Add New Event' : 'Edit Event'}
+            </h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Event title"
+                value={newEvent.summary}
+                onChange={(e) => setNewEvent({...newEvent, summary: e.target.value})}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+              <input
+                type="datetime-local"
+                value={newEvent.start}
+                onChange={(e) => setNewEvent({...newEvent, start: e.target.value})}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+              <input
+                type="datetime-local"
+                value={newEvent.end}
+                onChange={(e) => setNewEvent({...newEvent, end: e.target.value})}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+              <input
+                type="text"
+                placeholder="Location (optional)"
+                value={newEvent.location}
+                onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+              <textarea
+                placeholder="Description (optional)"
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                rows={3}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSaveEvent}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-[#00C9A7] to-[#00A8A7] text-white rounded-lg hover:from-[#00A8A7] hover:to-[#009A8A] transition-all duration-200 font-medium"
+              >
+                {isAddingEvent ? 'Add Event' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => {
+                  setIsAddingEvent(false);
+                  setIsEditingEvent(false);
+                  setSelectedEvent(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
-export default memo(CalendarWidget);
 
-{"\n"}
+export default memo(CalendarWidget);

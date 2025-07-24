@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
@@ -18,7 +18,29 @@ import useSWR from 'swr';
 import type { CalendarEvent, Task, Note } from '../../types/calendar';
 import type { Habit, HabitCompletion } from '../../types/habit-tracker';
 
-// Function to generate dashboard widget with FloCat suggestions
+// Enhanced caching with SWR
+const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then(res => res.json());
+
+// Cache keys for SWR
+const CACHE_KEYS = {
+  CALENDAR: 'ataglance-calendar',
+  TASKS: 'ataglance-tasks',
+  NOTES: 'ataglance-notes',
+  MEETINGS: 'ataglance-meetings',
+  HABITS: 'ataglance-habits',
+  HABIT_COMPLETIONS: 'ataglance-habit-completions',
+};
+
+// Brand-compliant styling
+const BRAND_STYLES = {
+  primary: '#00C9A7', // FloTeal
+  accent: '#FF6B6B',  // FloCoral
+  dark: '#1E1E2F',    // Dark Base
+  light: '#FDFDFD',   // Soft White
+  grey: '#9CA3AF',    // Grey Tint
+};
+
+// Function to generate dashboard widget with FloCat insights
 function generateDashboardWidget(
   tasks: any[],
   events: CalendarEvent[],
@@ -61,7 +83,6 @@ function generateDashboardWidget(
     } else {
       eventDate = new Date(event.start?.dateTime || event.start?.date || '');
     }
-    // Check if event starts on tomorrow (between start of tomorrow and end of tomorrow)
     const endOfTomorrow = new Date(tomorrow);
     endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
     
@@ -90,7 +111,7 @@ function generateDashboardWidget(
     )
   );
 
-  // Generate FloCat insights
+  // Generate FloCat insights with brand voice
   let floCatInsights = [];
   let priorityLevel = "calm";
 
@@ -99,540 +120,394 @@ function generateDashboardWidget(
     priorityLevel = "urgent";
   }
 
-  if (todayEvents.length > 3) {
-    floCatInsights.push(`📅 **Busy Day Ahead:** ${todayEvents.length} events scheduled today. Consider 15-min buffers between meetings.`);
-    priorityLevel = priorityLevel === "urgent" ? "urgent" : "busy";
-  }
-
-  if (workEvents.length > 0 && personalEvents.length > 0) {
-    floCatInsights.push(`⚖️ **Balance Tip:** Nice mix of ${workEvents.length} work and ${personalEvents.length} personal events today!`);
-  }
-
-  if (urgentTasks.length === 0 && todayEvents.length === 0) {
-    floCatInsights.push(`🎯 **Focus Opportunity:** Clear schedule today - perfect for deep work on your ${incompleteTasks.length} pending tasks!`);
-    priorityLevel = "focus";
-  }
-
-  if (completedHabits.length === habits.length && habits.length > 0) {
-    floCatInsights.push(`🌟 **Habit Champion:** All ${habits.length} habits completed today! You're on fire! 🔥`);
-  } else if (completedHabits.length > 0) {
-    floCatInsights.push(`💪 **Good Progress:** ${completedHabits.length}/${habits.length} habits done. Keep the momentum going!`);
-  }
-
-  // Next event timing
-  const nextEvent = todayEvents.find(event => {
-    let eventTime;
-    if (event.start instanceof Date) {
-      eventTime = event.start;
-    } else {
-      eventTime = new Date(event.start?.dateTime || event.start?.date || '');
-    }
-    return eventTime > now;
-  });
-
-  if (nextEvent) {
-    let nextEventTime;
-    if (nextEvent.start instanceof Date) {
-      nextEventTime = nextEvent.start;
-    } else {
-      nextEventTime = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || '');
-    }
-    const timeUntilNext = nextEventTime.getTime() - now.getTime();
-    const hoursUntil = Math.floor(timeUntilNext / (1000 * 60 * 60));
-    const minutesUntil = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+  if (todayEvents.length > 0) {
+    const eventCount = todayEvents.length;
+    const workCount = workEvents.length;
+    const personalCount = personalEvents.length;
     
-    if (hoursUntil === 0 && minutesUntil <= 15) {
-      floCatInsights.unshift(`⏰ **Heads Up:** "${nextEvent.summary}" starts in ${minutesUntil} minutes!`);
-    } else if (hoursUntil <= 1) {
-      floCatInsights.push(`⌚ **Coming Up:** "${nextEvent.summary}" in ${hoursUntil > 0 ? `${hoursUntil}h ` : ''}${minutesUntil}m - perfect time for a quick task!`);
+    if (workCount > 0 && personalCount > 0) {
+      floCatInsights.push(`📅 **Today's Schedule:** ${workCount} work event${workCount > 1 ? 's' : ''} and ${personalCount} personal event${personalCount > 1 ? 's' : ''} on your plate.`);
+    } else if (workCount > 0) {
+      floCatInsights.push(`💼 **Work Mode:** ${workCount} work event${workCount > 1 ? 's' : ''} scheduled for today.`);
+    } else {
+      floCatInsights.push(`🎉 **Personal Day:** ${personalCount} personal event${personalCount > 1 ? 's' : ''} to look forward to!`);
     }
   }
 
-  const hour = now.getHours();
-  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  if (tomorrowEvents.length > 0) {
+    floCatInsights.push(`🔮 **Tomorrow:** ${tomorrowEvents.length} event${tomorrowEvents.length > 1 ? 's' : ''} already lined up.`);
+  }
 
-  // FloCat personality responses
-  const floCatGreetings = {
-    urgent: [`${timeGreeting} ${preferredName}! 😾 Time to pounce on those urgent tasks!`, `Meow! ${timeGreeting}! 🙀 We've got some important items that need your claws on them!`],
-    busy: [`${timeGreeting} ${preferredName}! 😸 Busy day ahead - let's tackle it paw by paw!`, `Purr-fect timing, ${preferredName}! 😺 Lots happening today, but you've got this!`],
-    focus: [`${timeGreeting} ${preferredName}! 😌 Clear skies ahead - time for some deep focus work!`, `Meow! ${timeGreeting}! 🐱 Perfect day for productivity - your calendar is purr-fectly clear!`],
-    calm: [`${timeGreeting} ${preferredName}! 😸 Looking good today - smooth sailing ahead!`, `Purr-fect! ${timeGreeting} ${preferredName}! 😺 Everything looks well under control!`]
-  };
+  if (habits.length > 0) {
+    const completionRate = Math.round((completedHabits.length / habits.length) * 100);
+    if (completionRate >= 80) {
+      floCatInsights.push(`🌟 **Habit Hero:** ${completionRate}% of your habits completed today! You're crushing it!`);
+    } else if (completionRate >= 50) {
+      floCatInsights.push(`📈 **Making Progress:** ${completionRate}% of your habits done. Keep up the momentum!`);
+    } else {
+      floCatInsights.push(`💪 **Habit Check:** ${completedHabits.length}/${habits.length} habits completed. You've got this!`);
+    }
+  }
 
-  const randomGreeting = floCatGreetings[priorityLevel as keyof typeof floCatGreetings][Math.floor(Math.random() * floCatGreetings[priorityLevel as keyof typeof floCatGreetings].length)];
+  if (incompleteTasks.length > 0) {
+    const taskCount = incompleteTasks.length;
+    if (taskCount <= 3) {
+      floCatInsights.push(`✅ **Task Status:** Only ${taskCount} task${taskCount > 1 ? 's' : ''} left. You're almost there!`);
+    } else if (taskCount <= 7) {
+      floCatInsights.push(`📝 **Task Update:** ${taskCount} tasks remaining. Let's tackle them one by one!`);
+    } else {
+      floCatInsights.push(`📋 **Task Overview:** ${taskCount} tasks on your list. Time to prioritize!`);
+    }
+  }
 
-  return `<div class="dashboard-widget">
-  <div class="flocat-header">
-    <div class="flocat-avatar">😺</div>
-    <div class="flocat-greeting">
-      <h3>${randomGreeting}</h3>
-      ${floCatInsights.length > 0 ? `<div class="flocat-insights">${floCatInsights.slice(0, 2).join('<br>')}</div>` : ''}
-    </div>
-  </div>
-  
-  <div class="dashboard-grid">
-    <div class="dashboard-section">
-      <h4>📋 Tasks (${incompleteTasks.length})</h4>
-      <div class="items-list">
-        ${incompleteTasks.length > 0 ? 
-          incompleteTasks.slice(0, 4).map(task => 
-            `<div class="item ${urgentTasks.includes(task) ? 'urgent' : ''}">
-              <span class="item-text">${task.text || 'Untitled task'}</span>
-              ${urgentTasks.includes(task) ? '<span class="urgent-badge">⚠️</span>' : ''}
-            </div>`
-          ).join('') 
-          : '<div class="empty-state">No tasks 🎉</div>'
-        }
+  // Only show relevant sections
+  const hasTasks = incompleteTasks.length > 0;
+  const hasEvents = todayEvents.length > 0 || tomorrowEvents.length > 0;
+  const hasHabits = habits.length > 0;
+
+  // Generate HTML with brand-compliant styling
+  const html = `
+    <div class="at-a-glance-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+      <!-- Header with FloCat branding -->
+      <div class="flex items-center mb-6">
+        <div class="w-10 h-10 bg-gradient-to-br from-[${BRAND_STYLES.primary}] to-[${BRAND_STYLES.accent}] rounded-full flex items-center justify-center mr-3">
+          <span class="text-white font-bold text-lg">😺</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white" style="font-family: 'Poppins', sans-serif;">
+            Good ${now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'}, ${preferredName}!
+          </h2>
+          <p class="text-sm text-gray-600 dark:text-gray-400" style="font-family: 'Inter', sans-serif;">
+            Here's what FloCat found for you today
+          </p>
+        </div>
       </div>
-    </div>
 
-    <div class="dashboard-section">
-      <h4>📅 Today (${todayEvents.length})</h4>
-      <div class="items-list">
-        ${todayEvents.length > 0 ?
-          todayEvents.slice(0, 4).map(event => {
-            let time;
-            if (event.start instanceof Date) {
-              time = formatInTimeZone(event.start, userTimezone, 'h:mm a');
-            } else {
-              time = event.start?.dateTime ? 
-                formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a') : 
-                'All day';
-            }
-            const isWork = workEvents.includes(event);
-            return `<div class="item">
-              <span class="item-time">${time}</span>
-              <span class="item-text">${event.summary}</span>
-              <span class="event-type">${isWork ? '💼' : '👤'}</span>
-            </div>`;
-          }).join('')
-          : '<div class="empty-state">Free day! 🌅</div>'
-        }
+      <!-- Priority Level Indicator -->
+      <div class="mb-4 p-3 rounded-xl ${priorityLevel === 'urgent' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'}">
+        <div class="flex items-center">
+          <span class="text-lg mr-2">${priorityLevel === 'urgent' ? '🚨' : '😺'}</span>
+          <span class="text-sm font-medium ${priorityLevel === 'urgent' ? 'text-red-800 dark:text-red-200' : 'text-blue-800 dark:text-blue-200'}">
+            ${priorityLevel === 'urgent' ? 'High Priority Day' : 'Smooth Sailing'}
+          </span>
+        </div>
       </div>
-    </div>
 
-    <div class="dashboard-section">
-      <h4>🎯 Habits (${completedHabits.length}/${habits.length})</h4>
-      <div class="habits-progress">
-        ${habits.length > 0 ? 
-          `<div class="progress-bar">
-            <div class="progress-fill" style="width: ${habits.length > 0 ? (completedHabits.length / habits.length) * 100 : 0}%"></div>
+      <!-- FloCat Insights -->
+      ${floCatInsights.length > 0 ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3" style="font-family: 'Poppins', sans-serif;">
+            FloCat's Insights
+          </h3>
+          <div class="space-y-2">
+            ${floCatInsights.map(insight => `
+              <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-700 dark:text-gray-300" style="font-family: 'Inter', sans-serif;">
+                  ${insight}
+                </p>
+              </div>
+            `).join('')}
           </div>
-          <div class="habits-list">
+        </div>
+      ` : ''}
+
+      <!-- Tasks Section (only if there are tasks) -->
+      ${hasTasks ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center" style="font-family: 'Poppins', sans-serif;">
+            <span class="mr-2">📝</span>
+            Tasks (${incompleteTasks.length})
+          </h3>
+          <div class="space-y-2">
+            ${incompleteTasks.slice(0, 3).map(task => `
+              <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-700 dark:text-gray-300" style="font-family: 'Inter', sans-serif;">
+                  ${task.text}
+                </p>
+                ${task.dueDate ? `
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Due: ${new Date(task.dueDate).toLocaleDateString()}
+                  </p>
+                ` : ''}
+              </div>
+            `).join('')}
+            ${incompleteTasks.length > 3 ? `
+              <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                +${incompleteTasks.length - 3} more tasks
+              </p>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Calendar Events Section (only if there are events) -->
+      ${hasEvents ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center" style="font-family: 'Poppins', sans-serif;">
+            <span class="mr-2">📅</span>
+            Today's Events (${todayEvents.length})
+          </h3>
+          <div class="space-y-2">
+            ${todayEvents.slice(0, 3).map(event => `
+              <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300" style="font-family: 'Inter', sans-serif;">
+                  ${event.summary}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ${event.start instanceof Date ? 
+                    event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) :
+                    new Date(event.start?.dateTime || event.start?.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                  }
+                </p>
+              </div>
+            `).join('')}
+            ${todayEvents.length > 3 ? `
+              <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                +${todayEvents.length - 3} more events
+              </p>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Habits Section (only if there are habits) -->
+      ${hasHabits ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center" style="font-family: 'Poppins', sans-serif;">
+            <span class="mr-2">🌟</span>
+            Habit Progress (${completedHabits.length}/${habits.length})
+          </h3>
+          <div class="space-y-2">
             ${habits.slice(0, 3).map(habit => {
               const isCompleted = completedHabits.some(h => h.id === habit.id);
-              return `<div class="habit-item ${isCompleted ? 'completed' : ''}">
-                <span class="habit-icon">${isCompleted ? '✅' : '⭕'}</span>
-                <span class="habit-name">${habit.name}</span>
-              </div>`;
+              return `
+                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-700 dark:text-gray-300" style="font-family: 'Inter', sans-serif;">
+                      ${habit.name}
+                    </p>
+                    <span class="text-lg">${isCompleted ? '✅' : '⭕'}</span>
+                  </div>
+                </div>
+              `;
             }).join('')}
-          </div>` 
-          : '<div class="empty-state">No habits tracked</div>'
-        }
+            ${habits.length > 3 ? `
+              <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                +${habits.length - 3} more habits
+              </p>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Footer with FloCat signature -->
+      <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-xs text-gray-500 dark:text-gray-400 text-center" style="font-family: 'Inter', sans-serif;">
+          Powered by FloCat 😺 • Your day, your way
+        </p>
       </div>
     </div>
+  `;
 
-    <div class="dashboard-section">
-      <h4>📈 Tomorrow (${tomorrowEvents.length})</h4>
-      <div class="items-list">
-        ${tomorrowEvents.length > 0 ?
-          tomorrowEvents.slice(0, 3).map(event => {
-            let time;
-            if (event.start instanceof Date) {
-              time = formatInTimeZone(event.start, userTimezone, 'h:mm a');
-            } else {
-              time = event.start?.dateTime ? 
-                formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a') : 
-                'All day';
-            }
-            return `<div class="item preview">
-              <span class="item-time">${time}</span>
-              <span class="item-text">${event.summary}</span>
-            </div>`;
-          }).join('')
-          : '<div class="empty-state">Open schedule 📅</div>'
-        }
-      </div>
-    </div>
-  </div>
-
-  <div class="flocat-footer">
-    <span class="motivational-quote">
-      ${priorityLevel === "urgent" ? "Remember: One paw at a time! 🐾" : 
-        priorityLevel === "busy" ? "You're paw-sitively capable of handling this! 💪" :
-        priorityLevel === "focus" ? "Time to show those tasks who's the cat! 😼" :
-        "Purr-fect balance makes for a great day! ✨"}
-    </span>
-  </div>
-</div>
-
-<style>
-.dashboard-widget {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  max-width: 100%;
-  margin: 0 auto;
+  return html;
 }
-
-.flocat-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
-}
-
-.flocat-avatar {
-  font-size: 2rem;
-  margin-right: 12px;
-}
-
-.flocat-greeting h3 {
-  margin: 0 0 8px 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.flocat-insights {
-  font-size: 0.9rem;
-  opacity: 0.95;
-  line-height: 1.4;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.dashboard-section {
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.dashboard-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary, #1f2937);
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background: var(--bg-secondary, #f9fafb);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  position: relative;
-}
-
-.item.urgent {
-  background: #fef2f2;
-  border-left: 3px solid #ef4444;
-}
-
-.item.preview {
-  opacity: 0.7;
-}
-
-.item-time {
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  margin-right: 8px;
-  min-width: 60px;
-}
-
-.item-text {
-  flex: 1;
-  color: var(--text-primary, #1f2937);
-}
-
-.urgent-badge {
-  margin-left: 8px;
-}
-
-.event-type {
-  margin-left: 8px;
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--text-secondary, #6b7280);
-  font-style: italic;
-  padding: 20px;
-}
-
-.habits-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: var(--bg-secondary, #f3f4f6);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
-  transition: width 0.3s ease;
-}
-
-.habits-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.habit-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-
-.habit-item.completed .habit-name {
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
-.flocat-footer {
-  text-align: center;
-  padding: 16px;
-  background: var(--bg-secondary, #f9fafb);
-  border-radius: 8px;
-  font-style: italic;
-  color: var(--text-secondary, #6b7280);
-}
-
-@media (max-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .flocat-header {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .flocat-avatar {
-    margin-right: 0;
-    margin-bottom: 8px;
-  }
-}
-</style>`;
-}
-
-// Fetcher function for SWR
-const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then(res => res.json());
 
 const AtAGlanceWidget = () => {
-  const { user, isLoading } = useUser();
+  const { user } = useUser();
+  const trackInteraction = useWidgetTracking('ataglance');
   
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  const userName = user?.name || "User";
-  
-  // Check if we're on the client side
-  const isClient = typeof window !== 'undefined';
-  
-  // Track widget usage (client-side only)
-  const trackingHook = isClient ? useWidgetTracking('AtAGlanceWidget') : { trackInteraction: () => {} };
-  const { trackInteraction } = trackingHook;
-
-  const [formattedHtml, setFormattedHtml] = useState<string>("FloCat is preparing your dashboard...");
+  const [formattedHtml, setFormattedHtml] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user settings with SWR for caching - optimized
-  const { data: loadedSettings, error: settingsError } = useSWR(
-    user ? "/api/userSettings" : null,
+  // Use SWR for efficient data fetching with caching
+  const { data: userSettings } = useSWR(
+    user ? `/api/userSettings?userId=${user.primaryEmail}` : null,
     fetcher,
-    { 
-      revalidateOnFocus: false, 
+    {
       dedupingInterval: 300000, // 5 minutes
-      errorRetryCount: 1,
-      errorRetryInterval: 10000
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
     }
   );
 
+  const { data: calendarData } = useSWR(
+    user ? `${CACHE_KEYS.CALENDAR}-${user.primaryEmail}` : null,
+    async () => {
+      const now = new Date();
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const oneWeekFromNow = new Date(startOfToday);
+      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+      oneWeekFromNow.setHours(23, 59, 59, 999);
+
+      const timeMin = startOfToday.toISOString();
+      const timeMax = oneWeekFromNow.toISOString();
+      const apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
+
+      try {
+        const eventsResponse = await fetchCalendarEvents(`/api/calendar?${apiUrlParams}`);
+        return eventsResponse || [];
+      } catch (error) {
+        console.error('Calendar fetch error:', error);
+        return [];
+      }
+    },
+    {
+      dedupingInterval: 120000, // 2 minutes
+      revalidateOnFocus: false,
+      errorRetryCount: 1,
+    }
+  );
+
+  const { data: tasksData } = useSWR(
+    user ? CACHE_KEYS.TASKS : null,
+    () => fetchTasks(),
+    {
+      dedupingInterval: 60000, // 1 minute
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    }
+  );
+
+  const { data: habitsData } = useSWR(
+    user ? CACHE_KEYS.HABITS : null,
+    () => fetchHabits(),
+    {
+      dedupingInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    }
+  );
+
+  const { data: habitCompletionsData } = useSWR(
+    user ? CACHE_KEYS.HABIT_COMPLETIONS : null,
+    async () => {
+      const today = new Date();
+      return fetchHabitCompletions(today.getFullYear(), today.getMonth());
+    },
+    {
+      dedupingInterval: 300000, // 5 minutes
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    }
+  );
+
+  // Memoized data processing
+  const processedData = useMemo(() => {
+    if (!user || !calendarData || !tasksData || !habitsData || !habitCompletionsData) {
+      return null;
+    }
+
+    const now = new Date();
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Process calendar events
+    const eventsInUserTimezone = (calendarData || []).map((event: CalendarEvent) => {
+      let start: any = {};
+      if (event.start instanceof Date) {
+        start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+      } else {
+        if (event.start.dateTime) {
+          start = { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+        } else if (event.start.date) {
+          start = { date: event.start.date };
+        }
+      }
+      
+      let end: any = undefined;
+      if (event.end) {
+        if (event.end instanceof Date) {
+          end = { dateTime: formatInTimeZone(event.end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+        } else {
+          if (event.end.dateTime) {
+            end = { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+          } else if (event.end.date) {
+            end = { date: event.end.date };
+          }
+        }
+      }
+
+      return {
+        ...event,
+        start,
+        end,
+      };
+    });
+
+    // Filter upcoming events
+    const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
+      const nowInUserTimezone = toZonedTime(now, userTimezone);
+      const oneWeekFromNow = new Date(nowInUserTimezone);
+      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+
+      if (ev.start instanceof Date) {
+        return ev.start.getTime() >= nowInUserTimezone.getTime() &&
+               ev.start.getTime() <= oneWeekFromNow.getTime();
+      } else {
+        if (ev.start.dateTime) {
+          const startTime = toZonedTime(ev.start.dateTime, userTimezone);
+          let endTime = null;
+          
+          if (ev.end) {
+            if (ev.end instanceof Date) {
+              endTime = ev.end;
+            } else if (ev.end.dateTime) {
+              endTime = toZonedTime(ev.end.dateTime, userTimezone);
+            }
+          }
+
+          const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
+          const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
+          const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
+
+          return hasNotEnded && startsWithinNextWeek && startsAfterNow;
+        } else if (ev.start.date) {
+          const eventDate = toZonedTime(ev.start.date, userTimezone);
+          return eventDate.getTime() >= nowInUserTimezone.getTime() &&
+                 eventDate.getTime() <= oneWeekFromNow.getTime();
+        }
+      }
+      return false;
+    });
+
+    return {
+      events: upcomingEventsForPrompt,
+      tasks: tasksData.tasks || tasksData || [],
+      habits: habitsData || [],
+      habitCompletions: habitCompletionsData || [],
+    };
+  }, [user, calendarData, tasksData, habitsData, habitCompletionsData]);
+
+  // Generate widget content when data is ready
   useEffect(() => {
-    if (!user || !user.email || !loadedSettings) {
+    if (!processedData || !user) {
+      setLoading(true);
       return;
     }
 
-    let isMounted = true;
-    
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const now = new Date();
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-        // Calculate proper time range for fetching events (today + next 7 days)
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const oneWeekFromNow = new Date(startOfToday);
-        oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-        oneWeekFromNow.setHours(23, 59, 59, 999);
-
-        // Build API parameters for calendar with required timeMin and timeMax
-        const timeMin = startOfToday.toISOString();
-        const timeMax = oneWeekFromNow.toISOString();
-        let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
-
-        // Fetch data in parallel with timeout for better performance
-        const fetchWithTimeout = async (promise: Promise<any>, timeout: number = 5000) => {
-          return Promise.race([
-            promise,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Request timeout')), timeout)
-            )
-          ]);
-        };
-
-        const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
-          fetchWithTimeout(fetchCalendarEvents(`/api/calendar?${apiUrlParams}`)).catch(() => []),
-          fetchWithTimeout(fetchTasks()).catch(() => ({ tasks: [] })),
-          fetchWithTimeout(fetchNotes()).catch(() => ({ notes: [] })),
-          fetchWithTimeout(fetchMeetings()).catch(() => ({ meetings: [] }))
-        ]);
-
-        const eventsData = eventsResponse || [];
-        
-        // Process events data
-        const eventsInUserTimezone = eventsData.map((event: CalendarEvent) => {
-          let start: any = {};
-          if (event.start instanceof Date) {
-            start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-          } else {
-            if (event.start.dateTime) {
-              start = { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-            } else if (event.start.date) {
-              start = { date: event.start.date };
-            }
-          }
-          
-          let end: any = undefined;
-          if (event.end) {
-            if (event.end instanceof Date) {
-              end = { dateTime: formatInTimeZone(event.end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-            } else {
-              if (event.end.dateTime) {
-                end = { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-              } else if (event.end.date) {
-                end = { date: event.end.date };
-              }
-            }
-          }
-
-          return {
-            ...event,
-            start,
-            end,
-          };
-        });
-
-        // Filter upcoming events
-        const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
-          const nowInUserTimezone = toZonedTime(now, userTimezone);
-          const oneWeekFromNow = new Date(nowInUserTimezone);
-          oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-
-          if (ev.start instanceof Date) {
-            return ev.start.getTime() >= nowInUserTimezone.getTime() &&
-                   ev.start.getTime() <= oneWeekFromNow.getTime();
-          } else {
-            if (ev.start.dateTime) {
-              const startTime = toZonedTime(ev.start.dateTime, userTimezone);
-              let endTime = null;
-              
-              if (ev.end) {
-                if (ev.end instanceof Date) {
-                  endTime = ev.end;
-                } else if (ev.end.dateTime) {
-                  endTime = toZonedTime(ev.end.dateTime, userTimezone);
-                }
-              }
-
-              const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
-              const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
-              const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
-
-              return hasNotEnded && startsWithinNextWeek && startsAfterNow;
-            } else if (ev.start.date) {
-              const eventDate = toZonedTime(ev.start.date, userTimezone);
-              return eventDate.getTime() >= nowInUserTimezone.getTime() &&
-                     eventDate.getTime() <= oneWeekFromNow.getTime();
-            }
-          }
-          return false;
-        });
-        
-        // Fetch habits
-        let habits: Habit[] = [];
-        let habitCompletions: any[] = [];
-        
-        try {
-          const habitsData = await fetchHabits();
-          habits = habitsData || [];
-          
-          const today = new Date();
-          const completionsData = await fetchHabitCompletions(today.getFullYear(), today.getMonth());
-          habitCompletions = completionsData || [];
-        } catch (err) {
-          console.log("Error fetching habits:", err);
-        }
-
-        if (isMounted) {
-          const allTasks = tasksData.tasks || tasksData || [];
-          const preferredName = loadedSettings?.preferredName || userName;
-          
-          // Generate dashboard widget
-          const dashboardContent = generateDashboardWidget(
-            allTasks,
-            upcomingEventsForPrompt,
-            habits,
-            habitCompletions,
-            preferredName,
-            userTimezone
-          );
-          
-          setFormattedHtml(dashboardContent);
-          setLoading(false);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err.message);
-          console.error("Error generating dashboard widget:", err);
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [user, loadedSettings, userName]);
+    try {
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const preferredName = userSettings?.preferredName || user.primaryEmail?.split('@')[0] || 'User';
+      
+      const dashboardContent = generateDashboardWidget(
+        processedData.tasks,
+        processedData.events,
+        processedData.habits,
+        processedData.habitCompletions,
+        preferredName,
+        userTimezone
+      );
+      
+      setFormattedHtml(dashboardContent);
+      setLoading(false);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Error generating dashboard widget:", err);
+      setLoading(false);
+    }
+  }, [processedData, user, userSettings]);
 
   if (error) {
     return (

@@ -99,233 +99,194 @@ const DashboardGrid = () => {
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
-    // Load lock state from localStorage on component mount
-    const saved = localStorage.getItem("dashboardLocked");
-    setIsLocked(saved === "true");
-
-    // Listen for storage changes to sync lock state across components
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "dashboardLocked") {
-        setIsLocked(e.newValue === "true");
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also listen for custom events for same-tab updates
-    const handleLockChange = () => {
+    if (isClient) {
       const saved = localStorage.getItem("dashboardLocked");
       setIsLocked(saved === "true");
-    };
 
-    window.addEventListener('lockStateChanged', handleLockChange);
+      // Listen for storage changes to sync lock state across components
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "dashboardLocked") {
+          setIsLocked(e.newValue === "true");
+        }
+      };
 
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('lockStateChanged', handleLockChange);
-    };
-  }, []);
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Also listen for custom events for same-tab updates
+      const handleLockChange = () => {
+        const saved = localStorage.getItem("dashboardLocked");
+        setIsLocked(saved === "true");
+      };
 
-  const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
-  const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
+      window.addEventListener('lockStateChanged', handleLockChange);
 
-  // Default layouts
-  const defaultLayouts = {
-    lg: [
-      { i: "tasks", x: 0, y: 0, w: 3, h: 5 },
-      { i: "calendar", x: 3, y: 0, w: 3, h: 5 },
-      { i: "ataglance", x: 0, y: 5, w: 3, h: 5 },
-      { i: "quicknote", x: 3, y: 5, w: 3, h: 5 },
-      { i: "habit-tracker", x: 0, y: 10, w: 6, h: 5 },
-    ],
-    md: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 5 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 5 },
-      { i: "ataglance", x: 0, y: 5, w: 4, h: 5 },
-      { i: "quicknote", x: 4, y: 5, w: 4, h: 5 },
-      { i: "habit-tracker", x: 0, y: 10, w: 8, h: 5 },
-    ],
-    sm: [
-      { i: "tasks", x: 0, y: 0, w: 6, h: 5 },
-      { i: "calendar", x: 0, y: 5, w: 6, h: 5 },
-      { i: "ataglance", x: 0, y: 10, w: 6, h: 5 },
-      { i: "quicknote", x: 0, y: 15, w: 6, h: 5 },
-      { i: "habit-tracker", x: 0, y: 20, w: 6, h: 5 },
-    ],
-  };
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('lockStateChanged', handleLockChange);
+      };
+    }
+  }, [isClient]);
 
-  const [layouts, setLayouts] = useState(defaultLayouts);
-  const [loadedSettings, setLoadedSettings] = useState(false);
+  // user logic (Stack Auth: user object replaces user)
+  const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
 
-  // Fetch user settings to get active widgets (client-side only) with caching
+  // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      if (isClient && user?.email) {
+      setIsLoading(true);
+      if (isClient && user?.primaryEmail) {
         try {
-          // Check cache first
-          const cacheKey = `userSettings_${user.email}`;
-          const cached = sessionStorage.getItem(cacheKey);
-          if (cached) {
-            try {
-              const cachedData = JSON.parse(cached);
-              if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
-                setActiveWidgets(cachedData.activeWidgets || []);
-                setLoadedSettings(true);
-                return;
-              }
-            } catch (e) {
-              // Invalid cache, continue to fetch
-            }
-          }
-
-          const response = await fetch(`/api/userSettings?userId=${user.email}`);
+          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
           if (response.ok) {
             const userSettings = await response.json() as UserSettings;
-            const activeWidgets = userSettings.activeWidgets || [];
-            setActiveWidgets(activeWidgets);
-            
-            // Cache the result
-            sessionStorage.setItem(cacheKey, JSON.stringify({
-              activeWidgets,
-              timestamp: Date.now()
-            }));
-          } else {
-            setActiveWidgets([]);
-          }
-        } catch (e) {
-          setActiveWidgets([]);
-        } finally {
-          setLoadedSettings(true);
-        }
-      }
-    };
-
-    if (isClient) {
-      fetchUserSettings();
-    } else {
-      setActiveWidgets([]);
-      setLoadedSettings(true);
-    }
-  }, [user, isClient]);
-
-  // Load layout from Firestore on component mount (client-side only)
-  useEffect(() => {
-    const fetchLayout = async () => {
-      if (isClient && user?.email) {
-        try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
-          if (response.ok) {
-            const { layouts: savedLayouts } = await response.json();
-            if (savedLayouts) {
-              setLayouts(savedLayouts);
-            } else {
-              setLayouts(defaultLayouts);
-              await fetch('/api/userSettings/layouts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ layouts: defaultLayouts }),
-              });
+            if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
+              const validWidgets = userSettings.activeWidgets.filter(
+                widget => Object.keys(widgetComponents).includes(widget)
+              ) as WidgetType[];
+              setActiveWidgets(validWidgets);
             }
           } else {
-            setLayouts(defaultLayouts);
+            console.error("[DashboardGrid] Failed to fetch user settings, using defaults.");
           }
-        } catch (e) {
-          setLayouts(defaultLayouts);
+        } catch (error) {
+          console.error("[DashboardGrid] Error fetching user settings:", error);
         }
       }
+      setIsLoading(false);
     };
 
-    if (isClient) {
-      fetchLayout();
-    }
-  }, [user, isClient]);
+    fetchUserSettings();
+  }, [isClient, user]);
 
-  // Ref to store the timeout ID for debouncing
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Effect to update layouts when activeWidgets changes
+  // Progressive loading of widgets
   useEffect(() => {
-    if (activeWidgets.length > 0 && Object.keys(layouts).length > 0) {
-      const newLayouts: any = {};
-      (Object.keys(layouts) as Array<keyof typeof layouts>).forEach(breakpoint => {
-        newLayouts[breakpoint] = layouts[breakpoint].filter(
-          (item: any) => activeWidgets.includes(item.i)
-        );
+    if (activeWidgets.length === 0) return;
+
+    const loadNextWidgets = () => {
+      const loadSequence = [
+        { widget: 'ataglance', delay: 0 },
+        { widget: 'calendar', delay: 200 },
+        { widget: 'tasks', delay: 400 },
+        { widget: 'habit-tracker', delay: 600 },
+        { widget: 'quicknote', delay: 800 }
+      ];
+
+      loadSequence.forEach(({ widget, delay }) => {
+        if (activeWidgets.includes(widget as WidgetType)) {
+          setTimeout(() => {
+            setVisibleWidgets(prev => [...prev, widget]);
+            setLoadingProgress(prev => prev + (100 / activeWidgets.length));
+          }, delay);
+        }
       });
-      setLayouts(newLayouts);
-    }
+    };
+
+    loadNextWidgets();
   }, [activeWidgets]);
 
-  // Progressive loading effect - prioritize important widgets
-  useEffect(() => {
-    if (!loadedSettings || activeWidgets.length === 0) return;
+  const saveWidgetOrder = async () => {
+    if (!user?.primaryEmail) return;
 
-    // Priority order for widget loading
-    const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
-    const sortedWidgets = activeWidgets.sort((a, b) => {
-      const aIndex = priority.indexOf(a);
-      const bIndex = priority.indexOf(b);
-      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-    });
-
-    setVisibleWidgets([]);
-    setLoadingProgress(0);
-
-    // Load widgets progressively
-    sortedWidgets.forEach((widget, index) => {
-      setTimeout(() => {
-        setVisibleWidgets(prev => [...prev, widget]);
-        setLoadingProgress(((index + 1) / sortedWidgets.length) * 100);
-      }, index * 200); // 200ms delay between widgets
-    });
-  }, [activeWidgets, loadedSettings]);
-
-  const onLayoutChange = (layout: any, allLayouts: any) => {
     try {
-      const cleanedLayouts = removeUndefined(allLayouts);
+      const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          activeWidgets: activeWidgets
+        })
+      });
 
-      if (layoutChangeTimeoutRef.current) {
-        clearTimeout(layoutChangeTimeoutRef.current);
+      if (!response.ok) {
+        console.error("[DashboardGrid] Failed to save widget order");
       }
-      layoutChangeTimeoutRef.current = setTimeout(() => {
-        try {
-          setLayouts(cleanedLayouts);
-        } catch (err) {
-          // noop
-        }
-      }, 50);
-
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          if (isClient && user?.email) {
-            await fetch('/api/userSettings/layouts', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ layouts: cleanedLayouts }),
-            });
-          }
-        } catch (e) {
-          // noop
-        }
-      }, 500);
-    } catch (err) {
-      // noop
+    } catch (error) {
+      console.error("[DashboardGrid] Error saving widget order:", error);
     }
   };
 
-  if (!loadedSettings) {
+  const moveWidgetUp = (widgetId: WidgetType) => {
+    const currentIndex = activeWidgets.indexOf(widgetId);
+    if (currentIndex > 0) {
+      const newWidgets = [...activeWidgets];
+      [newWidgets[currentIndex], newWidgets[currentIndex - 1]] = [newWidgets[currentIndex - 1], newWidgets[currentIndex]];
+      setActiveWidgets(newWidgets);
+      saveWidgetOrder();
+    }
+  };
+
+  const moveWidgetDown = (widgetId: WidgetType) => {
+    const currentIndex = activeWidgets.indexOf(widgetId);
+    if (currentIndex < activeWidgets.length - 1) {
+      const newWidgets = [...activeWidgets];
+      [newWidgets[currentIndex], newWidgets[currentIndex + 1]] = [newWidgets[currentIndex + 1], newWidgets[currentIndex]];
+      setActiveWidgets(newWidgets);
+      saveWidgetOrder();
+    }
+  };
+
+  // Responsive layouts for different screen sizes
+  const layouts = useMemo(() => {
+    const baseLayout = {
+      lg: [
+        { i: 'ataglance', x: 0, y: 0, w: 12, h: 2 },
+        { i: 'calendar', x: 0, y: 2, w: 8, h: 4 },
+        { i: 'tasks', x: 8, y: 2, w: 4, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 6, w: 6, h: 3 },
+        { i: 'quicknote', x: 6, y: 6, w: 6, h: 3 }
+      ],
+      md: [
+        { i: 'ataglance', x: 0, y: 0, w: 10, h: 2 },
+        { i: 'calendar', x: 0, y: 2, w: 10, h: 4 },
+        { i: 'tasks', x: 0, y: 6, w: 10, h: 3 },
+        { i: 'habit-tracker', x: 0, y: 9, w: 5, h: 3 },
+        { i: 'quicknote', x: 5, y: 9, w: 5, h: 3 }
+      ],
+      sm: [
+        { i: 'ataglance', x: 0, y: 0, w: 6, h: 2 },
+        { i: 'calendar', x: 0, y: 2, w: 6, h: 4 },
+        { i: 'tasks', x: 0, y: 6, w: 6, h: 3 },
+        { i: 'habit-tracker', x: 0, y: 9, w: 6, h: 3 },
+        { i: 'quicknote', x: 0, y: 12, w: 6, h: 3 }
+      ],
+      xs: [
+        { i: 'ataglance', x: 0, y: 0, w: 4, h: 2 },
+        { i: 'calendar', x: 0, y: 2, w: 4, h: 4 },
+        { i: 'tasks', x: 0, y: 6, w: 4, h: 3 },
+        { i: 'habit-tracker', x: 0, y: 9, w: 4, h: 3 },
+        { i: 'quicknote', x: 0, y: 12, w: 4, h: 3 }
+      ]
+    };
+
+    // Filter layouts to only include active widgets
+    const filteredLayouts: any = {};
+    Object.keys(baseLayout).forEach(breakpoint => {
+      filteredLayouts[breakpoint] = baseLayout[breakpoint as keyof typeof baseLayout].filter(
+        item => activeWidgets.includes(item.i as WidgetType)
+      );
+    });
+
+    return filteredLayouts;
+  }, [activeWidgets]);
+
+  const onLayoutChange = (layout: any, allLayouts: any) => {
+    if (isLocked) return;
+    
+    // Update active widgets based on layout order
+    const newWidgetOrder = layout.map((item: any) => item.i) as WidgetType[];
+    setActiveWidgets(newWidgetOrder);
+    saveWidgetOrder();
+  };
+
+  if (isLoading) {
     return (
-      <div className="grid-bg">
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="glass p-5 rounded-xl animate-pulse">
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
+      <div className="p-4">
+        <div className="animate-pulse space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -333,34 +294,73 @@ const DashboardGrid = () => {
   }
 
   return (
-    <div className="grid-bg">
+    <div className="dashboard-container">
+      {/* Loading Progress */}
+      {loadingProgress < 100 && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-[#00C9A7] to-[#00A8A7] h-1 transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+      )}
+
+      {/* Widget Grid */}
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={30}
-        onLayoutChange={onLayoutChange}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
+        cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+        rowHeight={120}
         isDraggable={!isLocked}
         isResizable={!isLocked}
+        onLayoutChange={onLayoutChange}
         margin={[16, 16]}
+        containerPadding={[16, 16]}
+        useCSSTransforms={true}
+        preventCollision={false}
+        compactType="vertical"
       >
-        {activeWidgets.map((key) => (
-          <div key={key} className="glass p-5 rounded-xl flex flex-col">
-            <h2 className="widget-header">
-              {getWidgetIcon(key)}
-              {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
-            </h2>
-            <div className="widget-content">
-              {visibleWidgets.includes(key) ? (
-                memoizedWidgetComponents[key as WidgetType]
-              ) : (
-                <WidgetSkeleton type={key} />
-              )}
-            </div>
+        {activeWidgets.map((widgetKey) => (
+          <div key={widgetKey} className="widget-container">
+            {visibleWidgets.includes(widgetKey) ? (
+              widgetComponents[widgetKey]
+            ) : (
+              <WidgetSkeleton type={widgetKey} />
+            )}
           </div>
         ))}
       </ResponsiveGridLayout>
+
+      {/* Widget Controls (only show when not locked) */}
+      {!isLocked && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+            <h3 className="text-sm font-semibold mb-2">Widget Order</h3>
+            <div className="space-y-1">
+              {activeWidgets.map((widget, index) => (
+                <div key={widget} className="flex items-center justify-between text-xs">
+                  <span className="flex items-center">
+                    {getWidgetIcon(widget)}
+                    <span className="ml-2 capitalize">{widget.replace('-', ' ')}</span>
+                  </span>
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => moveWidgetUp(widget)}
+                      disabled={index === 0}
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveWidgetDown(widget)}
+                      disabled={index === activeWidgets.length - 1}
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
