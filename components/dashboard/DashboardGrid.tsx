@@ -271,9 +271,6 @@ const DashboardGrid = () => {
     }
   };
 
-  // All available widgets
-  const allWidgets: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
-
   // Responsive layouts for different screen sizes
   const layouts = useMemo(() => {
     const baseLayout = {
