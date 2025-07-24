@@ -317,7 +317,7 @@ const DashboardGrid = () => {
     const filteredLayouts: any = {};
     Object.keys(layoutsToUse).forEach(breakpoint => {
       filteredLayouts[breakpoint] = layoutsToUse[breakpoint as keyof typeof layoutsToUse].filter(
-        item => activeWidgets.includes(item.i as WidgetType)
+        (item: any) => activeWidgets.includes(item.i as WidgetType)
       );
     });
 
