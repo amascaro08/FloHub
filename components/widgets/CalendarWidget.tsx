@@ -73,8 +73,18 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
       
       if (event.start instanceof Date) {
         eventDate = event.start;
+      } else if (event.start?.dateTime) {
+        eventDate = new Date(event.start.dateTime);
+      } else if (event.start?.date) {
+        eventDate = new Date(event.start.date);
       } else {
-        eventDate = new Date(event.start?.dateTime || event.start?.date || '');
+        // Skip events without valid start date
+        return;
+      }
+      
+      // Skip invalid dates
+      if (isNaN(eventDate.getTime())) {
+        return;
       }
       
       const dateKey = format(eventDate, 'yyyy-MM-dd');
@@ -288,12 +298,22 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                         : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                     }`}
                   >
-                    <div className="font-medium">{event.summary}</div>
-                    {event.start?.dateTime && (
-                      <div className="text-xs opacity-75">
-                        {format(new Date(event.start.dateTime), 'h:mm a')}
-                      </div>
-                    )}
+                                         <div className="font-medium">{event.summary}</div>
+                     {(() => {
+                       let startTime: string | null = null;
+                       
+                       if (event.start instanceof Date) {
+                         startTime = event.start.toISOString();
+                       } else if (event.start?.dateTime) {
+                         startTime = event.start.dateTime;
+                       }
+                       
+                       return startTime ? (
+                         <div className="text-xs opacity-75">
+                           {format(new Date(startTime), 'h:mm a')}
+                         </div>
+                       ) : null;
+                     })()}
                   </div>
                 ))}
               </div>

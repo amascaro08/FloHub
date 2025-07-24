@@ -48,7 +48,8 @@ class WidgetCache {
   }
 
   invalidate(pattern: string): void {
-    for (const key of this.cache.keys()) {
+    const keys = Array.from(this.cache.keys());
+    for (const key of keys) {
       if (key.includes(pattern)) {
         this.cache.delete(key);
       }
@@ -96,7 +97,7 @@ export const fetchUserSettings = async (url: string): Promise<CalendarSettings> 
   
   const data = await monitorAPICall(url, { credentials: 'include' }, () => 
     fetchWithTimeout(url, { credentials: 'include' })
-  );
+  ) as CalendarSettings;
   
   widgetCache.set(cacheKey, data, 10 * 60 * 1000); // Cache for 10 minutes
   return data;
@@ -123,7 +124,7 @@ export const fetchCalendarEvents = async (url: string, cacheKey?: string): Promi
     headers: {
       'Content-Type': 'application/json',
     }
-  }, 8000)); // Longer timeout for calendar API
+  }, 8000)) as any; // Longer timeout for calendar API
   
   const events = Array.isArray(data) ? data : (data.events || []);
   
