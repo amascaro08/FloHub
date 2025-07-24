@@ -33,9 +33,9 @@ export type UserSettings = {
 export type CalendarSource = {
   id: string; // Unique identifier for the calendar source
   name: string; // Display name for the calendar
-  type: "google" | "o365" | "apple" | "other"; // Type of calendar
+  type: "google" | "o365" | "apple" | "ical" | "other"; // Type of calendar
   sourceId: string; // Original calendar ID from the provider
-  connectionData?: string; // Connection data (e.g., PowerAutomate URL for O365)
+  connectionData?: string; // Connection data (e.g., PowerAutomate URL for O365, iCal URL for ical)
   tags: string[]; // Tags for the calendar (e.g., "work", "personal")
   color?: string; // Optional color for the calendar
   isEnabled: boolean; // Whether the calendar is enabled

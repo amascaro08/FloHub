@@ -7,6 +7,7 @@ import { CalendarSource } from '../../types/app'; // Import CalendarSource type
 import { db } from '../../lib/drizzle';
 import { accounts } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
+const ical = require('node-ical');
 
 export type CalendarEvent = {
   id: string;
@@ -309,8 +310,21 @@ export default async function handler(
 
     console.log('O365 URLs to process:', o365Urls);
 
+    // Process iCal Calendar sources
+    const icalSources = calendarSources.filter(source => source.type === "ical");
+    let icalUrls: string[] = [];
+    
+    if (icalSources.length > 0) {
+      icalUrls = icalSources
+        .filter(source => source.connectionData && source.connectionData.startsWith("http"))
+        .map(source => source.connectionData)
+        .filter((url): url is string => typeof url === "string");
+    }
+
+    console.log('iCal URLs to process:', icalUrls);
+
     // Check if we have any calendar sources to process
-    if (googleCalendarIds.length === 0 && o365Urls.length === 0) {
+    if (googleCalendarIds.length === 0 && o365Urls.length === 0 && icalUrls.length === 0) {
       console.log("No calendar sources found");
       
       // If no access token and no O365 URLs, return empty events
@@ -528,15 +542,91 @@ export default async function handler(
       }
     });
 
+    // Process iCal URLs in parallel with caching
+    const icalPromises = icalUrls.map(async (url) => {
+      if (!url) return [];
+      
+      const source = icalSources.find(s => s.connectionData === url);
+      const tags = source?.tags || ["personal"]; // Default to personal tag for iCal
+      const sourceName = source?.name || "iCal Calendar";
+      const isWork = tags.includes("work");
+      
+      console.log("Attempting to fetch iCal events from URL:", url);
+      
+      try {
+        // Convert webcal:// to https://
+        let processedUrl = url;
+        if (processedUrl.startsWith('webcal://')) {
+          processedUrl = 'https://' + processedUrl.substring(9);
+        }
+
+        // Parse the iCal feed
+        const events = await ical.async.fromURL(processedUrl, {
+          timeout: 8000, // 8 second timeout
+          headers: {
+            'User-Agent': 'FloHub Calendar Integration/1.0'
+          }
+        });
+
+        const icalEvents: any[] = [];
+        
+        for (const key in events) {
+          const event = events[key];
+          
+          if (event.type === 'VEVENT') {
+            // Convert iCal event to our format
+            const startDate = event.start ? new Date(event.start) : null;
+            const endDate = event.end ? new Date(event.end) : null;
+            
+            // Skip events outside our date range
+            if (startDate && (startDate < minDate || startDate > maxDate)) {
+              continue;
+            }
+            
+            icalEvents.push({
+              id: `ical_${event.uid || key}_${Math.random().toString(36).substring(7)}`,
+              calendarId: `ical_${source?.id || "default"}`,
+              summary: event.summary || "No Title",
+              start: {
+                dateTime: startDate ? startDate.toISOString() : undefined,
+                date: event.start && typeof event.start === 'string' && event.start.length === 8 ? event.start : undefined // All-day events
+              },
+              end: {
+                dateTime: endDate ? endDate.toISOString() : undefined,
+                date: event.end && typeof event.end === 'string' && event.end.length === 8 ? event.end : undefined // All-day events
+              },
+              source: isWork ? "work" : "personal",
+              description: event.description || "",
+              location: event.location || "",
+              calendarName: sourceName,
+              tags,
+              // Handle recurring events
+              isRecurring: !!event.rrule,
+              seriesMasterId: event.rrule ? `ical_series_${event.uid}` : undefined
+            });
+          }
+        }
+        
+        console.log(`Successfully fetched ${icalEvents.length} iCal events from ${url}`);
+        return icalEvents;
+        
+      } catch (error: any) {
+        console.error(`Error fetching iCal events from ${url}:`, error);
+        return [];
+      }
+    });
+
     // Wait for all requests to complete in parallel
-    const [googleResults, o365Results] = await Promise.all([
+    const [googleResults, o365Results, icalResults] = await Promise.all([
       Promise.all(googlePromises),
-      Promise.all(o365Promises)
+      Promise.all(o365Promises),
+      Promise.all(icalPromises)
     ]);
 
     // Combine all results
     googleResults.forEach(events => allEvents.push(...events));
     o365Results.forEach(events => allEvents.push(...events));
+    icalResults.forEach(events => allEvents.push(...events));
 
     console.log(`Total events fetched: ${allEvents.length}`);
     return res.status(200).json({ events: allEvents });
