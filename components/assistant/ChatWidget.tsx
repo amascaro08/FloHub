@@ -97,11 +97,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
 
       return (
     <div role="dialog" aria-label="FloCat chat" className="
-      w-80 h-96
-      glass p-4 rounded-xl shadow-elevate-lg
+      w-full h-full
       flex flex-col
+      p-4
     ">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)] dark:text-gray-100" ref={messagesEndRef}>
+        <div className="flex-1 overflow-y-auto space-y-2 mb-4 text-[var(--fg)] dark:text-gray-100 min-h-0" ref={messagesEndRef}>
           {/* Welcome message and quick actions */}
           {showQuickActions && (
             <div className="space-y-3">
@@ -164,11 +164,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             </div>
           )}
         </div>
-        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 pt-2">
+        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 pt-4 pb-2">
           <input
             className="
               flex-1 border border-[var(--neutral-300)] dark:border-gray-600
-              rounded-l px-2 py-1 focus:outline-none
+              rounded-l px-3 py-2 focus:outline-none
               focus:ring-2 focus:ring-[var(--primary)]
               bg-white dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100
               placeholder-gray-400 dark:placeholder-gray-400
@@ -182,7 +182,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             onClick={handleSend} // Use handleSend
             disabled={loading || !input.trim()} // Disable if loading or input is empty
             className="
-              ml-2 px-3 rounded-r text-white
+              px-4 py-2 rounded-r text-white
               bg-[var(--accent)] hover:opacity-90
               disabled:opacity-50
             "
@@ -190,13 +190,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             Send
           </button>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close chat"
-          className="mt-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
-        >
-          Close
-        </button>
       </div>
   );
 };
