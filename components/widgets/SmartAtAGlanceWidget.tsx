@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
 import { 
   Brain, 
   TrendingUp, 
@@ -269,102 +266,98 @@ export default function SmartAtAGlanceWidget() {
       )}
 
       {/* Quick Insights */}
-      <Card className="w-full bg-white dark:bg-gray-800 border border-[var(--neutral-300)] dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-            <TrendingUp className="w-5 h-5 text-blue-500" />
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-[#00C9A7]" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
             Quick Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Task Completion Rate */}
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--primary)]">
-                {Math.round(insights.taskPatterns.completionRate)}%
-              </div>
-              <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Task Completion</div>
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Task Completion Rate */}
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[#00C9A7]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {Math.round(insights.taskPatterns.completionRate)}%
             </div>
-
-            {/* Tasks Per Day */}
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--primary)]">
-                {Math.round(insights.productivity.tasksPerDay * 10) / 10}
-              </div>
-              <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Tasks/Day</div>
-            </div>
-
-            {/* Most Productive Day */}
-            <div className="text-center">
-              <div className="text-lg font-bold text-[var(--primary)]">
-                {insights.timePatterns.mostProductiveDay}
-              </div>
-              <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Best Day</div>
-            </div>
-
-            {/* Active Hours */}
-            <div className="text-center">
-              <div className="text-lg font-bold text-[var(--primary)]">
-                {insights.timePatterns.mostActiveHours.slice(0, 2).map(h => `${h}:00`).join(', ')}
-              </div>
-              <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Peak Hours</div>
-            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>Task Completion</div>
           </div>
 
-          {/* Overdue Tasks Warning */}
-          {insights.taskPatterns.overdueTasks > 0 && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">
-                  {insights.taskPatterns.overdueTasks} overdue tasks need attention
+          {/* Tasks Per Day */}
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[#00C9A7]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {Math.round(insights.productivity.tasksPerDay * 10) / 10}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>Tasks/Day</div>
+          </div>
+
+          {/* Most Productive Day */}
+          <div className="text-center">
+            <div className="text-lg font-bold text-[#00C9A7]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {insights.timePatterns.mostProductiveDay}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>Best Day</div>
+          </div>
+
+          {/* Active Hours */}
+          <div className="text-center">
+            <div className="text-lg font-bold text-[#00C9A7]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {insights.timePatterns.mostActiveHours.slice(0, 2).map(h => `${h}:00`).join(', ')}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>Peak Hours</div>
+          </div>
+        </div>
+
+        {/* Overdue Tasks Warning */}
+        {insights.taskPatterns.overdueTasks > 0 && (
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
+                {insights.taskPatterns.overdueTasks} overdue tasks need attention
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Habit Status */}
+        {(insights.habitPatterns.strugglingHabits.length > 0 || 
+          insights.habitPatterns.successfulHabits.length > 0) && (
+          <div className="mt-4 space-y-2">
+            {insights.habitPatterns.successfulHabits.length > 0 && (
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {insights.habitPatterns.successfulHabits.length} habits going strong!
                 </span>
               </div>
-            </div>
-          )}
-
-          {/* Habit Status */}
-          {(insights.habitPatterns.strugglingHabits.length > 0 || 
-            insights.habitPatterns.successfulHabits.length > 0) && (
-            <div className="mt-4 space-y-2">
-              {insights.habitPatterns.successfulHabits.length > 0 && (
-                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">
-                    {insights.habitPatterns.successfulHabits.length} habits going strong!
-                  </span>
-                </div>
-              )}
-              
-              {insights.habitPatterns.strugglingHabits.length > 0 && (
-                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                  <Target className="w-4 h-4" />
-                  <span className="text-sm">
-                    {insights.habitPatterns.strugglingHabits.length} habits need attention
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+            
+            {insights.habitPatterns.strugglingHabits.length > 0 && (
+              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <Target className="w-4 h-4" />
+                <span className="text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {insights.habitPatterns.strugglingHabits.length} habits need attention
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Popular Tags */}
       {insights.taskPatterns.commonTags.length > 0 && (
-        <Card className="w-full bg-white dark:bg-gray-800 border border-[var(--neutral-300)] dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-lg text-[var(--fg)] dark:text-gray-100">Popular Tags</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {insights.taskPatterns.commonTags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="dark:border-gray-600 dark:text-gray-300">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            Popular Tags
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {insights.taskPatterns.commonTags.map((tag, index) => (
+              <span key={index} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
