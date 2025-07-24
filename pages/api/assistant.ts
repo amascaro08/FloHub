@@ -136,8 +136,7 @@ export default async function handler(
 
   const lowerPrompt = userInput.toLowerCase();
 
-  console.log(`[DEBUG] Assistant API received query: "${userInput}"`);
-  console.log(`[DEBUG] Lower prompt: "${lowerPrompt}"`);
+
 
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
@@ -148,11 +147,7 @@ export default async function handler(
       lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
       lowerPrompt.includes("upcoming") || lowerPrompt.includes("meeting");
       
-  console.log(`[DEBUG] Is calendar query? ${isCalendarQuery} - Query: "${userInput}"`);
-  
   if (isCalendarQuery) {
-    
-    console.log(`[DEBUG] Calendar query detected: "${userInput}"`);
     
     try {
       // Fetch fresh calendar events for calendar-related queries
@@ -160,7 +155,7 @@ export default async function handler(
       const timeMin = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24 hours ago
       const timeMax = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days from now
       
-      console.log(`[DEBUG] Fetching calendar from: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`);
+
       
       // First, get user settings to include O365 URL if needed
       const userSettingsResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/userSettings`, {
@@ -179,7 +174,7 @@ export default async function handler(
         }
       }
       
-      console.log(`[DEBUG] Final calendar URL: ${calendarUrl}`);
+
       
       const calendarResponse = await fetch(calendarUrl, {
         headers: {
@@ -187,29 +182,26 @@ export default async function handler(
         },
       });
       
-      console.log(`[DEBUG] Calendar API response status: ${calendarResponse.status}`);
+      
       
       if (calendarResponse.ok) {
         const calendarData = await calendarResponse.json();
         const freshCalendarEvents = calendarData.events || [];
         
-        console.log(`[DEBUG] Fresh calendar events count: ${freshCalendarEvents.length}`);
-        console.log(`[DEBUG] First few events:`, freshCalendarEvents.slice(0, 3));
+        
         
         // Load smart assistant with fresh calendar data
         await smartAssistant.loadUserContext(freshCalendarEvents);
         const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
         
-        console.log(`[DEBUG] Smart assistant response:`, queryResponse);
+        
         
         if (queryResponse && !queryResponse.includes("I can help you with:")) {
-          // Add debug info to response to confirm calendar events were used
-          const debugInfo = `\n\n*[DEBUG: Used ${freshCalendarEvents.length} fresh calendar events]*`;
-          return res.status(200).json({ reply: queryResponse + debugInfo });
+          return res.status(200).json({ reply: queryResponse });
         }
       } else {
         const errorText = await calendarResponse.text();
-        console.log(`[DEBUG] Calendar API error: ${calendarResponse.status} - ${errorText}`);
+        
         
         // If calendar fetch fails, still try with cached data but inform user
         await smartAssistant.loadUserContext();
@@ -262,12 +254,12 @@ export default async function handler(
       lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
     
-    console.log(`[DEBUG] Natural language query detected: "${userInput}"`);
+
     
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
       
-      console.log(`[DEBUG] Natural language query response:`, queryResponse);
+
       
       if (queryResponse && !queryResponse.includes("I can help you with:")) {
         return res.status(200).json({ reply: queryResponse });
@@ -282,12 +274,12 @@ export default async function handler(
   const capabilityMatch = findMatchingCapability(userInput);
   if (capabilityMatch) {
     try {
-      console.log(`[DEBUG] Capability matched: ${capabilityMatch.capability.featureName}, Command: ${capabilityMatch.command}, Args: "${capabilityMatch.args}"`);
+  
       const capabilityResponse = await capabilityMatch.capability.handler(
         capabilityMatch.command, 
         capabilityMatch.args
       );
-      console.log(`[DEBUG] Capability response: ${capabilityResponse}`);
+
       return res.status(200).json({ reply: capabilityResponse });
     } catch (error) {
       console.error("Error in capability handler:", error);
@@ -371,7 +363,7 @@ export default async function handler(
         const payload: any = { text: finalTaskText };
         if (dueDate) payload.dueDate = dueDate;
 
-        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
+
         const success = await callInternalApi("/api/tasks", "POST", payload, req);
         if (success) {
           return res.status(200).json({
