@@ -151,13 +151,14 @@ const DashboardGrid = () => {
 
   // user logic (Stack Auth: user object replaces user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"]);
+  const [savedLayouts, setSavedLayouts] = useState<any>({});
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
 
   // All available widgets
   const allWidgets: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
-  // Fetch user settings to get active widgets (client-side only)
+  // Fetch user settings to get active widgets and saved layouts (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
       setIsLoadingSettings(true);
@@ -171,6 +172,10 @@ const DashboardGrid = () => {
                 widget => Object.keys(widgetComponents).includes(widget)
               ) as WidgetType[];
               setActiveWidgets(validWidgets);
+            }
+            // Load saved layouts if they exist
+            if (userSettings.savedLayouts) {
+              setSavedLayouts(userSettings.savedLayouts);
             }
           } else {
             console.error("[DashboardGrid] Failed to fetch user settings, using defaults.");
@@ -221,15 +226,16 @@ const DashboardGrid = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          activeWidgets: activeWidgets
+          activeWidgets: activeWidgets,
+          savedLayouts: savedLayouts
         })
       });
 
       if (!response.ok) {
-        console.error("[DashboardGrid] Failed to save widget order");
+        console.error("[DashboardGrid] Failed to save widget order and layouts");
       }
     } catch (error) {
-      console.error("[DashboardGrid] Error saving widget order:", error);
+      console.error("[DashboardGrid] Error saving widget order and layouts:", error);
     }
   };
 
@@ -304,16 +310,19 @@ const DashboardGrid = () => {
       ]
     };
 
+    // Use saved layouts if available, otherwise use base layout
+    const layoutsToUse = Object.keys(savedLayouts).length > 0 ? savedLayouts : baseLayout;
+
     // Filter layouts to only include active widgets
     const filteredLayouts: any = {};
-    Object.keys(baseLayout).forEach(breakpoint => {
-      filteredLayouts[breakpoint] = baseLayout[breakpoint as keyof typeof baseLayout].filter(
+    Object.keys(layoutsToUse).forEach(breakpoint => {
+      filteredLayouts[breakpoint] = layoutsToUse[breakpoint as keyof typeof layoutsToUse].filter(
         item => activeWidgets.includes(item.i as WidgetType)
       );
     });
 
     return filteredLayouts;
-  }, [activeWidgets]);
+  }, [activeWidgets, savedLayouts]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     if (isLocked) return;
@@ -321,6 +330,14 @@ const DashboardGrid = () => {
     // Update active widgets based on layout order
     const newWidgetOrder = layout.map((item: any) => item.i) as WidgetType[];
     setActiveWidgets(newWidgetOrder);
+    
+    // Save the layout state for all breakpoints
+    const newSavedLayouts = { ...savedLayouts };
+    Object.keys(allLayouts).forEach(breakpoint => {
+      newSavedLayouts[breakpoint] = allLayouts[breakpoint];
+    });
+    setSavedLayouts(newSavedLayouts);
+    
     saveWidgetOrder();
   };
 
