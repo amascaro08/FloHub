@@ -227,7 +227,10 @@ NEXTAUTH_URL=http://localhost:3000
 ## 🔮 Future Enhancements
 
 ### 1. Planned Features
-- **Recurring Events**: Support for recurring patterns
+- **Recurring Events**: Support for recurring patterns ✅ **IMPLEMENTED**
+  - Power Automate URLs now properly handle recurring events and series instances
+  - Enhanced filtering logic for recurring events to be more inclusive of overlapping occurrences
+  - Improved event parsing to handle different recurrence formats from Power Automate flows
 - **Event Templates**: Predefined event types
 - **Calendar Sharing**: Share calendars with others
 - **Advanced Search**: Search events by content
