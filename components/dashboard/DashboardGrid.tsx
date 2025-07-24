@@ -106,8 +106,15 @@ const DashboardGrid = () => {
   }, [showWidgetModal]);
 
   // Not signed in? Show loading or redirect to login
-  if (isLoading) {
-    return <div>Loading...</div>;
+  if (isLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00C9A7] mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   // Locking: Read lock state from localStorage
@@ -146,6 +153,9 @@ const DashboardGrid = () => {
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"]);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
+
+  // All available widgets
+  const allWidgets: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
