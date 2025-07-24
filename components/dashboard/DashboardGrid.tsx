@@ -268,62 +268,42 @@ const DashboardGrid = () => {
   const layouts = useMemo(() => {
     const baseLayout = {
       lg: [
-        { i: 'ataglance', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 2 },
-        { i: 'calendar', x: 0, y: 3, w: 8, h: 5, minW: 4, minH: 3 },
-        { i: 'tasks', x: 8, y: 3, w: 4, h: 5, minW: 3, minH: 3 },
-        { i: 'habit-tracker', x: 0, y: 8, w: 6, h: 4, minW: 4, minH: 2 },
-        { i: 'quicknote', x: 6, y: 8, w: 6, h: 4, minW: 4, minH: 2 }
+        { i: 'ataglance', x: 0, y: 0, w: 12, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 8, h: 5 },
+        { i: 'tasks', x: 8, y: 3, w: 4, h: 5 },
+        { i: 'habit-tracker', x: 0, y: 8, w: 6, h: 4 },
+        { i: 'quicknote', x: 6, y: 8, w: 6, h: 4 }
       ],
       md: [
-        { i: 'ataglance', x: 0, y: 0, w: 10, h: 3, minW: 6, minH: 2 },
-        { i: 'calendar', x: 0, y: 3, w: 10, h: 5, minW: 6, minH: 3 },
-        { i: 'tasks', x: 0, y: 8, w: 10, h: 4, minW: 6, minH: 3 },
-        { i: 'habit-tracker', x: 0, y: 12, w: 5, h: 4, minW: 4, minH: 2 },
-        { i: 'quicknote', x: 5, y: 12, w: 5, h: 4, minW: 4, minH: 2 }
+        { i: 'ataglance', x: 0, y: 0, w: 10, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 10, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 10, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 5, h: 4 },
+        { i: 'quicknote', x: 5, y: 12, w: 5, h: 4 }
       ],
       sm: [
-        { i: 'ataglance', x: 0, y: 0, w: 6, h: 3, minW: 4, minH: 2 },
-        { i: 'calendar', x: 0, y: 3, w: 6, h: 5, minW: 4, minH: 3 },
-        { i: 'tasks', x: 0, y: 8, w: 6, h: 4, minW: 4, minH: 3 },
-        { i: 'habit-tracker', x: 0, y: 12, w: 6, h: 4, minW: 4, minH: 2 },
-        { i: 'quicknote', x: 0, y: 16, w: 6, h: 4, minW: 4, minH: 2 }
+        { i: 'ataglance', x: 0, y: 0, w: 6, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 6, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 6, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 6, h: 4 },
+        { i: 'quicknote', x: 0, y: 16, w: 6, h: 4 }
       ],
       xs: [
-        { i: 'ataglance', x: 0, y: 0, w: 4, h: 3, minW: 3, minH: 2 },
-        { i: 'calendar', x: 0, y: 3, w: 4, h: 5, minW: 3, minH: 3 },
-        { i: 'tasks', x: 0, y: 8, w: 4, h: 4, minW: 3, minH: 3 },
-        { i: 'habit-tracker', x: 0, y: 12, w: 4, h: 4, minW: 3, minH: 2 },
-        { i: 'quicknote', x: 0, y: 16, w: 4, h: 4, minW: 3, minH: 2 }
+        { i: 'ataglance', x: 0, y: 0, w: 4, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 4, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 4, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 4, h: 4 },
+        { i: 'quicknote', x: 0, y: 16, w: 4, h: 4 }
       ]
     };
 
-          // Generate layouts for active widgets only, ensuring no overlaps
-      const filteredLayouts: any = {};
-      Object.keys(baseLayout).forEach(breakpoint => {
-        const availableLayouts = baseLayout[breakpoint as keyof typeof baseLayout];
-        const activeLayouts = availableLayouts.filter(
-          item => activeWidgets.includes(item.i as WidgetType)
-        );
-        
-        // Ensure widgets are positioned without overlaps
-        const positionedLayouts: any[] = [];
-        activeLayouts.forEach((item, index) => {
-          if (index === 0) {
-            positionedLayouts.push(item);
-          } else {
-            // For subsequent widgets, position them below the previous ones
-            const prevItem = positionedLayouts[index - 1];
-            const newY = prevItem ? prevItem.y + prevItem.h : 0;
-            
-            positionedLayouts.push({
-              ...item,
-              y: newY
-            });
-          }
-        });
-        
-        filteredLayouts[breakpoint] = positionedLayouts;
-      });
+    // Filter layouts to only include active widgets
+    const filteredLayouts: any = {};
+    Object.keys(baseLayout).forEach(breakpoint => {
+      filteredLayouts[breakpoint] = baseLayout[breakpoint as keyof typeof baseLayout].filter(
+        item => activeWidgets.includes(item.i as WidgetType)
+      );
+    });
 
     return filteredLayouts;
   }, [activeWidgets]);
@@ -376,12 +356,6 @@ const DashboardGrid = () => {
           <div 
             key={widgetKey} 
             className="widget-container"
-            data-grid={{
-              minW: widgetKey === 'calendar' ? 4 : widgetKey === 'tasks' ? 3 : 3,
-              minH: widgetKey === 'calendar' ? 3 : widgetKey === 'tasks' ? 3 : 2,
-              maxW: 12,
-              maxH: 12
-            }}
           >
             {visibleWidgets.includes(widgetKey) ? (
               widgetComponents[widgetKey]
