@@ -232,32 +232,32 @@ const DashboardGrid = () => {
   const layouts = useMemo(() => {
     const baseLayout = {
       lg: [
-        { i: 'ataglance', x: 0, y: 0, w: 12, h: 2 },
-        { i: 'calendar', x: 0, y: 2, w: 8, h: 4 },
-        { i: 'tasks', x: 8, y: 2, w: 4, h: 4 },
-        { i: 'habit-tracker', x: 0, y: 6, w: 6, h: 3 },
-        { i: 'quicknote', x: 6, y: 6, w: 6, h: 3 }
+        { i: 'ataglance', x: 0, y: 0, w: 12, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 8, h: 5 },
+        { i: 'tasks', x: 8, y: 3, w: 4, h: 5 },
+        { i: 'habit-tracker', x: 0, y: 8, w: 6, h: 4 },
+        { i: 'quicknote', x: 6, y: 8, w: 6, h: 4 }
       ],
       md: [
-        { i: 'ataglance', x: 0, y: 0, w: 10, h: 2 },
-        { i: 'calendar', x: 0, y: 2, w: 10, h: 4 },
-        { i: 'tasks', x: 0, y: 6, w: 10, h: 3 },
-        { i: 'habit-tracker', x: 0, y: 9, w: 5, h: 3 },
-        { i: 'quicknote', x: 5, y: 9, w: 5, h: 3 }
+        { i: 'ataglance', x: 0, y: 0, w: 10, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 10, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 10, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 5, h: 4 },
+        { i: 'quicknote', x: 5, y: 12, w: 5, h: 4 }
       ],
       sm: [
-        { i: 'ataglance', x: 0, y: 0, w: 6, h: 2 },
-        { i: 'calendar', x: 0, y: 2, w: 6, h: 4 },
-        { i: 'tasks', x: 0, y: 6, w: 6, h: 3 },
-        { i: 'habit-tracker', x: 0, y: 9, w: 6, h: 3 },
-        { i: 'quicknote', x: 0, y: 12, w: 6, h: 3 }
+        { i: 'ataglance', x: 0, y: 0, w: 6, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 6, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 6, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 6, h: 4 },
+        { i: 'quicknote', x: 0, y: 16, w: 6, h: 4 }
       ],
       xs: [
-        { i: 'ataglance', x: 0, y: 0, w: 4, h: 2 },
-        { i: 'calendar', x: 0, y: 2, w: 4, h: 4 },
-        { i: 'tasks', x: 0, y: 6, w: 4, h: 3 },
-        { i: 'habit-tracker', x: 0, y: 9, w: 4, h: 3 },
-        { i: 'quicknote', x: 0, y: 12, w: 4, h: 3 }
+        { i: 'ataglance', x: 0, y: 0, w: 4, h: 3 },
+        { i: 'calendar', x: 0, y: 3, w: 4, h: 5 },
+        { i: 'tasks', x: 0, y: 8, w: 4, h: 4 },
+        { i: 'habit-tracker', x: 0, y: 12, w: 4, h: 4 },
+        { i: 'quicknote', x: 0, y: 16, w: 4, h: 4 }
       ]
     };
 

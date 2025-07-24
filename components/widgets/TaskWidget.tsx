@@ -195,7 +195,7 @@ function TaskWidget() {
   const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
 
   return (
-    <div className="relative"> {/* Removed glass class as it's now in the parent */}
+    <div className="task-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 relative">
       {/* Celebration Message */}
       {celebrating && (
         <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl animate-fade-in">

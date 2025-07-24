@@ -111,6 +111,24 @@ function generateDashboardWidget(
     )
   );
 
+  // Find next meeting
+  const now = new Date();
+  const nextMeeting = todayEvents
+    .filter(event => {
+      let eventTime;
+      if (event.start instanceof Date) {
+        eventTime = event.start;
+      } else {
+        eventTime = new Date(event.start?.dateTime || event.start?.date || '');
+      }
+      return eventTime > now;
+    })
+    .sort((a, b) => {
+      let aTime = a.start instanceof Date ? a.start : new Date(a.start?.dateTime || a.start?.date || '');
+      let bTime = b.start instanceof Date ? b.start : new Date(b.start?.dateTime || b.start?.date || '');
+      return aTime.getTime() - bTime.getTime();
+    })[0];
+
   // Generate FloCat insights with brand voice
   let floCatInsights = [];
   let priorityLevel = "calm";
@@ -132,6 +150,16 @@ function generateDashboardWidget(
     } else {
       floCatInsights.push(`🎉 **Personal Day:** ${personalCount} personal event${personalCount > 1 ? 's' : ''} to look forward to!`);
     }
+  }
+
+  if (nextMeeting) {
+    let meetingTime;
+    if (nextMeeting.start instanceof Date) {
+      meetingTime = nextMeeting.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } else {
+      meetingTime = new Date(nextMeeting.start?.dateTime || nextMeeting.start?.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+    floCatInsights.push(`⏰ **Next Meeting:** "${nextMeeting.summary}" at ${meetingTime}`);
   }
 
   if (tomorrowEvents.length > 0) {
@@ -170,8 +198,8 @@ function generateDashboardWidget(
     <div class="at-a-glance-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
       <!-- Header with FloCat branding -->
       <div class="flex items-center mb-6">
-        <div class="w-10 h-10 bg-gradient-to-br from-[${BRAND_STYLES.primary}] to-[${BRAND_STYLES.accent}] rounded-full flex items-center justify-center mr-3">
-          <span class="text-white font-bold text-lg">😺</span>
+        <div class="w-10 h-10 bg-gradient-to-br from-[${BRAND_STYLES.primary}] to-[${BRAND_STYLES.accent}] rounded-full flex items-center justify-center mr-3 overflow-hidden">
+          <img src="/flohub_flocat.png" alt="FloCat" class="w-8 h-8 object-contain" />
         </div>
         <div>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white" style="font-family: 'Poppins', sans-serif;">
