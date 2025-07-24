@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
@@ -8,6 +8,7 @@ import {
   fetchTasks,
   fetchNotes,
   fetchMeetings,
+  invalidateCache,
 } from '@/lib/widgetFetcher';
 import {
   fetchHabits,
@@ -441,198 +442,188 @@ function generateDashboardWidget(
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then(res => res.json());
 
 const AtAGlanceWidget = () => {
-  const { user, isLoading } = useUser();
-  
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  const userName = user?.name || "User";
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [widgetData, setWidgetData] = useState<any>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
   // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
-  
-  // Track widget usage (client-side only)
   const trackingHook = isClient ? useWidgetTracking('AtAGlanceWidget') : { trackInteraction: () => {} };
-  const { trackInteraction } = trackingHook;
 
-  const [formattedHtml, setFormattedHtml] = useState<string>("FloCat is preparing your dashboard...");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Optimized data fetching with parallel requests and better error handling
+  const fetchDataOptimized = useCallback(async () => {
+    if (!user?.email) return;
 
-  // Fetch user settings with SWR for caching - optimized
-  const { data: loadedSettings, error: settingsError } = useSWR(
-    user ? "/api/userSettings" : null,
-    fetcher,
-    { 
-      revalidateOnFocus: false, 
-      dedupingInterval: 300000, // 5 minutes
-      errorRetryCount: 1,
-      errorRetryInterval: 10000
-    }
-  );
+    try {
+      setLoading(true);
+      setError(null);
 
-  useEffect(() => {
-    if (!user || !user.email || !loadedSettings) {
-      return;
-    }
+      const now = new Date();
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    let isMounted = true;
-    
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+      // Calculate proper time range for fetching events (today + next 7 days)
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const oneWeekFromNow = new Date(startOfToday);
+      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+      oneWeekFromNow.setHours(23, 59, 59, 999);
 
-        const now = new Date();
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      // Build API parameters for calendar with required timeMin and timeMax
+      const timeMin = startOfToday.toISOString();
+      const timeMax = oneWeekFromNow.toISOString();
+      let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
 
-        // Calculate proper time range for fetching events (today + next 7 days)
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const oneWeekFromNow = new Date(startOfToday);
-        oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-        oneWeekFromNow.setHours(23, 59, 59, 999);
+      // Create all fetch promises with individual timeout protection
+      const fetchPromises = [
+        fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `calendar_${timeMin}_${timeMax}`).catch(() => []),
+        fetchTasks().catch(() => ({ tasks: [] })),
+        fetchNotes().catch(() => ({ notes: [] })),
+        fetchMeetings().catch(() => ({ meetings: [] })),
+        fetchHabits().catch(() => ({ habits: [] })),
+        fetchHabitCompletions(now.getFullYear(), now.getMonth() + 1).catch(() => ({ completions: [] }))
+      ];
 
-        // Build API parameters for calendar with required timeMin and timeMax
-        const timeMin = startOfToday.toISOString();
-        const timeMax = oneWeekFromNow.toISOString();
-        let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
+      // Execute all requests in parallel with timeout
+      const [eventsData, tasksData, notesData, meetingsData, habitsData, habitCompletionsData] = await Promise.allSettled(fetchPromises);
 
-        // Fetch data in parallel with timeout for better performance
-        const fetchWithTimeout = async (promise: Promise<any>, timeout: number = 5000) => {
-          return Promise.race([
-            promise,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Request timeout')), timeout)
-            )
-          ]);
+      // Process results with fallbacks
+      const events = eventsData.status === 'fulfilled' ? eventsData.value : [];
+      const tasks = tasksData.status === 'fulfilled' ? tasksData.value : { tasks: [] };
+      const notes = notesData.status === 'fulfilled' ? notesData.value : { notes: [] };
+      const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value : { meetings: [] };
+      const habits = habitsData.status === 'fulfilled' ? habitsData.value : { habits: [] };
+      const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value : { completions: [] };
+
+      // Process events data with timezone conversion
+      const eventsInUserTimezone = events.map((event: CalendarEvent) => {
+        let start: any = {};
+        if (event.start instanceof Date) {
+          start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+        } else {
+          if (event.start.dateTime) {
+            start = { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+          } else if (event.start.date) {
+            start = { date: event.start.date };
+          }
+        }
+        
+        let end: any = undefined;
+        if (event.end) {
+          if (event.end instanceof Date) {
+            end = { dateTime: formatInTimeZone(event.end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+          } else {
+            if (event.end.dateTime) {
+              end = { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
+            } else if (event.end.date) {
+              end = { date: event.end.date };
+            }
+          }
+        }
+
+        return {
+          ...event,
+          start,
+          end,
         };
+      });
 
-        const [eventsResponse, tasksData, notesData, meetingsData] = await Promise.all([
-          fetchWithTimeout(fetchCalendarEvents(`/api/calendar?${apiUrlParams}`)).catch(() => []),
-          fetchWithTimeout(fetchTasks()).catch(() => ({ tasks: [] })),
-          fetchWithTimeout(fetchNotes()).catch(() => ({ notes: [] })),
-          fetchWithTimeout(fetchMeetings()).catch(() => ({ meetings: [] }))
-        ]);
+      // Filter upcoming events
+      const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
+        const nowInUserTimezone = toZonedTime(now, userTimezone);
+        const oneWeekFromNow = new Date(nowInUserTimezone);
+        oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
 
-        const eventsData = eventsResponse || [];
-        
-        // Process events data
-        const eventsInUserTimezone = eventsData.map((event: CalendarEvent) => {
-          let start: any = {};
-          if (event.start instanceof Date) {
-            start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-          } else {
-            if (event.start.dateTime) {
-              start = { dateTime: formatInTimeZone(toZonedTime(event.start.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-            } else if (event.start.date) {
-              start = { date: event.start.date };
-            }
-          }
-          
-          let end: any = undefined;
-          if (event.end) {
-            if (event.end instanceof Date) {
-              end = { dateTime: formatInTimeZone(event.end, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-            } else {
-              if (event.end.dateTime) {
-                end = { dateTime: formatInTimeZone(toZonedTime(event.end.dateTime, userTimezone), userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
-              } else if (event.end.date) {
-                end = { date: event.end.date };
+        if (ev.start instanceof Date) {
+          return ev.start.getTime() >= nowInUserTimezone.getTime() &&
+                 ev.start.getTime() <= oneWeekFromNow.getTime();
+        } else {
+          if (ev.start.dateTime) {
+            const startTime = toZonedTime(ev.start.dateTime, userTimezone);
+            let endTime = null;
+            
+            if (ev.end) {
+              if (ev.end instanceof Date) {
+                endTime = ev.end;
+              } else if (ev.end.dateTime) {
+                endTime = toZonedTime(ev.end.dateTime, userTimezone);
               }
             }
+
+            const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
+            const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
+            const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
+
+            return hasNotEnded && startsWithinNextWeek && startsAfterNow;
+          } else if (ev.start.date) {
+            const eventDate = new Date(ev.start.date);
+            const endOfWeek = new Date(oneWeekFromNow);
+            endOfWeek.setDate(endOfWeek.getDate() + 1);
+            
+            return eventDate >= nowInUserTimezone && eventDate <= endOfWeek;
           }
-
-          return {
-            ...event,
-            start,
-            end,
-          };
-        });
-
-        // Filter upcoming events
-        const upcomingEventsForPrompt = eventsInUserTimezone.filter((ev: CalendarEvent) => {
-          const nowInUserTimezone = toZonedTime(now, userTimezone);
-          const oneWeekFromNow = new Date(nowInUserTimezone);
-          oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-
-          if (ev.start instanceof Date) {
-            return ev.start.getTime() >= nowInUserTimezone.getTime() &&
-                   ev.start.getTime() <= oneWeekFromNow.getTime();
-          } else {
-            if (ev.start.dateTime) {
-              const startTime = toZonedTime(ev.start.dateTime, userTimezone);
-              let endTime = null;
-              
-              if (ev.end) {
-                if (ev.end instanceof Date) {
-                  endTime = ev.end;
-                } else if (ev.end.dateTime) {
-                  endTime = toZonedTime(ev.end.dateTime, userTimezone);
-                }
-              }
-
-              const hasNotEnded = !endTime || endTime.getTime() > nowInUserTimezone.getTime();
-              const startsWithinNextWeek = startTime.getTime() <= oneWeekFromNow.getTime();
-              const startsAfterNow = startTime.getTime() >= nowInUserTimezone.getTime();
-
-              return hasNotEnded && startsWithinNextWeek && startsAfterNow;
-            } else if (ev.start.date) {
-              const eventDate = toZonedTime(ev.start.date, userTimezone);
-              return eventDate.getTime() >= nowInUserTimezone.getTime() &&
-                     eventDate.getTime() <= oneWeekFromNow.getTime();
-            }
-          }
-          return false;
-        });
-        
-        // Fetch habits
-        let habits: Habit[] = [];
-        let habitCompletions: any[] = [];
-        
-        try {
-          const habitsData = await fetchHabits();
-          habits = habitsData || [];
-          
-          const today = new Date();
-          const completionsData = await fetchHabitCompletions(today.getFullYear(), today.getMonth());
-          habitCompletions = completionsData || [];
-        } catch (err) {
-          console.log("Error fetching habits:", err);
         }
+        return false;
+      });
 
-        if (isMounted) {
-          const allTasks = tasksData.tasks || tasksData || [];
-          const preferredName = loadedSettings?.preferredName || userName;
-          
-          // Generate dashboard widget
-          const dashboardContent = generateDashboardWidget(
-            allTasks,
-            upcomingEventsForPrompt,
-            habits,
-            habitCompletions,
-            preferredName,
-            userTimezone
-          );
-          
-          setFormattedHtml(dashboardContent);
-          setLoading(false);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err.message);
-          console.error("Error generating dashboard widget:", err);
-          setLoading(false);
-        }
-      }
-    };
+      // Generate widget content
+      const widgetContent = generateDashboardWidget(
+        tasks.tasks || [],
+        upcomingEventsForPrompt,
+        habits.habits || [],
+        habitCompletions.completions || [],
+        user.name || user.email,
+        userTimezone
+      );
 
-    fetchData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [user, loadedSettings, userName]);
+      setWidgetData({
+        content: widgetContent,
+        events: upcomingEventsForPrompt,
+        tasks: tasks.tasks || [],
+        notes: notes.notes || [],
+        meetings: meetings.meetings || [],
+        habits: habits.habits || [],
+        habitCompletions: habitCompletions.completions || [],
+        lastUpdated: new Date()
+      });
+
+      setLastRefresh(new Date());
+      setLoading(false);
+
+    } catch (err) {
+      console.error('Error fetching AtAGlance data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Load data on mount and when user changes
+  useEffect(() => {
+    if (user?.email) {
+      fetchDataOptimized();
+    }
+  }, [user, fetchDataOptimized]);
+
+  // Background refresh every 5 minutes
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const interval = setInterval(() => {
+      fetchDataOptimized();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, fetchDataOptimized]);
+
+  // Manual refresh function
+  const handleRefresh = useCallback(() => {
+    invalidateCache('calendar');
+    invalidateCache('tasks');
+    invalidateCache('notes');
+    invalidateCache('meetings');
+    invalidateCache('habits');
+    fetchDataOptimized();
+  }, [fetchDataOptimized]);
 
   if (error) {
     return (
@@ -680,9 +671,9 @@ const AtAGlanceWidget = () => {
   return (
     <div 
       className="at-a-glance-widget"
-      onClick={() => trackInteraction('view_summary')}
+      onClick={() => trackingHook.trackInteraction('view_summary')}
     >
-      <div dangerouslySetInnerHTML={{ __html: formattedHtml }} />
+      <div dangerouslySetInnerHTML={{ __html: widgetData?.content }} />
     </div>
   );
 };

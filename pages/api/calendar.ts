@@ -22,6 +22,63 @@ export type CalendarEvent = {
 
 type ErrorRes = { error: string; details?: any };
 
+// Cache for Power Automate URL responses
+interface PowerAutomateCache {
+  [url: string]: {
+    data: any[];
+    timestamp: number;
+    ttl: number;
+  };
+}
+
+const powerAutomateCache: PowerAutomateCache = {};
+const POWER_AUTOMATE_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+// Helper function to check if cache is valid
+const isPowerAutomateCacheValid = (url: string): boolean => {
+  const cached = powerAutomateCache[url];
+  if (!cached) return false;
+  return Date.now() - cached.timestamp < cached.ttl;
+};
+
+// Helper function to get cached Power Automate data
+const getCachedPowerAutomateData = (url: string): any[] | null => {
+  if (isPowerAutomateCacheValid(url)) {
+    return powerAutomateCache[url].data;
+  }
+  return null;
+};
+
+// Helper function to cache Power Automate data
+const cachePowerAutomateData = (url: string, data: any[]): void => {
+  powerAutomateCache[url] = {
+    data,
+    timestamp: Date.now(),
+    ttl: POWER_AUTOMATE_CACHE_TTL,
+  };
+};
+
+// Helper function for timeout protection
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout: number = 5000): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+};
+
 // Function to refresh Google access token
 async function refreshGoogleToken(userId: number, refreshToken: string): Promise<string | null> {
   try {
@@ -292,61 +349,17 @@ export default async function handler(
       console.log(`Fetching Google Calendar events for ${id}...`);
 
       try {
-        const gres = await fetch(url, {
+        const gres = await fetchWithTimeout(url, {
           headers: { 
             Authorization: `Bearer ${accessToken}`,
             'Cache-Control': 'max-age=60' // Cache for 60 seconds
           },
-        });
+        }, 8000); // 8 second timeout for Google API
 
-        if (!gres.ok) {
-          const err = await gres.json();
-          console.error(`Google Calendar API error for ${id}:`, gres.status, err);
+        if (gres.ok) {
+          const body = await gres.json();
+          const eventSource = tags.includes("work") ? "work" : "personal";
           
-          // If unauthorized, try to refresh token once more
-          if (gres.status === 401 && googleAccount?.refresh_token) {
-            console.log('Unauthorized, attempting final token refresh...');
-            const newToken = await refreshGoogleToken(decoded.userId, googleAccount.refresh_token);
-            if (newToken) {
-              // Retry the request with new token
-              const retryRes = await fetch(url, {
-                headers: { Authorization: `Bearer ${newToken}` },
-              });
-              if (retryRes.ok) {
-                const retryBody = await retryRes.json();
-                if (Array.isArray(retryBody.items)) {
-                  const isWork = tags.includes("work");
-                  const isPersonal = tags.includes("personal") || (!isWork && tags.length === 0);
-                  const eventSource = isWork ? "work" : "personal";
-                  
-                  const events = retryBody.items.map((item: any) => ({
-                    id: item.id,
-                    calendarId: id,
-                    summary: item.summary || "No Title",
-                    start: item.start || { dateTime: "", timeZone: "" },
-                    end: item.end || { dateTime: "", timeZone: "" },
-                    source: eventSource,
-                    description: item.description || "",
-                    calendarName: sourceName,
-                    tags,
-                  }));
-                  console.log(`Successfully fetched ${retryBody.items.length} events for ${id} after token refresh`);
-                  return events;
-                }
-              }
-            }
-          }
-          return [];
-        }
-
-        const body = await gres.json();
-        if (Array.isArray(body.items)) {
-          // Determine if this is a work or personal calendar based on tags
-          const isWork = tags.includes("work");
-          const isPersonal = tags.includes("personal") || (!isWork && tags.length === 0);
-          const eventSource = isWork ? "work" : "personal";
-          
-          // Tag and normalize fields
           const events = body.items.map((item: any) => ({
             id: item.id,
             calendarId: id, // Include the calendarId
@@ -368,13 +381,9 @@ export default async function handler(
       }
     });
 
-    // Wait for all Google Calendar requests to complete
-    const googleResults = await Promise.all(googlePromises);
-    googleResults.forEach(events => allEvents.push(...events));
-
-    // Process O365/Power Automate URLs
-    for (const url of o365Urls) {
-      if (!url) continue;
+    // Process O365/Power Automate URLs in parallel with caching
+    const o365Promises = o365Urls.map(async (url) => {
+      if (!url) return [];
       
       const source = o365Sources.find(s => s.connectionData === url);
       const tags = source?.tags || ["work"]; // Default to work tag for O365
@@ -382,8 +391,20 @@ export default async function handler(
       const isWork = tags.includes("work") || tags.length === 0; // Default to work if no tags
       
       console.log("Attempting to fetch O365 events from URL:", url);
-              try {
-          const o365Res = await fetch(url);
+      
+      // Check cache first
+      const cachedData = getCachedPowerAutomateData(url);
+      if (cachedData) {
+        console.log("Using cached O365 data for URL:", url);
+        return cachedData.map((event: any) => ({
+          ...event,
+          calendarName: sourceName,
+          tags,
+        }));
+      }
+
+      try {
+        const o365Res = await fetchWithTimeout(url, {}, 10000); // 10 second timeout for Power Automate
         console.log("O365 fetch response status:", o365Res.status);
         
         if (o365Res.ok) {
@@ -425,15 +446,31 @@ export default async function handler(
             });
             
           console.log("O365 mapped and filtered events count:", o365Events.length);
-          allEvents.push(...o365Events);
+          
+          // Cache the processed data
+          cachePowerAutomateData(url, o365Events);
+          
+          return o365Events;
         } else {
           const errorText = await o365Res.text();
           console.error("Failed to fetch O365 events, status:", o365Res.status, "Response:", errorText);
+          return [];
         }
       } catch (e) {
         console.error("Error fetching O365 events:", e);
+        return [];
       }
-    }
+    });
+
+    // Wait for all requests to complete in parallel
+    const [googleResults, o365Results] = await Promise.all([
+      Promise.all(googlePromises),
+      Promise.all(o365Promises)
+    ]);
+
+    // Combine all results
+    googleResults.forEach(events => allEvents.push(...events));
+    o365Results.forEach(events => allEvents.push(...events));
 
     console.log(`Total events fetched: ${allEvents.length}`);
     return res.status(200).json({ events: allEvents });
