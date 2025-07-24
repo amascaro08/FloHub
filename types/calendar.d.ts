@@ -23,7 +23,7 @@ export interface CalendarEvent {
   // Recurring event fields
   isRecurring?: boolean; // Whether this event is part of a recurring series
   seriesMasterId?: string; // ID of the series master for recurring events
-  recurrence?: any; // Recurrence pattern information
+  instanceIndex?: number; // Index of this instance within the recurring series
 }
 
 // Settings type for calendar components

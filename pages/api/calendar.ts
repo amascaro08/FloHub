@@ -420,28 +420,37 @@ export default async function handler(
             
           console.log("O365 raw events count:", o365EventsRaw.length);
           
-          // Process recurring events - some Power Automate flows return series info
-          const expandedEvents: any[] = [];
+          // Process Power Automate events - they come as individual instances, not series
+          // Group by title to identify recurring events
+          const eventsByTitle = new Map<string, any[]>();
           
           o365EventsRaw.forEach((e: any) => {
-            // Handle both single events and recurring event instances
-            if (e.recurrence || e.isRecurring || e.seriesMasterId) {
-              // This is a recurring event or part of a series
-              console.log("Processing recurring event:", e.title || e.subject);
-              
-              // Check if this is a series master or instance
-              if (e.seriesMasterId && e.seriesMasterId !== e.id) {
-                // This is an instance of a recurring series
-                expandedEvents.push(e);
-              } else if (!e.seriesMasterId) {
-                // This might be a series master or single occurrence
-                // Add it as-is, Power Automate should have already expanded instances
-                expandedEvents.push(e);
-              }
-            } else {
-              // Regular single event
-              expandedEvents.push(e);
+            const title = e.title || e.subject || "Untitled";
+            if (!eventsByTitle.has(title)) {
+              eventsByTitle.set(title, []);
             }
+            eventsByTitle.get(title)?.push(e);
+          });
+          
+          // Mark recurring events (those with multiple instances with same title)
+          const expandedEvents: any[] = [];
+          
+          eventsByTitle.forEach((events, title) => {
+            const isRecurringSeries = events.length > 1;
+            
+            if (isRecurringSeries) {
+              console.log(`Processing recurring series "${title}" with ${events.length} instances`);
+            }
+            
+            events.forEach((event) => {
+              // Add metadata about whether this is part of a recurring series
+              expandedEvents.push({
+                ...event,
+                isRecurring: isRecurringSeries,
+                seriesMasterId: isRecurringSeries ? `series_${title.replace(/\s+/g, '_')}` : undefined,
+                instanceIndex: isRecurringSeries ? events.indexOf(event) : undefined
+              });
+            });
           });
           
           console.log("Expanded events count:", expandedEvents.length);
@@ -464,9 +473,9 @@ export default async function handler(
               calendarName: sourceName,
               tags,
               // Preserve recurring event metadata
-              isRecurring: e.recurrence || e.isRecurring || !!e.seriesMasterId,
+              isRecurring: e.isRecurring || false,
               seriesMasterId: e.seriesMasterId,
-              recurrence: e.recurrence
+              instanceIndex: e.instanceIndex
             }))
             .filter((event: any) => {
               // Enhanced filtering for O365 events by timeMin and timeMax
