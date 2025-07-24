@@ -36,12 +36,21 @@ export default async function handler(
 
   // Disable caching to always return freshest data
   res.setHeader('Cache-Control', 'no-store');
+  console.log("[userSettings] Request cookies:", req.cookies);
+  console.log("[userSettings] Auth token:", req.cookies['auth-token']);
   const decoded = auth(req);
+  console.log("[userSettings] Auth decoded:", decoded);
+  
   if (!decoded) {
+    console.log("[userSettings] No auth token found");
     return res.status(401).json({ error: "Not authenticated" });
   }
+  
   const user = await getUserById(decoded.userId);
+  console.log("[userSettings] User from database:", user);
+  
   if (!user?.email) {
+    console.log("[userSettings] User not found in database for userId:", decoded.userId);
     return res.status(401).json({ error: "User not found" });
   }
   const user_email = user.email;

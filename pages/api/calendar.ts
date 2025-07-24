@@ -104,7 +104,10 @@ export default async function handler(
 
   try {
     if (req.method === "GET") {
+      console.log("[calendar] Request cookies:", req.cookies);
+      console.log("[calendar] Auth token:", req.cookies['auth-token']);
       const decoded = auth(req);
+      console.log("[calendar] Auth decoded:", decoded);
       if (!decoded) {
         return res.status(401).json({ error: "Not signed in" });
       }
