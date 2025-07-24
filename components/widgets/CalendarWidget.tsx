@@ -53,6 +53,31 @@ const containsHTML = (content: string): boolean => {
          content.includes('&gt;');
 };
 
+// Function to parse HTML content from Power Automate
+const parseHTMLContent = (content: string): string => {
+  if (!content) return '';
+  
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  
+  // Extract text content while preserving line breaks
+  let textContent = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Clean up common HTML entities
+  textContent = textContent
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return textContent;
+};
+
 // Function to extract Microsoft Teams meeting link from event description
 const extractTeamsLink = (description: string): string | null => {
   if (!description) return null;
@@ -140,6 +165,7 @@ function CalendarWidget() {
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showEventDetail, setShowEventDetail] = useState(false);
   const [newEvent, setNewEvent] = useState({
     summary: '',
     description: '',
@@ -406,6 +432,11 @@ function CalendarWidget() {
     }
   };
 
+  const showEventDetails = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setShowEventDetail(true);
+  };
+
   const joinMeeting = (event: any) => {
     const link = event.teamsLink || event.zoomLink;
     if (link) {
@@ -491,7 +522,8 @@ function CalendarWidget() {
           processedEvents.map((event, index) => (
             <div
               key={`${event.id}-${index}`}
-              className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200"
+              className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer"
+              onClick={() => showEventDetails(event)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -514,13 +546,13 @@ function CalendarWidget() {
                       📍 {event.location}
                     </p>
                   )}
-                  {event.description && !containsHTML(event.description) && (
+                  {event.description && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                      {event.description}
+                      {containsHTML(event.description) ? parseHTMLContent(event.description) : event.description}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                   {event.hasMeetingLink && (
                     <button
                       onClick={() => joinMeeting(event)}
@@ -609,6 +641,85 @@ function CalendarWidget() {
                 className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Detail Modal */}
+      {showEventDetail && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Event Details
+              </h3>
+              <button
+                onClick={() => setShowEventDetail(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  {selectedEvent.summary}
+                </h4>
+                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <span>📅 {formatEvent(selectedEvent).startTime}</span>
+                  {formatEvent(selectedEvent).endTime && formatEvent(selectedEvent).endTime !== formatEvent(selectedEvent).startTime && (
+                    <span>⏰ {formatEvent(selectedEvent).endTime}</span>
+                  )}
+                </div>
+              </div>
+
+              {selectedEvent.location && (
+                <div>
+                  <h5 className="font-semibold text-gray-900 dark:text-white mb-1">📍 Location</h5>
+                  <p className="text-gray-600 dark:text-gray-400">{selectedEvent.location}</p>
+                </div>
+              )}
+
+              {selectedEvent.description && (
+                <div>
+                  <h5 className="font-semibold text-gray-900 dark:text-white mb-1">📝 Description</h5>
+                  <div className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                    {containsHTML(selectedEvent.description) ? parseHTMLContent(selectedEvent.description) : selectedEvent.description}
+                  </div>
+                </div>
+              )}
+
+              {selectedEvent.hasMeetingLink && (
+                <div>
+                  <h5 className="font-semibold text-gray-900 dark:text-white mb-1">🎥 Meeting Link</h5>
+                  <button
+                    onClick={() => joinMeeting(selectedEvent)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    Join Meeting
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowEventDetail(false);
+                  openEdit(selectedEvent);
+                }}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-[#00C9A7] to-[#00A8A7] text-white rounded-lg hover:from-[#00A8A7] hover:to-[#009A8A] transition-all duration-200 font-medium"
+              >
+                Edit Event
+              </button>
+              <button
+                onClick={() => setShowEventDetail(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
