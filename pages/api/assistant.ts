@@ -154,11 +154,6 @@ export default async function handler(
     
     console.log(`[DEBUG] Calendar query detected: "${userInput}"`);
     
-    // Temporary debug response to confirm path is taken
-    if (userInput.toLowerCase().includes('meeting') || userInput.toLowerCase().includes('schedule')) {
-      return res.status(200).json({ reply: `🔧 DEBUG: Calendar query detected! Query was: "${userInput}". Calendar query detection working. Checking if we can fetch calendar events...` });
-    }
-    
     try {
       // Fetch fresh calendar events for calendar-related queries
       const now = new Date();
@@ -208,7 +203,9 @@ export default async function handler(
         console.log(`[DEBUG] Smart assistant response:`, queryResponse);
         
         if (queryResponse && !queryResponse.includes("I can help you with:")) {
-          return res.status(200).json({ reply: queryResponse });
+          // Add debug info to response to confirm calendar events were used
+          const debugInfo = `\n\n*[DEBUG: Used ${freshCalendarEvents.length} fresh calendar events]*`;
+          return res.status(200).json({ reply: queryResponse + debugInfo });
         }
       } else {
         const errorText = await calendarResponse.text();
