@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Parse the iCal feed
     const events = await ical.async.fromURL(processedUrl, {
-      timeout: 10000, // 10 second timeout
+      timeout: 30000, // 30 second timeout
       headers: {
         'User-Agent': 'FloHub Calendar Integration/1.0'
       }

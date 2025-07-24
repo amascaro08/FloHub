@@ -24,6 +24,34 @@ interface DebugInfo {
     calendarListStatus?: number;
     calendarEventsStatus?: number;
   };
+  calendarSourcesDebug: {
+    google: {
+      eventCount: number;
+      status: string;
+      error?: string;
+    };
+    o365: {
+      eventCount: number;
+      sources: Array<{
+        name: string;
+        url: string;
+        eventCount: number;
+        status: string;
+        error?: string;
+      }>;
+    };
+    ical: {
+      eventCount: number;
+      sources: Array<{
+        name: string;
+        url: string;
+        eventCount: number;
+        status: string;
+        error?: string;
+        calendarInfo?: any;
+      }>;
+    };
+  };
   errors: string[];
 }
 
@@ -143,6 +171,14 @@ const CalendarDebugPage = () => {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Calendar Sources</p>
                 <p className="font-medium">{debugInfo.userSettings.calendarSources.length} configured</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Events Found</p>
+                <p className="font-medium">
+                  {debugInfo.calendarSourcesDebug.google.eventCount + 
+                   debugInfo.calendarSourcesDebug.o365.eventCount + 
+                   debugInfo.calendarSourcesDebug.ical.eventCount} events
+                </p>
               </div>
             </div>
           </div>
@@ -270,6 +306,156 @@ const CalendarDebugPage = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 break-all">{debugInfo.userSettings.powerAutomateUrl}</p>
               </div>
             )}
+          </div>
+
+          {/* Calendar Sources Debug */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-medium mb-4">Calendar Sources Debug</h2>
+            
+            {/* Google Calendar Debug */}
+            <div className="mb-6">
+              <h3 className="text-md font-medium mb-3 flex items-center">
+                <span className="mr-2">📅</span>
+                Google Calendar
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  ({debugInfo.calendarSourcesDebug.google.eventCount} events)
+                </span>
+              </h3>
+              <div className="ml-6 space-y-2">
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={`font-mono text-sm ${
+                    debugInfo.calendarSourcesDebug.google.status === 'success' ? 'text-green-600' :
+                    debugInfo.calendarSourcesDebug.google.status === 'not_connected' ? 'text-gray-600' :
+                    'text-red-600'
+                  }`}>
+                    {debugInfo.calendarSourcesDebug.google.status}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Events Found:</span>
+                  <span className="font-mono">{debugInfo.calendarSourcesDebug.google.eventCount}</span>
+                </div>
+                {debugInfo.calendarSourcesDebug.google.error && (
+                  <div className="flex justify-between">
+                    <span>Error:</span>
+                    <span className="font-mono text-sm text-red-600">
+                      {debugInfo.calendarSourcesDebug.google.error}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* O365/PowerAutomate Debug */}
+            <div className="mb-6">
+              <h3 className="text-md font-medium mb-3 flex items-center">
+                <span className="mr-2">🏢</span>
+                O365/PowerAutomate
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  ({debugInfo.calendarSourcesDebug.o365.eventCount} total events)
+                </span>
+              </h3>
+              {debugInfo.calendarSourcesDebug.o365.sources.length > 0 ? (
+                <div className="ml-6 space-y-4">
+                  {debugInfo.calendarSourcesDebug.o365.sources.map((source, index) => (
+                    <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-3">
+                      <div className="font-medium mb-2">{source.name}</div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Status:</span>
+                          <span className={`font-mono ${
+                            source.status === 'success' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {source.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Events:</span>
+                          <span className="font-mono">{source.eventCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>URL:</span>
+                          <span className="font-mono text-xs break-all">
+                            {source.url.length > 40 ? `${source.url.substring(0, 40)}...` : source.url}
+                          </span>
+                        </div>
+                        {source.error && (
+                          <div className="flex justify-between">
+                            <span>Error:</span>
+                            <span className="font-mono text-xs text-red-600">{source.error}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ml-6 text-gray-600 dark:text-gray-400">No O365 sources configured</div>
+              )}
+            </div>
+
+            {/* iCal Debug */}
+            <div className="mb-6">
+              <h3 className="text-md font-medium mb-3 flex items-center">
+                <span className="mr-2">🔗</span>
+                iCal Feeds
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  ({debugInfo.calendarSourcesDebug.ical.eventCount} total events)
+                </span>
+              </h3>
+              {debugInfo.calendarSourcesDebug.ical.sources.length > 0 ? (
+                <div className="ml-6 space-y-4">
+                  {debugInfo.calendarSourcesDebug.ical.sources.map((source, index) => (
+                    <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-3">
+                      <div className="font-medium mb-2">{source.name}</div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Status:</span>
+                          <span className={`font-mono ${
+                            source.status === 'success' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {source.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Events:</span>
+                          <span className="font-mono">{source.eventCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>URL:</span>
+                          <span className="font-mono text-xs break-all">
+                            {source.url.length > 40 ? `${source.url.substring(0, 40)}...` : source.url}
+                          </span>
+                        </div>
+                        {source.calendarInfo && Object.keys(source.calendarInfo).length > 0 && (
+                          <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                            <div className="text-xs font-medium mb-1">Calendar Info:</div>
+                            {source.calendarInfo.name && (
+                              <div className="text-xs">Name: {source.calendarInfo.name}</div>
+                            )}
+                            {source.calendarInfo.description && (
+                              <div className="text-xs">Description: {source.calendarInfo.description}</div>
+                            )}
+                            {source.calendarInfo.timezone && (
+                              <div className="text-xs">Timezone: {source.calendarInfo.timezone}</div>
+                            )}
+                          </div>
+                        )}
+                        {source.error && (
+                          <div className="flex justify-between">
+                            <span>Error:</span>
+                            <span className="font-mono text-xs text-red-600">{source.error}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ml-6 text-gray-600 dark:text-gray-400">No iCal sources configured</div>
+              )}
+            </div>
           </div>
 
           {/* Quick Actions */}

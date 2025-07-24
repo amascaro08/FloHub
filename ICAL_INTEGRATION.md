@@ -80,7 +80,7 @@ This document describes the new iCal calendar integration feature that allows us
 
 - **Library**: Uses `node-ical` for parsing iCal feeds
 - **Caching**: No caching implemented (feeds fetched on each request)
-- **Timeout**: 8-second timeout for iCal feed requests
+- **Timeout**: 30-second timeout for iCal feed requests
 - **Format support**: Supports standard RFC 5545 iCal format
 - **Recurring events**: Basic support for recurring events via RRule
 
