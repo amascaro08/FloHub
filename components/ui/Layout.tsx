@@ -28,7 +28,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
-  const [topInput, setTopInput] = useState('');
 
   // -- AUTH --
   const { user } = useUser();
@@ -191,7 +190,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
       </aside>
 
       {/* main */}
-      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
+        isChatOpen ? 'md:transform md:-translate-x-4' : ''
+      }`}>
         {/* header */}
         <header className="flex items-center justify-between p-4 bg-[var(--surface)] shadow-elevate-sm border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center">
@@ -213,39 +214,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
             />
           </div>
 
-          {/* FloCat Chat Bubble */}
-          <div className="flex-1 flex justify-center relative">
-            <div className="w-full max-w-md relative">
-              <input
-                type="text"
-                placeholder="FloCat is here to help you... 🐱"
-                className="w-full p-2.5 pl-4 pr-10 rounded-full border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm hover:shadow bg-white dark:bg-neutral-800"
-                value={topInput}
-                onChange={(e) => setTopInput(e.target.value)}
-                onFocus={() => setIsChatOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isChatOpen && topInput.trim()) {
-                    handleTopInputSend();
-                  }
-                }}
-              />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
-              </div>
-            </div>
-            {isChatOpen && (
-              <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-                <ChatWidget
-                  onClose={() => setIsChatOpen(false)}
-                  key="chatwidget"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <WeatherWidget />
+            <ChatToggleButton onClick={toggleChat} />
             <button
-              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ml-2 relative group"
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors relative group"
               onClick={() => toggleLock()}
               aria-label={isLocked ? "Unlock layout" : "Lock layout"}
             >
@@ -267,6 +240,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </main>
       </div>
+
+      {/* Chat Side Modal */}
+      <ChatSideModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };
