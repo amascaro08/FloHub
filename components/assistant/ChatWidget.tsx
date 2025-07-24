@@ -99,8 +99,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
     <div role="dialog" aria-label="FloCat chat" className="
       w-full h-full
       flex flex-col
+      p-4
     ">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)] dark:text-gray-100" ref={messagesEndRef}>
+        <div className="flex-1 overflow-y-auto space-y-2 mb-4 text-[var(--fg)] dark:text-gray-100 min-h-0" ref={messagesEndRef}>
           {/* Welcome message and quick actions */}
           {showQuickActions && (
             <div className="space-y-3">
@@ -163,7 +164,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             </div>
           )}
         </div>
-        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 p-4">
+        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 pt-4 pb-2">
           <input
             className="
               flex-1 border border-[var(--neutral-300)] dark:border-gray-600

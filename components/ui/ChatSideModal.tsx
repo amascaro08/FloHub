@@ -39,7 +39,7 @@ const ChatSideModal: React.FC<ChatSideModalProps> = ({ isOpen, onClose }) => {
     <>
       {/* Side Modal */}
       <div
-        className={`fixed top-0 right-0 h-full w-full md:max-w-md bg-white dark:bg-neutral-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-sm md:max-w-md lg:max-w-lg bg-white dark:bg-neutral-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -61,10 +61,8 @@ const ChatSideModal: React.FC<ChatSideModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Chat Content */}
-        <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <ChatWidget onClose={onClose} />
-          </div>
+        <div className="flex-1 overflow-hidden">
+          <ChatWidget onClose={onClose} />
         </div>
       </div>
     </>
