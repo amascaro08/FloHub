@@ -560,12 +560,14 @@ export default async function handler(
           processedUrl = 'https://' + processedUrl.substring(9);
         }
 
-                 // Parse the iCal feed
+                 // Parse the iCal feed with proper timeout
          const events = await ical.async.fromURL(processedUrl, {
            timeout: 30000, // 30 second timeout
            headers: {
              'User-Agent': 'FloHub Calendar Integration/1.0'
-           }
+           },
+           // Additional axios timeout configuration
+           timeoutErrorMessage: 'iCal feed request timeout',
          });
 
         const icalEvents: any[] = [];

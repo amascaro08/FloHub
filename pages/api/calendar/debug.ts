@@ -196,7 +196,9 @@ async function debugCalendarSources(debugInfo: DebugInfo, user: any, errors: str
           timeout: 10000, // 10 second timeout for debug
           headers: {
             'User-Agent': 'FloHub Calendar Integration/1.0'
-          }
+          },
+          // Additional axios timeout configuration
+          timeoutErrorMessage: 'iCal debug request timeout',
         });
 
         let eventCount = 0;

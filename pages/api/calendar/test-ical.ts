@@ -32,12 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Testing iCal URL:', processedUrl);
 
-    // Parse the iCal feed
+    // Parse the iCal feed with proper timeout
     const events = await ical.async.fromURL(processedUrl, {
       timeout: 30000, // 30 second timeout
       headers: {
         'User-Agent': 'FloHub Calendar Integration/1.0'
-      }
+      },
+      // Additional axios timeout configuration
+      timeoutErrorMessage: 'iCal feed request timeout',
     });
 
     // Count events and extract basic info
