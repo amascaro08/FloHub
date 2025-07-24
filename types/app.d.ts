@@ -27,6 +27,7 @@ export type UserSettings = {
     enabledCapabilities: string[];
   };
   layouts?: { [key: string]: any };
+  savedLayouts?: { [key: string]: any };
 };
 
 // Define a type for calendar sources
