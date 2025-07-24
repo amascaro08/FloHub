@@ -464,7 +464,7 @@ function CalendarWidget() {
   }
 
   return (
-    <div className="calendar-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+    <div className="calendar-widget h-full w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -504,7 +504,7 @@ function CalendarWidget() {
       </div>
 
       {/* Events List */}
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="animate-pulse space-y-3">
             {[...Array(3)].map((_, i) => (

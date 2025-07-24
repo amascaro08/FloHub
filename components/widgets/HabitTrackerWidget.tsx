@@ -255,14 +255,15 @@ const HabitTrackerWidget = () => {
   }
 
   return (
-    <div className="habit-tracker-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+    <div className="habit-tracker-widget h-full w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3" style={{ fontFamily: 'Poppins, sans-serif' }}>Habit Tracker</h2>
       
       {habits.length === 0 ? (
-        <div className="mb-3">
+        <div className="mb-3 flex-1">
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 transition-colors">You don't have any habits yet.</p>
         </div>
       ) : (
+        <div className="flex-1 overflow-y-auto">
         <>
           {/* Progress bar */}
           <div className="mb-3">
@@ -354,9 +355,10 @@ const HabitTrackerWidget = () => {
             )}
           </div>
         </>
+      </div>
       )}
       
-      <Link href="/habit-tracker" className="text-[#00C9A7] hover:text-[#00A8A7] flex items-center text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <Link href="/habit-tracker" className="text-[#00C9A7] hover:text-[#00A8A7] flex items-center text-sm mt-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
         <span>Open Full Tracker</span>
         <ArrowRightIcon className="w-4 h-4 ml-1" />
       </Link>

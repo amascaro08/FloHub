@@ -195,7 +195,7 @@ function TaskWidget() {
   const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
 
   return (
-    <div className="task-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 relative">
+    <div className="task-widget h-full w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 relative overflow-hidden flex flex-col">
       {/* Celebration Message */}
       {celebrating && (
         <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl animate-fade-in">
@@ -282,7 +282,7 @@ function TaskWidget() {
         </button>
       </form>
 
-      <ul className="space-y-3">
+      <ul className="space-y-3 flex-1 overflow-y-auto">
         {incompleteTasks.length > 0 ? (
           incompleteTasks.map((t) => (
             <li

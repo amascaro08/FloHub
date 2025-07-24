@@ -600,11 +600,11 @@ const AtAGlanceWidget = () => {
 
   return (
     <div 
-      className="at-a-glance-widget h-full flex flex-col"
+      className="at-a-glance-widget h-full w-full flex flex-col overflow-hidden"
       onClick={() => trackInteraction('view_summary')}
     >
       <div 
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto p-4"
         dangerouslySetInnerHTML={{ __html: formattedHtml }} 
       />
     </div>
