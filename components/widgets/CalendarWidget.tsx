@@ -242,9 +242,14 @@ function CalendarWidget() {
     }
   );
 
+  // Debug logging
+  console.log("[CalendarWidget] Events data:", events);
+  console.log("[CalendarWidget] Error:", error);
+  console.log("[CalendarWidget] Loading:", isLoading);
+
   // SWR for user settings
   const { data: userSettings } = useSWR(
-    user ? `/api/userSettings?userId=${user.primaryEmail}` : null,
+    user ? `/api/userSettings` : null,
     fetcher,
     {
       dedupingInterval: 300000, // 5 minutes

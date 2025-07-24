@@ -226,6 +226,13 @@ const DashboardGrid = () => {
   const saveWidgetOrder = async () => {
     if (!user?.primaryEmail) return;
 
+    const payload = {
+      activeWidgets: activeWidgets,
+      layouts: savedLayouts
+    };
+
+    console.log("[DashboardGrid] Saving widget order and layouts:", payload);
+
     try {
       const response = await fetch('/api/userSettings', {
         method: 'PUT',
@@ -233,14 +240,12 @@ const DashboardGrid = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          activeWidgets: activeWidgets,
-          layouts: savedLayouts
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        console.error("[DashboardGrid] Failed to save widget order and layouts");
+        const errorText = await response.text();
+        console.error("[DashboardGrid] Failed to save widget order and layouts:", response.status, errorText);
       } else {
         console.log("[DashboardGrid] Successfully saved widget order and layouts");
       }
