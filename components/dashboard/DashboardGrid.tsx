@@ -89,6 +89,21 @@ const DashboardGrid = () => {
   // Progressive loading state
   const [visibleWidgets, setVisibleWidgets] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showWidgetModal, setShowWidgetModal] = useState(false);
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showWidgetModal) {
+        setShowWidgetModal(false);
+      }
+    };
+
+    if (showWidgetModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showWidgetModal]);
 
   // Not signed in? Show loading or redirect to login
   if (isLoading) {
@@ -228,6 +243,23 @@ const DashboardGrid = () => {
     }
   };
 
+  const toggleWidget = (widgetId: WidgetType) => {
+    if (activeWidgets.includes(widgetId)) {
+      // Remove widget
+      const newWidgets = activeWidgets.filter(w => w !== widgetId);
+      setActiveWidgets(newWidgets);
+      saveWidgetOrder();
+    } else {
+      // Add widget to the end
+      const newWidgets = [...activeWidgets, widgetId];
+      setActiveWidgets(newWidgets);
+      saveWidgetOrder();
+    }
+  };
+
+  // All available widgets
+  const allWidgets: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
+
   // Responsive layouts for different screen sizes
   const layouts = useMemo(() => {
     const baseLayout = {
@@ -327,36 +359,121 @@ const DashboardGrid = () => {
         ))}
       </ResponsiveGridLayout>
 
-      {/* Widget Controls (only show when not locked) */}
+            {/* Floating Action Button for Widget Controls */}
       {!isLocked && (
-        <div className="fixed bottom-4 right-4 z-40">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="text-sm font-semibold mb-2">Widget Order</h3>
-            <div className="space-y-1">
-              {activeWidgets.map((widget, index) => (
-                <div key={widget} className="flex items-center justify-between text-xs">
-                  <span className="flex items-center">
-                    {getWidgetIcon(widget)}
-                    <span className="ml-2 capitalize">{widget.replace('-', ' ')}</span>
-                  </span>
-                  <div className="flex space-x-1">
-                    <button
-                      onClick={() => moveWidgetUp(widget)}
-                      disabled={index === 0}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => moveWidgetDown(widget)}
-                      disabled={index === activeWidgets.length - 1}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-                    >
-                      ↓
-                    </button>
+        <div className="fixed bottom-4 right-4 z-40 md:bottom-4 md:right-4 sm:bottom-2 sm:right-2">
+          <button
+            onClick={() => setShowWidgetModal(true)}
+            className="bg-[#00C9A7] hover:bg-[#00A8A7] text-white rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-105"
+            title="Widget Settings"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Widget Controls Modal */}
+      {showWidgetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" onClick={() => setShowWidgetModal(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Widget Settings
+              </h3>
+              <button
+                onClick={() => setShowWidgetModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Active Widgets Section */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Active Widgets ({activeWidgets.length})
+              </h4>
+              <div className="space-y-2">
+                {activeWidgets.map((widget, index) => (
+                  <div key={widget} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <span className="flex items-center text-sm">
+                      {getWidgetIcon(widget)}
+                      <span className="ml-2 capitalize text-gray-900 dark:text-white" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        {widget.replace('-', ' ')}
+                      </span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => moveWidgetUp(widget)}
+                          disabled={index === 0}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-400"
+                          title="Move Up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={() => moveWidgetDown(widget)}
+                          disabled={index === activeWidgets.length - 1}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-400"
+                          title="Move Down"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => toggleWidget(widget)}
+                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
+                        title="Remove Widget"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Available Widgets Section */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Available Widgets
+              </h4>
+              <div className="space-y-2">
+                {allWidgets
+                  .filter(widget => !activeWidgets.includes(widget))
+                  .map((widget) => (
+                    <div key={widget} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <span className="flex items-center text-sm">
+                        {getWidgetIcon(widget)}
+                        <span className="ml-2 capitalize text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
+                          {widget.replace('-', ' ')}
+                        </span>
+                      </span>
+                      <button
+                        onClick={() => toggleWidget(widget)}
+                        className="px-3 py-1 bg-[#00C9A7] text-white rounded-lg hover:bg-[#00A8A7] transition-colors text-xs font-medium"
+                        style={{ fontFamily: 'Inter, sans-serif' }}
+                        title="Add Widget"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            
+            {/* Done Button */}
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowWidgetModal(false)}
+                className="w-full px-4 py-2 bg-[#00C9A7] text-white rounded-lg hover:bg-[#00A8A7] transition-colors font-medium"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
