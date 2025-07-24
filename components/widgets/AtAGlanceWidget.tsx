@@ -314,7 +314,7 @@ function generateDashboardWidget(
 
 const AtAGlanceWidget = () => {
   const { user } = useUser();
-  const trackInteraction = useWidgetTracking('ataglance');
+  const { trackInteraction } = useWidgetTracking('ataglance');
   
   const [formattedHtml, setFormattedHtml] = useState<string>('');
   const [loading, setLoading] = useState(true);
