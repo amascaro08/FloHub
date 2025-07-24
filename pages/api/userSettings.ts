@@ -75,6 +75,7 @@ export default async function handler(
           timezone: "UTC",
           floCatSettings: { enabledCapabilities: [] },
           layouts: {},
+        };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
       }
