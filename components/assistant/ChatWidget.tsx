@@ -95,83 +95,94 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
     }
   ];
 
-      return (
-    <div role="dialog" aria-label="FloCat chat" className="
-      w-80 h-96
-      glass p-4 rounded-xl shadow-elevate-lg
-      flex flex-col
-    ">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-2 text-[var(--fg)] dark:text-gray-100" ref={messagesEndRef}>
-          {/* Welcome message and quick actions */}
-          {showQuickActions && (
-            <div className="space-y-3">
-              <div className="text-center py-2">
-                <Brain className="w-8 h-8 mx-auto mb-2 text-[var(--primary)]" />
-                <h3 className="font-semibold text-sm text-[var(--fg)] dark:text-gray-100">Hey! I'm FloCat 😺</h3>
-                <p className="text-xs text-[var(--fg-muted)] dark:text-gray-300 mt-1">
-                  Your AI productivity assistant. What can I help you with?
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                {quickActions.map((action, index) => (
-                  <button
-                    key={index}
-                    className={`h-auto p-2 flex flex-col items-center gap-1 text-white rounded-lg text-xs font-medium transition-all duration-200 ${action.color} border-0 disabled:opacity-50`}
-                    onClick={() => {
-                      if (action.fillsInput) {
-                        setInput(action.message);
-                      } else {
-                        handleQuickAction(action.message);
-                      }
-                    }}
-                    disabled={loading}
-                  >
-                    {action.icon}
-                    <span className="text-xs font-medium">{action.label}</span>
-                  </button>
-                ))}
-              </div>
-              
-                              <div className="text-center">
-                  <p className="text-xs text-[var(--fg-muted)] dark:text-gray-300">
-                    Or type your question below...
-                  </p>
-                </div>
+  return (
+    <div role="dialog" aria-label="FloCat chat" className="h-full flex flex-col p-4 overflow-hidden">
+      {/* Chat messages area */}
+      <div className="flex-1 overflow-y-auto space-y-3 mb-4 text-[var(--fg)] dark:text-gray-100 min-h-0" ref={messagesEndRef}>
+        {/* Welcome message and quick actions */}
+        {showQuickActions && (
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              <Brain className="w-10 h-10 mx-auto mb-3 text-[var(--primary)]" />
+              <h3 className="font-semibold text-lg text-[var(--fg)] dark:text-gray-100">Hey! I'm FloCat 😺</h3>
+              <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300 mt-2 leading-relaxed">
+                Your AI productivity assistant. What can I help you with today?
+              </p>
             </div>
-          )}
+            
+            <div className="grid grid-cols-2 gap-3">
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  className={`h-auto p-3 flex flex-col items-center gap-2 text-white rounded-lg text-xs font-medium transition-all duration-200 ${action.color} border-0 disabled:opacity-50 hover:scale-105`}
+                  onClick={() => {
+                    if (action.fillsInput) {
+                      setInput(action.message);
+                    } else {
+                      handleQuickAction(action.message);
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  {action.icon}
+                  <span className="text-xs font-medium text-center leading-tight">{action.label}</span>
+                </button>
+              ))}
+            </div>
+            
+            <div className="text-center pt-2">
+              <p className="text-xs text-[var(--fg-muted)] dark:text-gray-300">
+                Or type your question below...
+              </p>
+            </div>
+          </div>
+        )}
 
-          {/* Chat history */}
-          {history.map((message, index) => (
-            <div key={index} className={`p-2 rounded ${
-              message.role === 'user' 
-                ? 'bg-[var(--neutral-200)] dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100' 
-                : 'bg-[var(--neutral-100)] dark:bg-gray-600 text-[var(--fg)] dark:text-gray-100'
-            }`}>
-              {message.htmlContent ? (
-                <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} className="prose prose-sm dark:prose-invert max-w-none" />
-              ) : (
-                <p>{message.content}</p>
-              )}
-            </div>
-          ))}
+        {/* Chat history */}
+        {history.map((message, index) => (
+          <div key={index} className={`p-3 rounded-lg ${
+            message.role === 'user' 
+              ? 'bg-[var(--primary)] text-white ml-4' 
+              : 'bg-[var(--neutral-100)] dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100 mr-4'
+          }`}>
+            {message.isLoading ? (
+              <div className="flex items-center gap-3">
+                <div className="animate-spin w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
+                <span className="text-sm text-[var(--fg-muted)] dark:text-gray-300">
+                  {message.loadingMessage || 'FloCat is thinking...'}
+                </span>
+              </div>
+            ) : message.htmlContent ? (
+              <div dangerouslySetInnerHTML={{ __html: message.htmlContent }} className="prose prose-sm dark:prose-invert max-w-none" />
+            ) : (
+              <p className="text-sm leading-relaxed">{message.content}</p>
+            )}
+          </div>
+        ))}
 
-          {/* Loading indicator */}
-          {loading && (
-            <div className="flex items-center gap-2 p-2 bg-[var(--neutral-100)] dark:bg-gray-600 rounded">
-              <div className="animate-spin w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
-              <span className="text-sm text-[var(--fg-muted)] dark:text-gray-300">FloCat is thinking...</span>
-            </div>
-          )}
-        </div>
-        <div className="flex border-t border-[var(--neutral-300)] dark:border-gray-600 pt-2">
+        {/* Loading indicator */}
+        {loading && (
+          <div className="flex items-center gap-3 p-3 bg-[var(--neutral-100)] dark:bg-gray-700 rounded-lg mr-4">
+            <div className="animate-spin w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
+            <span className="text-sm text-[var(--fg-muted)] dark:text-gray-300">FloCat is thinking...</span>
+          </div>
+        )}
+        
+        {/* Scroll anchor */}
+        <div className="h-0" />
+      </div>
+      
+      {/* Input area */}
+      <div className="border-t border-[var(--neutral-300)] dark:border-gray-600 pt-4">
+        <div className="flex gap-2">
           <input
             className="
               flex-1 border border-[var(--neutral-300)] dark:border-gray-600
-              rounded-l px-2 py-1 focus:outline-none
+              rounded-lg px-3 py-2 focus:outline-none
               focus:ring-2 focus:ring-[var(--primary)]
               bg-white dark:bg-gray-700 text-[var(--fg)] dark:text-gray-100
               placeholder-gray-400 dark:placeholder-gray-400
+              text-sm
             "
             placeholder="Type a message…"
             value={input}
@@ -182,22 +193,17 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
             onClick={handleSend} // Use handleSend
             disabled={loading || !input.trim()} // Disable if loading or input is empty
             className="
-              ml-2 px-3 rounded-r text-white
-              bg-[var(--accent)] hover:opacity-90
-              disabled:opacity-50
+              px-4 py-2 rounded-lg text-white text-sm font-medium
+              bg-[var(--primary)] hover:bg-[var(--primary-dark)]
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition-all duration-200
             "
             >
             Send
           </button>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close chat"
-          className="mt-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
-        >
-          Close
-        </button>
       </div>
+    </div>
   );
 };
 

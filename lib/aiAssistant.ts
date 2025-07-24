@@ -106,94 +106,185 @@ export class SmartAIAssistant {
     this.userId = userId;
   }
 
-  async loadUserContext(): Promise<UserContext> {
+  async loadUserContext(freshCalendarEvents?: any[]): Promise<UserContext> {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     try {
-      // Fetch all user data in parallel for better performance
-      const [
-        userTasks,
-        userNotes,
-        userHabits,
-        userHabitCompletions,
-        userJournalEntries,
-        userJournalMoods,
-        userCalendarEvents,
-        userMeetings,
-        userConversations,
-        settings
-      ] = await Promise.all([
+      // If we have fresh calendar events, we can try a minimal context load for calendar queries
+      if (freshCalendarEvents && freshCalendarEvents.length > 0) {
+        try {
+          // Helper function for this minimal context
+          const fetchWithFallback = async <T>(queryPromise: Promise<T>, fallback: T, description: string): Promise<T> => {
+            try {
+              return await queryPromise;
+            } catch (error) {
+              console.error(`Error fetching ${description}:`, error);
+              return fallback;
+            }
+          };
+
+          // Still need to fetch user settings for timezone
+          const settings = await fetchWithFallback(
+            db.select().from(userSettings)
+              .where(eq(userSettings.user_email, this.userId))
+              .limit(1),
+            [],
+            'user settings for calendar context'
+          );
+          
+          // Minimal context with just calendar events for faster calendar queries
+          this.context = {
+            userId: this.userId,
+            tasks: [],
+            completedTasks: [],
+            notes: [],
+            meetings: [],
+            habits: [],
+            habitCompletions: [],
+            journalEntries: [],
+            journalMoods: [],
+            calendarEvents: freshCalendarEvents,
+            conversations: [],
+            userSettings: settings[0] || null
+          };
+          return this.context;
+        } catch (calendarError) {
+          console.error('Error creating minimal calendar context, falling back to full load:', calendarError);
+        }
+      }
+              // Fetch all user data in parallel for better performance, with individual error handling
+        const fetchWithFallback = async <T>(queryPromise: Promise<T>, fallback: T, description: string): Promise<T> => {
+          try {
+            return await queryPromise;
+          } catch (error) {
+            console.error(`Error fetching ${description}:`, error);
+            return fallback;
+          }
+        };
+
+        const [
+          userTasks,
+          userNotes,
+          userHabits,
+          userHabitCompletions,
+          userJournalEntries,
+          userJournalMoods,
+          userCalendarEvents,
+          userMeetings,
+          userConversations,
+          settings
+        ] = await Promise.all([
         // Tasks (last 30 days)
-        db.select().from(tasks)
-          .where(and(
-            eq(tasks.user_email, this.userId),
-            gte(tasks.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(tasks.createdAt)),
+        fetchWithFallback(
+          db.select().from(tasks)
+            .where(and(
+              eq(tasks.user_email, this.userId),
+              gte(tasks.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(tasks.createdAt)),
+          [],
+          'tasks'
+        ),
 
         // Notes (last 30 days)
-        db.select().from(notes)
-          .where(and(
-            eq(notes.user_email, this.userId),
-            gte(notes.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(notes.createdAt)),
+        fetchWithFallback(
+          db.select().from(notes)
+            .where(and(
+              eq(notes.user_email, this.userId),
+              gte(notes.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(notes.createdAt)),
+          [],
+          'notes'
+        ),
 
         // Habits
-        db.select().from(habits)
-          .where(eq(habits.userId, this.userId))
-          .orderBy(desc(habits.createdAt)),
+        fetchWithFallback(
+          db.select().from(habits)
+            .where(eq(habits.userId, this.userId))
+            .orderBy(desc(habits.createdAt)),
+          [],
+          'habits'
+        ),
 
         // Habit completions (last 30 days)
-        db.select().from(habitCompletions)
-          .where(and(
-            eq(habitCompletions.userId, this.userId),
-            gte(habitCompletions.timestamp, thirtyDaysAgo)
-          ))
-          .orderBy(desc(habitCompletions.timestamp)),
+        fetchWithFallback(
+          db.select().from(habitCompletions)
+            .where(and(
+              eq(habitCompletions.userId, this.userId),
+              gte(habitCompletions.timestamp, thirtyDaysAgo)
+            ))
+            .orderBy(desc(habitCompletions.timestamp)),
+          [],
+          'habit completions'
+        ),
 
         // Journal entries (last 30 days)
-        db.select().from(journalEntries)
-          .where(and(
-            eq(journalEntries.user_email, this.userId),
-            gte(journalEntries.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(journalEntries.createdAt)),
+        fetchWithFallback(
+          db.select().from(journalEntries)
+            .where(and(
+              eq(journalEntries.user_email, this.userId),
+              gte(journalEntries.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(journalEntries.createdAt)),
+          [],
+          'journal entries'
+        ),
 
         // Journal moods (last 30 days)
-        db.select().from(journalMoods)
-          .where(and(
-            eq(journalMoods.user_email, this.userId),
-            gte(journalMoods.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(journalMoods.createdAt)),
+        fetchWithFallback(
+          db.select().from(journalMoods)
+            .where(and(
+              eq(journalMoods.user_email, this.userId),
+              gte(journalMoods.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(journalMoods.createdAt)),
+          [],
+          'journal moods'
+        ),
 
         // Calendar events (last 7 days + next 7 days)
-        db.select().from(calendarEvents)
-          .where(eq(calendarEvents.userId, this.userId)),
+        fetchWithFallback(
+          db.select().from(calendarEvents)
+            .where(eq(calendarEvents.userId, this.userId)),
+          [],
+          'calendar events'
+        ),
 
         // Meetings (last 30 days)
-        db.select().from(meetings)
-          .where(and(
-            eq(meetings.userId, this.userId),
-            gte(meetings.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(meetings.createdAt)),
+        fetchWithFallback(
+          db.select().from(meetings)
+            .where(and(
+              eq(meetings.userId, this.userId),
+              gte(meetings.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(meetings.createdAt)),
+          [],
+          'meetings'
+        ),
 
         // Conversations (last 30 days)
-        db.select().from(conversations)
-          .where(and(
-            eq(conversations.userId, this.userId),
-            gte(conversations.createdAt, thirtyDaysAgo)
-          ))
-          .orderBy(desc(conversations.createdAt)),
+        fetchWithFallback(
+          db.select().from(conversations)
+            .where(and(
+              eq(conversations.userId, this.userId),
+              gte(conversations.createdAt, thirtyDaysAgo)
+            ))
+            .orderBy(desc(conversations.createdAt)),
+          [],
+          'conversations'
+        ),
 
         // User settings
-        db.select().from(userSettings)
-          .where(eq(userSettings.user_email, this.userId))
-          .limit(1)
+        fetchWithFallback(
+          db.select().from(userSettings)
+            .where(eq(userSettings.user_email, this.userId))
+            .limit(1),
+          [],
+          'user settings'
+        )
       ]);
 
       this.context = {
@@ -206,15 +297,23 @@ export class SmartAIAssistant {
         habitCompletions: userHabitCompletions,
         journalEntries: userJournalEntries,
         journalMoods: userJournalMoods,
-        calendarEvents: userCalendarEvents,
+        calendarEvents: freshCalendarEvents || userCalendarEvents,
         conversations: userConversations,
         userSettings: settings[0] || null
       };
 
       return this.context;
     } catch (error) {
-      console.error('Error loading user context:', error);
-      throw new Error('Failed to load user context');
+      console.error('Error loading user context for userId:', this.userId);
+      console.error('Specific error:', error);
+      
+      // Try to provide more context about which query failed
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      throw new Error(`Failed to load user context: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -663,6 +762,14 @@ export class SmartAIAssistant {
       return this.handleHabitQueries(query);
     }
 
+    // Calendar/Schedule queries - add these BEFORE note queries to prioritize calendar events
+    if (lowerQuery.includes('schedule') || lowerQuery.includes('calendar') || 
+        lowerQuery.includes('next event') || lowerQuery.includes('upcoming') ||
+        (lowerQuery.includes('what') && (lowerQuery.includes('next') || lowerQuery.includes('today'))) ||
+        lowerQuery.includes('event')) {
+      return this.handleCalendarQueries(query);
+    }
+
     // Note-related queries
     if (lowerQuery.includes('note') && lowerQuery.includes('about')) {
       return this.handleNoteQueries(query);
@@ -766,6 +873,248 @@ export class SmartAIAssistant {
     }
 
     return "I can help you track habit consistency, identify struggling habits, or find your most successful ones. What would you like to know?";
+  }
+
+  private handleCalendarQueries(query: string): string {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const lowerQuery = query.toLowerCase();
+
+    // Get calendar events from context
+    const calendarEvents = this.context?.calendarEvents || [];
+    
+    // Filter and sort upcoming events
+    const upcomingEvents = calendarEvents
+      .filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= now;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.start?.dateTime || a.start?.date || a.createdAt);
+        const dateB = new Date(b.start?.dateTime || b.start?.date || b.createdAt);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    // Handle specific query types
+    if (lowerQuery.includes('next') || lowerQuery.includes('upcoming')) {
+      if (upcomingEvents.length === 0) {
+        return "You don't have any upcoming events scheduled. Your calendar is clear! 📅";
+      }
+
+      const nextEvent = upcomingEvents[0];
+      const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.createdAt);
+      const timeUntil = this.formatTimeUntil(eventDate);
+      
+      return `📅 Your next event is "${nextEvent.summary || nextEvent.title || 'Untitled Event'}" ${timeUntil}. ${this.formatEventDate(eventDate)}`;
+    }
+
+    if (lowerQuery.includes('today')) {
+      const todayEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const isToday = eventDate >= today && eventDate < tomorrow;
+        return isToday;
+      });
+
+      if (todayEvents.length === 0) {
+        return "You don't have any events scheduled for today. Enjoy your free time! ✨";
+      }
+
+      const eventList = todayEvents.slice(0, 5).map(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const time = this.formatEventTime(eventDate);
+        return `• ${time} - ${event.summary || event.title || 'Untitled Event'}`;
+      }).join('\n');
+
+      return `📅 Today's events (${todayEvents.length} total):\n\n${eventList}`;
+    }
+
+    if (lowerQuery.includes('tomorrow')) {
+      const tomorrowEnd = new Date(tomorrow);
+      tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+      
+      const tomorrowEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= tomorrow && eventDate < tomorrowEnd;
+      });
+
+      if (tomorrowEvents.length === 0) {
+        return "You don't have any events scheduled for tomorrow. 📅";
+      }
+
+      const eventList = tomorrowEvents.slice(0, 5).map(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const time = eventDate.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        return `• ${time} - ${event.summary || event.title || 'Untitled Event'}`;
+      }).join('\n');
+
+      return `📅 Tomorrow's events (${tomorrowEvents.length} total):\n\n${eventList}`;
+    }
+
+    if (lowerQuery.includes('week')) {
+      const weekEvents = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        return eventDate >= today && eventDate <= nextWeek;
+      });
+
+      if (weekEvents.length === 0) {
+        return "You don't have any events scheduled for this week. 📅";
+      }
+
+      const groupedEvents = weekEvents.reduce((acc, event) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+        const dayKey = eventDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        
+        if (!acc[dayKey]) acc[dayKey] = [];
+        acc[dayKey].push(event);
+        return acc;
+      }, {} as { [key: string]: any[] });
+
+      let weekSummary = `📅 This week's events (${weekEvents.length} total):\n\n`;
+      Object.entries(groupedEvents).forEach(([day, events]) => {
+        weekSummary += `**${day}:**\n`;
+        (events as any[]).slice(0, 3).forEach((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+          const time = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          weekSummary += `• ${time} - ${event.summary || event.title || 'Untitled Event'}\n`;
+        });
+        weekSummary += '\n';
+      });
+
+      return weekSummary;
+    }
+
+    // Default calendar overview
+    if (upcomingEvents.length === 0) {
+      // Check if we have any related meeting notes to provide context
+      const meetings = this.context?.meetings || [];
+      const recentMeetings = meetings.filter(meeting => {
+        const meetingDate = new Date(meeting.createdAt);
+        const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+        return meetingDate >= twoDaysAgo;
+      });
+
+      if (recentMeetings.length > 0) {
+        const meetingList = recentMeetings.slice(0, 3).map(meeting => 
+          `• ${meeting.eventTitle || meeting.title || 'Meeting'} (${this.formatTimeAgo(new Date(meeting.createdAt))})`
+        ).join('\n');
+        
+        return `📅 Your calendar is currently empty. No upcoming events scheduled!\n\n📝 However, I found some recent meeting notes that might be relevant:\n\n${meetingList}\n\n*These are from your meeting notes, not scheduled calendar events.*`;
+      }
+      
+      return "Your calendar is currently empty. No upcoming events scheduled! 📅";
+    }
+
+    const next3Events = upcomingEvents.slice(0, 3);
+    const eventList = next3Events.map(event => {
+      const eventDate = new Date(event.start?.dateTime || event.start?.date || event.createdAt);
+      const timeUntil = this.formatTimeUntil(eventDate);
+      return `• ${event.summary || event.title || 'Untitled Event'} ${timeUntil}`;
+    }).join('\n');
+
+    // Check for related meeting notes that might provide additional context
+    const meetings = this.context?.meetings || [];
+    const relevantMeetings = meetings.filter(meeting => {
+      const meetingTitle = (meeting.eventTitle || meeting.title || '').toLowerCase();
+      return next3Events.some(event => {
+        const eventTitle = (event.summary || event.title || '').toLowerCase();
+        return meetingTitle.includes(eventTitle) || eventTitle.includes(meetingTitle);
+      });
+    });
+
+    let response = `📅 Your upcoming events:\n\n${eventList}${upcomingEvents.length > 3 ? `\n\n...and ${upcomingEvents.length - 3} more` : ''}`;
+    
+    if (relevantMeetings.length > 0) {
+      const relatedNotes = relevantMeetings.slice(0, 2).map(meeting => 
+        `• ${meeting.eventTitle || meeting.title} - ${meeting.content?.substring(0, 100)}${meeting.content?.length > 100 ? '...' : ''}`
+      ).join('\n');
+      
+      response += `\n\n📝 **Related meeting notes:**\n${relatedNotes}`;
+    }
+
+    return response;
+  }
+
+  private formatTimeUntil(date: Date): string {
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 60) {
+      return diffMinutes <= 0 ? 'starting now' : `in ${diffMinutes} minutes`;
+    } else if (diffHours < 24) {
+      return `in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+    } else if (diffDays === 1) {
+      return 'tomorrow';
+    } else if (diffDays < 7) {
+      return `in ${diffDays} days`;
+    } else {
+      return `on ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+  }
+
+  private getUserTimezone(): string {
+    return this.context?.userSettings?.timezone || 'UTC';
+  }
+
+  private formatEventDate(date: Date): string {
+    const timezone = this.getUserTimezone();
+    try {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone
+      });
+    } catch (error) {
+      // Fallback to UTC if timezone is invalid
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'UTC'
+      });
+    }
+  }
+
+  private formatEventTime(date: Date): string {
+    const timezone = this.getUserTimezone();
+    try {
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true,
+        timeZone: timezone
+      });
+    } catch (error) {
+      // Fallback to UTC if timezone is invalid
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true,
+        timeZone: 'UTC'
+      });
+    }
   }
 
   private handleNoteQueries(query: string): string {

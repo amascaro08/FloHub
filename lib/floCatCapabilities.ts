@@ -40,10 +40,8 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
   }
   
   const lowerInput = userInput.toLowerCase().trim();
-  console.log(`[DEBUG] Matching capability for input: "${userInput}"`);
 
   for (const capability of floCatCapabilities) {
-    console.log(`[DEBUG] Checking capability: ${capability.featureName}`);
     
     // Flexible matching for common variations (check this first for better results)
     if (capability.featureName === "Task Management") {
@@ -52,7 +50,6 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
           (lowerInput.includes("task"))) {
         const command = "add";
         const args = extractTaskFromInput(userInput);
-        console.log(`[DEBUG] Task add match found. Args: "${args}"`);
         return { capability, command, args };
       }
       
@@ -61,7 +58,6 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
           lowerInput.includes("task")) {
         const command = "list";
         const args = "";
-        console.log(`[DEBUG] Task list match found`);
         return { capability, command, args };
       }
     }
@@ -74,7 +70,6 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
       if (lowerInput.includes(lowerPhrase)) {
         const command = extractCommandFromPhrase(phrase);
         const args = extractArgsAfterPhrase(userInput, phrase);
-        console.log(`[DEBUG] Direct phrase match: "${phrase}", command: ${command}, args: "${args}"`);
         return { capability, command, args };
       }
     }

@@ -34,6 +34,7 @@ type ChatRequest = {
     habitCompletions?: any[];
     allEvents?: any[];
     allTasks?: any[];
+    calendarEvents?: any[];
   };
 };
 
@@ -45,6 +46,31 @@ type ChatResponse = {
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
+
+// Extract tags and determine source from task text
+function extractTagsAndSource(text: string): { text: string; source?: "work" | "personal"; tags: string[] } {
+  const tagRegex = /#(\w+)/g;
+  const tags: string[] = [];
+  let match;
+  
+  // Extract all tags
+  while ((match = tagRegex.exec(text)) !== null) {
+    tags.push(match[1].toLowerCase());
+  }
+  
+  // Remove tags from text
+  const cleanText = text.replace(/#\w+/g, '').trim().replace(/\s+/g, ' ');
+  
+  // Determine source based on tags
+  let source: "work" | "personal" | undefined;
+  if (tags.includes('work')) {
+    source = 'work';
+  } else if (tags.includes('personal')) {
+    source = 'personal';
+  }
+  
+  return { text: cleanText, source, tags };
+}
 
 // Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
 const parseDueDate = (phrase: string): string | undefined => {
@@ -135,8 +161,88 @@ export default async function handler(
 
   const lowerPrompt = userInput.toLowerCase();
 
+
+
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
+  
+  // Check for calendar/schedule queries first and fetch fresh calendar data
+  const isCalendarQuery = lowerPrompt.includes("calendar") || lowerPrompt.includes("schedule") || 
+      lowerPrompt.includes("event") || lowerPrompt.includes("today") ||
+      lowerPrompt.includes("tomorrow") || lowerPrompt.includes("next") ||
+      lowerPrompt.includes("upcoming") || lowerPrompt.includes("meeting");
+      
+  if (isCalendarQuery) {
+    
+    try {
+      // Fetch fresh calendar events for calendar-related queries
+      const now = new Date();
+      const timeMin = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24 hours ago
+      const timeMax = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days from now
+      
+
+      
+      // First, get user settings to include O365 URL if needed
+      const userSettingsResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/userSettings`, {
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        },
+      });
+      
+      let calendarUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${timeMin}&timeMax=${timeMax}&useCalendarSources=true`;
+      
+      if (userSettingsResponse.ok) {
+        const userSettings = await userSettingsResponse.json();
+        const o365Url = userSettings?.calendarSources?.find((source: any) => source.type === 'o365')?.url;
+        if (o365Url) {
+          calendarUrl += `&o365Url=${encodeURIComponent(o365Url)}`;
+        }
+      }
+      
+
+      
+      const calendarResponse = await fetch(calendarUrl, {
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        },
+      });
+      
+      
+      
+      if (calendarResponse.ok) {
+        const calendarData = await calendarResponse.json();
+        const freshCalendarEvents = calendarData.events || [];
+        
+        
+        
+        // Load smart assistant with fresh calendar data
+        await smartAssistant.loadUserContext(freshCalendarEvents);
+        const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+        
+        
+        
+        if (queryResponse && !queryResponse.includes("I can help you with:")) {
+          return res.status(200).json({ reply: queryResponse });
+        }
+      } else {
+        const errorText = await calendarResponse.text();
+        
+        
+        // If calendar fetch fails, still try with cached data but inform user
+        await smartAssistant.loadUserContext();
+        const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+        if (queryResponse && !queryResponse.includes("I can help you with:")) {
+          return res.status(200).json({ 
+            reply: queryResponse + "\n\n*Note: I used cached calendar data as I couldn't fetch your latest events.*" 
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error processing calendar query:", error);
+      // Continue with normal processing
+    }
+  }
+
   // Check for proactive suggestion requests
   if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
     try {
@@ -168,12 +274,18 @@ export default async function handler(
     }
   }
 
-  // Check for natural language queries first
+  // Check for other natural language queries
   if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
       lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
+    
+
+    
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
+      
+
+      
       if (queryResponse && !queryResponse.includes("I can help you with:")) {
         return res.status(200).json({ reply: queryResponse });
       }
@@ -187,12 +299,12 @@ export default async function handler(
   const capabilityMatch = findMatchingCapability(userInput);
   if (capabilityMatch) {
     try {
-      console.log(`[DEBUG] Capability matched: ${capabilityMatch.capability.featureName}, Command: ${capabilityMatch.command}, Args: "${capabilityMatch.args}"`);
+  
       const capabilityResponse = await capabilityMatch.capability.handler(
         capabilityMatch.command, 
         capabilityMatch.args
       );
-      console.log(`[DEBUG] Capability response: ${capabilityResponse}`);
+
       return res.status(200).json({ reply: capabilityResponse });
     } catch (error) {
       console.error("Error in capability handler:", error);
@@ -273,14 +385,19 @@ export default async function handler(
       
       if (finalTaskText) {
         const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
-        const payload: any = { text: finalTaskText };
+        
+        // Extract tags and determine source
+        const { text: cleanText, source, tags } = extractTagsAndSource(finalTaskText);
+        
+        const payload: any = { text: cleanText };
         if (dueDate) payload.dueDate = dueDate;
+        if (source) payload.source = source;
 
-        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
         const success = await callInternalApi("/api/tasks", "POST", payload, req);
         if (success) {
+          const sourceInfo = source ? ` #${source}` : '';
           return res.status(200).json({
-            reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+            reply: `✅ Task "${cleanText}" added successfully!${dueDate ? ` Due: ${new Date(dueDate).toLocaleDateString()}` : ''}${sourceInfo ? ` Tags: ${sourceInfo}` : ''}`,
           });
         } else {
           return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });

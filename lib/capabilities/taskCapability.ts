@@ -116,7 +116,6 @@ const cleanTaskText = (text: string): string => {
 };
 
 async function handleTaskCommand(command: string, args: string, userId: string): Promise<string> {
-  console.log(`[DEBUG] handleTaskCommand called with command: "${command}", args: "${args}", userId: "${userId}"`);
   try {
     switch (command.toLowerCase()) {
       case "add":
@@ -157,7 +156,6 @@ async function handleTaskCommand(command: string, args: string, userId: string):
 }
 
 async function addTask(args: string, userId: string): Promise<string> {
-  console.log(`[DEBUG] addTask called with args: "${args}", userId: "${userId}"`);
   if (!args.trim()) {
     return "Please specify what task you'd like to add. For example: 'add task: Review presentation due tomorrow'";
   }
