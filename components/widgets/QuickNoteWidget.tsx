@@ -117,7 +117,7 @@ function QuickNoteWidget() {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="quicknote-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700 flex flex-col h-full">
       <form onSubmit={handleSaveNote} className="flex flex-col flex-1 gap-3">
         <textarea
           className="input-modern flex-1 resize-none"

@@ -232,10 +232,10 @@ const HabitTrackerWidget = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 transition-colors">Habit Tracker</h2>
+      <div className="habit-tracker-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>Habit Tracker</h2>
         <div className="flex justify-center items-center h-24">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-teal-500"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#00C9A7]"></div>
         </div>
       </div>
     );
@@ -243,10 +243,10 @@ const HabitTrackerWidget = () => {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2 transition-colors">Habit Tracker</h2>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-3 transition-colors">{error}</p>
-        <Link href="/habit-tracker" className="text-teal-600 dark:text-teal-500 hover:text-teal-500 dark:hover:text-teal-400 flex items-center transition-colors">
+      <div className="habit-tracker-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>Habit Tracker</h2>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>{error}</p>
+        <Link href="/habit-tracker" className="text-[#00C9A7] hover:text-[#00A8A7] flex items-center transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
           <span>Open Full Tracker</span>
           <ArrowRightIcon className="w-4 h-4 ml-1" />
         </Link>
@@ -255,8 +255,8 @@ const HabitTrackerWidget = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 transition-colors">Habit Tracker</h2>
+    <div className="habit-tracker-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3" style={{ fontFamily: 'Poppins, sans-serif' }}>Habit Tracker</h2>
       
       {habits.length === 0 ? (
         <div className="mb-3">
@@ -266,13 +266,13 @@ const HabitTrackerWidget = () => {
         <>
           {/* Progress bar */}
           <div className="mb-3">
-            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1 transition-colors">
+            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
               <span>Today's Progress</span>
               <span>{completedCount}/{totalCount} completed</span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 transition-colors">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
               <div
-                className="bg-teal-600 dark:bg-teal-600 h-2.5 rounded-full transition-colors"
+                className="bg-[#00C9A7] h-2.5 rounded-full"
                 style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
@@ -280,48 +280,48 @@ const HabitTrackerWidget = () => {
           
           {/* Overall Stats */}
           <div className="mb-3">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">Overall Stats</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>Overall Stats</h3>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center">
                 <div className="flex items-center mb-1">
-                  <ChartBarIcon className="w-3 h-3 text-blue-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Total Habits</span>
+                  <ChartBarIcon className="w-3 h-3 text-[#00C9A7] mr-1" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>Total Habits</span>
                 </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.totalHabits}</span>
+                <span className="text-lg font-bold text-gray-800 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{overallStats.totalHabits}</span>
               </div>
               
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center">
                 <div className="flex items-center mb-1">
-                  <FireIcon className="w-3 h-3 text-orange-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Longest Streak</span>
+                  <FireIcon className="w-3 h-3 text-[#FF6B6B] mr-1" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>Longest Streak</span>
                 </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.longestStreak}</span>
+                <span className="text-lg font-bold text-gray-800 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{overallStats.longestStreak}</span>
               </div>
               
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center">
                 <div className="flex items-center mb-1">
-                  <TrophyIcon className="w-3 h-3 text-yellow-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Weekly Rate</span>
+                  <TrophyIcon className="w-3 h-3 text-[#FF6B6B] mr-1" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>Weekly Rate</span>
                 </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.weeklyCompletionRate}%</span>
+                <span className="text-lg font-bold text-gray-800 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{overallStats.weeklyCompletionRate}%</span>
               </div>
               
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center">
                 <div className="flex items-center mb-1">
-                  <CheckIcon className="w-3 h-3 text-green-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Monthly Rate</span>
+                  <CheckIcon className="w-3 h-3 text-[#00C9A7] mr-1" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>Monthly Rate</span>
                 </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.monthlyCompletionRate}%</span>
+                <span className="text-lg font-bold text-gray-800 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{overallStats.monthlyCompletionRate}%</span>
               </div>
             </div>
           </div>
           
           {/* Today's habits */}
           <div className="mb-3">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">Today's Habits</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>Today's Habits</h3>
             
             {todaysHabits.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400 text-xs transition-colors">No habits scheduled for today</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs" style={{ fontFamily: 'Inter, sans-serif' }}>No habits scheduled for today</p>
             ) : (
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {todaysHabits.map(habit => {
@@ -330,22 +330,22 @@ const HabitTrackerWidget = () => {
                   return (
                     <div 
                       key={habit.id}
-                      className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center p-2 rounded-lg cursor-pointer ${
                         isCompleted ? 'bg-green-100 dark:bg-green-900 bg-opacity-100 dark:bg-opacity-30' : 'bg-gray-100 dark:bg-gray-700'
                       }`}
                       onClick={() => handleToggleCompletion(habit)}
                     >
                       <div 
-                        className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center transition-colors ${
-                          isCompleted ? 'bg-green-500 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                        className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center ${
+                          isCompleted ? 'bg-[#00C9A7]' : 'bg-gray-300 dark:bg-gray-600'
                         }`}
                       >
                         {isCompleted && <CheckIcon className="w-3 h-3 text-white" />}
                       </div>
-                      <span className="text-sm text-gray-800 dark:text-white truncate flex-grow transition-colors">{habit.name}</span>
+                      <span className="text-sm text-gray-800 dark:text-white truncate flex-grow" style={{ fontFamily: 'Inter, sans-serif' }}>{habit.name}</span>
                       <div 
                         className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: '#4fd1c5' }}
+                        style={{ backgroundColor: '#00C9A7' }}
                       ></div>
                     </div>
                   );
@@ -356,7 +356,7 @@ const HabitTrackerWidget = () => {
         </>
       )}
       
-      <Link href="/habit-tracker" className="text-teal-600 dark:text-teal-500 hover:text-teal-500 dark:hover:text-teal-400 flex items-center text-sm transition-colors">
+      <Link href="/habit-tracker" className="text-[#00C9A7] hover:text-[#00A8A7] flex items-center text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
         <span>Open Full Tracker</span>
         <ArrowRightIcon className="w-4 h-4 ml-1" />
       </Link>

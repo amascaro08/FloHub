@@ -141,46 +141,42 @@ export default function SmartAtAGlanceWidget() {
 
   if (loading) {
     return (
-      <Card className="w-full bg-white dark:bg-gray-800 border border-[var(--neutral-300)] dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-            <Brain className="w-5 h-5" />
+      <div className="smart-at-a-glance-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-4">
+          <Brain className="w-5 h-5 text-[#00C9A7]" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
             Smart Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-[var(--primary)]" />
-            <span className="ml-2 text-[var(--fg)] dark:text-gray-100">Analyzing your patterns...</span>
-          </div>
-        </CardContent>
-      </Card>
+          </h2>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="w-6 h-6 animate-spin text-[#00C9A7]" />
+          <span className="ml-2 text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>Analyzing your patterns...</span>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="w-full bg-white dark:bg-gray-800 border border-[var(--neutral-300)] dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-            <Brain className="w-5 h-5" />
+      <div className="smart-at-a-glance-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-4">
+          <Brain className="w-5 h-5 text-[#00C9A7]" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
             Smart Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-[var(--fg-muted)] dark:text-gray-300">
-            <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
-            <p>{error}</p>
-            <Button 
-              variant="secondary" 
-              onClick={fetchSmartSummary}
-              className="mt-4"
-            >
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </h2>
+        </div>
+        <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-[#FF6B6B]" />
+          <p style={{ fontFamily: 'Inter, sans-serif' }}>{error}</p>
+          <button 
+            onClick={fetchSmartSummary}
+            className="mt-4 px-4 py-2 bg-[#00C9A7] text-white rounded-lg hover:bg-[#00A8A7] transition-colors font-medium"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -191,18 +187,20 @@ export default function SmartAtAGlanceWidget() {
   const { suggestions, insights } = smartSummary;
 
   return (
-    <div className="space-y-4">
+    <div className="smart-at-a-glance-widget bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
       {/* Proactive Suggestions */}
       {suggestions.length > 0 && (
-        <Card className="w-full bg-white dark:bg-gray-800 border border-[var(--neutral-300)] dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-              <Lightbulb className="w-5 h-5 text-yellow-500" />
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Lightbulb className="w-5 h-5 text-[#FF6B6B]" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
               AI Suggestions
-              <Badge variant="secondary">{suggestions.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+            </h3>
+            <span className="px-2 py-1 bg-[#00C9A7] text-white text-xs rounded-full font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {suggestions.length}
+            </span>
+          </div>
+          <div className="space-y-3">
             {suggestions.slice(0, 3).map((suggestion, index) => (
               <div 
                 key={index}
