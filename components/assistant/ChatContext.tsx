@@ -10,8 +10,6 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   htmlContent?: string;
-  isLoading?: boolean;
-  loadingMessage?: string;
 }
 
 interface ChatContextType {
@@ -40,94 +38,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // User messages don't need markdown parsing here, but we'll add the structure
     const newUserMessage: ChatMessage = { role: 'user', content: message, htmlContent: message };
     
-    // Add the user message immediately
-    setHistory(prevHistory => [...prevHistory, newUserMessage]);
-    
     // Update input, loading, and status states together
     setInput('');
     setLoading(true);
     setStatus('loading');
 
-    // Add a loading message to show progress
-    const loadingMessage: ChatMessage = { 
-      role: 'assistant', 
-      content: 'FloCat is thinking...', 
-      htmlContent: 'FloCat is thinking...',
-      isLoading: true,
-      loadingMessage: 'Starting analysis...'
-    };
-    setHistory(prevHistory => [...prevHistory, loadingMessage]);
-
     try {
-      // Determine what type of request this is and update loading message accordingly
-      const lowerMessage = message.toLowerCase();
-      
-      if (lowerMessage.includes('calendar') || lowerMessage.includes('schedule') || 
-          lowerMessage.includes('event') || lowerMessage.includes('today') ||
-          lowerMessage.includes('tomorrow') || lowerMessage.includes('next') ||
-          lowerMessage.includes('upcoming')) {
-        
-        // Update loading message for calendar queries
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Checking your schedule...' }
-        ]);
-        
-        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Fetching calendar events...' }
-        ]);
-        
-      } else if (lowerMessage.includes('note') || lowerMessage.includes('meeting')) {
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Searching your notes...' }
-        ]);
-        
-      } else if (lowerMessage.includes('task') || lowerMessage.includes('todo')) {
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Checking your tasks...' }
-        ]);
-        
-      } else if (lowerMessage.includes('habit') || lowerMessage.includes('streak')) {
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Analyzing your habits...' }
-        ]);
-        
-      } else if (lowerMessage.includes('summary') || lowerMessage.includes('overview')) {
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Gathering your data...' }
-        ]);
-        
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Creating your summary...' }
-        ]);
-        
-      } else {
-        
-        setHistory(prevHistory => [
-          ...prevHistory.slice(0, -1),
-          { ...loadingMessage, loadingMessage: 'Processing your request...' }
-        ]);
-        
-      }
-
-      // Small delay to show the specific loading message
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Make the API request
+      // Instead of using the client-side capability matching and OpenAI directly,
+      // we'll make a request to our API endpoint
       const response = await fetch('/api/assistant', {
         method: 'POST',
         headers: {
@@ -156,18 +74,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         assistantHtmlContent = assistantContent;
       }
 
-      // Replace the loading message with the actual response
-      const assistantResponse: ChatMessage = { 
-        role: 'assistant', 
-        content: assistantContent, 
-        htmlContent: assistantHtmlContent,
-        isLoading: false
-      };
-      
-      setHistory(prevHistory => [
-        ...prevHistory.slice(0, -1), // Remove loading message
-        assistantResponse
-      ]);
+      // Update history with both the user message and the assistant's response
+      const assistantResponse: ChatMessage = { role: 'assistant', content: assistantContent, htmlContent: assistantHtmlContent };
+      setHistory(prevHistory => [...prevHistory, newUserMessage, assistantResponse]);
       setStatus('success');
 
     } catch (error) {
@@ -182,11 +91,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         errorHtmlMessage = errorMessage;
       }
       
-      // Replace loading message with error
-      setHistory(prevHistory => [
-        ...prevHistory.slice(0, -1), // Remove loading message
-        { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage, isLoading: false }
-      ]);
+      setHistory(prevHistory => [...prevHistory, newUserMessage, { role: 'assistant', content: errorMessage, htmlContent: errorHtmlMessage }]);
       setStatus('error');
 
     } finally {
