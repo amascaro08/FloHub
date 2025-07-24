@@ -7,10 +7,11 @@ import { eq } from "drizzle-orm";
 import { UserSettings } from "../../types/app"; // Import UserSettings from typese
 
 type ErrorRes = { error: string };
+type SuccessRes = { success: boolean };
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UserSettings | ErrorRes>
+  res: NextApiResponse<UserSettings | ErrorRes | SuccessRes>
 ) {
   // Handle CORS for production
   const origin = req.headers.origin;
