@@ -371,10 +371,6 @@ const DashboardGrid = () => {
         useCSSTransforms={true}
         preventCollision={true}
         compactType="vertical"
-        minH={2}
-        minW={2}
-        maxH={12}
-        maxW={12}
       >
         {activeWidgets.map((widgetKey) => (
           <div 
