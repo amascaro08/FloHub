@@ -129,13 +129,13 @@ const DashboardGrid = () => {
 
   // user logic (Stack Auth: user object replaces user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
 
   // Fetch user settings to get active widgets (client-side only)
   useEffect(() => {
     const fetchUserSettings = async () => {
-      setIsLoading(true);
+      setIsLoadingSettings(true);
       if (isClient && user?.primaryEmail) {
         try {
           const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
@@ -154,7 +154,7 @@ const DashboardGrid = () => {
           console.error("[DashboardGrid] Error fetching user settings:", error);
         }
       }
-      setIsLoading(false);
+      setIsLoadingSettings(false);
     };
 
     fetchUserSettings();
@@ -281,7 +281,7 @@ const DashboardGrid = () => {
     saveWidgetOrder();
   };
 
-  if (isLoading) {
+  if (isLoadingSettings) {
     return (
       <div className="p-4">
         <div className="animate-pulse space-y-4">
