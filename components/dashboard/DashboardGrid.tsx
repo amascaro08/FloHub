@@ -297,31 +297,33 @@ const DashboardGrid = () => {
       ]
     };
 
-    // Generate layouts for active widgets only, ensuring no overlaps
-    const filteredLayouts: any = {};
-    Object.keys(baseLayout).forEach(breakpoint => {
-      const availableLayouts = baseLayout[breakpoint as keyof typeof baseLayout];
-      const activeLayouts = availableLayouts.filter(
-        item => activeWidgets.includes(item.i as WidgetType)
-      );
-      
-      // Ensure widgets are positioned without overlaps
-      const positionedLayouts = activeLayouts.map((item, index) => {
-        // For the first widget, use original position
-        if (index === 0) return item;
+          // Generate layouts for active widgets only, ensuring no overlaps
+      const filteredLayouts: any = {};
+      Object.keys(baseLayout).forEach(breakpoint => {
+        const availableLayouts = baseLayout[breakpoint as keyof typeof baseLayout];
+        const activeLayouts = availableLayouts.filter(
+          item => activeWidgets.includes(item.i as WidgetType)
+        );
         
-        // For subsequent widgets, position them below the previous ones
-        const prevItem = positionedLayouts[index - 1];
-        const newY = prevItem ? prevItem.y + prevItem.h : 0;
+        // Ensure widgets are positioned without overlaps
+        const positionedLayouts: any[] = [];
+        activeLayouts.forEach((item, index) => {
+          if (index === 0) {
+            positionedLayouts.push(item);
+          } else {
+            // For subsequent widgets, position them below the previous ones
+            const prevItem = positionedLayouts[index - 1];
+            const newY = prevItem ? prevItem.y + prevItem.h : 0;
+            
+            positionedLayouts.push({
+              ...item,
+              y: newY
+            });
+          }
+        });
         
-        return {
-          ...item,
-          y: newY
-        };
+        filteredLayouts[breakpoint] = positionedLayouts;
       });
-      
-      filteredLayouts[breakpoint] = positionedLayouts;
-    });
 
     return filteredLayouts;
   }, [activeWidgets]);
