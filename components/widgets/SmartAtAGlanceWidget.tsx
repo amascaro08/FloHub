@@ -209,37 +209,38 @@ export default function SmartAtAGlanceWidget() {
                   </div>
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm text-[var(--fg)] dark:text-gray-100">{suggestion.title}</h4>
-                      <Badge 
-                        variant={getPriorityColor(suggestion.priority) as any}
-                        className="text-xs"
-                      >
+                      <h4 className="font-medium text-sm text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{suggestion.title}</h4>
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        suggestion.priority === 'high' ? 'bg-[#FF6B6B] text-white' :
+                        suggestion.priority === 'medium' ? 'bg-[#00C9A7] text-white' :
+                        'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                      }`} style={{ fontFamily: 'Inter, sans-serif' }}>
                         {suggestion.priority}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
                         {Math.round(suggestion.confidence * 100)}% confident
-                      </Badge>
+                      </span>
                     </div>
                     
-                    <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300">
+                    <p className="text-sm text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {suggestion.message}
                     </p>
                     
                     {expandedSuggestion === index && (
-                      <div className="space-y-2 pt-2 border-t border-[var(--neutral-300)] dark:border-gray-600">
-                        <p className="text-xs text-[var(--fg-muted)] dark:text-gray-400 italic">
+                      <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic" style={{ fontFamily: 'Inter, sans-serif' }}>
                           💡 {suggestion.reasoning}
                         </p>
                         
                         {suggestion.actionable && suggestion.action && (
-                          <Button
-                            size="sm"
+                          <button
                             onClick={() => handleActionableSuggestion(suggestion)}
-                            className="mt-2"
+                            className="mt-2 px-3 py-1 bg-[#00C9A7] text-white rounded-lg hover:bg-[#00A8A7] transition-colors text-xs font-medium flex items-center"
+                            style={{ fontFamily: 'Inter, sans-serif' }}
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Apply Suggestion
-                          </Button>
+                          </button>
                         )}
                       </div>
                     )}
@@ -248,7 +249,7 @@ export default function SmartAtAGlanceWidget() {
                       onClick={() => setExpandedSuggestion(
                         expandedSuggestion === index ? null : index
                       )}
-                      className="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)] flex items-center gap-1 transition-colors"
+                      className="text-xs text-[#00C9A7] hover:text-[#00A8A7] flex items-center gap-1" style={{ fontFamily: 'Inter, sans-serif' }}
                     >
                       {expandedSuggestion === index ? 'Show Less' : 'Show More'}
                       <ChevronRight 
@@ -261,8 +262,8 @@ export default function SmartAtAGlanceWidget() {
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Quick Insights */}
