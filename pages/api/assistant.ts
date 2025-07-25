@@ -168,6 +168,117 @@ export default async function handler(
     }
   }
 
+  // ── Check for schedule/calendar queries first ───────────────────
+  if (lowerPrompt.includes("schedule") || lowerPrompt.includes("my schedule") || 
+      lowerPrompt.includes("meetings") || lowerPrompt.includes("my meetings") ||
+      lowerPrompt.includes("calendar") || lowerPrompt.includes("my calendar") ||
+      lowerPrompt.includes("agenda") || lowerPrompt.includes("today's events") ||
+      lowerPrompt.includes("upcoming events") || lowerPrompt.includes("what's on my calendar")) {
+    
+    try {
+      // Fetch calendar events for the next 7 days
+      const now = new Date();
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      const calendarResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${now.toISOString()}&timeMax=${nextWeek.toISOString()}&useCalendarSources=true`, {
+        method: 'GET',
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        },
+      });
+
+      if (calendarResponse.ok) {
+        const calendarData = await calendarResponse.json();
+        const events = calendarData.events || [];
+        
+        // Filter today's and upcoming events
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todayEvents = events.filter((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date);
+          return eventDate >= today && eventDate < tomorrow;
+        });
+
+        const upcomingEvents = events.filter((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date);
+          return eventDate >= tomorrow;
+        }).slice(0, 5);
+
+        // Generate schedule response
+        let scheduleResponse = "";
+        
+        if (lowerPrompt.includes("today") || lowerPrompt.includes("today's")) {
+          scheduleResponse = `📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n\n`;
+          
+          if (todayEvents.length > 0) {
+            todayEvents.forEach((event: any) => {
+              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+              });
+              scheduleResponse += `• ${time} - **${event.summary}**\n`;
+              if (event.location) {
+                scheduleResponse += `  📍 ${event.location}\n`;
+              }
+            });
+          } else {
+            scheduleResponse += "No events scheduled for today! ✨\n";
+          }
+        } else {
+          scheduleResponse = `📅 **Your Schedule Overview**:\n\n`;
+          
+          // Today's events
+          scheduleResponse += `**Today** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n`;
+          if (todayEvents.length > 0) {
+            todayEvents.slice(0, 3).forEach((event: any) => {
+              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+              });
+              scheduleResponse += `• ${time} - ${event.summary}\n`;
+            });
+            if (todayEvents.length > 3) {
+              scheduleResponse += `• ... and ${todayEvents.length - 3} more\n`;
+            }
+          } else {
+            scheduleResponse += "• No events today\n";
+          }
+          
+          // Upcoming events
+          scheduleResponse += `\n**Upcoming Events**:\n`;
+          if (upcomingEvents.length > 0) {
+            upcomingEvents.forEach((event: any) => {
+              const eventDate = new Date(event.start?.dateTime || event.start?.date);
+              const dateStr = eventDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+              });
+              const timeStr = eventDate.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+              });
+              scheduleResponse += `• ${dateStr} at ${timeStr} - **${event.summary}**\n`;
+            });
+          } else {
+            scheduleResponse += "• No upcoming events this week\n";
+          }
+        }
+        
+        return res.status(200).json({ reply: scheduleResponse });
+      }
+    } catch (error) {
+      console.error("Error fetching calendar events:", error);
+      // Fall through to normal processing
+    }
+  }
+
   // Check for natural language queries first
   if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
       lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
@@ -277,13 +388,31 @@ export default async function handler(
         if (dueDate) payload.dueDate = dueDate;
 
         console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
-        const success = await callInternalApi("/api/tasks", "POST", payload, req);
-        if (success) {
-          return res.status(200).json({
-            reply: `✅ Task "${finalTaskText}" added${dueDate ? ` (due ${duePhrase})` : ""}.`,
+        
+        try {
+          const taskResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tasks`, {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json",
+              "Cookie": req.headers.cookie || "",
+            },
+            body: JSON.stringify(payload),
           });
-        } else {
-          return res.status(500).json({ error: "Sorry, I couldn't add the task. There was an internal error." });
+
+          if (taskResponse.ok) {
+            const createdTask = await taskResponse.json();
+            console.log(`[DEBUG] Task created successfully:`, createdTask);
+            return res.status(200).json({
+              reply: `✅ Task "${finalTaskText}" added successfully${dueDate ? ` (due ${duePhrase})` : ""}!`,
+            });
+          } else {
+            const errorData = await taskResponse.text();
+            console.error(`[DEBUG] Task creation failed with status ${taskResponse.status}:`, errorData);
+            return res.status(500).json({ error: "Sorry, I couldn't add the task. Please try again." });
+          }
+        } catch (error) {
+          console.error(`[DEBUG] Task creation error:`, error);
+          return res.status(500).json({ error: "Sorry, there was an error adding the task. Please try again." });
         }
       }
     }

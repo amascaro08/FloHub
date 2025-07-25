@@ -648,12 +648,20 @@ export class SmartAIAssistant {
 
     const lowerQuery = query.toLowerCase();
 
+    // Calendar/Schedule queries - prioritize these first
+    if (lowerQuery.includes('schedule') || lowerQuery.includes('calendar') || 
+        lowerQuery.includes('meetings') || lowerQuery.includes('events') ||
+        lowerQuery.includes('agenda') || lowerQuery.includes('today\'s') ||
+        (lowerQuery.includes('what') && (lowerQuery.includes('today') || lowerQuery.includes('tomorrow')))) {
+      return this.handleCalendarQueries(query);
+    }
+
     // Task-related queries
     if (lowerQuery.includes('task') && (lowerQuery.includes('when') || lowerQuery.includes('last'))) {
       return this.handleTaskTimeQueries(query);
     }
 
-    // Meeting-related queries
+    // Meeting-related queries (for past meetings/notes)
     if (lowerQuery.includes('meeting') && lowerQuery.includes('with')) {
       return this.handleMeetingQueries(query);
     }
@@ -680,6 +688,112 @@ export class SmartAIAssistant {
 
     // Default to general context search
     return this.handleGeneralQueries(query);
+  }
+
+  private handleCalendarQueries(query: string): string {
+    const lowerQuery = query.toLowerCase();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Filter calendar events based on the query
+    let relevantEvents = this.context!.calendarEvents;
+
+    if (lowerQuery.includes('today') || lowerQuery.includes('today\'s')) {
+      relevantEvents = relevantEvents.filter(event => {
+        const eventDate = new Date(event.start || event.date);
+        return eventDate >= today && eventDate < tomorrow;
+      });
+      
+      if (relevantEvents.length === 0) {
+        return "You have no events scheduled for today! ✨ Enjoy your free time.";
+      }
+      
+      const eventList = relevantEvents.map(event => {
+        const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        return `• ${time} - **${event.summary}**${event.location ? ` (${event.location})` : ''}`;
+      }).join('\n');
+      
+      return `📅 **Today's Schedule** (${relevantEvents.length} event${relevantEvents.length !== 1 ? 's' : ''}):\n\n${eventList}`;
+      
+    } else if (lowerQuery.includes('tomorrow')) {
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+      
+      relevantEvents = relevantEvents.filter(event => {
+        const eventDate = new Date(event.start || event.date);
+        return eventDate >= tomorrow && eventDate < dayAfterTomorrow;
+      });
+      
+      if (relevantEvents.length === 0) {
+        return "You have no events scheduled for tomorrow! 🌟";
+      }
+      
+      const eventList = relevantEvents.map(event => {
+        const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        return `• ${time} - **${event.summary}**${event.location ? ` (${event.location})` : ''}`;
+      }).join('\n');
+      
+      return `📅 **Tomorrow's Schedule** (${relevantEvents.length} event${relevantEvents.length !== 1 ? 's' : ''}):\n\n${eventList}`;
+      
+    } else {
+      // General schedule/calendar query - show upcoming events
+      relevantEvents = relevantEvents.filter(event => {
+        const eventDate = new Date(event.start || event.date);
+        return eventDate >= today && eventDate <= nextWeek;
+      }).slice(0, 10);
+      
+      if (relevantEvents.length === 0) {
+        return "You have no upcoming events in the next week! 🆓 Perfect time to plan something new.";
+      }
+      
+      // Group by day
+      const eventsByDay = new Map<string, any[]>();
+      relevantEvents.forEach(event => {
+        const eventDate = new Date(event.start || event.date);
+        const dayKey = eventDate.toDateString();
+        if (!eventsByDay.has(dayKey)) {
+          eventsByDay.set(dayKey, []);
+        }
+        eventsByDay.get(dayKey)!.push(event);
+      });
+      
+      let scheduleText = "📅 **Your Upcoming Schedule**:\n\n";
+      
+             for (const [dayKey, dayEvents] of Array.from(eventsByDay.entries())) {
+         const dayDate = new Date(dayKey);
+         const dayName = dayDate.toLocaleDateString('en-US', { 
+           weekday: 'long', 
+           month: 'short', 
+           day: 'numeric' 
+         });
+         
+         scheduleText += `**${dayName}** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n`;
+         
+         dayEvents.forEach((event: any) => {
+           const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
+             hour: 'numeric', 
+             minute: '2-digit', 
+             hour12: true 
+           });
+           scheduleText += `• ${time} - ${event.summary}${event.location ? ` (${event.location})` : ''}\n`;
+         });
+         
+         scheduleText += '\n';
+       }
+      
+      return scheduleText.trim();
+    }
   }
 
   private handleTaskTimeQueries(query: string): string {
