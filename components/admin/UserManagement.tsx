@@ -63,7 +63,8 @@ const UserManagement: React.FC = () => {
   const [emailForm, setEmailForm] = useState({
     subject: '',
     message: '',
-    messageType: 'notification' as 'announcement' | 'notification' | 'support' | 'update'
+    messageType: 'notification' as 'announcement' | 'notification' | 'support' | 'update',
+    signature: 'The FloHub Team'
   });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [messageHistory, setMessageHistory] = useState<any[]>([]);
@@ -187,7 +188,8 @@ const UserManagement: React.FC = () => {
           recipients: communicationModal.selectedUsers.map(u => u.email),
           subject: emailForm.subject,
           message: emailForm.message,
-          messageType: emailForm.messageType
+          messageType: emailForm.messageType,
+          signature: emailForm.signature
         })
       });
 
@@ -196,7 +198,7 @@ const UserManagement: React.FC = () => {
       if (response.ok) {
         alert(`Email sent successfully to ${result.details.sent} recipients!`);
         setCommunicationModal({ isOpen: false, type: 'individual', selectedUsers: [] });
-        setEmailForm({ subject: '', message: '', messageType: 'notification' });
+        setEmailForm({ subject: '', message: '', messageType: 'notification', signature: 'The FloHub Team' });
         
         // Refresh message history if it's currently shown
         if (showHistory) {
@@ -537,7 +539,7 @@ const UserManagement: React.FC = () => {
               </div>
 
               {/* Message */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Message:</label>
                 <textarea
                   value={emailForm.message}
@@ -546,6 +548,31 @@ const UserManagement: React.FC = () => {
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700"
                   placeholder="Enter your message"
                 />
+              </div>
+
+              {/* Signature */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Email Signature:</label>
+                <select
+                  value={emailForm.signature}
+                  onChange={(e) => setEmailForm({...emailForm, signature: e.target.value})}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700"
+                >
+                  <option value="The FloHub Team">The FloHub Team</option>
+                  <option value="Alvaro - Founder">Alvaro - Founder</option>
+                  <option value="Alvaro Mascaro">Alvaro Mascaro</option>
+                  <option value="FloHub Support Team">FloHub Support Team</option>
+                  <option value="Custom">Custom...</option>
+                </select>
+                {emailForm.signature === 'Custom' && (
+                  <input
+                    type="text"
+                    value=""
+                    onChange={(e) => setEmailForm({...emailForm, signature: e.target.value})}
+                    className="w-full mt-2 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700"
+                    placeholder="Enter custom signature"
+                  />
+                )}
               </div>
 
               {/* Actions */}

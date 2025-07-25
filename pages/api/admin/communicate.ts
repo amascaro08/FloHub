@@ -12,6 +12,7 @@ interface CommunicationRequest {
   subject: string;
   message: string;
   messageType: 'announcement' | 'notification' | 'support' | 'update';
+  signature: string;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { type, recipients, subject, message, messageType }: CommunicationRequest = req.body;
+    const { type, recipients, subject, message, messageType, signature }: CommunicationRequest = req.body;
 
     if (!recipients || recipients.length === 0) {
       return res.status(400).json({ error: 'No recipients specified' });
@@ -65,8 +66,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const success = await emailService.sendEmail({
             to: targetUser.email,
             subject: subject,
-            html: generateEmailTemplate(targetUser.name, message, messageType),
-            text: generatePlainTextEmail(targetUser.name, message),
+            html: generateEmailTemplate(targetUser.name, message, messageType, signature || 'The FloHub Team'),
+            text: generatePlainTextEmail(targetUser.name, message, signature || 'The FloHub Team'),
           });
           return { email: targetUser.email, success };
         } catch (error) {
@@ -119,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function generateEmailTemplate(userName: string, message: string, messageType: string): string {
+function generateEmailTemplate(userName: string, message: string, messageType: string, signature: string): string {
   const typeConfig = {
     announcement: { icon: '📢', color: '#2563eb', title: 'Announcement' },
     notification: { icon: '🔔', color: '#059669', title: 'Notification' },
@@ -194,8 +195,8 @@ function generateEmailTemplate(userName: string, message: string, messageType: s
         </div>
         
         <div class="footer">
-          <p>Best regards,<br>The FloHub Team</p>
-          <p>This message was sent from the FloHub Admin Panel.</p>
+          <p>Best regards,<br>${signature}</p>
+          <p>You are receiving this message as you are a registered user of FloHub.</p>
         </div>
       </div>
     </body>
@@ -203,15 +204,15 @@ function generateEmailTemplate(userName: string, message: string, messageType: s
   `;
 }
 
-function generatePlainTextEmail(userName: string, message: string): string {
+function generatePlainTextEmail(userName: string, message: string, signature: string): string {
   return `
 Hi ${userName},
 
-${message}
+  ${message}
 
 Best regards,
-The FloHub Team
+${signature}
 
-This message was sent from the FloHub Admin Panel.
+You are receiving this message as you are a registered user of FloHub.
   `;
 }

@@ -61,7 +61,11 @@ const [activeTab, setActiveTab] = useState<'users' | 'analytics'>('users');
       </Head>
       
       {/* Tab Navigation */}
-      <div className="mb-6">
+      <div className="mb-6 p-4">
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <Users className="w-6 h-6" />
+          Admin Dashboard
+        </h1>
         <div className="border-b border-gray-200 dark:border-gray-600">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -91,7 +95,9 @@ const [activeTab, setActiveTab] = useState<'users' | 'analytics'>('users');
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'users' ? <UserManagement /> : <AdminAnalytics />}
+      <div className="px-4">
+        {activeTab === 'users' ? <UserManagement /> : <AdminAnalytics />}
+      </div>
     </Layout>
   );
 }
