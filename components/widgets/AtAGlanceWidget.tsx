@@ -69,6 +69,16 @@ function generateDashboardWidget(
     return eventDate >= tomorrow && eventDate < endOfTomorrow;
   });
 
+  // Log recurring events for debugging
+  const recurringEvents = events.filter(event => event.isRecurring);
+  if (recurringEvents.length > 0) {
+    console.log('AtAGlanceWidget: Found recurring events:', recurringEvents.map(e => ({
+      summary: e.summary,
+      isRecurring: e.isRecurring,
+      seriesMasterId: e.seriesMasterId
+    })));
+  }
+
   // Identify work vs personal events
   const workEvents = todayEvents.filter(event => 
     event.summary?.toLowerCase().includes('meeting') ||
@@ -201,10 +211,11 @@ function generateDashboardWidget(
                 'All day';
             }
             const isWork = workEvents.includes(event);
+            const recurringIcon = event.isRecurring ? '🔄' : '';
             return `<div class="item">
               <span class="item-time">${time}</span>
               <span class="item-text">${event.summary}</span>
-              <span class="event-type">${isWork ? '💼' : '👤'}</span>
+              <span class="event-type">${isWork ? '💼' : '👤'}${recurringIcon}</span>
             </div>`;
           }).join('')
           : '<div class="empty-state">Free day! 🌅</div>'
@@ -246,9 +257,11 @@ function generateDashboardWidget(
                 formatInTimeZone(new Date(event.start.dateTime), userTimezone, 'h:mm a') : 
                 'All day';
             }
+            const recurringIcon = event.isRecurring ? '🔄' : '';
             return `<div class="item preview">
               <span class="item-time">${time}</span>
               <span class="item-text">${event.summary}</span>
+              <span class="event-type">${recurringIcon}</span>
             </div>`;
           }).join('')
           : '<div class="empty-state">Open schedule 📅</div>'
