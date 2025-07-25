@@ -290,7 +290,7 @@ async function fetchAnalyticsData(startTimestampMs: number) {
       analyticsData.widgetUsage = [
         { widget: 'CalendarWidget', count: 80 },
         { widget: 'TaskWidget', count: 75 },
-        { widget: 'AtAGlanceWidget', count: 70 },
+        { widget: 'SmartAtAGlanceWidget', count: 70 },
         { widget: 'QuickNoteWidget', count: 65 },
         { widget: 'HabitTrackerWidget', count: 40 },
         { widget: 'ChatWidget', count: 35 },
