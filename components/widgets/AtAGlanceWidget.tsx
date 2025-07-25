@@ -4,7 +4,6 @@ import React, { useState, useEffect, memo, useCallback } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import {
-  fetchCalendarEvents,
   fetchTasks,
   fetchNotes,
   fetchMeetings,
@@ -14,6 +13,7 @@ import {
   fetchHabits,
   fetchHabitCompletions
 } from '@/lib/habitServiceAPI';
+import { useCalendarContext } from '@/contexts/CalendarContext';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import useSWR from 'swr';
 import type { CalendarEvent, Task, Note } from '../../types/calendar';
@@ -452,6 +452,13 @@ const AtAGlanceWidget = () => {
   const isClient = typeof window !== 'undefined';
   const trackingHook = isClient ? useWidgetTracking('AtAGlanceWidget') : { trackInteraction: () => {} };
 
+  // Use shared calendar context instead of individual hook
+  const {
+    events: calendarEvents,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = useCalendarContext();
+
   // Optimized data fetching with parallel requests and better error handling
   const fetchDataOptimized = useCallback(async () => {
     if (!user?.email) return;
@@ -463,20 +470,8 @@ const AtAGlanceWidget = () => {
       const now = new Date();
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      // Calculate proper time range for fetching events (today + next 7 days)
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const oneWeekFromNow = new Date(startOfToday);
-      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-      oneWeekFromNow.setHours(23, 59, 59, 999);
-
-      // Build API parameters for calendar with required timeMin and timeMax
-      const timeMin = startOfToday.toISOString();
-      const timeMax = oneWeekFromNow.toISOString();
-      let apiUrlParams = `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&useCalendarSources=true&userTimezone=${encodeURIComponent(userTimezone)}`;
-
-      // Create all fetch promises with individual timeout protection
+      // Create all fetch promises with individual timeout protection (excluding calendar events)
       const fetchPromises = [
-        fetchCalendarEvents(`/api/calendar?${apiUrlParams}`, `calendar_${timeMin}_${timeMax}`).catch(() => []),
         fetchTasks().catch(() => ({ tasks: [] })),
         fetchNotes().catch(() => ({ notes: [] })),
         fetchMeetings().catch(() => ({ meetings: [] })),
@@ -485,18 +480,17 @@ const AtAGlanceWidget = () => {
       ];
 
       // Execute all requests in parallel with timeout
-      const [eventsData, tasksData, notesData, meetingsData, habitsData, habitCompletionsData] = await Promise.allSettled(fetchPromises);
+      const [tasksData, notesData, meetingsData, habitsData, habitCompletionsData] = await Promise.allSettled(fetchPromises);
 
       // Process results with fallbacks
-      const events = eventsData.status === 'fulfilled' ? eventsData.value : [];
       const tasks = tasksData.status === 'fulfilled' ? tasksData.value : { tasks: [] };
       const notes = notesData.status === 'fulfilled' ? notesData.value : { notes: [] };
       const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value : { meetings: [] };
       const habits = habitsData.status === 'fulfilled' ? habitsData.value : { habits: [] };
       const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value : { completions: [] };
 
-      // Process events data with timezone conversion
-      const eventsInUserTimezone = events.map((event: CalendarEvent) => {
+      // Process events data with timezone conversion (using shared calendar events)
+      const eventsInUserTimezone = calendarEvents.map((event: CalendarEvent) => {
         let start: any = {};
         if (event.start instanceof Date) {
           start = { dateTime: formatInTimeZone(event.start, userTimezone, 'yyyy-MM-dd\'T\'HH:mm:ssXXX') };
@@ -595,14 +589,14 @@ const AtAGlanceWidget = () => {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       setLoading(false);
     }
-  }, [user]);
+  }, [user, calendarEvents]);
 
   // Load data on mount and when user changes
   useEffect(() => {
-    if (user?.email) {
+    if (user?.email && !eventsLoading) {
       fetchDataOptimized();
     }
-  }, [user, fetchDataOptimized]);
+  }, [user, fetchDataOptimized, eventsLoading]);
 
   // Background refresh every 5 minutes
   useEffect(() => {
@@ -617,7 +611,6 @@ const AtAGlanceWidget = () => {
 
   // Manual refresh function
   const handleRefresh = useCallback(() => {
-    invalidateCache('calendar');
     invalidateCache('tasks');
     invalidateCache('notes');
     invalidateCache('meetings');
@@ -648,7 +641,7 @@ const AtAGlanceWidget = () => {
     );
   }
 
-  if (loading) {
+  if (loading || eventsLoading) {
     return (
       <div className="p-4 border rounded-lg shadow-sm">
         <div className="animate-pulse">

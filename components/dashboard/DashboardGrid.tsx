@@ -10,6 +10,7 @@ import {
   FileText,
 } from 'lucide-react';
 import OptimizedSkeleton from '@/components/ui/OptimizedSkeleton';
+import { CalendarProvider } from '@/contexts/CalendarContext';
 
 const WidgetSkeleton = ({ type }: { type?: string }) => (
   <OptimizedSkeleton variant={type as any} />
@@ -317,6 +318,13 @@ const DashboardGrid = () => {
     }
   };
 
+  // Calculate calendar date range for shared context
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const oneWeekFromNow = new Date(startOfToday);
+  oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+  oneWeekFromNow.setHours(23, 59, 59, 999);
+
   if (!loadedSettings) {
     return (
       <div className="grid-bg">
@@ -333,35 +341,41 @@ const DashboardGrid = () => {
   }
 
   return (
-    <div className="grid-bg">
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={30}
-        onLayoutChange={onLayoutChange}
-        isDraggable={!isLocked}
-        isResizable={!isLocked}
-        margin={[16, 16]}
-      >
-        {activeWidgets.map((key) => (
-          <div key={key} className="glass p-5 rounded-2xl flex flex-col">
-            <h2 className="widget-header">
-              {getWidgetIcon(key)}
-              {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
-            </h2>
-            <div className="widget-content">
-              {visibleWidgets.includes(key) ? (
-                memoizedWidgetComponents[key as WidgetType]
-              ) : (
-                <WidgetSkeleton type={key} />
-              )}
+    <CalendarProvider
+      startDate={startOfToday}
+      endDate={oneWeekFromNow}
+      enabled={!!user?.email}
+    >
+      <div className="grid-bg">
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={30}
+          onLayoutChange={onLayoutChange}
+          isDraggable={!isLocked}
+          isResizable={!isLocked}
+          margin={[16, 16]}
+        >
+          {activeWidgets.map((key) => (
+            <div key={key} className="glass p-5 rounded-2xl flex flex-col">
+              <h2 className="widget-header">
+                {getWidgetIcon(key)}
+                {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
+              </h2>
+              <div className="widget-content">
+                {visibleWidgets.includes(key) ? (
+                  memoizedWidgetComponents[key as WidgetType]
+                ) : (
+                  <WidgetSkeleton type={key} />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </ResponsiveGridLayout>
-    </div>
+          ))}
+        </ResponsiveGridLayout>
+      </div>
+    </CalendarProvider>
   );
 };
 
