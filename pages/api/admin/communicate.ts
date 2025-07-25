@@ -122,10 +122,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 function generateEmailTemplate(userName: string, message: string, messageType: string, signature: string): string {
   const typeConfig = {
-    announcement: { icon: '📢', color: '#2563eb', title: 'Announcement' },
-    notification: { icon: '🔔', color: '#059669', title: 'Notification' },
-    support: { icon: '🤝', color: '#7c3aed', title: 'Support Message' },
-    update: { icon: '🚀', color: '#dc2626', title: 'Update' },
+    announcement: { icon: '📢', color: '#FF6B6B', title: 'Announcement' }, // FloCoral
+    notification: { icon: '🔔', color: '#00C9A7', title: 'Notification' }, // FloTeal
+    support: { icon: '🤝', color: '#00C9A7', title: 'Support Message' }, // FloTeal
+    update: { icon: '🚀', color: '#FF6B6B', title: 'Update' }, // FloCoral
   } as const;
 
   const config = (typeConfig as any)[messageType] || typeConfig.notification;
@@ -137,66 +137,135 @@ function generateEmailTemplate(userName: string, message: string, messageType: s
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${config.title} - FloHub</title>
+      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
       <style>
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           line-height: 1.6;
-          color: #333;
+          color: #1E1E2F;
           max-width: 600px;
           margin: 0 auto;
           padding: 20px;
+          background-color: #FDFDFD;
         }
         .container {
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 30px;
+          background: #FDFDFD;
+          border-radius: 16px;
+          padding: 40px;
           margin: 20px 0;
+          box-shadow: 0 10px 25px rgba(30, 30, 47, 0.1);
         }
         .header {
           text-align: center;
-          margin-bottom: 30px;
-          border-bottom: 3px solid ${config.color};
-          padding-bottom: 20px;
+          margin-bottom: 40px;
+          padding-bottom: 30px;
+          border-bottom: 2px solid ${config.color};
         }
-        .logo {
-          font-size: 24px;
-          font-weight: bold;
-          color: ${config.color};
+        .logo-container {
+          margin-bottom: 20px;
+        }
+        .logo-text {
+          font-family: 'Poppins', sans-serif;
+          font-size: 28px;
+          font-weight: 700;
           margin-bottom: 10px;
+          color: #1E1E2F;
+        }
+        .flo {
+          color: #00C9A7;
+        }
+        .hub {
+          color: #FF6B6B;
+        }
+        .tagline {
+          font-size: 14px;
+          color: #9CA3AF;
+          font-style: italic;
+          margin-bottom: 20px;
+        }
+        .message-type {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: ${config.color};
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        .greeting {
+          font-size: 18px;
+          color: #1E1E2F;
+          margin: 30px 0 20px 0;
         }
         .message-content {
-          background: white;
-          padding: 20px;
-          border-radius: 6px;
-          margin: 20px 0;
+          background: #FDFDFD;
+          padding: 30px;
+          border-radius: 12px;
+          margin: 30px 0;
           border-left: 4px solid ${config.color};
+          border: 1px solid #E5E7EB;
+          font-size: 16px;
+          line-height: 1.6;
         }
         .footer {
-          margin-top: 30px;
+          margin-top: 40px;
           font-size: 14px;
-          color: #666;
+          color: #9CA3AF;
           text-align: center;
-          border-top: 1px solid #ddd;
-          padding-top: 20px;
+          border-top: 1px solid #E5E7EB;
+          padding-top: 30px;
+        }
+        .signature {
+          color: #1E1E2F;
+          font-weight: 500;
+          margin-bottom: 15px;
+        }
+        .disclaimer {
+          font-size: 12px;
+          color: #9CA3AF;
+        }
+        .flocat-emoji {
+          font-size: 20px;
+          margin-right: 5px;
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">${config.icon} FloHub</div>
-          <h1>${config.title}</h1>
+          <div class="logo-container">
+            <img src="${process.env.NEXTAUTH_URL || 'https://flohub.vercel.app'}/FloHub_Logo_Transparent.png" 
+                 alt="FloHub Logo" 
+                 style="max-width: 120px; height: auto; margin-bottom: 10px;" />
+          </div>
+          <div class="logo-text">
+            <span class="flo">Flo</span><span class="hub">Hub</span>
+          </div>
+          <div class="tagline">Work smarter, flow better.</div>
+          <div class="message-type">
+            <span>${config.icon}</span>
+            <span>${config.title}</span>
+          </div>
         </div>
         
-        <p>Hi ${userName},</p>
+        <div class="greeting">Hi ${userName},</div>
         
         <div class="message-content">
           ${message.replace(/\n/g, '<br>')}
         </div>
         
         <div class="footer">
-          <p>Best regards,<br>${signature}</p>
-          <p>You are receiving this message as you are a registered user of FloHub.</p>
+          <div class="signature">
+            Best regards,<br>
+            <strong>${signature}</strong>
+          </div>
+          <div class="disclaimer">
+            <span class="flocat-emoji">🐾</span>
+            You are receiving this message as you are a registered user of FloHub.<br>
+            <em>"Your day. Your way. Guided by Flo."</em>
+          </div>
         </div>
       </div>
     </body>
@@ -206,13 +275,19 @@ function generateEmailTemplate(userName: string, message: string, messageType: s
 
 function generatePlainTextEmail(userName: string, message: string, signature: string): string {
   return `
+FloHub - "Work smarter, flow better."
+================================
+
 Hi ${userName},
 
-  ${message}
+${message}
 
 Best regards,
 ${signature}
 
-You are receiving this message as you are a registered user of FloHub.
+🐾 You are receiving this message as you are a registered user of FloHub.
+"Your day. Your way. Guided by Flo."
+
+FloHub Team
   `;
 }
