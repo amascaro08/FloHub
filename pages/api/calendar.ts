@@ -569,7 +569,7 @@ export default async function handler(
               headers: {
                 'User-Agent': 'FloHub Calendar Integration/1.0'
               },
-              signal: AbortSignal.timeout(5000) // Quick test
+              signal: AbortSignal.timeout(15000) // 15 second timeout for debug
             });
             
             const contentType = testResponse.headers.get('content-type');

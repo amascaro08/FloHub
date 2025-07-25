@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         headers: {
           'User-Agent': 'FloHub Calendar Integration/1.0'
         },
-        signal: AbortSignal.timeout(10000) // 10 second timeout for initial test
+        signal: AbortSignal.timeout(30000) // 30 second timeout for initial test
       });
       
       responseInfo = {
@@ -69,6 +69,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
     } catch (fetchError: any) {
       console.error('Initial fetch failed:', fetchError);
+      
+      // Provide specific guidance for timeout errors
+      if (fetchError.name === 'TimeoutError' || fetchError.code === 23) {
+        return res.status(400).json({ 
+          error: 'PowerAutomate URL timeout',
+          details: 'Your PowerAutomate Logic App is taking longer than 30 seconds to respond. This usually means the Logic App is processing complex logic or querying external data sources.',
+          recommendations: [
+            'Check your Logic App performance in the Azure portal',
+            'Optimize any database queries or external API calls',
+            'Consider caching data if the Logic App runs complex logic',
+            'Verify the Logic App has data to return',
+            'Try accessing the URL directly in a browser to confirm it works'
+          ],
+          code: fetchError.code,
+          timeout: '30 seconds'
+        });
+      }
+      
       return res.status(400).json({ 
         error: 'Failed to fetch URL',
         details: fetchError.message,

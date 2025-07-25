@@ -4,7 +4,7 @@ This guide helps diagnose and resolve issues with PowerAutomate Logic App URLs t
 
 ## Problem Description
 
-**Issue**: PowerAutomate Logic App URL downloads a valid ICS file when accessed directly in a browser, but FloHub reports 0 events when testing the URL.
+**Issue**: PowerAutomate Logic App URL downloads a valid ICS file when accessed directly in a browser, but FloHub reports 0 events when testing the URL. The error "The operation was aborted due to timeout" indicates the Logic App is taking longer than expected to generate the iCal content.
 
 **Example URL Format**:
 ```
@@ -15,13 +15,15 @@ https://prod-63.australiasoutheast.logic.azure.com/workflows/fbf82878b8a3432fb79
 
 ### Enhanced Test Endpoint
 
-The `/api/calendar/test-ical` endpoint has been enhanced with comprehensive debugging:
+The `/api/calendar/test-ical` endpoint has been enhanced with comprehensive debugging and **30-second timeout**:
 
 **New Features**:
+- **Extended Timeout**: 30-second timeout to accommodate slow PowerAutomate Logic Apps
 - **Response Analysis**: Captures HTTP status, content-type, headers, and response length
 - **Content Validation**: Checks if response contains valid iCal structure (`BEGIN:VCALENDAR`)
 - **Response Preview**: Shows first 200 characters of the response for debugging
 - **Header Analysis**: Examines all response headers to identify format issues
+- **PowerAutomate-Specific Error Messages**: Detailed guidance for timeout issues
 
 **Usage**:
 1. Go to Settings → Calendar Settings
