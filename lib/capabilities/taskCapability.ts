@@ -166,6 +166,7 @@ async function addTask(args: string, userId: string): Promise<string> {
   let taskText = args;
   let dueDate: Date | undefined;
   let duePhrase: string | null = null;
+  let source = 'personal'; // default source
 
   // Handle different patterns of due date specification
   const dueDatePatterns = [
@@ -204,6 +205,14 @@ async function addTask(args: string, userId: string): Promise<string> {
     }
   }
 
+  // Extract source specification
+  const lowerArgs = args.toLowerCase();
+  if (lowerArgs.includes("work") || lowerArgs.includes("business")) {
+    source = 'work';
+  } else if (lowerArgs.includes("personal") || lowerArgs.includes("home")) {
+    source = 'personal';
+  }
+
   // Extract tags and priority
   const tags = extractTags(taskText);
   const priority = extractPriority(taskText);
@@ -221,11 +230,11 @@ async function addTask(args: string, userId: string): Promise<string> {
     text: taskText,
     dueDate: dueDate,
     tags: tags.length > 0 ? tags : null,
-    source: 'assistant',
+    source: source,
     done: false
   }).returning();
 
-  let response = `✅ Task "${taskText}" added successfully!`;
+  let response = `✅ Task "${taskText}" added successfully to your **${source}** tasks!`;
   
   if (dueDate) {
     response += ` Due: ${dueDate.toLocaleDateString()}`;

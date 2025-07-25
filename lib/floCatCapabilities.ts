@@ -51,7 +51,10 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
     if (capability.featureName === "Calendar Management") {
       // Handle calendar/schedule queries
       if (lowerInput.includes("schedule") || lowerInput.includes("calendar") || 
-          lowerInput.includes("events") || lowerInput.includes("agenda")) {
+          lowerInput.includes("events") || lowerInput.includes("agenda") ||
+          lowerInput.includes("meeting") || lowerInput.includes("first meeting") ||
+          lowerInput.includes("next meeting") || lowerInput.includes("what do i have") ||
+          lowerInput.includes("what's on")) {
         
         if (lowerInput.includes("today")) {
           const command = "today";

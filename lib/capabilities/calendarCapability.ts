@@ -35,7 +35,13 @@ async function handleCalendarCommand(command: string, args: string, userId: stri
 async function showCalendarEvents(args: string, userId: string): Promise<string> {
   const lowerArgs = args.toLowerCase();
   
-  if (lowerArgs.includes("today")) {
+  // Check for specific day queries
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const matchedDay = dayNames.find(day => lowerArgs.includes(day));
+  
+  if (matchedDay) {
+    return await showSpecificDayEvents(matchedDay, args, userId);
+  } else if (lowerArgs.includes("today")) {
     return await showTodayEvents(userId);
   } else if (lowerArgs.includes("tomorrow")) {
     return await showTomorrowEvents(userId);
@@ -44,6 +50,78 @@ async function showCalendarEvents(args: string, userId: string): Promise<string>
   } else {
     // Default to upcoming events
     return await showUpcomingEvents(userId);
+  }
+}
+
+async function showSpecificDayEvents(dayName: string, args: string, userId: string): Promise<string> {
+  try {
+    const lowerArgs = args.toLowerCase();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayIndex = dayNames.indexOf(dayName.toLowerCase());
+    
+    const now = new Date();
+    const currentDay = now.getDay();
+    let daysToAdd = (dayIndex - currentDay + 7) % 7;
+    if (daysToAdd === 0 && !lowerArgs.includes("today")) daysToAdd = 7; // Next week if same day
+    
+    const targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + daysToAdd);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const contextData = (global as any).currentContextData;
+    const events = contextData?.events || contextData?.allEvents || [];
+    
+    const dayEvents = events.filter((event: any) => {
+      const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+      return eventDate >= targetDate && eventDate < nextDay;
+    });
+
+    const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+    if (dayEvents.length === 0) {
+      return `📅 No events scheduled for ${capitalizedDay}! ✨`;
+    }
+
+    if (lowerArgs.includes("first meeting") || lowerArgs.includes("next meeting")) {
+      // Show only the first meeting
+      const firstEvent = dayEvents[0];
+      const time = new Date(firstEvent.start?.dateTime || firstEvent.start?.date || firstEvent.start).toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      let response = `📅 **Your first meeting on ${capitalizedDay}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
+      if (firstEvent.location) {
+        response += `  📍 ${firstEvent.location}\n`;
+      }
+      if (firstEvent.description) {
+        response += `  📝 ${firstEvent.description.substring(0, 100)}${firstEvent.description.length > 100 ? '...' : ''}\n`;
+      }
+      return response;
+    } else {
+      // Show all events for the day
+      let response = `📅 **${capitalizedDay}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
+      
+      dayEvents.forEach((event: any) => {
+        const time = new Date(event.start?.dateTime || event.start?.date || event.start).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        response += `• ${time} - **${event.summary}**\n`;
+        if (event.location) {
+          response += `  📍 ${event.location}\n`;
+        }
+      });
+
+      return response;
+    }
+  } catch (error) {
+    console.error("Error showing specific day events:", error);
+    return "Sorry, I couldn't retrieve events for that day. Please try again.";
   }
 }
 
@@ -243,7 +321,11 @@ export const calendarCapability: FloCatCapability = {
     "today's events", "today's schedule", "what's today", "what do I have today",
     "tomorrow's events", "tomorrow's schedule", "what's tomorrow", "what do I have tomorrow",
     "this week", "weekly schedule", "week's events", "show schedule",
-    "upcoming events", "what's coming up", "my schedule", "calendar events"
+    "upcoming events", "what's coming up", "my schedule", "calendar events",
+    "first meeting", "next meeting", "meeting on", "events on",
+    "what do I have on", "what's on", "meetings on monday", "meetings on tuesday",
+    "meetings on wednesday", "meetings on thursday", "meetings on friday",
+    "meetings on saturday", "meetings on sunday", "my meetings", "show meetings"
   ],
   handler: async (command: string, args: string) => {
     const userId = (global as any).currentUserId;

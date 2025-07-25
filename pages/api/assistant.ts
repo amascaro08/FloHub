@@ -173,7 +173,16 @@ export default async function handler(
       lowerPrompt.includes("meetings") || lowerPrompt.includes("my meetings") ||
       lowerPrompt.includes("calendar") || lowerPrompt.includes("my calendar") ||
       lowerPrompt.includes("agenda") || lowerPrompt.includes("today's events") ||
-      lowerPrompt.includes("upcoming events") || lowerPrompt.includes("what's on my calendar")) {
+      lowerPrompt.includes("upcoming events") || lowerPrompt.includes("what's on my calendar") ||
+      lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting") ||
+      lowerPrompt.includes("meeting on") || lowerPrompt.includes("events on") ||
+      lowerPrompt.includes("what do i have on") || lowerPrompt.includes("what's on") ||
+      (lowerPrompt.includes("meeting") && (lowerPrompt.includes("monday") || lowerPrompt.includes("tuesday") || 
+       lowerPrompt.includes("wednesday") || lowerPrompt.includes("thursday") || lowerPrompt.includes("friday") ||
+       lowerPrompt.includes("saturday") || lowerPrompt.includes("sunday") || lowerPrompt.includes("today") ||
+       lowerPrompt.includes("tomorrow"))) ||
+      (lowerPrompt.includes("what") && (lowerPrompt.includes("today") || lowerPrompt.includes("tomorrow")) && 
+       (lowerPrompt.includes("meeting") || lowerPrompt.includes("event") || lowerPrompt.includes("schedule")))) {
     
     try {
       // Fetch calendar events for the next 7 days
@@ -210,7 +219,64 @@ export default async function handler(
         // Generate schedule response
         let scheduleResponse = "";
         
-        if (lowerPrompt.includes("today") || lowerPrompt.includes("today's")) {
+        // Handle specific day queries
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const matchedDay = dayNames.find(day => lowerPrompt.includes(day));
+        
+        if (matchedDay) {
+          // Filter events for the specific day
+          const dayIndex = dayNames.indexOf(matchedDay);
+          const targetDate = new Date();
+          const currentDay = targetDate.getDay();
+          let daysToAdd = (dayIndex - currentDay + 7) % 7;
+          if (daysToAdd === 0 && !lowerPrompt.includes("today")) daysToAdd = 7; // Next week if same day
+          targetDate.setDate(targetDate.getDate() + daysToAdd);
+          
+          const nextDay = new Date(targetDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          
+          const dayEvents = events.filter((event: any) => {
+            const eventDate = new Date(event.start?.dateTime || event.start?.date);
+            return eventDate >= targetDate && eventDate < nextDay;
+          });
+          
+          const dayName = matchedDay.charAt(0).toUpperCase() + matchedDay.slice(1);
+          
+          if (dayEvents.length === 0) {
+            scheduleResponse = `📅 No events scheduled for ${dayName}! ✨`;
+          } else {
+            if (lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting")) {
+              // Show only the first meeting
+              const firstEvent = dayEvents[0];
+              const time = new Date(firstEvent.start?.dateTime || firstEvent.start?.date).toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+              });
+              scheduleResponse = `📅 **Your first meeting on ${dayName}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
+              if (firstEvent.location) {
+                scheduleResponse += `  📍 ${firstEvent.location}\n`;
+              }
+              if (firstEvent.description) {
+                scheduleResponse += `  📝 ${firstEvent.description.substring(0, 100)}${firstEvent.description.length > 100 ? '...' : ''}\n`;
+              }
+            } else {
+              // Show all events for the day
+              scheduleResponse = `📅 **${dayName}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
+              dayEvents.forEach((event: any) => {
+                const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit', 
+                  hour12: true 
+                });
+                scheduleResponse += `• ${time} - **${event.summary}**\n`;
+                if (event.location) {
+                  scheduleResponse += `  📍 ${event.location}\n`;
+                }
+              });
+            }
+          }
+        } else if (lowerPrompt.includes("today") || lowerPrompt.includes("today's")) {
           scheduleResponse = `📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n\n`;
           
           if (todayEvents.length > 0) {
@@ -384,10 +450,45 @@ export default async function handler(
       
       if (finalTaskText) {
         const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
-        const payload: any = { text: finalTaskText };
+        
+        // Check for source specification
+        const hasSourceSpecified = lowerPrompt.includes("work") || lowerPrompt.includes("personal") || 
+                                   lowerPrompt.includes("business") || lowerPrompt.includes("home");
+        
+        // Check if user specified source or due date
+        const needsMoreInfo = !hasSourceSpecified || !dueDate;
+        
+        if (needsMoreInfo) {
+          let questions = [];
+          
+          if (!hasSourceSpecified) {
+            questions.push("📂 **Source**: Should this be a **work** or **personal** task?");
+          }
+          
+          if (!dueDate) {
+            questions.push("📅 **Due Date**: When would you like this task to be due? (e.g., today, tomorrow, next Friday, or no due date)");
+          }
+          
+          const questionText = questions.join("\n\n");
+          
+          return res.status(200).json({
+            reply: `I'll help you create the task "${finalTaskText}"! I just need a bit more information:\n\n${questionText}\n\nPlease let me know and I'll create the task with those details! 😺`
+          });
+        }
+        
+        // Determine source
+        let source = 'personal'; // default
+        if (lowerPrompt.includes("work") || lowerPrompt.includes("business")) {
+          source = 'work';
+        }
+        
+        const payload: any = { 
+          text: finalTaskText,
+          source: source
+        };
         if (dueDate) payload.dueDate = dueDate;
 
-        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", due: ${dueDate}, duePhrase: "${duePhrase}"`);
+        console.log(`[DEBUG] Creating task via direct API: "${finalTaskText}", source: ${source}, due: ${dueDate}, duePhrase: "${duePhrase}"`);
         
         try {
           const taskResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tasks`, {
@@ -403,7 +504,7 @@ export default async function handler(
             const createdTask = await taskResponse.json();
             console.log(`[DEBUG] Task created successfully:`, createdTask);
             return res.status(200).json({
-              reply: `✅ Task "${finalTaskText}" added successfully${dueDate ? ` (due ${duePhrase})` : ""}!`,
+              reply: `✅ Task "${finalTaskText}" added successfully to your **${source}** tasks${dueDate ? ` (due ${duePhrase})` : ""}! 🎯`,
             });
           } else {
             const errorData = await taskResponse.text();
