@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
-import { users, userSettings, sessions } from '@/db/schema';
+import { users, userSettings, sessions, analytics } from '@/db/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,15 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         name: users.name,
         email: users.email,
         createdAt: users.createdAt,
-        lastActive: sql<Date>`(
+        lastActive: sql<Date | null>`(
           SELECT MAX(timestamp) 
-          FROM analytics_users_durations 
-          WHERE "userId" = users.email
+          FROM analytics 
+          WHERE user_email = users.email
         )`.as('lastActive'),
         totalSessions: sql<number>`(
-          SELECT COUNT(*) 
-          FROM analytics_users_durations 
-          WHERE "userId" = users.email
+          COALESCE((
+            SELECT COUNT(DISTINCT DATE(timestamp)) 
+            FROM analytics 
+            WHERE user_email = users.email
+          ), 0)
         )`.as('totalSessions'),
         floCatStyle: userSettings.floCatStyle,
         preferredName: userSettings.preferredName,
@@ -51,11 +53,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activeUsersCount = await db
-      .select({ count: count() })
-      .from(analyticsUsersDurations)
-      .where(gte(analyticsUsersDurations.timestamp, thirtyDaysAgo))
-      .groupBy(analyticsUsersDurations.userId);
+    const activeUsersData = await db
+      .select({ user_email: analytics.user_email })
+      .from(analytics)
+      .where(gte(analytics.timestamp, thirtyDaysAgo))
+      .groupBy(analytics.user_email);
+    
+    const activeUsersCount = activeUsersData.length;
 
     // Get user registration stats over time
     const registrationStats = await db
@@ -68,11 +72,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .groupBy(sql`DATE(created_at)`)
       .orderBy(sql`DATE(created_at)`);
 
+    console.log('Users found:', usersWithDetails.length);
+    console.log('Sample user:', usersWithDetails[0]);
+
     res.status(200).json({
       users: usersWithDetails,
       stats: {
         totalUsers: usersWithDetails.length,
-        activeUsers30Days: activeUsersCount.length,
+        activeUsers30Days: activeUsersCount,
         registrationStats,
       },
     });
