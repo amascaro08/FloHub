@@ -125,9 +125,9 @@ function generateEmailTemplate(userName: string, message: string, messageType: s
     notification: { icon: '🔔', color: '#059669', title: 'Notification' },
     support: { icon: '🤝', color: '#7c3aed', title: 'Support Message' },
     update: { icon: '🚀', color: '#dc2626', title: 'Update' },
-  };
+  } as const;
 
-  const config = typeConfig[messageType] || typeConfig.notification;
+  const config = (typeConfig as any)[messageType] || typeConfig.notification;
 
   return `
     <!DOCTYPE html>
