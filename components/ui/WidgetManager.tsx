@@ -24,6 +24,12 @@ const availableWidgets: WidgetConfig[] = [
     component: "AtAGlanceWidget",
   },
   {
+    id: "smart-ataglance",
+    name: "Smart At a Glance",
+    description: "AI-powered intelligent dashboard with insights and quick actions",
+    component: "SmartAtAGlanceWidget",
+  },
+  {
     id: "quicknote",
     name: "Quick Note",
     description: "Create and view quick notes",
