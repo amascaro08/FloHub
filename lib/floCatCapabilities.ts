@@ -1,6 +1,7 @@
 // lib/floCatCapabilities.ts
 import { habitCapability } from './capabilities/habitCapability';
 import { taskCapability } from './capabilities/taskCapability';
+import { calendarCapability } from './capabilities/calendarCapability';
 
 /**
  * Defines the structure for a FloCat capability.
@@ -19,6 +20,7 @@ export interface FloCatCapability {
 
 // Register all capabilities here
 export const floCatCapabilities: FloCatCapability[] = [
+  calendarCapability,
   habitCapability,
   taskCapability,
   // Add more capabilities as they are developed
@@ -46,6 +48,38 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
     console.log(`[DEBUG] Checking capability: ${capability.featureName}`);
     
     // Flexible matching for common variations (check this first for better results)
+    if (capability.featureName === "Calendar Management") {
+      // Handle calendar/schedule queries
+      if (lowerInput.includes("schedule") || lowerInput.includes("calendar") || 
+          lowerInput.includes("events") || lowerInput.includes("agenda") ||
+          lowerInput.includes("meeting") || lowerInput.includes("first meeting") ||
+          lowerInput.includes("next meeting") || lowerInput.includes("what do i have") ||
+          lowerInput.includes("what's on")) {
+        
+        if (lowerInput.includes("today")) {
+          const command = "today";
+          const args = "";
+          console.log(`[DEBUG] Calendar today match found`);
+          return { capability, command, args };
+        } else if (lowerInput.includes("tomorrow")) {
+          const command = "tomorrow";
+          const args = "";
+          console.log(`[DEBUG] Calendar tomorrow match found`);
+          return { capability, command, args };
+        } else if (lowerInput.includes("week")) {
+          const command = "week";
+          const args = "";
+          console.log(`[DEBUG] Calendar week match found`);
+          return { capability, command, args };
+        } else {
+          const command = "show";
+          const args = userInput;
+          console.log(`[DEBUG] Calendar show match found. Args: "${args}"`);
+          return { capability, command, args };
+        }
+      }
+    }
+    
     if (capability.featureName === "Task Management") {
       // Handle variations like "add a task", "create new task", etc.
       if ((lowerInput.includes("add") || lowerInput.includes("create") || lowerInput.includes("new") || lowerInput.includes("make")) && 
