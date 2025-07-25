@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const responseText = await testResponse.text();
       responseInfo.responseLength = responseText.length;
-      responseInfo.responsePreview = responseText.substring(0, 200) + (responseText.length > 200 ? '...' : '');
+      responseInfo.responsePreview = responseText.substring(0, 500) + (responseText.length > 500 ? '...' : '');
       
       console.log('PowerAutomate Response Info:', responseInfo);
       
@@ -64,6 +64,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           details: 'Response does not contain BEGIN:VCALENDAR',
           responseInfo,
           responsePreview: responseInfo.responsePreview
+        });
+      }
+      
+      // Check for mixed JSON/iCal content (common PowerAutomate issue)
+      if (responseText.includes('{"ical"') || responseText.includes('"ical":')) {
+        return res.status(400).json({ 
+          error: 'PowerAutomate Logic App format issue',
+          details: 'Your Logic App is returning JSON with embedded iCal instead of pure iCal content. The response contains both iCal headers and JSON data.',
+          issue: 'Mixed JSON/iCal format detected',
+          responseInfo,
+          responsePreview: responseInfo.responsePreview,
+          recommendations: [
+            'Update your PowerAutomate Logic App Response action to return only the iCal content string',
+            'Remove any JSON wrapping around the iCal data',
+            'Ensure the Response body contains raw iCal text, not a JSON object with an "ical" property',
+            'Set Content-Type to "text/calendar" without JSON formatting'
+          ]
         });
       }
       

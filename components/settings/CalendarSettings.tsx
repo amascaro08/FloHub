@@ -105,9 +105,11 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         const errorData = await response.json();
         console.error('iCal URL test failed:', errorData);
         
-        // Show detailed error message for PowerAutomate timeouts
+        // Show detailed error message for PowerAutomate issues
         if (errorData.error === 'PowerAutomate URL timeout') {
           alert(`PowerAutomate Logic App Timeout (${errorData.timeout})\n\n${errorData.details}\n\nRecommendations:\n${errorData.recommendations.map((rec: string) => `• ${rec}`).join('\n')}`);
+        } else if (errorData.error === 'PowerAutomate Logic App format issue') {
+          alert(`PowerAutomate Format Issue Detected\n\n${errorData.details}\n\nIssue: ${errorData.issue}\n\nHow to Fix:\n${errorData.recommendations.map((rec: string) => `• ${rec}`).join('\n')}\n\nResponse Preview:\n${errorData.responsePreview}`);
         } else {
           alert(`iCal URL test failed: ${errorData.error || 'Unknown error'}`);
         }
