@@ -657,6 +657,21 @@ export default async function handler(
     o365Results.forEach(events => allEvents.push(...events));
     icalResults.forEach(events => allEvents.push(...events));
 
+    // Sort events by start time to ensure proper ordering
+    allEvents.sort((a, b) => {
+      const aStart = a.start?.dateTime || a.start?.date;
+      const bStart = b.start?.dateTime || b.start?.date;
+      
+      if (!aStart && !bStart) return 0;
+      if (!aStart) return 1;
+      if (!bStart) return -1;
+      
+      const aTime = new Date(aStart).getTime();
+      const bTime = new Date(bStart).getTime();
+      
+      return aTime - bTime;
+    });
+
     console.log(`Total events fetched: ${allEvents.length}`);
     return res.status(200).json({ events: allEvents });
   } else if (req.method === "POST") {

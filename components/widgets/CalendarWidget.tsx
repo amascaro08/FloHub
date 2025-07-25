@@ -308,7 +308,14 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                           : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                       }`}
                     >
-                      <div className="font-medium">{event.summary}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {event.summary}
+                        {event.isRecurring && (
+                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded">
+                            🔄
+                          </span>
+                        )}
+                      </div>
                       {(() => {
                         let startTime: string | null = null;
                         
