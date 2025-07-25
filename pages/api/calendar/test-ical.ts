@@ -32,6 +32,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Testing iCal URL:', processedUrl);
 
+    // First, let's check what the URL returns with a basic fetch
+    let responseInfo: any = {};
+    try {
+      const testResponse = await fetch(processedUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'FloHub Calendar Integration/1.0'
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout for initial test
+      });
+      
+      responseInfo = {
+        status: testResponse.status,
+        statusText: testResponse.statusText,
+        contentType: testResponse.headers.get('content-type'),
+        contentLength: testResponse.headers.get('content-length'),
+        headers: Object.fromEntries(testResponse.headers.entries())
+      };
+      
+      const responseText = await testResponse.text();
+      responseInfo.responseLength = responseText.length;
+      responseInfo.responsePreview = responseText.substring(0, 200) + (responseText.length > 200 ? '...' : '');
+      
+      console.log('PowerAutomate Response Info:', responseInfo);
+      
+      // Check if response looks like iCal
+      if (!responseText.includes('BEGIN:VCALENDAR')) {
+        return res.status(400).json({ 
+          error: 'URL does not return valid iCal data',
+          details: 'Response does not contain BEGIN:VCALENDAR',
+          responseInfo,
+          responsePreview: responseInfo.responsePreview
+        });
+      }
+      
+    } catch (fetchError: any) {
+      console.error('Initial fetch failed:', fetchError);
+      return res.status(400).json({ 
+        error: 'Failed to fetch URL',
+        details: fetchError.message,
+        code: fetchError.code
+      });
+    }
+
     // Parse the iCal feed with proper timeout
     const events = await ical.async.fromURL(processedUrl, {
       timeout: 30000, // 30 second timeout
@@ -78,6 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       eventCount,
       upcomingEvents,
       calendarInfo,
+      responseInfo,
       message: `Successfully parsed iCal feed with ${eventCount} total events (${upcomingEvents} upcoming)`
     });
 

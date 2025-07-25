@@ -560,6 +560,33 @@ export default async function handler(
           processedUrl = 'https://' + processedUrl.substring(9);
         }
 
+        // Add extra debugging for PowerAutomate URLs
+        if (processedUrl.includes('logic.azure.com')) {
+          console.log('PowerAutomate URL detected, adding extra debugging...');
+          try {
+            const testResponse = await fetch(processedUrl, {
+              method: 'GET',
+              headers: {
+                'User-Agent': 'FloHub Calendar Integration/1.0'
+              },
+              signal: AbortSignal.timeout(5000) // Quick test
+            });
+            
+            const contentType = testResponse.headers.get('content-type');
+            const responseText = await testResponse.text();
+            
+            console.log('PowerAutomate Debug:', {
+              status: testResponse.status,
+              contentType,
+              responseLength: responseText.length,
+              hasVCalendar: responseText.includes('BEGIN:VCALENDAR'),
+              responseStart: responseText.substring(0, 100)
+            });
+          } catch (debugError) {
+            console.log('PowerAutomate debug fetch failed:', debugError);
+          }
+        }
+
                  // Parse the iCal feed with proper timeout
          const events = await ical.async.fromURL(processedUrl, {
            timeout: 30000, // 30 second timeout
