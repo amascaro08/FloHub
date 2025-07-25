@@ -162,7 +162,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       });
 
       // Cache each source separately in IndexedDB
-      for (const [key, sourceEvents] of eventsBySource) {
+      for (const [key, sourceEvents] of Array.from(eventsBySource.entries())) {
         const [source, calendarId] = key.split('_', 2);
         await calendarCache.cacheEvents(
           sourceEvents,

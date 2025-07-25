@@ -1,6 +1,6 @@
 import React from 'react';
 import { XMarkIcon, CalendarIcon, ClockIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import { CalendarEvent } from '@/types/calendar';
+import { CalendarEvent, CalendarEventDateTime } from '@/types/calendar';
 import { format } from 'date-fns';
 
 interface EventDetailModalProps {
@@ -36,6 +36,15 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onCl
     return null;
   };
 
+  // Check if event is all-day
+  const isAllDay = () => {
+    if (event.start instanceof Date) {
+      return false; // Date objects are always time-specific
+    } else {
+      return event.start?.date && !event.start?.dateTime;
+    }
+  };
+
   // Extract Teams links from description
   const extractTeamsLinks = (description: string): string[] => {
     const teamsRegex = /(https?:\/\/teams\.microsoft\.com\/[^\s]+)/gi;
@@ -54,6 +63,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onCl
   const endTime = getEndTime();
   const teamsLinks = event.description ? extractTeamsLinks(event.description) : [];
   const parsedDescription = event.description ? parseHTMLContent(event.description) : '';
+  const allDay = isAllDay();
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -110,8 +120,8 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onCl
                   </p>
                   {startTime && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {event.start?.date ? 'All day' : format(startTime, 'h:mm a')}
-                      {endTime && !event.end?.date && (
+                      {allDay ? 'All day' : format(startTime, 'h:mm a')}
+                      {endTime && !allDay && (
                         <span> - {format(endTime, 'h:mm a')}</span>
                       )}
                     </p>
@@ -120,11 +130,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onCl
               </div>
 
               {/* Location if available */}
-              {(event as any).location && (
+              {event.location && (
                 <div className="flex items-start space-x-3">
                   <MapPinIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {(event as any).location}
+                    {event.location}
                   </p>
                 </div>
               )}
