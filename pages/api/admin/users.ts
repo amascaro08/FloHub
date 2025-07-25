@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
-import { users, userSettings, sessions, analyticsUsersDurations } from '@/db/schema';
+import { users, userSettings, sessions } from '@/db/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

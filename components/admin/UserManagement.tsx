@@ -246,13 +246,9 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Users className="w-6 h-6" />
-          User Management
-        </h1>
+    <div className="space-y-6">
+      {/* Action Buttons */}
+      <div className="flex justify-end items-center">
         <div className="flex gap-2">
           <button
             onClick={() => {
