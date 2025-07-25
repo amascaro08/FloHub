@@ -59,7 +59,7 @@ export default async function handler(
           customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
           powerAutomateUrl: "",
           globalTags: [],
-          activeWidgets: ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+          activeWidgets: ["tasks", "calendar", "smart-ataglance", "quicknote", "habit-tracker"],
           floCatStyle: "default",
           floCatPersonality: [],
           preferredName: "",
@@ -90,7 +90,7 @@ export default async function handler(
         customRange: (data.customRange as any) || { start: "", end: "" }, // Ensure it's an object
         powerAutomateUrl: data.powerAutomateUrl || "",
         globalTags: (data.globalTags as string[]) || [],
-        activeWidgets: (data.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        activeWidgets: (data.activeWidgets as string[]) || ["tasks", "calendar", "smart-ataglance", "quicknote", "habit-tracker"],
         floCatStyle: data.floCatStyle as UserSettings['floCatStyle'] || "default",
         floCatPersonality: (data.floCatPersonality as string[]) || [],
         preferredName: data.preferredName || "",

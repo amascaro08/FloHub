@@ -35,7 +35,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
 };
 
 // Default widget order for mobile
-const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
+const defaultWidgetOrder: WidgetType[] = ["smart-ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
 
 export default function MobileDashboard() {
   const isClient = typeof window !== 'undefined';

@@ -265,7 +265,7 @@ const DashboardGrid = () => {
     if (!loadedSettings || activeWidgets.length === 0) return;
 
     // Priority order for widget loading
-    const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
+            const priority = ["smart-ataglance", "ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
     const sortedWidgets = activeWidgets.sort((a, b) => {
       const aIndex = priority.indexOf(a);
       const bIndex = priority.indexOf(b);
