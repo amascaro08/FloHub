@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserSettings, CalendarSource } from '../../types/app';
 
 type CalItem = { id: string; summary: string; primary?: boolean };
-type CalendarSourceType = "google" | "o365" | "apple" | "other";
+type CalendarSourceType = "google" | "o365" | "apple" | "ical" | "other";
 
 interface CalendarSettingsProps {
   settings: UserSettings;
@@ -84,6 +84,46 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
     }
   };
 
+  // Test iCal URL
+  const testICalUrl = async (url: string) => {
+    setTestingUrl(url);
+    try {
+      const response = await fetch('/api/calendar/test-ical', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('iCal URL test successful:', result);
+        alert(`iCal URL is working correctly! Found ${result.eventCount || 0} events.`);
+        return true;
+      } else {
+        const errorData = await response.json();
+        console.error('iCal URL test failed:', errorData);
+        
+        // Show detailed error message for PowerAutomate issues
+        if (errorData.error === 'PowerAutomate URL timeout') {
+          alert(`PowerAutomate Logic App Timeout (${errorData.timeout})\n\n${errorData.details}\n\nRecommendations:\n${errorData.recommendations.map((rec: string) => `• ${rec}`).join('\n')}`);
+        } else if (errorData.error === 'PowerAutomate Logic App format issue') {
+          alert(`PowerAutomate Format Issue Detected\n\n${errorData.details}\n\nIssue: ${errorData.issue}\n\nHow to Fix:\n${errorData.recommendations.map((rec: string) => `• ${rec}`).join('\n')}\n\nResponse Preview:\n${errorData.responsePreview}`);
+        } else {
+          alert(`iCal URL test failed: ${errorData.error || 'Unknown error'}`);
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('Error testing iCal URL:', error);
+      alert('Error testing iCal URL. Please check the URL and try again.');
+      return false;
+    } finally {
+      setTestingUrl(null);
+    }
+  };
+
   // Check connection status on component mount
   useEffect(() => {
     testGoogleConnection();
@@ -150,6 +190,20 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               </div>
             </div>
           ))}
+          {settings.calendarSources?.filter(s => s.type === 'ical').map(source => (
+            <div key={source.id} className="flex items-center justify-between">
+              <span className="truncate">{source.name}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => source.connectionData && testICalUrl(source.connectionData)}
+                  disabled={testingUrl === source.connectionData}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                >
+                  {testingUrl === source.connectionData ? 'Testing...' : 'Test'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -204,6 +258,91 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
             >
               Add Power Automate URL
             </button>
+            <button
+              onClick={() => {
+                const calendarName = prompt("Please enter a name for this calendar:", "My iCal Calendar");
+                if (!calendarName || !calendarName.trim()) {
+                  return;
+                }
+                
+                const icalUrl = prompt(
+                  "Please enter your iCal URL:\n\n" +
+                  "📅 GOOGLE CALENDAR SECRET URL:\n" +
+                  "Go to Google Calendar Settings → [Calendar Name] → Integrate Calendar → Copy 'Secret address in iCal format'\n" +
+                  "Format: https://calendar.google.com/calendar/ical/[email]/private-[secret]/basic.ics\n\n" +
+                  "🏢 OUTLOOK/OFFICE 365:\n" +
+                  "Go to Outlook Calendar Settings → Shared Calendars → Publish → Copy ICS link\n" +
+                  "Format: https://outlook.live.com/calendar/published/[id]/calendar.ics\n\n" +
+                  "🔗 OTHER ICAL FEEDS:\n" +
+                  "• PowerAutomate Logic Apps: https://[region].logic.azure.com/workflows/.../invoke\n" +
+                  "• Public calendars: https://example.com/calendar.ics\n" +
+                  "• Webcal links: webcal://example.com/calendar.ics\n\n" +
+                  "⚠️ IMPORTANT: Use SECRET/PRIVATE URLs for your own calendars for security!"
+                );
+                if (icalUrl && icalUrl.trim()) {
+                  let processedUrl = icalUrl.trim();
+                  
+                  // Convert webcal:// to https://
+                  if (processedUrl.startsWith('webcal://')) {
+                    processedUrl = 'https://' + processedUrl.substring(9);
+                  }
+                  
+                  if (!processedUrl.startsWith('http')) {
+                    alert('Please enter a valid HTTP/HTTPS URL or webcal:// URL');
+                    return;
+                  }
+                  
+                  // Detect calendar provider and set appropriate defaults
+                  let calendarProvider = "other";
+                  let defaultTags = ["personal"];
+                  
+                  if (processedUrl.includes('calendar.google.com')) {
+                    calendarProvider = "Google Calendar (iCal)";
+                    if (processedUrl.includes('/private-')) {
+                      defaultTags = ["personal", "google-secret"];
+                    } else {
+                      defaultTags = ["personal", "google-public"];
+                    }
+                  } else if (processedUrl.includes('outlook.live.com') || processedUrl.includes('outlook.office365.com')) {
+                    calendarProvider = "Outlook Calendar (iCal)";
+                    defaultTags = ["personal", "outlook"];
+                  } else if (processedUrl.includes('logic.azure.com')) {
+                    calendarProvider = "PowerAutomate (iCal)";
+                    defaultTags = ["work", "powerautomate"];
+                  }
+                  
+                  // Create a new calendar source for the iCal URL
+                  const newSource: CalendarSource = {
+                    id: `ical_${Date.now()}`,
+                    name: calendarName.trim(),
+                    type: "ical",
+                    sourceId: "default",
+                    connectionData: processedUrl,
+                    tags: defaultTags,
+                    isEnabled: true,
+                  };
+                  
+                  const updatedSources = settings.calendarSources ? [...settings.calendarSources, newSource] : [newSource];
+                  
+                  onSettingsChange({
+                    ...settings,
+                    calendarSources: updatedSources,
+                  });
+                  
+                  // Show helpful message based on provider
+                  if (processedUrl.includes('calendar.google.com') && processedUrl.includes('/private-')) {
+                    alert(`✅ Google Calendar secret URL added successfully!\n\nThis is a secure private feed that only you can access. Your calendar events will sync automatically.\n\nNote: If you regenerate the secret URL in Google Calendar, you'll need to update it here.`);
+                  } else if (processedUrl.includes('outlook.live.com') || processedUrl.includes('outlook.office365.com')) {
+                    alert(`✅ Outlook Calendar URL added successfully!\n\nYour Outlook calendar events will sync automatically.\n\nNote: If you change the publishing settings in Outlook, you may need to update the URL here.`);
+                  } else if (processedUrl.includes('logic.azure.com')) {
+                    alert(`✅ PowerAutomate iCal URL added successfully!\n\nThis Logic App will generate your calendar events in iCal format.\n\nNote: Make sure your Logic App is published and publicly accessible.`);
+                  }
+                }
+              }}
+              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+            >
+              Add iCal Calendar
+            </button>
           </div>
         </div>
         
@@ -218,9 +357,10 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                       {source.type === "google" ? "Google Calendar" :
                        source.type === "o365" ? "Microsoft 365" :
-                       source.type === "apple" ? "Apple Calendar" : "Other Calendar"}
+                       source.type === "apple" ? "Apple Calendar" :
+                       source.type === "ical" ? "iCal Feed" : "Other Calendar"}
                     </div>
-                    {source.connectionData && source.type === "o365" && (
+                    {source.connectionData && (source.type === "o365" || source.type === "ical") && (
                       <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 break-all">
                         URL: {source.connectionData.length > 60 ? 
                           `${source.connectionData.substring(0, 60)}...` : 
@@ -251,6 +391,15 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     {source.type === "o365" && source.connectionData && (
                       <button
                         onClick={() => testPowerAutomateUrl(source.connectionData!)}
+                        disabled={testingUrl === source.connectionData}
+                        className="text-xs text-green-600 hover:text-green-800 underline disabled:opacity-50"
+                      >
+                        {testingUrl === source.connectionData ? 'Testing...' : 'Test URL'}
+                      </button>
+                    )}
+                    {source.type === "ical" && source.connectionData && (
+                      <button
+                        onClick={() => testICalUrl(source.connectionData!)}
                         disabled={testingUrl === source.connectionData}
                         className="text-xs text-green-600 hover:text-green-800 underline disabled:opacity-50"
                       >
@@ -311,6 +460,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               <div className="space-y-2 text-sm">
                 <p>• <strong>Google Calendar:</strong> Full sync with your Google events</p>
                 <p>• <strong>Power Automate:</strong> Connect Office 365 or other calendar systems</p>
+                <p>• <strong>iCal Feed:</strong> Subscribe to private/secret iCal URLs (Google, Outlook) or public feeds</p>
               </div>
               <div className="mt-6 space-x-2">
                 <button
@@ -376,6 +526,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
           <p><strong>Google Calendar:</strong> If you see "Not Connected", click "Add Google Calendar" to authorize access.</p>
           <p><strong>Power Automate URL:</strong> Make sure your URL returns JSON data and is accessible from the internet. Use the "Test URL" button to verify.</p>
+          <p><strong>iCal Calendar:</strong> Use SECRET/PRIVATE iCal URLs for your own calendars (Google, Outlook) or public feeds. Supports http/https and webcal:// URLs. For Google Calendar, use the "Secret address in iCal format" from calendar settings for security.</p>
           <p><strong>No Events Showing:</strong> Check that your calendar sources are enabled and that you have events in the selected date range.</p>
         </div>
       </section>

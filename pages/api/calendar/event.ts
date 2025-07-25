@@ -72,12 +72,18 @@ export default async function handler(
     }
     
     // Check if this is a Google Calendar or another type
-    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('other_');
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_');
     // Check if this is an OAuth-based O365 calendar
     const isO365OAuth = calendarId.startsWith('o365_') && description?.includes("oauth:");
     
     // If not a Google Calendar, we need to handle it differently
     if (!isGoogleCalendar) {
+      // Check if this is an iCal calendar (read-only)
+      if (calendarId.startsWith('ical_')) {
+        return res.status(400).json({ 
+          error: "Cannot create events in iCal calendars. iCal feeds are read-only." 
+        });
+      }
       // Determine which type of calendar we're dealing with
       if (calendarId.startsWith('o365_')) {
         try {
@@ -450,10 +456,16 @@ export default async function handler(
     }
     
     // Check if this is a Google Calendar or another type
-    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('other_');
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_');
     
     // If not a Google Calendar, we need to handle it differently
     if (!isGoogleCalendar) {
+      // Check if this is an iCal calendar (read-only)
+      if (calendarId.startsWith('ical_')) {
+        return res.status(400).json({ 
+          error: "Cannot update events in iCal calendars. iCal feeds are read-only." 
+        });
+      }
       // Determine which type of calendar we're dealing with
       if (calendarId.startsWith('o365_')) {
         try {
@@ -625,10 +637,16 @@ export default async function handler(
     
     // Check if this is a Google Calendar or another type
     const calId = calendarId as string;
-    const isGoogleCalendar = !calId.startsWith('o365_') && !calId.startsWith('apple_') && !calId.startsWith('other_');
+    const isGoogleCalendar = !calId.startsWith('o365_') && !calId.startsWith('apple_') && !calId.startsWith('ical_') && !calId.startsWith('other_');
     
     // If not a Google Calendar, we need to handle it differently
     if (!isGoogleCalendar) {
+      // Check if this is an iCal calendar (read-only)
+      if (calId.startsWith('ical_')) {
+        return res.status(400).json({ 
+          error: "Cannot delete events from iCal calendars. iCal feeds are read-only." 
+        });
+      }
       // Determine which type of calendar we're dealing with
       if (calId.startsWith('o365_')) {
         try {
