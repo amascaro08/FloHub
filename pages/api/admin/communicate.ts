@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
+import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
 import { emailService } from '@/lib/emailService';
-import { db } from '@/db/db';
+import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { inArray, eq } from 'drizzle-orm';
 
@@ -21,9 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user and verify admin access
-    const session = await getServerSession(req, res, authOptions);
-    const user = session?.user;
-
+    const decoded = auth(req);
+    if (!decoded) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    const user = await getUserById(decoded.userId);
     if (!user || user.email !== 'amascaro08@gmail.com') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -79,9 +81,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log the message to history
     try {
-      await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/messages`, {
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/admin/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cookie': req.headers.cookie || ''
+        },
         body: JSON.stringify({
           type,
           subject,
@@ -91,6 +97,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           success: successCount > 0
         })
       });
+      if (!response.ok) {
+        console.error('Failed to log message to history:', await response.text());
+      }
     } catch (error) {
       console.error('Failed to log message to history:', error);
     }

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
-import { db } from '@/db/db';
+import { auth } from '@/lib/auth';
+import { getUserById } from '@/lib/user';
+import { db } from '@/lib/drizzle';
 import { users, userSettings, sessions, analyticsUsersDurations } from '@/db/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 
@@ -12,9 +12,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Get user and verify admin access
-    const session = await getServerSession(req, res, authOptions);
-    const user = session?.user;
-
+    const decoded = auth(req);
+    if (!decoded) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    const user = await getUserById(decoded.userId);
     if (!user || user.email !== 'amascaro08@gmail.com') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -29,12 +31,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         lastActive: sql<Date>`(
           SELECT MAX(timestamp) 
           FROM analytics_users_durations 
-          WHERE user_email = users.email
+          WHERE "userId" = users.email
         )`.as('lastActive'),
         totalSessions: sql<number>`(
           SELECT COUNT(*) 
           FROM analytics_users_durations 
-          WHERE user_email = users.email
+          WHERE "userId" = users.email
         )`.as('totalSessions'),
         floCatStyle: userSettings.floCatStyle,
         preferredName: userSettings.preferredName,
@@ -53,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select({ count: count() })
       .from(analyticsUsersDurations)
       .where(gte(analyticsUsersDurations.timestamp, thirtyDaysAgo))
-      .groupBy(analyticsUsersDurations.user_email);
+      .groupBy(analyticsUsersDurations.userId);
 
     // Get user registration stats over time
     const registrationStats = await db
