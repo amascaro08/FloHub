@@ -9,6 +9,7 @@ import {
   unsubscribeFromPushNotifications,
   sendTestNotification
 } from '@/lib/notifications';
+import NotificationDebug from './NotificationDebug';
 
 type NotificationState = {
   isSupported: boolean;
@@ -19,11 +20,13 @@ type NotificationState = {
 };
 
 const NotificationManager: React.FC = () => {
-   const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
+  const [showDebug, setShowDebug] = useState(false);
 
   if (!user) {
-    return <div>Loading...</div>; // Or any other fallback UI
+    return <div>Loading...</div>;
   }
+  
   const [state, setState] = useState<NotificationState>({
     isSupported: false,
     permission: 'default',
@@ -36,8 +39,11 @@ const NotificationManager: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('NotificationManager: Initializing...');
     const isSupported = isPushNotificationSupported();
     const permission = getNotificationPermission();
+    
+    console.log('NotificationManager: Support check', { isSupported, permission });
     
     setState(prev => ({
       ...prev,
@@ -57,6 +63,7 @@ const NotificationManager: React.FC = () => {
   // Check if the user is already subscribed
   const checkSubscriptionStatus = async () => {
     try {
+      console.log('NotificationManager: Checking subscription status...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
       // Check if service worker is registered
@@ -64,6 +71,7 @@ const NotificationManager: React.FC = () => {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
         
+        console.log('NotificationManager: Subscription status', !!subscription);
         setState(prev => ({ 
           ...prev, 
           isSubscribed: !!subscription,
@@ -71,7 +79,7 @@ const NotificationManager: React.FC = () => {
         }));
       }
     } catch (error) {
-      console.error('Error checking subscription status:', error);
+      console.error('NotificationManager: Error checking subscription status:', error);
       setState(prev => ({ 
         ...prev, 
         error: 'Failed to check notification subscription status',
@@ -83,62 +91,93 @@ const NotificationManager: React.FC = () => {
   // Request permission and subscribe to push notifications
   const enableNotifications = async () => {
     try {
+      console.log('NotificationManager: Enabling notifications...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // Check if running on iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      // Check if running on Android
-      const isAndroid = /Android/.test(navigator.userAgent);
+      // Check platform
+      const userAgent = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+      const isAndroid = /Android/.test(userAgent);
+      const isChrome = /Chrome/.test(userAgent) && !/Edg/.test(userAgent);
+      
+      console.log('NotificationManager: Platform detection', { isIOS, isAndroid, isChrome });
+      
+      // Platform-specific warnings
+      if (isAndroid && !isChrome) {
+        setState(prev => ({
+          ...prev,
+          error: 'For best notification support on Android, please use Chrome browser.',
+          isLoading: false
+        }));
+        return;
+      }
+      
+      if (isIOS) {
+        setState(prev => ({
+          ...prev,
+          error: 'iOS has limited notification support. For best experience, add this app to your home screen.',
+          isLoading: false
+        }));
+        // Continue anyway for iOS
+      }
       
       // Request permission
+      console.log('NotificationManager: Requesting permission...');
       const permissionGranted = await requestNotificationPermission();
       
       if (!permissionGranted) {
+        const currentPermission = getNotificationPermission();
+        let errorMessage = 'Permission denied for notifications';
+        
+        if (currentPermission === 'denied') {
+          errorMessage = 'Notifications are blocked. Please enable them in your browser settings and refresh the page.';
+        }
+        
         setState(prev => ({
           ...prev,
-          permission: getNotificationPermission(),
+          permission: currentPermission,
           isLoading: false,
-          error: 'Permission denied for notifications'
+          error: errorMessage
         }));
         return;
       }
       
       // Subscribe to push notifications
-      // Use a hardcoded VAPID key for development if environment variable is not set
+      console.log('NotificationManager: Subscribing to push notifications...');
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
         'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
       
-      // Log platform information for debugging
-      console.log('Platform info:', {
-        isIOS,
-        isAndroid,
-        userAgent: navigator.userAgent,
-        vapidKeyAvailable: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      });
+      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+        console.warn('NotificationManager: Using fallback VAPID key - this should not happen in production');
+      }
       
       const subscription = await subscribeToPushNotifications(vapidPublicKey);
       
       if (!subscription) {
-        // Handle platform-specific error messages
+        let errorMessage = 'Failed to subscribe to push notifications.';
+        
         if (isIOS) {
-          throw new Error('Push notifications may not be fully supported on iOS. Please ensure Safari settings allow notifications.');
+          errorMessage = 'Push notifications may not be fully supported on iOS. Please ensure Safari settings allow notifications and try adding this app to your home screen.';
         } else if (isAndroid) {
-          throw new Error('Push notifications failed on Android. Please check if Chrome is up to date and notifications are allowed in system settings.');
+          errorMessage = 'Push notifications failed on Android. Please ensure Chrome is up to date, notifications are allowed in system settings, and try clearing browser data.';
         } else {
-          throw new Error('Failed to subscribe to push notifications. Please check browser compatibility.');
+          errorMessage = 'Failed to subscribe to push notifications. Please check browser compatibility and try again.';
         }
+        
+        throw new Error(errorMessage);
       }
       
       setState(prev => ({
         ...prev,
         isSubscribed: true,
         permission: 'granted',
-        isLoading: false
+        isLoading: false,
+        error: null
       }));
       
-      console.log('Successfully subscribed to push notifications');
+      console.log('NotificationManager: Successfully subscribed to push notifications');
     } catch (error) {
-      console.error('Error enabling notifications:', error);
+      console.error('NotificationManager: Error enabling notifications:', error);
       setState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to enable notifications',
@@ -150,6 +189,7 @@ const NotificationManager: React.FC = () => {
   // Unsubscribe from push notifications
   const disableNotifications = async () => {
     try {
+      console.log('NotificationManager: Disabling notifications...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
       const success = await unsubscribeFromPushNotifications();
@@ -161,10 +201,10 @@ const NotificationManager: React.FC = () => {
       }));
       
       if (success) {
-        console.log('Successfully unsubscribed from push notifications');
+        console.log('NotificationManager: Successfully unsubscribed from push notifications');
       }
     } catch (error) {
-      console.error('Error disabling notifications:', error);
+      console.error('NotificationManager: Error disabling notifications:', error);
       setState(prev => ({ 
         ...prev, 
         error: 'Failed to disable notifications',
@@ -176,16 +216,62 @@ const NotificationManager: React.FC = () => {
   // Send a test notification
   const sendTestNotificationHandler = async () => {
     try {
+      console.log('NotificationManager: Sending test notification...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      await sendTestNotification();
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+      });
       
-      setState(prev => ({ ...prev, isLoading: false }));
+      const result = await response.json();
+      console.log('NotificationManager: Test notification response:', result);
+      
+      if (response.ok) {
+        setState(prev => ({ ...prev, isLoading: false, error: null }));
+        
+        // Show success message
+        if (result.debug?.subscriptionCount > 1) {
+          alert(`✅ Test notification sent to ${result.debug.subscriptionCount} subscription(s)!\n\n${result.message}`);
+        } else {
+          alert('✅ Test notification sent successfully! Check your device for the notification.');
+        }
+      } else {
+        // Handle detailed error response
+        let errorMessage = result.message || 'Failed to send test notification';
+        
+        if (result.results && result.results.length > 0) {
+          const failedResults = result.results.filter((r: any) => !r.success);
+          if (failedResults.length > 0) {
+            errorMessage += '\n\nDetailed errors:';
+            failedResults.forEach((r: any, index: number) => {
+              errorMessage += `\n${index + 1}. ${r.error}`;
+            });
+          }
+        }
+        
+        if (result.debug) {
+          errorMessage += '\n\nDebug info:';
+          errorMessage += `\n- VAPID configured: ${result.debug.vapidConfigured ? 'Yes' : 'No'}`;
+          errorMessage += `\n- Subscriptions found: ${result.debug.subscriptionCount}`;
+          
+          if (result.debug.subscriptionDetails) {
+            result.debug.subscriptionDetails.forEach((sub: any, index: number) => {
+              errorMessage += `\n- Subscription ${index + 1}: ${sub.hasKeys ? 'Valid' : 'Missing keys'}`;
+            });
+          }
+        }
+        
+        setState(prev => ({
+          ...prev,
+          error: errorMessage,
+          isLoading: false
+        }));
+      }
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('NotificationManager: Error sending test notification:', error);
       setState(prev => ({ 
         ...prev, 
-        error: 'Failed to send test notification',
+        error: error instanceof Error ? error.message : 'Network error: Failed to send test notification. Check your internet connection.',
         isLoading: false 
       }));
     }
@@ -196,12 +282,31 @@ const NotificationManager: React.FC = () => {
   }
 
   if (!state.isSupported) {
-    return <p className="text-sm text-gray-500">Push notifications are not supported in this browser</p>;
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-gray-500">Push notifications are not supported in this browser</p>
+        <button 
+          onClick={() => setShowDebug(!showDebug)}
+          className="text-xs text-blue-500 hover:text-blue-700"
+        >
+          {showDebug ? 'Hide' : 'Show'} Debug Info
+        </button>
+        {showDebug && <NotificationDebug />}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <h3 className="text-lg font-medium">Notification Settings</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Notification Settings</h3>
+        <button 
+          onClick={() => setShowDebug(!showDebug)}
+          className="text-xs text-blue-500 hover:text-blue-700"
+        >
+          {showDebug ? 'Hide' : 'Show'} Debug
+        </button>
+      </div>
       
       {state.error && (
         <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md text-sm">
@@ -235,9 +340,15 @@ const NotificationManager: React.FC = () => {
       </div>
       
       {state.permission === 'denied' && (
-        <p className="text-sm text-red-500 dark:text-red-400">
-          Notifications are blocked. Please update your browser settings to allow notifications.
-        </p>
+        <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-md text-sm">
+          <p className="font-medium">Notifications are blocked</p>
+          <p className="mt-1">To enable notifications:</p>
+          <ol className="mt-2 ml-4 list-decimal space-y-1">
+            <li>Click the lock icon in your address bar</li>
+            <li>Set notifications to "Allow"</li>
+            <li>Refresh the page and try again</li>
+          </ol>
+        </div>
       )}
       
       {!state.isSupported && (
@@ -247,13 +358,24 @@ const NotificationManager: React.FC = () => {
       )}
       
       {state.isSubscribed && (
-        <button
-          onClick={sendTestNotificationHandler}
-          className="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm transition-colors"
-          disabled={state.isLoading}
-        >
-          Send Test Notification
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={sendTestNotificationHandler}
+            className="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm transition-colors"
+            disabled={state.isLoading}
+          >
+            Send Test Notification
+          </button>
+          
+          <div className="text-xs text-green-600 dark:text-green-400">
+            ✅ You'll receive notifications for:
+            <ul className="mt-1 ml-4 list-disc space-y-1">
+              <li>Meeting reminders (15 & 5 minutes before)</li>
+              <li>Task due date reminders (24 hours & 1 hour before)</li>
+              <li>FloChat reminders (when you ask FloCat to remind you)</li>
+            </ul>
+          </div>
+        </div>
       )}
       
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -262,6 +384,12 @@ const NotificationManager: React.FC = () => {
           FloCat will notify you when a meeting is about to start or when a task is due.
         </p>
       </div>
+
+      {showDebug && (
+        <div className="mt-4 border-t pt-4">
+          <NotificationDebug />
+        </div>
+      )}
     </div>
   );
 };
