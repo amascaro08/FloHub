@@ -20,6 +20,11 @@ export interface CalendarEvent {
   htmlLink?: string; // Google Calendar event link
   created?: string; // ISO string for creation time
   updated?: string; // ISO string for last update time
+  organizer?: {
+    email?: string;
+    name?: string;
+    displayName?: string;
+  }; // Event organizer information
   // Recurring event fields
   isRecurring?: boolean; // Whether this event is part of a recurring series
   seriesMasterId?: string; // ID of the series master for recurring events
