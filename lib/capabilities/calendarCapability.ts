@@ -36,7 +36,10 @@ async function showCalendarEvents(args: string, userId: string): Promise<string>
   const lowerArgs = args.toLowerCase();
   
   // ENHANCED: Handle contextual queries like "when do I take mum to the airport"
-  if (lowerArgs.includes("when") && (lowerArgs.includes("do") || lowerArgs.includes("am"))) {
+  if ((lowerArgs.includes("when") && (lowerArgs.includes("do") || lowerArgs.includes("am"))) ||
+      lowerArgs.includes("airport") || lowerArgs.includes("flight") || 
+      lowerArgs.includes("mum") || lowerArgs.includes("mom") || lowerArgs.includes("dad")) {
+    console.log(`[DEBUG] Calendar capability handling contextual query: "${args}"`);
     return await handleContextualQuery(args, userId);
   }
   
@@ -325,6 +328,10 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
     
     const contextData = (global as any).currentContextData;
     const events = contextData?.events || contextData?.allEvents || [];
+    console.log(`[DEBUG] Available events: ${events.length}`);
+    if (events.length > 0) {
+      console.log(`[DEBUG] Sample event: ${JSON.stringify(events[0])}`);
+    }
     
     // Extract keywords for contextual search
     const contextKeywords = extractCalendarKeywords(query);

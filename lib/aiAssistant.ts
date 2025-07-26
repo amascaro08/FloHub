@@ -706,16 +706,26 @@ export class SmartAIAssistant {
     let relevantEvents = this.context!.calendarEvents;
 
     // ENHANCED: Check for specific contextual queries (like "when do I take mum to the airport")
-    if (lowerQuery.includes("when") && (lowerQuery.includes("do") || lowerQuery.includes("am"))) {
+    if ((lowerQuery.includes("when") && (lowerQuery.includes("do") || lowerQuery.includes("am"))) ||
+        lowerQuery.includes("airport") || lowerQuery.includes("flight") || 
+        lowerQuery.includes("mum") || lowerQuery.includes("mom") || lowerQuery.includes("dad")) {
+      console.log(`[DEBUG] Contextual query detected: "${query}"`);
       // Extract keywords from the query for contextual search
       const contextKeywords = this.extractCalendarKeywords(query);
+      console.log(`[DEBUG] Extracted keywords: ${contextKeywords.join(', ')}`);
       
       if (contextKeywords.length > 0) {
         // Search for events that match the context keywords
         const matchingEvents = relevantEvents.filter(event => {
           const eventText = `${event.summary || ''} ${event.description || ''} ${event.location || ''}`.toLowerCase();
-          return contextKeywords.some(keyword => eventText.includes(keyword));
+          const matches = contextKeywords.some(keyword => eventText.includes(keyword));
+          if (matches) {
+            console.log(`[DEBUG] Found matching event: "${event.summary}" - matched keywords in: "${eventText}"`);
+          }
+          return matches;
         });
+        
+        console.log(`[DEBUG] Found ${matchingEvents.length} matching events out of ${relevantEvents.length} total events`);
         
         if (matchingEvents.length > 0) {
           // Sort by date and get the next occurrence

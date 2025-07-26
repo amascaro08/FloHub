@@ -347,8 +347,8 @@ export default async function handler(
   }
 
   // Check for natural language queries first
-  if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
-      lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
+  if (lowerPrompt.includes("when did") || lowerPrompt.includes("when do") || lowerPrompt.includes("when am") ||
+      lowerPrompt.includes("show me") || lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
