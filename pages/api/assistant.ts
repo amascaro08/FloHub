@@ -177,6 +177,7 @@ export default async function handler(
       lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting") ||
       lowerPrompt.includes("meeting on") || lowerPrompt.includes("events on") ||
       lowerPrompt.includes("what do i have on") || lowerPrompt.includes("what's on") ||
+      (lowerPrompt.includes("when") && (lowerPrompt.includes("do i") || lowerPrompt.includes("am i"))) ||
       (lowerPrompt.includes("meeting") && (lowerPrompt.includes("monday") || lowerPrompt.includes("tuesday") || 
        lowerPrompt.includes("wednesday") || lowerPrompt.includes("thursday") || lowerPrompt.includes("friday") ||
        lowerPrompt.includes("saturday") || lowerPrompt.includes("sunday") || lowerPrompt.includes("today") ||

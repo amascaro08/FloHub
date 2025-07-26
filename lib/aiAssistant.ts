@@ -652,6 +652,10 @@ export class SmartAIAssistant {
     if (lowerQuery.includes('schedule') || lowerQuery.includes('calendar') || 
         lowerQuery.includes('meetings') || lowerQuery.includes('events') ||
         lowerQuery.includes('agenda') || lowerQuery.includes('today\'s') ||
+        (lowerQuery.includes('when') && (lowerQuery.includes('do i') || lowerQuery.includes('am i'))) ||
+        lowerQuery.includes('airport') || lowerQuery.includes('flight') || 
+        lowerQuery.includes('mum') || lowerQuery.includes('mom') || lowerQuery.includes('dad') ||
+        lowerQuery.includes('doctor') || lowerQuery.includes('appointment') ||
         (lowerQuery.includes('what') && (lowerQuery.includes('today') || lowerQuery.includes('tomorrow')))) {
       return this.handleCalendarQueries(query);
     }
@@ -701,7 +705,113 @@ export class SmartAIAssistant {
     // Filter calendar events based on the query
     let relevantEvents = this.context!.calendarEvents;
 
-    if (lowerQuery.includes('today') || lowerQuery.includes('today\'s')) {
+    // ENHANCED: Check for specific contextual queries (like "when do I take mum to the airport")
+    if (lowerQuery.includes("when") && (lowerQuery.includes("do") || lowerQuery.includes("am"))) {
+      // Extract keywords from the query for contextual search
+      const contextKeywords = this.extractCalendarKeywords(query);
+      
+      if (contextKeywords.length > 0) {
+        // Search for events that match the context keywords
+        const matchingEvents = relevantEvents.filter(event => {
+          const eventText = `${event.summary || ''} ${event.description || ''} ${event.location || ''}`.toLowerCase();
+          return contextKeywords.some(keyword => eventText.includes(keyword));
+        });
+        
+        if (matchingEvents.length > 0) {
+          // Sort by date and get the next occurrence
+          const upcomingMatches = matchingEvents
+            .filter(event => {
+              const eventDate = new Date(event.start || event.date);
+              return eventDate >= today;
+            })
+            .sort((a, b) => {
+              const dateA = new Date(a.start || a.date);
+              const dateB = new Date(b.start || b.date);
+              return dateA.getTime() - dateB.getTime();
+            });
+          
+          if (upcomingMatches.length > 0) {
+            const nextEvent = upcomingMatches[0];
+            const eventDate = new Date(nextEvent.start || nextEvent.date);
+            const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
+            const dateStr = eventDate.toLocaleDateString('en-US', { 
+              month: 'long', 
+              day: 'numeric',
+              year: eventDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+            const timeStr = eventDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit', 
+              hour12: true 
+            });
+            
+            // Calculate time difference for more natural response
+            const timeDiff = eventDate.getTime() - now.getTime();
+            const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            
+            let whenText = "";
+            if (daysUntil === 0) {
+              whenText = "today";
+            } else if (daysUntil === 1) {
+              whenText = "tomorrow";
+            } else if (daysUntil <= 7) {
+              whenText = `this ${dayName}`;
+            } else {
+              whenText = `on ${dayName}, ${dateStr}`;
+            }
+            
+            let response = `📅 **${nextEvent.summary}** is scheduled for **${whenText}** at **${timeStr}**`;
+            
+            if (nextEvent.location) {
+              response += `\n📍 Location: ${nextEvent.location}`;
+            }
+            
+            if (nextEvent.description) {
+              response += `\n📝 ${nextEvent.description.substring(0, 150)}${nextEvent.description.length > 150 ? '...' : ''}`;
+            }
+            
+            // Add helpful context about time remaining
+            if (daysUntil === 0) {
+              const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+              if (hoursUntil > 0) {
+                response += `\n\n⏰ That's in about ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}!`;
+              }
+            } else if (daysUntil === 1) {
+              response += `\n\n⏰ That's tomorrow!`;
+            } else if (daysUntil <= 7) {
+              response += `\n\n⏰ That's in ${daysUntil} days.`;
+            }
+            
+            return response;
+          } else {
+            // No upcoming matches, check for past events
+            const pastMatches = matchingEvents
+              .filter(event => {
+                const eventDate = new Date(event.start || event.date);
+                return eventDate < today;
+              })
+              .sort((a, b) => {
+                const dateA = new Date(a.start || a.date);
+                const dateB = new Date(b.start || b.date);
+                return dateB.getTime() - dateA.getTime(); // Most recent first
+              });
+            
+            if (pastMatches.length > 0) {
+              const lastEvent = pastMatches[0];
+              const eventDate = new Date(lastEvent.start || lastEvent.date);
+              const timeAgo = this.formatTimeAgo(eventDate);
+              
+              return `📅 I found "${lastEvent.summary}" but it was ${timeAgo}. I don't see any upcoming events matching your query.`;
+            } else {
+              return `📅 I couldn't find any events matching "${contextKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
+            }
+          }
+        }
+      }
+    }
+
+    // Standard calendar query handling (existing logic)
+    if (lowerQuery.includes("today") || lowerQuery.includes("today's")) {
       relevantEvents = relevantEvents.filter(event => {
         const eventDate = new Date(event.start || event.date);
         return eventDate >= today && eventDate < tomorrow;
@@ -722,7 +832,7 @@ export class SmartAIAssistant {
       
       return `📅 **Today's Schedule** (${relevantEvents.length} event${relevantEvents.length !== 1 ? 's' : ''}):\n\n${eventList}`;
       
-    } else if (lowerQuery.includes('tomorrow')) {
+    } else if (lowerQuery.includes("tomorrow")) {
       const dayAfterTomorrow = new Date(tomorrow);
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
       
@@ -794,6 +904,50 @@ export class SmartAIAssistant {
       
       return scheduleText.trim();
     }
+  }
+
+  // NEW: Extract calendar-specific keywords for contextual search
+  private extractCalendarKeywords(query: string): string[] {
+    const lowerQuery = query.toLowerCase();
+    
+    // Remove question words and common phrases
+    const stopWords = ['when', 'do', 'i', 'am', 'is', 'are', 'the', 'a', 'an', 'and', 'or', 'but', 'to', 'for', 'with', 'at', 'on', 'in', 'take', 'have', 'get', 'go', 'my', 'me'];
+    
+    // Extract meaningful keywords
+    const words = lowerQuery
+      .replace(/[^\w\s]/g, ' ') // Remove punctuation
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.includes(word));
+    
+    // Add common synonyms and variations
+    const expandedKeywords = [...words];
+    words.forEach(word => {
+      switch(word) {
+        case 'mum':
+        case 'mom':
+        case 'mother':
+          expandedKeywords.push('mum', 'mom', 'mother');
+          break;
+        case 'dad':
+        case 'father':
+          expandedKeywords.push('dad', 'father');
+          break;
+        case 'airport':
+          expandedKeywords.push('flight', 'plane', 'travel');
+          break;
+        case 'flight':
+          expandedKeywords.push('airport', 'plane', 'travel');
+          break;
+        case 'doctor':
+          expandedKeywords.push('appointment', 'medical', 'clinic');
+          break;
+        case 'meeting':
+          expandedKeywords.push('call', 'conference', 'discussion');
+          break;
+      }
+    });
+    
+    return [...new Set(expandedKeywords)]; // Remove duplicates
   }
 
   private handleTaskTimeQueries(query: string): string {
