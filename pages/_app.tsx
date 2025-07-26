@@ -21,7 +21,25 @@ const App = ({ Component, pageProps }: AppProps) => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          console.log('Registering service worker...');
+          console.log('Force clearing all caches before registering SW...');
+          
+          // Force clear all caches first
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+              console.log('Deleting cache:', cacheName);
+              await caches.delete(cacheName);
+            }
+          }
+          
+          // Unregister all existing service workers
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            console.log('Unregistering existing service worker');
+            await registration.unregister();
+          }
+          
+          console.log('Registering new disabled service worker...');
           const registration = await navigator.serviceWorker.register('/sw.js', { 
             scope: '/',
             updateViaCache: 'none'
@@ -29,18 +47,34 @@ const App = ({ Component, pageProps }: AppProps) => {
           
           console.log('SW registered successfully:', registration);
           
-          // Simple update handling
+          // Listen for service worker messages
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('Received message from SW:', event.data);
+            if (event.data.type === 'SW_DISABLED') {
+              console.log('Service worker disabled successfully');
+              // Force reload to ensure clean state
+              setTimeout(() => {
+                console.log('Reloading page to clear any cached issues...');
+                window.location.reload();
+              }, 1000);
+            }
+          });
+          
+          // Force immediate activation if there's a waiting service worker
+          if (registration.waiting) {
+            console.log('Service worker waiting, activating immediately');
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          
+          // Handle updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               console.log('New service worker found');
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New service worker installed');
-                  // Let users know about the update but don't force reload
-                  if (confirm('App updated! Reload to get the latest version?')) {
-                    window.location.reload();
-                  }
+                if (newWorker.state === 'installed') {
+                  console.log('New service worker installed, activating');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
                 }
               });
             }
