@@ -180,7 +180,7 @@ const SmartAtAGlanceWidget = () => {
         message: `"${nextMeeting.summary}" starts in ${nextMeeting.timeUntilStart}`,
         icon: <AlertTriangle className="w-4 h-4" />,
         actionable: true,
-        action: () => window.open(`/calendar`, '_blank'),
+                 action: () => window.open('/calendar', '_blank'),
         actionLabel: 'Open Calendar'
       });
     }
@@ -192,7 +192,7 @@ const SmartAtAGlanceWidget = () => {
         message: `${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''} past due`,
         icon: <Clock className="w-4 h-4" />,
         actionable: true,
-        action: () => window.open('/tasks', '_blank'),
+                 action: () => window.open('/dashboard/tasks', '_blank'),
         actionLabel: 'Review Tasks'
       });
     }
@@ -236,31 +236,32 @@ const SmartAtAGlanceWidget = () => {
       });
     }
 
-    return {
-      incompleteTasks,
-      urgentTasks,
-      overdueTasks,
-      todayEvents,
-      nextMeeting,
-      completedHabits,
-      insights: insights.slice(0, 3), // Top 3 insights
-      stats: {
-        tasksTotal: incompleteTasks.length,
-        tasksUrgent: urgentTasks.length,
-        eventsToday: todayEvents.length,
-        habitProgress: habits.length > 0 ? Math.round((completedHabits.length / habits.length) * 100) : 0,
-        habitCount: `${completedHabits.length}/${habits.length}`
-      }
-    };
+         return {
+       incompleteTasks,
+       urgentTasks,
+       overdueTasks,
+       todayEvents,
+       nextMeeting,
+       completedHabits,
+       insights: insights.slice(0, 3), // Top 3 insights
+       stats: {
+         tasksTotal: incompleteTasks.length,
+         tasksUrgent: urgentTasks.length,
+         tasksOverdue: overdueTasks.length,
+         eventsToday: todayEvents.length,
+         habitProgress: habits.length > 0 ? Math.round((completedHabits.length / habits.length) * 100) : 0,
+         habitCount: `${completedHabits.length}/${habits.length}`
+       }
+     };
   }, []);
 
   // Quick actions
   const getQuickActions = useCallback((): QuickAction[] => {
     const actions: QuickAction[] = [
       {
-        label: 'Add Task',
-        icon: <PlusCircle className="w-4 h-4" />,
-        action: () => window.open('/tasks', '_blank')
+                 label: 'Add Task',
+         icon: <PlusCircle className="w-4 h-4" />,
+         action: () => window.open('/dashboard/tasks', '_blank')
       },
       {
         label: 'View Calendar',
@@ -273,7 +274,7 @@ const SmartAtAGlanceWidget = () => {
       actions.unshift({
         label: 'Review Urgent',
         icon: <AlertTriangle className="w-4 h-4" />,
-        action: () => window.open('/tasks?filter=urgent', '_blank'),
+                 action: () => window.open('/dashboard/tasks?filter=urgent', '_blank'),
         variant: 'destructive'
       });
     }
@@ -372,8 +373,8 @@ const SmartAtAGlanceWidget = () => {
         <CardContent>
           <div className="text-center py-8 text-[var(--fg-muted)] dark:text-gray-300">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-500" />
-            <p className="font-medium">FloCat's Brain is Recharging</p>
-            <p className="text-sm mt-1">Smart insights temporarily unavailable</p>
+                         <p className="font-medium">FloHub AI is Recharging</p>
+             <p className="text-sm mt-1">Smart insights temporarily unavailable</p>
             <Button 
               variant="secondary" 
               onClick={handleRefresh}
@@ -399,8 +400,8 @@ const SmartAtAGlanceWidget = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-purple-500" />
-            <span className="ml-2 text-[var(--fg)] dark:text-gray-100">FloCat is analyzing your day...</span>
+                          <RefreshCw className="w-6 h-6 animate-spin text-teal-500" />
+            <span className="ml-2 text-[var(--fg)] dark:text-gray-100">FloHub AI is analyzing your day...</span>
           </div>
         </CardContent>
       </Card>
@@ -417,13 +418,13 @@ const SmartAtAGlanceWidget = () => {
       onClick={() => trackingHook.trackInteraction('view_smart_summary')}
     >
       {/* Header with Key Insights */}
-      <Card className="w-full bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700">
+      <Card className="w-full bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-700">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-              <Brain className="w-5 h-5 text-purple-500" />
+              <Brain className="w-5 h-5 text-teal-500" />
               Smart Dashboard
-              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+              <Badge variant="secondary" className="ml-2 bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
                 AI Powered
               </Badge>
             </CardTitle>
@@ -432,7 +433,7 @@ const SmartAtAGlanceWidget = () => {
               size="sm"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="text-purple-600 hover:text-purple-700"
+              className="text-teal-600 hover:text-teal-700"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
@@ -442,16 +443,19 @@ const SmartAtAGlanceWidget = () => {
           {/* Key Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{data.stats.tasksTotal}</div>
+              <div className="text-2xl font-bold text-teal-600">{data.stats.tasksTotal}</div>
               <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Pending Tasks</div>
               {data.stats.tasksUrgent > 0 && (
                 <Badge variant="destructive" className="mt-1 text-xs">{data.stats.tasksUrgent} urgent</Badge>
+              )}
+              {data.stats.tasksOverdue > 0 && (
+                <Badge className="mt-1 text-xs bg-orange-100 text-orange-700">{data.stats.tasksOverdue} overdue</Badge>
               )}
             </div>
             
             {data.nextMeeting && (
               <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-                <div className="text-lg font-bold text-blue-600">{data.nextMeeting.timeUntilStart}</div>
+                                   <div className="text-lg font-bold text-teal-600">{data.nextMeeting.timeUntilStart}</div>
                 <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Next Meeting</div>
                 {data.nextMeeting.isUrgent && (
                   <Badge variant="destructive" className="mt-1 text-xs">Starting Soon</Badge>
@@ -460,13 +464,13 @@ const SmartAtAGlanceWidget = () => {
             )}
             
             <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{data.stats.eventsToday}</div>
+              <div className="text-2xl font-bold text-teal-600">{data.stats.eventsToday}</div>
               <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Events Today</div>
             </div>
             
             {data.stats.habitCount !== '0/0' && (
               <div className="text-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-                <div className="text-lg font-bold text-orange-600">{data.stats.habitProgress}%</div>
+                                 <div className="text-lg font-bold text-teal-600">{data.stats.habitProgress}%</div>
                 <div className="text-xs text-[var(--fg-muted)] dark:text-gray-400">Habits ({data.stats.habitCount})</div>
               </div>
             )}
@@ -483,7 +487,7 @@ const SmartAtAGlanceWidget = () => {
                     insight.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' :
                     insight.type === 'celebration' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' :
                     insight.type === 'opportunity' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' :
-                    'bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800'
+                                         'bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800'
                   }`}
                 >
                   <div className={`mt-0.5 ${
@@ -491,7 +495,7 @@ const SmartAtAGlanceWidget = () => {
                     insight.type === 'warning' ? 'text-amber-600' :
                     insight.type === 'celebration' ? 'text-green-600' :
                     insight.type === 'opportunity' ? 'text-blue-600' :
-                    'text-purple-600'
+                                         'text-teal-600'
                   }`}>
                     {insight.icon}
                   </div>
@@ -667,11 +671,11 @@ const SmartAtAGlanceWidget = () => {
       </div>
 
       {/* FloCat Footer */}
-      <div className="text-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-        <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300 italic">
-          😺 FloCat's AI insights • Last updated {data.lastUpdated.toLocaleTimeString()}
-        </p>
-      </div>
+              <div className="text-center p-3 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
+          <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300 italic">
+            🐱 FloHub AI insights • Last updated {data.lastUpdated.toLocaleTimeString()}
+          </p>
+        </div>
     </div>
   );
 };
