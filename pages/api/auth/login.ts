@@ -49,6 +49,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
     });
 
+    // Check if this is a PWA request (moved from cookie utility for header logic)
+    const userAgent = req.headers['user-agent'] || '';
+    const isPWA = userAgent.includes('standalone') || req.headers['sec-fetch-site'] === 'none';
+
     // Add PWA-specific headers
     res.setHeader('Set-Cookie', cookie);
     
