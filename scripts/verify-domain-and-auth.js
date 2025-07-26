@@ -103,7 +103,8 @@ async function testAuthEndpoints() {
   const authEndpoints = [
     '/api/auth/session',
     '/api/auth/callback/google-additional',
-    '/api/debug-status'
+    '/api/debug-status',
+    '/api/debug/cookie-test?action=info'
   ];
   
   for (const endpoint of authEndpoints) {
@@ -115,8 +116,9 @@ async function testAuthEndpoints() {
         log('red', `❌ ${endpoint}: ${result.error}`);
       } else {
         const statusColor = result.status === 200 ? 'green' : 
-                           result.status === 401 ? 'yellow' : 'red';
-        log(statusColor, `${result.status === 200 ? '✅' : result.status === 401 ? '🔐' : '❌'} ${endpoint}: ${result.status}`);
+                           result.status === 401 ? 'yellow' : 
+                           result.status === 403 ? 'yellow' : 'red';
+        log(statusColor, `${result.status === 200 ? '✅' : result.status === 401 || result.status === 403 ? '🔐' : '❌'} ${endpoint}: ${result.status}`);
       }
     } catch (error) {
       log('red', `❌ ${endpoint}: ${error.message}`);
@@ -147,24 +149,25 @@ function checkEnvironmentVariables() {
 function showRecommendations() {
   log('blue', '\n💡 Recommendations:\n');
   
-  console.log('1. If flohub.xyz redirects to www.flohub.xyz:');
-  console.log('   → Update NEXTAUTH_URL to https://www.flohub.xyz');
+  console.log('1. Multi-domain cookie support is now active:');
+  console.log('   → Cookies automatically work for flohub.xyz and www.flohub.xyz');
+  console.log('   → Vercel domain (flohub.vercel.app) has independent cookies');
+  console.log();
+  
+  console.log('2. Choose your primary domain strategy:');
+  console.log('   → Option A: Keep current redirect (flohub.xyz → www.flohub.xyz)');
+  console.log('   → Option B: Make flohub.xyz primary (configure in Vercel)');
+  console.log();
+  
+  console.log('3. Update environment variables:');
+  console.log('   → Set NEXTAUTH_URL to match your serving domain');
   console.log('   → Update Google OAuth redirect URI accordingly');
   console.log();
   
-  console.log('2. If you want flohub.xyz as primary:');
-  console.log('   → Configure Vercel to serve from flohub.xyz directly');
-  console.log('   → Keep NEXTAUTH_URL as https://flohub.xyz');
-  console.log();
-  
-  console.log('3. Check Google Cloud Console:');
-  console.log('   → Ensure redirect URI matches NEXTAUTH_URL domain');
-  console.log('   → Format: {NEXTAUTH_URL}/api/auth/callback/google-additional');
-  console.log();
-  
-  console.log('4. Test authentication:');
-  console.log('   → Visit the working domain and try to log in');
-  console.log('   → Check browser dev tools for cookie and redirect issues');
+  console.log('4. Test multi-domain authentication:');
+  console.log('   → Login on one domain, verify it works on related domains');
+  console.log('   → Check browser dev tools for proper cookie domain settings');
+  console.log('   → Use /api/debug/cookie-test for detailed domain info');
 }
 
 async function main() {

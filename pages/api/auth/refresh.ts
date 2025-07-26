@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import { createSecureCookie, getDomainInfo } from '@/lib/cookieUtils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -27,13 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresIn: '30d',
     });
 
-    const cookie = serialize('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'lax',
+    // Create secure cookie with dynamic domain detection
+    const domainInfo = getDomainInfo(req);
+    console.log('Refresh - Domain info:', domainInfo);
+    
+    const cookie = createSecureCookie(req, 'auth-token', token, {
       maxAge: 60 * 60 * 24 * 30, // 30 days for refresh
-      path: '/',
-      domain: process.env.NODE_ENV === 'production' ? '.flohub.xyz' : undefined, // Allow subdomains
     });
 
     res.setHeader('Set-Cookie', cookie);
