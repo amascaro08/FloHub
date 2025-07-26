@@ -62,6 +62,6 @@ export default async function handler(
     return res.status(200).json(calendars);
   } catch (error: any) {
     console.error('Error fetching Microsoft calendars:', error);
-    return res.status(500).json({ error: error.message || 'Failed to fetch Microsoft calendars' });
+    return res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) || 'Failed to fetch Microsoft calendars' });
   }
 }

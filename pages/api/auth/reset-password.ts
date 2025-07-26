@@ -47,6 +47,23 @@ export default async function handler(
 
     // Send password reset email
     try {
+      // Check email configuration first
+      const emailConfigStatus = emailService.getConfigurationStatus();
+      if (!emailConfigStatus.configured) {
+        console.error('Email service not configured:', emailConfigStatus.error);
+        
+        // In development, still provide the reset URL
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Development: Password reset URL (email not configured):', resetUrl);
+        }
+        
+        // Return success to avoid revealing email existence, but log the issue
+        return res.status(200).json({ 
+          message: 'If an account with that email exists, a password reset link has been sent.',
+          devNote: process.env.NODE_ENV === 'development' ? 'Email service not configured. Check server logs for reset URL.' : undefined
+        });
+      }
+
       const emailSent = await emailService.sendPasswordResetEmail(
         email, 
         resetUrl, 

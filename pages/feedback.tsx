@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { NextPage } from 'next';
+import { useRouter } from 'next/router';
 
 const FeedbackPage: NextPage = () => {
-  const { user, isLoading: isUserLoading } = useUser();
+  const router = useRouter();
+  const { user, isLoading: isUserLoading, isError } = useUser();
   const [feedbackType, setFeedbackType] = useState('general');
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -21,15 +23,25 @@ const FeedbackPage: NextPage = () => {
     );
   }
 
-  // Handle unauthenticated state
-  if (!user) {
+  // Handle authentication errors - redirect to login instead of showing error
+  if (isError || !user) {
+    // If there's an authentication error, redirect to login
+    if (typeof window !== 'undefined') {
+      router.push('/login?redirect=' + encodeURIComponent('/feedback'));
+    }
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center">
           <h1 className="text-2xl font-semibold mb-4 text-[var(--fg)]">Submit Feedback</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-neutral-600 dark:text-neutral-400 mb-4">
             You must be signed in to submit feedback.
           </p>
+          <button 
+            onClick={() => router.push('/login?redirect=' + encodeURIComponent('/feedback'))}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Sign In
+          </button>
         </div>
       </div>
     );

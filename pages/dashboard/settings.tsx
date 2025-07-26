@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { useUser } from "@/lib/hooks/useUser";
 import { UserSettings } from "@/types/app";
 import CalendarSettings from "@/components/settings/CalendarSettings";
@@ -9,6 +10,7 @@ import TimezoneSettings from "@/components/settings/TimezoneSettings";
 import WidgetsSettings from "@/components/settings/WidgetsSettings";
 
 const SettingsPage = () => {
+  const router = useRouter();
   const { user } = useUser();
   const [settings, setSettings] = useState<UserSettings>({
     selectedCals: [],
@@ -32,6 +34,32 @@ const SettingsPage = () => {
   });
   const [activeTab, setActiveTab] = useState("general");
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState("");
+
+  // Handle URL parameters for tab navigation
+  useEffect(() => {
+    if (router.query.tab && typeof router.query.tab === 'string') {
+      const validTabs = ['general', 'calendar', 'widgets', 'flocat', 'notifications', 'tags'];
+      if (validTabs.includes(router.query.tab)) {
+        setActiveTab(router.query.tab);
+      }
+    }
+  }, [router.query.tab]);
+
+  // Handle success/error messages from OAuth
+  useEffect(() => {
+    if (router.query.success) {
+      // Show success message or notification here
+      console.log('OAuth success:', router.query.success);
+      // Clear the query parameters
+      router.replace(router.pathname, undefined, { shallow: true });
+    }
+    if (router.query.error) {
+      // Show error message or notification here
+      console.error('OAuth error:', router.query.error);
+      // Clear the query parameters
+      router.replace(router.pathname, undefined, { shallow: true });
+    }
+  }, [router.query.success, router.query.error, router]);
 
   useEffect(() => {
     if (user?.email) {
@@ -74,13 +102,16 @@ const SettingsPage = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4 text-[var(--fg)]">Settings</h1>
-      <div className="flex border-b border-neutral-200 dark:border-neutral-700">
-        <button onClick={() => setActiveTab("general")} className={`py-2 px-4 transition-colors ${activeTab === "general" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>General</button>
-        <button onClick={() => setActiveTab("calendar")} className={`py-2 px-4 transition-colors ${activeTab === "calendar" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Calendar</button>
-        <button onClick={() => setActiveTab("widgets")} className={`py-2 px-4 transition-colors ${activeTab === "widgets" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Widgets</button>
-        <button onClick={() => setActiveTab("flocat")} className={`py-2 px-4 transition-colors ${activeTab === "flocat" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>FloCat</button>
-        <button onClick={() => setActiveTab("notifications")} className={`py-2 px-4 transition-colors ${activeTab === "notifications" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Notifications</button>
-        <button onClick={() => setActiveTab("tags")} className={`py-2 px-4 transition-colors ${activeTab === "tags" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Tags</button>
+      {/* Fixed mobile responsive tab navigation */}
+      <div className="flex border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto scrollbar-hide">
+        <div className="flex min-w-max">
+          <button onClick={() => setActiveTab("general")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "general" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>General</button>
+          <button onClick={() => setActiveTab("calendar")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "calendar" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Calendar</button>
+          <button onClick={() => setActiveTab("widgets")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "widgets" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Widgets</button>
+          <button onClick={() => setActiveTab("flocat")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "flocat" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>FloCat</button>
+          <button onClick={() => setActiveTab("notifications")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "notifications" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Notifications</button>
+          <button onClick={() => setActiveTab("tags")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "tags" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Tags</button>
+        </div>
       </div>
       <div className="mt-4">
         {renderTabContent()}

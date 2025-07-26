@@ -11,8 +11,8 @@ export default function LoginForm() {
   const [showResetForm, setShowResetForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get returnUrl from query parameters
-  const returnUrl = router.query.returnUrl as string || '/dashboard';
+  // Get redirect URL from query parameters - check both 'redirect' and 'returnUrl'
+  const redirectUrl = (router.query.redirect as string) || (router.query.returnUrl as string) || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +39,8 @@ export default function LoginForm() {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        // Redirect to returnUrl if provided, otherwise go to dashboard
-        router.push(returnUrl);
+        // Redirect to the redirect URL if provided, otherwise go to dashboard
+        router.push(redirectUrl);
       } else {
         const errorData = await res.json();
         console.error('Login failed:', errorData);

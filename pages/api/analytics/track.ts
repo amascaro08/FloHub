@@ -32,8 +32,8 @@ export default async function handler(
       eventData: eventData || {},
     });
     return res.status(200).json({ message: "Analytics event tracked successfully" });
-  } catch (error: any) {
-    console.error("Error tracking analytics event:", error);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+  } catch (error) {
+    console.error('Analytics tracking error:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
   }
 }

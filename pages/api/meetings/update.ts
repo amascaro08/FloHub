@@ -312,11 +312,10 @@ export default async function handler(
           updatedAt: updatedNoteData.updatedAt ? new Date(updatedNoteData.updatedAt).getTime() : 0
         }
       });
-    } catch (updateError: any) {
-      console.error("update.ts - Error during update operation:", updateError);
+    } catch (updateError) {
+      console.error('Error updating document:', updateError);
       return res.status(500).json({
-        success: false,
-        error: `Error updating document: ${updateError.message}`
+        error: `Error updating document: ${updateError instanceof Error ? updateError.message : String(updateError)}`
       });
     }
 
