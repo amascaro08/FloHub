@@ -19,6 +19,8 @@ interface EmailOptions {
 
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
+  private isConfigured: boolean = false;
+  private configError: string | null = null;
 
   constructor() {
     this.initializeTransporter();
@@ -29,6 +31,13 @@ class EmailService {
     const emailProvider = process.env.EMAIL_PROVIDER || 'smtp';
 
     try {
+      // Validate required environment variables
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        this.configError = 'EMAIL_USER and EMAIL_PASS environment variables are required';
+        console.warn('Email service not configured:', this.configError);
+        return;
+      }
+
       if (emailProvider === 'gmail') {
         this.transporter = nodemailer.createTransport({
           service: 'gmail',
@@ -37,6 +46,8 @@ class EmailService {
             pass: process.env.EMAIL_PASS!,
           },
         });
+        this.isConfigured = true;
+        console.log('✅ Email service configured with Gmail');
       } else if (emailProvider === 'smtp') {
         this.transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST!,
@@ -47,21 +58,32 @@ class EmailService {
             pass: process.env.SMTP_PASS!,
           },
         });
+        this.isConfigured = true;
+        console.log('✅ Email service configured with SMTP');
       } else {
-        console.warn('No email provider configured. Email functionality will be disabled.');
+        this.configError = `No email provider configured for provider: ${emailProvider}. Please set EMAIL_PROVIDER to 'gmail' or 'smtp'.`;
+        console.warn('Email service not configured:', this.configError);
       }
     } catch (error) {
+      this.configError = `Failed to initialize email transporter: ${error.message}`;
       console.error('Failed to initialize email transporter:', error);
     }
   }
 
-  private isConfigured(): boolean {
-    return this.transporter !== null;
+  private isEmailConfigured(): boolean {
+    return this.isConfigured;
+  }
+
+  getConfigurationStatus(): { configured: boolean; error: string | null } {
+    return {
+      configured: this.isConfigured,
+      error: this.configError
+    };
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
-    if (!this.isConfigured()) {
-      console.warn('Email service not configured. Email not sent.');
+    if (!this.isEmailConfigured()) {
+      console.warn('Email service not configured. Email not sent.', this.configError);
       return false;
     }
 
