@@ -140,17 +140,26 @@ export default function WidgetToggle({ isLocked }: WidgetToggleProps) {
   };
 
   // Don't show if layout is locked
-  if (isLocked) {
-    return null;
-  }
+  // Temporarily always show for debugging
+  // if (isLocked) {
+  //   return null;
+  // }
+
+  console.log('WidgetToggle rendering:', { isLocked, user, isLoading });
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-[9999]">
+      {/* Debug element */}
+      <div className="fixed bottom-20 right-6 bg-red-500 text-white p-2 text-sm rounded">
+        Debug: Toggle {isLocked ? 'LOCKED' : 'UNLOCKED'}
+      </div>
+      
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-primary-500 hover:bg-primary-600 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center"
+        className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center min-w-[56px] min-h-[56px]"
         aria-label="Widget Settings"
+        style={{ backgroundColor: '#3B82F6' }}
       >
         <Settings className="w-6 h-6" />
       </button>
@@ -197,22 +206,22 @@ export default function WidgetToggle({ isLocked }: WidgetToggleProps) {
                 return (
                   <div
                     key={widgetId}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      isActive 
-                        ? "border-primary-200 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20"
-                        : "border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700"
-                    }`}
+                                         className={`flex items-center justify-between p-3 rounded-lg border ${
+                       isActive 
+                         ? "border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20"
+                         : "border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700"
+                     }`}
                   >
                     <div className="flex items-center flex-1">
                       <button
                         onClick={() => toggleWidget(widgetId)}
                         className="flex items-center flex-1 text-left"
                       >
-                        {isActive ? (
-                          <Eye className="w-4 h-4 text-primary-500 mr-2" />
-                        ) : (
-                          <EyeOff className="w-4 h-4 text-gray-400 mr-2" />
-                        )}
+                                                 {isActive ? (
+                           <Eye className="w-4 h-4 text-blue-500 mr-2" />
+                         ) : (
+                           <EyeOff className="w-4 h-4 text-gray-400 mr-2" />
+                         )}
                         <span className={`font-medium ${
                           isActive ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"
                         }`}>
