@@ -8,13 +8,6 @@
       "when": 1753058713427,
       "tag": "0000_grey_turbo",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1753524814635,
-      "tag": "0001_classy_harry_osborn",
-      "breakpoints": true
     }
   ]
 }

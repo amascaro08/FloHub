@@ -27,27 +27,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   const trackingHook = isClient ? useWidgetTracking('CalendarWidget') : { trackInteraction: () => {} };
 
   // Use shared calendar context instead of individual hook
-  // Wrap in try-catch to handle cases where context is not available
-  let calendarContextData;
-  try {
-    calendarContextData = useCalendarContext();
-  } catch (error) {
-    // Context not available, use fallback
-    console.log('Calendar context not available, using fallback');
-    calendarContextData = {
-      events: [],
-      isLoading: false,
-      error: null,
-      isBackgroundRefreshing: false,
-    };
-  }
-
   const {
     events,
     isLoading: eventsLoading,
     error: eventsError,
     isBackgroundRefreshing,
-  } = calendarContextData;
+  } = useCalendarContext();
 
   // Generate calendar days
   const calendarDays = useMemo(() => {

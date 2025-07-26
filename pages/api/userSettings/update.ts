@@ -35,7 +35,6 @@ export default async function handler(
     const settingsData = {
       selectedCals: newSettings.selectedCals || [],
       defaultView: newSettings.defaultView || 'month',
-      defaultCalendarView: newSettings.defaultCalendarView || 'month',
       customRange: newSettings.customRange || { start: '', end: '' },
       powerAutomateUrl: newSettings.powerAutomateUrl || '',
       globalTags: newSettings.globalTags || [],

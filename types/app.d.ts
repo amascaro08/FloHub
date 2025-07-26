@@ -6,7 +6,6 @@
 export type UserSettings = {
   selectedCals?: string[];
   defaultView?: "today" | "tomorrow" | "week" | "month" | "custom";
-  defaultCalendarView?: "day" | "week" | "month";
   customRange?: { start: string; end: string };
   powerAutomateUrl?: string;
   globalTags?: string[];
