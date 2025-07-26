@@ -92,8 +92,24 @@ const SmartAtAGlanceWidget = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    // Filter incomplete tasks
-    const incompleteTasks = tasks.filter(task => !(task.completed || task.done));
+    // Filter incomplete tasks (using same logic as other widgets)
+    const incompleteTasks = tasks.filter(task => !task.done);
+    
+    // Debug: also check for other possible completion properties
+    const debugIncompleteWithBoth = tasks.filter(task => !(task.completed || task.done));
+    
+    console.log('SmartAtAGlanceWidget Task Filter Debug:', {
+      totalTasksReceived: tasks.length,
+      incompleteTasksWithDoneOnly: incompleteTasks.length,
+      incompleteTasksWithBothProps: debugIncompleteWithBoth.length,
+      firstFewTaskProps: tasks.slice(0, 3).map((t: any) => ({
+        text: t.text?.substring(0, 20),
+        done: t.done,
+        completed: t.completed,
+        status: t.status,
+        allProps: Object.keys(t)
+      }))
+    });
     
     // Analyze urgency
     const urgentTasks = incompleteTasks.filter(task => 
@@ -320,8 +336,28 @@ const SmartAtAGlanceWidget = () => {
       const habits = habitsData.status === 'fulfilled' ? habitsData.value.habits || [] : [];
       const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value.completions || [] : [];
 
+      // Debug logging
+      console.log('SmartAtAGlanceWidget Debug:', {
+        totalTasks: tasks.length,
+        tasksData: tasks.slice(0, 3), // Log first 3 tasks to see structure
+        taskStatuses: tasks.map((t: any) => ({ 
+          text: t.text?.substring(0, 20), 
+          completed: t.completed, 
+          done: t.done,
+          status: t.status 
+        })).slice(0, 5)
+      });
+
       // Analyze and set data
       const analysis = analyzeData(tasks, calendarEvents, habits, habitCompletions);
+      
+      console.log('SmartAtAGlanceWidget Analysis:', {
+        incompleteTasks: analysis.incompleteTasks.length,
+        urgentTasks: analysis.urgentTasks.length,
+        overdueTasks: analysis.overdueTasks.length,
+        statsTotal: analysis.stats.tasksTotal
+      });
+
       setData({
         ...analysis,
         notes,
