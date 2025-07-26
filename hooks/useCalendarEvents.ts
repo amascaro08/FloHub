@@ -140,16 +140,21 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       // Fetch from API
       const events = await fetchEvents(startDate, endDate);
       
+      // Deduplicate events by ID to prevent duplicates from Power Automate or other sources
+      const deduplicatedEvents = Array.from(
+        new Map(events.map(event => [event.id, event])).values()
+      );
+      
       // Cache the result in both in-memory and IndexedDB
       eventCache.set(cacheKey, {
         id: cacheKey,
-        events: events,
+        events: deduplicatedEvents,
         lastUpdated: Date.now(),
       });
 
       // Cache in IndexedDB by source type
       const eventsBySource = new Map<string, CalendarEvent[]>();
-      events.forEach(event => {
+      deduplicatedEvents.forEach(event => {
         const source = event.calendarId?.startsWith('o365_') ? 'o365' : 
                      event.calendarId?.startsWith('ical_') ? 'ical' : 'google';
         const calendarId = event.calendarId || 'default';
@@ -173,7 +178,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
         );
       }
 
-      setLocalEvents(events);
+      setLocalEvents(deduplicatedEvents);
       lastSyncTimeRef.current = Date.now();
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to load events'));
@@ -199,11 +204,21 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
         );
 
         if (deltaResult.hasNewEvents) {
-          // Merge delta events with existing events
+          // Merge delta events with existing events, ensuring no duplicates
           setLocalEvents(prev => {
             const existingIds = new Set(prev.map(e => e.id));
             const newEvents = deltaResult.events.filter(e => !existingIds.has(e.id));
-            return [...prev, ...newEvents];
+            
+            // If we have new events, create a combined list and deduplicate by ID
+            if (newEvents.length > 0) {
+              const combined = [...prev, ...newEvents];
+              const deduped = Array.from(
+                new Map(combined.map(event => [event.id, event])).values()
+              );
+              return deduped;
+            }
+            
+            return prev;
           });
         } else {
           // Full refresh if no delta available

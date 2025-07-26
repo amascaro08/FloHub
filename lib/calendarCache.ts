@@ -122,26 +122,65 @@ class CalendarCacheService {
       const store = await this.getStore('readwrite');
       const cacheKey = `${source}_${calendarId || 'default'}_${startDate.toISOString()}_${endDate.toISOString()}`;
 
-      const cachedEvent: CachedEvent = {
-        id: cacheKey,
-        events,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        lastUpdated: Date.now(),
-        source,
-        calendarId,
-      };
-
+      // First, clear any existing cache entries for this source/calendar combo to prevent duplicates
+      const clearRequest = store.index('source').openCursor(IDBKeyRange.only(source));
+      
       return new Promise((resolve, reject) => {
-        const request = store.put(cachedEvent);
+        const entriesToDelete: string[] = [];
         
-        request.onsuccess = () => {
-          resolve();
+        clearRequest.onsuccess = () => {
+          const cursor = clearRequest.result;
+          if (cursor) {
+            const cached = cursor.value as CachedEvent;
+            // Delete entries from the same source and calendar that overlap with our date range
+            if (cached.calendarId === (calendarId || 'default')) {
+              const cachedStart = new Date(cached.startDate);
+              const cachedEnd = new Date(cached.endDate);
+              // Check for overlap
+              if (cachedStart <= endDate && cachedEnd >= startDate) {
+                entriesToDelete.push(cached.id);
+              }
+            }
+            cursor.continue();
+          } else {
+            // Now delete the overlapping entries
+            const deletePromises = entriesToDelete.map(id => {
+              return new Promise<void>((deleteResolve) => {
+                const deleteRequest = store.delete(id);
+                deleteRequest.onsuccess = () => deleteResolve();
+                deleteRequest.onerror = () => deleteResolve(); // Continue even if delete fails
+              });
+            });
+            
+            Promise.all(deletePromises).then(() => {
+              // Now add the new cache entry
+              const cachedEvent: CachedEvent = {
+                id: cacheKey,
+                events,
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                lastUpdated: Date.now(),
+                source,
+                calendarId,
+              };
+
+              const putRequest = store.put(cachedEvent);
+              
+              putRequest.onsuccess = () => {
+                resolve();
+              };
+
+              putRequest.onerror = () => {
+                console.error('Error caching events:', putRequest.error);
+                reject(putRequest.error);
+              };
+            });
+          }
         };
 
-        request.onerror = () => {
-          console.error('Error caching events:', request.error);
-          reject(request.error);
+        clearRequest.onerror = () => {
+          console.error('Error clearing overlapping cache entries:', clearRequest.error);
+          reject(clearRequest.error);
         };
       });
     } catch (error) {
