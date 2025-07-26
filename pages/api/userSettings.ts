@@ -56,6 +56,7 @@ export default async function handler(
         const defaultSettings: UserSettings = {
           selectedCals: ["primary"],
           defaultView: "month",
+      defaultCalendarView: "month",
           customRange: { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
           powerAutomateUrl: "",
           globalTags: [],
@@ -87,6 +88,7 @@ export default async function handler(
       const settings: UserSettings = {
         selectedCals: (data.selectedCals as string[]) || [], // Ensure it's an array
         defaultView: data.defaultView as UserSettings['defaultView'] || "month",
+        defaultCalendarView: data.defaultCalendarView as 'day' | 'week' | 'month' || "month",
         customRange: (data.customRange as any) || { start: "", end: "" }, // Ensure it's an object
         powerAutomateUrl: data.powerAutomateUrl || "",
         globalTags: (data.globalTags as string[]) || [],

@@ -69,6 +69,16 @@ const CalendarPage = () => {
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
+  // Track if user has manually changed the view
+  const [hasUserChangedView, setHasUserChangedView] = useState(false);
+
+  // Set default view from user settings
+  useEffect(() => {
+    if (settings?.defaultCalendarView && !hasUserChangedView) {
+      setCurrentView(settings.defaultCalendarView);
+    }
+  }, [settings?.defaultCalendarView, hasUserChangedView]);
+
   // Calculate date range for current view
   const getDateRange = useCallback(() => {
     if (currentView === 'day') {
@@ -201,6 +211,31 @@ const CalendarPage = () => {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  // Get navigation labels based on current view
+  const getNavigationLabels = () => {
+    switch (currentView) {
+      case 'day':
+        return {
+          previous: 'Previous Day',
+          next: 'Next Day',
+          title: format(currentDate, 'EEEE, MMMM d, yyyy')
+        };
+      case 'week':
+        return {
+          previous: 'Previous Week',
+          next: 'Next Week',
+          title: `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
+        };
+      case 'month':
+      default:
+        return {
+          previous: 'Previous Month',
+          next: 'Next Month',
+          title: format(currentDate, 'MMMM yyyy')
+        };
+    }
   };
 
   const getEventsForDay = (day: Date) => {
@@ -512,26 +547,23 @@ const CalendarPage = () => {
                 <button
                   onClick={goToPrevious}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label={`Previous ${currentView}`}
+                  aria-label={getNavigationLabels().previous}
+                  title={getNavigationLabels().previous}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {currentView === 'day' 
-                    ? format(currentDate, 'MMMM d, yyyy')
-                    : currentView === 'week'
-                    ? `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
-                    : format(currentDate, 'MMMM yyyy')
-                  }
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-0 text-center">
+                  {getNavigationLabels().title}
                 </h2>
                 
                 <button
                   onClick={goToNext}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label={`Next ${currentView}`}
+                  aria-label={getNavigationLabels().next}
+                  title={getNavigationLabels().next}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -542,7 +574,10 @@ const CalendarPage = () => {
               {/* View Controls */}
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setCurrentView('day')}
+                  onClick={() => {
+                    setCurrentView('day');
+                    setHasUserChangedView(true);
+                  }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'day'
                       ? 'bg-blue-500 text-white'
@@ -552,7 +587,10 @@ const CalendarPage = () => {
                   Day
                 </button>
                 <button
-                  onClick={() => setCurrentView('week')}
+                  onClick={() => {
+                    setCurrentView('week');
+                    setHasUserChangedView(true);
+                  }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'week'
                       ? 'bg-blue-500 text-white'
@@ -562,7 +600,10 @@ const CalendarPage = () => {
                   Week
                 </button>
                 <button
-                  onClick={() => setCurrentView('month')}
+                  onClick={() => {
+                    setCurrentView('month');
+                    setHasUserChangedView(true);
+                  }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'month'
                       ? 'bg-blue-500 text-white'

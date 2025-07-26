@@ -30,6 +30,7 @@ export interface CalendarEvent {
 export interface CalendarSettings {
   selectedCals: string[];
   defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  defaultCalendarView?: "day" | "week" | "month"; // New setting for calendar page view mode
   customRange: { start: string; end: string };
   powerAutomateUrl?: string;
   // Additional settings used in other components
