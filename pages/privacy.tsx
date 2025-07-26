@@ -1,6 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - FloHub',
@@ -30,6 +31,26 @@ function PrivacyPolicy() {
           <p className="text-lg text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
             Your privacy matters to us. Learn how FloHub collects, uses, and protects your personal information.
           </p>
+        </div>
+
+        {/* Back to Home Button */}
+        <div className="flex justify-center mb-8">
+          <Link 
+            href="/"
+            className="inline-flex items-center px-6 py-3 bg-primary/10 hover:bg-primary/20 text-primary font-medium rounded-xl transition-all duration-200 shadow-md hover:shadow-lg group"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            <svg 
+              className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth={2} 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+          </Link>
         </div>
         
         {/* Content */}
