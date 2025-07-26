@@ -145,19 +145,19 @@ export default function WidgetToggle({ isLocked }: WidgetToggleProps) {
   }
 
   return (
-    <div className="fixed top-20 right-4 z-50">
+    <div className="fixed bottom-6 right-6 z-50">
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-lg transition-colors flex items-center justify-center"
+        className="bg-primary-500 hover:bg-primary-600 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center"
         aria-label="Widget Settings"
       >
-        <Settings className="w-5 h-5" />
+        <Settings className="w-6 h-6" />
       </button>
 
       {/* Widget Toggle Panel */}
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 max-h-96 overflow-y-auto">
+        <div className="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 max-h-96 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-gray-900 dark:text-white">
