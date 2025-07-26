@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import { createSecureCookie, getDomainInfo } from '@/lib/cookieUtils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -40,18 +41,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresIn: rememberMe ? '30d' : '24h', // 30 days if remember me, 24 hours if not
     });
 
-    // Check if this is a PWA request
+    // Create secure cookie with dynamic domain detection
+    const domainInfo = getDomainInfo(req);
+    console.log('Login - Domain info:', domainInfo);
+    
+    const cookie = createSecureCookie(req, 'auth-token', token, {
+      maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
+    });
+
+    // Check if this is a PWA request (moved from cookie utility for header logic)
     const userAgent = req.headers['user-agent'] || '';
     const isPWA = userAgent.includes('standalone') || req.headers['sec-fetch-site'] === 'none';
-
-    const cookie = serialize('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: isPWA ? 'none' : 'lax', // Use 'none' for PWA to handle cross-context requests
-      maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
-      path: '/',
-      domain: process.env.NODE_ENV === 'production' ? '.flohub.xyz' : undefined, // Allow subdomains
-    });
 
     // Add PWA-specific headers
     res.setHeader('Set-Cookie', cookie);
