@@ -26,6 +26,9 @@ export interface CalendarEvent {
   instanceIndex?: number; // Index of this instance within the recurring series
 }
 
+// Import CalendarSource type
+import type { CalendarSource } from './app';
+
 // Settings type for calendar components
 export interface CalendarSettings {
   selectedCals: string[];
@@ -33,7 +36,7 @@ export interface CalendarSettings {
   customRange: { start: string; end: string };
   powerAutomateUrl?: string;
   // Additional settings used in other components
-  calendarSources?: string[];
+  calendarSources?: CalendarSource[];
   floCatStyle?: string;
   floCatPersonality?: string;
   preferredName?: string;
