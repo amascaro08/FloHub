@@ -83,35 +83,47 @@ export default function MobileDashboard() {
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
 
   // Fetch user settings to get active widgets (client-side only)
-  useEffect(() => {
-    const fetchUserSettings = async () => {
-      setIsLoading(true);
-      if (isClient && user?.primaryEmail) {
-        try {
-          const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
-          if (response.ok) {
-            const userSettings = await response.json() as UserSettings;
-            if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
-              const validWidgets = userSettings.activeWidgets.filter(
-                widget => Object.keys(widgetComponents).includes(widget)
-              ) as WidgetType[];
-              setActiveWidgets(validWidgets);
-            }
-          } else {
-            console.error("[MobileDashboard] Failed to fetch user settings, using defaults.");
+  const fetchUserSettings = async () => {
+    setIsLoading(true);
+    if (isClient && user?.primaryEmail) {
+      try {
+        const response = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
+        if (response.ok) {
+          const userSettings = await response.json() as UserSettings;
+          if (userSettings.activeWidgets && userSettings.activeWidgets.length > 0) {
+            const validWidgets = userSettings.activeWidgets.filter(
+              widget => Object.keys(widgetComponents).includes(widget)
+            ) as WidgetType[];
+            setActiveWidgets(validWidgets);
           }
-        } catch (error) {
-          console.error("[MobileDashboard] Error fetching user settings:", error);
-        } finally {
-          setIsLoading(false);
+        } else {
+          console.error("[MobileDashboard] Failed to fetch user settings, using defaults.");
         }
-      } else {
+      } catch (error) {
+        console.error("[MobileDashboard] Error fetching user settings:", error);
+      } finally {
         setIsLoading(false);
       }
-    };
+    } else {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUserSettings();
   }, [user?.primaryEmail, isClient]);
+
+  // Listen for widget settings changes from WidgetToggle
+  useEffect(() => {
+    const handleWidgetSettingsChanged = () => {
+      fetchUserSettings();
+    };
+
+    window.addEventListener('widgetSettingsChanged', handleWidgetSettingsChanged);
+    return () => {
+      window.removeEventListener('widgetSettingsChanged', handleWidgetSettingsChanged);
+    };
+  }, []);
 
   // Save widget order when it changes
   const saveWidgetOrder = async () => {

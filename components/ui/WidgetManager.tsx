@@ -59,6 +59,9 @@ export default function WidgetManager({ settings, onSettingsChange }: WidgetMana
       ...settings,
       activeWidgets,
     });
+    
+    // Dispatch event to notify dashboard components
+    window.dispatchEvent(new CustomEvent('widgetSettingsChanged'));
   }, [activeWidgets, settings, onSettingsChange]);
 
   // Toggle widget active state

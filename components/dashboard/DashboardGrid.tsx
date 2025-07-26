@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, memo, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, memo, useMemo, lazy, Suspense, useCallback } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
@@ -159,55 +159,67 @@ const DashboardGrid = () => {
   const [loadedSettings, setLoadedSettings] = useState(false);
 
   // Fetch user settings to get active widgets (client-side only) with caching
-  useEffect(() => {
-    const fetchUserSettings = async () => {
-      if (isClient && user?.email) {
-        try {
-          // Check cache first
-          const cacheKey = `userSettings_${user.email}`;
-          const cached = sessionStorage.getItem(cacheKey);
-          if (cached) {
-            try {
-              const cachedData = JSON.parse(cached);
-              if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
-                setActiveWidgets(cachedData.activeWidgets || []);
-                setLoadedSettings(true);
-                return;
-              }
-            } catch (e) {
-              // Invalid cache, continue to fetch
+  const fetchUserSettings = useCallback(async () => {
+    if (isClient && user?.email) {
+      try {
+        // Check cache first
+        const cacheKey = `userSettings_${user.email}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const cachedData = JSON.parse(cached);
+            if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
+              setActiveWidgets(cachedData.activeWidgets || []);
+              setLoadedSettings(true);
+              return;
             }
+          } catch (e) {
+            // Invalid cache, continue to fetch
           }
-
-          const response = await fetch(`/api/userSettings?userId=${user.email}`);
-          if (response.ok) {
-            const userSettings = await response.json() as UserSettings;
-            const activeWidgets = userSettings.activeWidgets || [];
-            setActiveWidgets(activeWidgets);
-            
-            // Cache the result
-            sessionStorage.setItem(cacheKey, JSON.stringify({
-              activeWidgets,
-              timestamp: Date.now()
-            }));
-          } else {
-            setActiveWidgets([]);
-          }
-        } catch (e) {
-          setActiveWidgets([]);
-        } finally {
-          setLoadedSettings(true);
         }
-      }
-    };
 
+        const response = await fetch(`/api/userSettings?userId=${user.email}`);
+        if (response.ok) {
+          const userSettings = await response.json() as UserSettings;
+          const activeWidgets = userSettings.activeWidgets || [];
+          setActiveWidgets(activeWidgets);
+          
+          // Cache the result
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            activeWidgets,
+            timestamp: Date.now()
+          }));
+        } else {
+          setActiveWidgets([]);
+        }
+      } catch (e) {
+        setActiveWidgets([]);
+      } finally {
+                setLoadedSettings(true);
+      }
+      }
+    }, [isClient, user?.email]);
+
+  useEffect(() => {
     if (isClient) {
       fetchUserSettings();
     } else {
       setActiveWidgets([]);
       setLoadedSettings(true);
     }
-  }, [user, isClient]);
+  }, [user?.email, isClient, fetchUserSettings]);
+
+  // Listen for widget settings changes from WidgetToggle
+  useEffect(() => {
+    const handleWidgetSettingsChanged = () => {
+      fetchUserSettings();
+    };
+
+    window.addEventListener('widgetSettingsChanged', handleWidgetSettingsChanged);
+    return () => {
+      window.removeEventListener('widgetSettingsChanged', handleWidgetSettingsChanged);
+    };
+  }, []);
 
   // Load layout from Firestore on component mount (client-side only)
   useEffect(() => {
