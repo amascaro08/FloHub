@@ -13,6 +13,7 @@ import {
 } from "../db/schema";
 import { eq, and, gte, lte, desc, sql, count } from "drizzle-orm";
 import OpenAI from "openai";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -104,6 +105,24 @@ export class SmartAIAssistant {
 
   constructor(userId: string) {
     this.userId = userId;
+  }
+
+  // Helper to get user timezone
+  private getUserTimezone(): string {
+    return (global as any).currentUserTimezone || 'UTC';
+  }
+
+  // Helper to get timezone-aware dates
+  private getTimezoneAwareDates() {
+    const userTimezone = this.getUserTimezone();
+    const now = new Date();
+    const nowInUserTz = toZonedTime(now, userTimezone);
+    
+    const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return { now: nowInUserTz, today, tomorrow, userTimezone };
   }
 
   async loadUserContext(): Promise<UserContext> {
@@ -696,10 +715,7 @@ export class SmartAIAssistant {
 
   private handleCalendarQueries(query: string): string {
     const lowerQuery = query.toLowerCase();
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { now, today, tomorrow, userTimezone } = this.getTimezoneAwareDates();
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // Filter calendar events based on the query
@@ -732,7 +748,8 @@ export class SmartAIAssistant {
           const upcomingMatches = matchingEvents
             .filter(event => {
               const eventDate = new Date(event.start || event.date);
-              return eventDate >= today;
+              const eventInUserTz = toZonedTime(eventDate, userTimezone);
+              return eventInUserTz >= today;
             })
             .sort((a, b) => {
               const dateA = new Date(a.start || a.date);
@@ -743,17 +760,9 @@ export class SmartAIAssistant {
           if (upcomingMatches.length > 0) {
             const nextEvent = upcomingMatches[0];
             const eventDate = new Date(nextEvent.start || nextEvent.date);
-            const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
-            const dateStr = eventDate.toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric',
-              year: eventDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-            });
-            const timeStr = eventDate.toLocaleTimeString('en-US', { 
-              hour: 'numeric', 
-              minute: '2-digit', 
-              hour12: true 
-            });
+            const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
+            const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
+            const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
             
             // Calculate time difference for more natural response
             const timeDiff = eventDate.getTime() - now.getTime();
@@ -824,7 +833,8 @@ export class SmartAIAssistant {
     if (lowerQuery.includes("today") || lowerQuery.includes("today's")) {
       relevantEvents = relevantEvents.filter(event => {
         const eventDate = new Date(event.start || event.date);
-        return eventDate >= today && eventDate < tomorrow;
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= today && eventInUserTz < tomorrow;
       });
       
       if (relevantEvents.length === 0) {
@@ -832,11 +842,8 @@ export class SmartAIAssistant {
       }
       
       const eventList = relevantEvents.map(event => {
-        const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
+        const eventDate = new Date(event.start || event.date);
+        const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
         return `• ${time} - **${event.summary}**${event.location ? ` (${event.location})` : ''}`;
       }).join('\n');
       
@@ -848,7 +855,8 @@ export class SmartAIAssistant {
       
       relevantEvents = relevantEvents.filter(event => {
         const eventDate = new Date(event.start || event.date);
-        return eventDate >= tomorrow && eventDate < dayAfterTomorrow;
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= tomorrow && eventInUserTz < dayAfterTomorrow;
       });
       
       if (relevantEvents.length === 0) {
@@ -856,11 +864,8 @@ export class SmartAIAssistant {
       }
       
       const eventList = relevantEvents.map(event => {
-        const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
+        const eventDate = new Date(event.start || event.date);
+        const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
         return `• ${time} - **${event.summary}**${event.location ? ` (${event.location})` : ''}`;
       }).join('\n');
       

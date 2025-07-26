@@ -1,4 +1,23 @@
 import type { FloCatCapability } from "../floCatCapabilities";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+// Helper to get user timezone
+function getUserTimezone(): string {
+  return (global as any).currentUserTimezone || 'UTC';
+}
+
+// Helper to get timezone-aware dates
+function getTimezoneAwareDates() {
+  const userTimezone = getUserTimezone();
+  const now = new Date();
+  const nowInUserTz = toZonedTime(now, userTimezone);
+  
+  const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return { now: nowInUserTz, today, tomorrow, userTimezone };
+}
 
 async function handleCalendarCommand(command: string, args: string, userId: string): Promise<string> {
   console.log(`[DEBUG] handleCalendarCommand called with command: "${command}", args: "${args}", userId: "${userId}"`);
@@ -135,10 +154,7 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
 
 async function showTodayEvents(userId: string): Promise<string> {
   try {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { now, today, tomorrow, userTimezone } = getTimezoneAwareDates();
 
     // Use global context data if available
     const contextData = (global as any).currentContextData;
@@ -146,7 +162,8 @@ async function showTodayEvents(userId: string): Promise<string> {
     
     const todayEvents = events.filter((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      return eventDate >= today && eventDate < tomorrow;
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      return eventInUserTz >= today && eventInUserTz < tomorrow;
     });
 
     if (todayEvents.length === 0) {
@@ -157,11 +174,7 @@ async function showTodayEvents(userId: string): Promise<string> {
     
     todayEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      const time = eventDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       response += `• ${time} - **${event.summary}**\n`;
       if (event.location) {
         response += `  📍 ${event.location}\n`;
@@ -323,8 +336,7 @@ async function showUpcomingEvents(userId: string): Promise<string> {
 
 async function handleContextualQuery(query: string, userId: string): Promise<string> {
   try {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const { now, today, userTimezone } = getTimezoneAwareDates();
     
     const contextData = (global as any).currentContextData;
     const events = contextData?.events || contextData?.allEvents || [];
@@ -354,7 +366,8 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
     const upcomingMatches = matchingEvents
       .filter((event: any) => {
         const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-        return eventDate >= today;
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= today;
       })
       .sort((a: any, b: any) => {
         const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
@@ -365,17 +378,9 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
     if (upcomingMatches.length > 0) {
       const nextEvent = upcomingMatches[0];
       const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.start);
-      const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
-      const dateStr = eventDate.toLocaleDateString('en-US', { 
-        month: 'long', 
-        day: 'numeric',
-        year: eventDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      });
-      const timeStr = eventDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
+      const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
+      const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       
       // Calculate time difference for more natural response
       const timeDiff = eventDate.getTime() - now.getTime();

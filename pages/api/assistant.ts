@@ -16,6 +16,7 @@ import {
 import { ChatCompletionMessageParam } from "openai/resources";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 // Types
 type ChatRequest = {
@@ -201,15 +202,17 @@ export default async function handler(
         const calendarData = await calendarResponse.json();
         const events = calendarData.events || [];
         
-        // Filter today's and upcoming events
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Filter today's and upcoming events using user timezone
+        const now = new Date();
+        const nowInUserTz = toZonedTime(now, userTimezone);
+        const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
         const todayEvents = events.filter((event: any) => {
           const eventDate = new Date(event.start?.dateTime || event.start?.date);
-          return eventDate >= today && eventDate < tomorrow;
+          const eventInUserTz = toZonedTime(eventDate, userTimezone);
+          return eventInUserTz >= today && eventInUserTz < tomorrow;
         });
 
         const upcomingEvents = events.filter((event: any) => {
@@ -604,18 +607,23 @@ export default async function handler(
     // Fetch conversations (notes and meetings will be handled in settings section)
     const conversations = await fetchUserConversations(email).catch(() => []);
     
-    // Fetch user settings to get FloCat style preference
+    // Fetch user settings to get FloCat style preference and timezone
     const userSettingsData = await db.query.userSettings.findFirst({
       where: eq(userSettings.user_email, email),
       columns: {
         floCatStyle: true,
         floCatPersonality: true,
         preferredName: true,
+        timezone: true,
       },
     });
     const floCatStyle = bodyFloCatStyle || userSettingsData?.floCatStyle || "default";
     const floCatPersonality = userSettingsData?.floCatPersonality || [];
     const preferredName = bodyPreferredName || userSettingsData?.preferredName || "";
+    const userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Store timezone globally for calendar operations
+    (global as any).currentUserTimezone = userTimezone;
     
     // Use notes and meetings from request body if provided, otherwise fetch from database
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
