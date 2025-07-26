@@ -533,48 +533,20 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       
       {/* Default view filter */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-6 overflow-hidden">
-        <h2 className="text-lg font-medium mb-4">Calendar View Settings</h2>
-        
-        {/* Default Date Filter */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Default Date Filter
-          </label>
-          <select
-            value={settings.defaultView}
-            onChange={(e) =>
-              onSettingsChange({ ...settings, defaultView: e.target.value as any })
-            }
-            className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full md:w-auto"
-          >
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="custom">Custom Range</option>
-          </select>
-        </div>
-
-        {/* Default Calendar View */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Default Calendar View
-          </label>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Choose how you want the calendar page to display by default.
-          </p>
-          <select
-            value={settings.defaultCalendarView || 'month'}
-            onChange={(e) =>
-              onSettingsChange({ ...settings, defaultCalendarView: e.target.value as 'day' | 'week' | 'month' })
-            }
-            className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full md:w-auto"
-          >
-            <option value="day">Day View</option>
-            <option value="week">Week View</option>
-            <option value="month">Month View</option>
-          </select>
-        </div>
+        <h2 className="text-lg font-medium mb-4">Default Date Filter</h2>
+        <select
+          value={settings.defaultView}
+          onChange={(e) =>
+            onSettingsChange({ ...settings, defaultView: e.target.value as any })
+          }
+          className="border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full md:w-auto"
+        >
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Range</option>
+        </select>
 
         {settings.defaultView === "custom" && (
           <div className="mt-4 flex flex-col md:flex-row gap-4">

@@ -20,11 +20,6 @@ export interface CalendarEvent {
   htmlLink?: string; // Google Calendar event link
   created?: string; // ISO string for creation time
   updated?: string; // ISO string for last update time
-  organizer?: {
-    email?: string;
-    name?: string;
-    displayName?: string;
-  }; // Event organizer information
   // Recurring event fields
   isRecurring?: boolean; // Whether this event is part of a recurring series
   seriesMasterId?: string; // ID of the series master for recurring events
@@ -35,7 +30,6 @@ export interface CalendarEvent {
 export interface CalendarSettings {
   selectedCals: string[];
   defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
-  defaultCalendarView?: "day" | "week" | "month"; // New setting for calendar page view mode
   customRange: { start: string; end: string };
   powerAutomateUrl?: string;
   // Additional settings used in other components

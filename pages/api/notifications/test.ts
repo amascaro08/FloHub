@@ -126,7 +126,7 @@ export default async function handler(
     const debugInfo = {
       vapidConfigured: !!(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
       subscriptionCount: subscriptions.length,
-      subscriptionDetails: [] as Array<{ id: string; endpoint: string; hasKeys: boolean; }>
+      subscriptionDetails: []
     };
 
     for (const sub of subscriptions) {

@@ -105,7 +105,6 @@ export const userSettings = pgTable("user_settings", {
   preferredName: varchar("preferred_name", { length: 255 }),
   selectedCals: text("selected_cals").array(),
   defaultView: varchar("default_view", { length: 50 }),
-  defaultCalendarView: varchar("default_calendar_view", { length: 10 }).default('month'),
   customRange: jsonb("custom_range"),
   powerAutomateUrl: varchar("power_automate_url", { length: 255 }),
   globalTags: text("global_tags").array(),

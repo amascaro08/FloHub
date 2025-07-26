@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
 import { CalendarEvent } from '@/types/calendar';
 import { calendarCache } from '@/lib/calendarCache';
@@ -11,10 +11,10 @@ interface UseCalendarEventsOptions {
 
 // Enhanced cache for calendar events with IndexedDB integration
 const eventCache = new Map<string, CachedEvent>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (increased from 2 minutes)
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes (reduced from 5 minutes)
 
 // Background refresh interval
-const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes (increased from 5 minutes)
+const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 interface CachedEvent {
   id: string;
@@ -22,9 +22,9 @@ interface CachedEvent {
   lastUpdated: number;
 }
 
-// Helper to generate stable cache key
+// Helper to generate cache key
 const getCacheKey = (startDate: Date, endDate: Date) => {
-  return `${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`;
+  return `${startDate.toISOString()}_${endDate.toISOString()}`;
 };
 
 // Helper to check if cache is valid
@@ -35,11 +35,9 @@ const isCacheValid = (cachedEvent: CachedEvent) => {
 // Helper to fetch events from API with timeout
 const fetchEvents = async (startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
   try {
-    console.log('Fetching calendar events for range:', startDate.toISOString(), 'to', endDate.toISOString());
-    
     const response = await fetch(`/api/calendar?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&useCalendarSources=true`, {
       credentials: 'include',
       signal: controller.signal,
@@ -48,18 +46,16 @@ const fetchEvents = async (startDate: Date, endDate: Date): Promise<CalendarEven
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch calendar events: ${response.status}`);
+      throw new Error('Failed to fetch calendar events');
     }
     
     const data = await response.json();
-    console.log('Successfully fetched', data.events?.length || 0, 'events');
     return data.events || [];
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Request timeout');
     }
-    console.error('Error fetching calendar events:', error);
     throw error;
   }
 };
@@ -72,39 +68,24 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
   const [isInitializing, setIsInitializing] = useState(true);
   const backgroundRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncTimeRef = useRef<number>(Date.now());
-  const isLoadingRef = useRef(false);
 
-  // Stable cache key that doesn't change on every render
-  const cacheKey = useMemo(() => getCacheKey(startDate, endDate), [startDate, endDate]);
+  const cacheKey = getCacheKey(startDate, endDate);
 
-  // Initialize IndexedDB cache once
+  // Initialize IndexedDB cache
   useEffect(() => {
-    let isMounted = true;
-    
     const initCache = async () => {
-      if (!enabled) {
-        setIsInitializing(false);
-        return;
-      }
-      
       try {
         await calendarCache.init();
-        if (isMounted) {
-          setIsInitializing(false);
-        }
+        setIsInitializing(false);
       } catch (error) {
         console.error('Failed to initialize calendar cache:', error);
-        if (isMounted) {
-          setIsInitializing(false);
-        }
+        setIsInitializing(false);
       }
     };
 
-    initCache();
-    
-    return () => {
-      isMounted = false;
-    };
+    if (enabled) {
+      initCache();
+    }
   }, [enabled]);
 
   // Check cache first (both in-memory and IndexedDB)
@@ -112,7 +93,6 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
     // Check in-memory cache first
     const cached = eventCache.get(cacheKey);
     if (cached && isCacheValid(cached)) {
-      console.log('Using in-memory cache for', cacheKey);
       return cached.events;
     }
 
@@ -120,7 +100,6 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
     try {
       const cachedEvents = await calendarCache.getCachedEvents(startDate, endDate);
       if (cachedEvents.length > 0) {
-        console.log('Using IndexedDB cache for', cacheKey);
         // Update in-memory cache
         eventCache.set(cacheKey, {
           id: cacheKey,
@@ -138,19 +117,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
 
   // Load events with enhanced caching and background refresh
   const loadEvents = useCallback(async (isBackgroundRefresh = false) => {
-    if (!enabled || isInitializing) {
-      console.log('Skipping load events - disabled or initializing');
-      return;
-    }
+    if (!enabled || isInitializing) return;
 
-    // Prevent multiple simultaneous loads
-    if (isLoadingRef.current && !isBackgroundRefresh) {
-      console.log('Load already in progress, skipping');
-      return;
-    }
-
-    isLoadingRef.current = true;
-    
     if (isBackgroundRefresh) {
       setIsBackgroundRefreshing(true);
     } else {
@@ -165,7 +133,6 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
         if (cached) {
           setLocalEvents(cached);
           setIsLoading(false);
-          isLoadingRef.current = false;
           return;
         }
       }
@@ -197,29 +164,22 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
       // Cache each source separately in IndexedDB
       for (const [key, sourceEvents] of Array.from(eventsBySource.entries())) {
         const [source, calendarId] = key.split('_', 2);
-        try {
-          await calendarCache.cacheEvents(
-            sourceEvents,
-            startDate,
-            endDate,
-            source as 'google' | 'o365' | 'ical',
-            calendarId
-          );
-        } catch (cacheError) {
-          console.warn('Failed to cache events for', key, ':', cacheError);
-        }
+        await calendarCache.cacheEvents(
+          sourceEvents,
+          startDate,
+          endDate,
+          source as 'google' | 'o365' | 'ical',
+          calendarId
+        );
       }
 
       setLocalEvents(events);
       lastSyncTimeRef.current = Date.now();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
-      console.error('Error loading events:', errorMessage);
-      setError(new Error(errorMessage));
+      setError(err instanceof Error ? err : new Error('Failed to load events'));
     } finally {
       setIsLoading(false);
       setIsBackgroundRefreshing(false);
-      isLoadingRef.current = false;
     }
   }, [startDate, endDate, enabled, cacheKey, getCachedEvents, isInitializing]);
 
@@ -230,12 +190,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
     }
 
     backgroundRefreshRef.current = setInterval(async () => {
-      if (!enabled || isLoadingRef.current) {
-        return;
-      }
-      
       try {
-        console.log('Starting background refresh for', cacheKey);
         // Check for delta updates
         const deltaResult = await calendarCache.getDeltaEvents(
           startDate,
@@ -248,9 +203,6 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
           setLocalEvents(prev => {
             const existingIds = new Set(prev.map(e => e.id));
             const newEvents = deltaResult.events.filter(e => !existingIds.has(e.id));
-            if (newEvents.length > 0) {
-              console.log('Added', newEvents.length, 'new events from delta');
-            }
             return [...prev, ...newEvents];
           });
         } else {
@@ -259,10 +211,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
         }
       } catch (error) {
         console.error('Background refresh error:', error);
-        // Don't fall back to full refresh on error to prevent infinite loops
+        // Fallback to full refresh
+        loadEvents(true);
       }
     }, BACKGROUND_REFRESH_INTERVAL);
-  }, [loadEvents, startDate, endDate, enabled, cacheKey]);
+  }, [loadEvents, startDate, endDate]);
 
   // Stop background refresh
   const stopBackgroundRefresh = useCallback(() => {
@@ -382,47 +335,21 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true }: UseCal
 
   // Load events on mount and when dependencies change
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (!isInitializing && enabled) {
-      // Add a small delay to prevent rapid successive calls
-      timeoutId = setTimeout(() => {
-        loadEvents();
-      }, 100);
+    if (!isInitializing) {
+      loadEvents();
     }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [loadEvents, isInitializing, enabled]);
+  }, [loadEvents, isInitializing]);
 
   // Start background refresh when component mounts
   useEffect(() => {
     if (enabled && !isInitializing) {
-      const timeoutId = setTimeout(() => {
-        startBackgroundRefresh();
-      }, 5000); // Start background refresh after 5 seconds
-      
-      return () => {
-        clearTimeout(timeoutId);
-        stopBackgroundRefresh();
-      };
+      startBackgroundRefresh();
     }
 
     return () => {
       stopBackgroundRefresh();
     };
   }, [enabled, startBackgroundRefresh, stopBackgroundRefresh, isInitializing]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopBackgroundRefresh();
-      isLoadingRef.current = false;
-    };
-  }, [stopBackgroundRefresh]);
 
   return {
     events: localEvents,

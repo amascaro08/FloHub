@@ -69,23 +69,6 @@ const CalendarPage = () => {
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
-  // Track if user has manually changed the view
-  const [hasUserChangedView, setHasUserChangedView] = useState(false);
-
-  // Fetch user settings first
-  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
-    user ? '/api/userSettings' : null,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
-  );
-
-  // Set default view from user settings
-  useEffect(() => {
-    if (settings?.defaultCalendarView && !hasUserChangedView) {
-      setCurrentView(settings.defaultCalendarView);
-    }
-  }, [settings?.defaultCalendarView, hasUserChangedView]);
-
   // Calculate date range for current view
   const getDateRange = useCallback(() => {
     if (currentView === 'day') {
@@ -105,6 +88,12 @@ const CalendarPage = () => {
     }
   }, [currentDate, currentView]);
 
+  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
+    user ? '/api/userSettings' : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
+  );
+
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
     user ? '/api/calendar/list' : null,
@@ -113,11 +102,7 @@ const CalendarPage = () => {
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  // Use cached calendar events hook with stable enabled flag
-  const eventsEnabled = useMemo(() => {
-    return !!user && (!settings || !!settings?.selectedCals);
-  }, [user, settings?.selectedCals]);
-
+  // Use cached calendar events hook
   const {
     events,
     isLoading,
@@ -130,7 +115,7 @@ const CalendarPage = () => {
   } = useCalendarEvents({
     startDate,
     endDate,
-    enabled: eventsEnabled
+    enabled: !!user && !!settings?.selectedCals
   });
 
   // Handle errors gracefully
@@ -212,31 +197,6 @@ const CalendarPage = () => {
 
   const goToToday = () => {
     setCurrentDate(new Date());
-  };
-
-  // Get navigation labels based on current view
-  const getNavigationLabels = () => {
-    switch (currentView) {
-      case 'day':
-        return {
-          previous: 'Previous Day',
-          next: 'Next Day',
-          title: format(currentDate, 'EEEE, MMMM d, yyyy')
-        };
-      case 'week':
-        return {
-          previous: 'Previous Week',
-          next: 'Next Week',
-          title: `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
-        };
-      case 'month':
-      default:
-        return {
-          previous: 'Previous Month',
-          next: 'Next Month',
-          title: format(currentDate, 'MMMM yyyy')
-        };
-    }
   };
 
   const getEventsForDay = (day: Date) => {
@@ -548,23 +508,26 @@ const CalendarPage = () => {
                 <button
                   onClick={goToPrevious}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label={getNavigationLabels().previous}
-                  title={getNavigationLabels().previous}
+                  aria-label={`Previous ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-0 text-center">
-                  {getNavigationLabels().title}
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {currentView === 'day' 
+                    ? format(currentDate, 'MMMM d, yyyy')
+                    : currentView === 'week'
+                    ? `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
+                    : format(currentDate, 'MMMM yyyy')
+                  }
                 </h2>
                 
                 <button
                   onClick={goToNext}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  aria-label={getNavigationLabels().next}
-                  title={getNavigationLabels().next}
+                  aria-label={`Next ${currentView}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -575,10 +538,7 @@ const CalendarPage = () => {
               {/* View Controls */}
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => {
-                    setCurrentView('day');
-                    setHasUserChangedView(true);
-                  }}
+                  onClick={() => setCurrentView('day')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'day'
                       ? 'bg-blue-500 text-white'
@@ -588,10 +548,7 @@ const CalendarPage = () => {
                   Day
                 </button>
                 <button
-                  onClick={() => {
-                    setCurrentView('week');
-                    setHasUserChangedView(true);
-                  }}
+                  onClick={() => setCurrentView('week')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'week'
                       ? 'bg-blue-500 text-white'
@@ -601,10 +558,7 @@ const CalendarPage = () => {
                   Week
                 </button>
                 <button
-                  onClick={() => {
-                    setCurrentView('month');
-                    setHasUserChangedView(true);
-                  }}
+                  onClick={() => setCurrentView('month')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'month'
                       ? 'bg-blue-500 text-white'
@@ -769,11 +723,6 @@ const CalendarPage = () => {
                                           📍 {event.location}
                                         </div>
                                       )}
-                                      {event.organizer && (event.organizer.name || event.organizer.email) && (
-                                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                          👤 {event.organizer.name || event.organizer.email}
-                                        </div>
-                                      )}
                                     </div>
                                     <div className="ml-4">
                                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -864,18 +813,7 @@ const CalendarPage = () => {
                                   </div>
                                 </div>
                               )}
-                              {event.organizer && (event.organizer.name || event.organizer.email) && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                  <div className="flex items-center">
-                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Organizer:</span>
-                                    {event.organizer.name || event.organizer.email}
-                                  </div>
-                                </div>
-                              )}
-                              {event.description && !containsHTML(event.description) && (
+                              {event.description && (
                                 <div className="text-sm text-gray-600 dark:text-gray-400">
                                   <div className="prose prose-sm max-w-none dark:prose-invert">
                                     {event.description.length > 200 
@@ -1023,19 +961,6 @@ const CalendarPage = () => {
                   <div>
                     <span className="font-medium text-gray-600 dark:text-gray-400">Location:</span>
                     <span className="ml-2">{selectedEvent.location}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Organizer */}
-              {selectedEvent.organizer && (selectedEvent.organizer.name || selectedEvent.organizer.email) && (
-                <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                  <svg className="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <div>
-                    <span className="font-medium text-gray-600 dark:text-gray-400">Organizer:</span>
-                    <span className="ml-2">{selectedEvent.organizer.name || selectedEvent.organizer.email}</span>
                   </div>
                 </div>
               )}
