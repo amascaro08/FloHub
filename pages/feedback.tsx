@@ -13,67 +13,6 @@ const FeedbackPage: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [issueUrl, setIssueUrl] = useState('');
-  const [authAttempted, setAuthAttempted] = useState(false);
-
-  // Handle authentication state changes
-  useEffect(() => {
-    if (!isUserLoading) {
-      setAuthAttempted(true);
-    }
-  }, [isUserLoading]);
-
-  // Handle loading state - show loading UI while checking authentication
-  if (isUserLoading || !authAttempted) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto py-8 px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <div className="flex justify-center items-center min-h-[400px]">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  <div className="text-lg text-gray-900 dark:text-white">Loading...</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle authentication errors - redirect to login ONLY after auth has been attempted
-  if (authAttempted && (isError || !user)) {
-    // Don't redirect immediately if we're already loading to prevent loops
-    const redirectToLogin = () => {
-      const currentPath = router.asPath;
-      const loginUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
-      router.push(loginUrl);
-    };
-
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto py-8 px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <div className="text-center">
-                <h1 className="text-2xl font-semibold mb-4 text-[var(--fg)]">Submit Feedback</h1>
-                <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                  You must be signed in to submit feedback.
-                </p>
-                <button 
-                  onClick={redirectToLogin}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  Sign In
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Available feedback types
   const feedbackTypes = [
@@ -152,15 +91,39 @@ const FeedbackPage: NextPage = () => {
         setSelectedTags([]);
         setFeedbackType('general');
       } else {
-        setSubmitMessage(data.error || 'Failed to submit feedback.');
+        // Handle specific authentication errors
+        if (response.status === 401) {
+          setSubmitMessage('Please sign in to submit feedback. Redirecting to login...');
+          setTimeout(() => {
+            const currentPath = router.asPath;
+            const loginUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
+            router.push(loginUrl);
+          }, 2000);
+        } else {
+          setSubmitMessage(data.error || 'Failed to submit feedback.');
+        }
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      setSubmitMessage('An error occurred while submitting feedback.');
+      setSubmitMessage('An error occurred while submitting feedback. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading state only briefly
+  if (isUserLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Submit Feedback</h1>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -169,6 +132,13 @@ const FeedbackPage: NextPage = () => {
         <p className="text-neutral-600 dark:text-neutral-400">
           Help us improve the app by sharing your feedback. Your submission will create a GitHub issue for tracking.
         </p>
+        {!user && !isUserLoading && (
+          <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-700 dark:text-yellow-300">
+            <p className="text-sm">
+              <strong>Note:</strong> You need to be signed in to submit feedback. If you're not signed in, you'll be prompted to log in when you submit.
+            </p>
+          </div>
+        )}
       </div>
 
       {submitMessage && (
@@ -330,7 +300,31 @@ const FeedbackPage: NextPage = () => {
           <li>• You'll receive a link to track the progress of your feedback</li>
           <li>• All feedback is reviewed and prioritized by the development team</li>
           <li>• You'll be notified when your issue is resolved</li>
+          {!user && (
+            <li className="text-yellow-600 dark:text-yellow-400">• <strong>Sign in required:</strong> You'll be prompted to sign in when submitting feedback</li>
+          )}
         </ul>
+        {user && (
+          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+              Troubleshooting: If feedback submission fails, you can check the GitHub configuration:
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/test-github-config', { credentials: 'include' });
+                  const data = await response.json();
+                  alert(JSON.stringify(data, null, 2));
+                } catch (error) {
+                  alert('Failed to check configuration: ' + error);
+                }
+              }}
+              className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
+            >
+              Test GitHub Config
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
