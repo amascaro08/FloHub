@@ -382,8 +382,14 @@ export default async function handler(
             end: item.end || { dateTime: "", timeZone: "" },
             source: eventSource,
             description: item.description || "",
+            location: item.location || "",
             calendarName: sourceName,
             tags,
+            organizer: {
+              email: item.organizer?.email,
+              name: item.organizer?.displayName || item.organizer?.email,
+              displayName: item.organizer?.displayName
+            },
           }));
           console.log(`Successfully fetched ${body.items.length} events for ${id}`);
           return events;
@@ -486,6 +492,12 @@ export default async function handler(
               description: e.description || e.body || "",
               calendarName: sourceName,
               tags,
+              location: e.location || "",
+              organizer: {
+                email: e.organizer?.emailAddress?.address || e.organizer?.email,
+                name: e.organizer?.emailAddress?.name || e.organizer?.name || e.organizer?.displayName,
+                displayName: e.organizer?.displayName || e.organizer?.name
+              },
               // Preserve recurring event metadata
               isRecurring: e.isRecurring || false,
               seriesMasterId: e.seriesMasterId,
