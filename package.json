@@ -11,7 +11,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:init": "tsx scripts/init-db.ts"
+    "db:init": "tsx scripts/init-db.ts",
+    "notifications:setup": "node scripts/setup-notifications.js",
+    "notifications:generate-keys": "node scripts/generate-vapid-keys.js",
+    "notifications:run-scheduler": "node scripts/notification-scheduler.js"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",
