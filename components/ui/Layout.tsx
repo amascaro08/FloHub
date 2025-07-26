@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/router';
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText } from 'lucide-react'
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText, Users } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ChatSideModal from './ChatSideModal';
@@ -52,7 +52,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
-  const adminNavItem = { name: "Admin", href: "/dashboard/admin", icon: Settings };
+      const adminNavItem = { name: "User Management", href: "/dashboard/admin", icon: Users };
 
   // -- CHAT --
   const chatContext = useChat();
