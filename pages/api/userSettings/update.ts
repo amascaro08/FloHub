@@ -65,8 +65,8 @@ export default async function handler(
       });
 
     return res.status(204).end();
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating user settings:", error);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
   }
 }

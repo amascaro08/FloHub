@@ -35,6 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json(status);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get debug status', details: error.message });
+    res.status(500).json({ 
+      error: 'Failed to get debug status', 
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 }

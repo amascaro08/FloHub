@@ -65,7 +65,7 @@ class EmailService {
         console.warn('Email service not configured:', this.configError);
       }
     } catch (error) {
-      this.configError = `Failed to initialize email transporter: ${error.message}`;
+      this.configError = `Failed to initialize email transporter: ${error instanceof Error ? error.message : String(error)}`;
       console.error('Failed to initialize email transporter:', error);
     }
   }

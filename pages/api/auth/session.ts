@@ -28,7 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Session API error:', error);
     // Return 401 for authentication errors, 500 for server errors
-    if (error.message?.includes('jwt') || error.message?.includes('token')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('jwt') || errorMessage.includes('token')) {
       res.status(401).json({ error: 'Invalid authentication token' });
     } else {
       res.status(500).json({ error: 'Internal server error' });
