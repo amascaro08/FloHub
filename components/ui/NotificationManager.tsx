@@ -219,15 +219,59 @@ const NotificationManager: React.FC = () => {
       console.log('NotificationManager: Sending test notification...');
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      await sendTestNotification();
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+      });
       
-      setState(prev => ({ ...prev, isLoading: false }));
-      console.log('NotificationManager: Test notification sent successfully');
+      const result = await response.json();
+      console.log('NotificationManager: Test notification response:', result);
+      
+      if (response.ok) {
+        setState(prev => ({ ...prev, isLoading: false, error: null }));
+        
+        // Show success message
+        if (result.debug?.subscriptionCount > 1) {
+          alert(`✅ Test notification sent to ${result.debug.subscriptionCount} subscription(s)!\n\n${result.message}`);
+        } else {
+          alert('✅ Test notification sent successfully! Check your device for the notification.');
+        }
+      } else {
+        // Handle detailed error response
+        let errorMessage = result.message || 'Failed to send test notification';
+        
+        if (result.results && result.results.length > 0) {
+          const failedResults = result.results.filter((r: any) => !r.success);
+          if (failedResults.length > 0) {
+            errorMessage += '\n\nDetailed errors:';
+            failedResults.forEach((r: any, index: number) => {
+              errorMessage += `\n${index + 1}. ${r.error}`;
+            });
+          }
+        }
+        
+        if (result.debug) {
+          errorMessage += '\n\nDebug info:';
+          errorMessage += `\n- VAPID configured: ${result.debug.vapidConfigured ? 'Yes' : 'No'}`;
+          errorMessage += `\n- Subscriptions found: ${result.debug.subscriptionCount}`;
+          
+          if (result.debug.subscriptionDetails) {
+            result.debug.subscriptionDetails.forEach((sub: any, index: number) => {
+              errorMessage += `\n- Subscription ${index + 1}: ${sub.hasKeys ? 'Valid' : 'Missing keys'}`;
+            });
+          }
+        }
+        
+        setState(prev => ({
+          ...prev,
+          error: errorMessage,
+          isLoading: false
+        }));
+      }
     } catch (error) {
       console.error('NotificationManager: Error sending test notification:', error);
       setState(prev => ({ 
         ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to send test notification',
+        error: error instanceof Error ? error.message : 'Network error: Failed to send test notification. Check your internet connection.',
         isLoading: false 
       }));
     }
