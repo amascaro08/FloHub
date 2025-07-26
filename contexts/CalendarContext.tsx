@@ -1,6 +1,8 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { CalendarEvent } from '@/types/calendar';
+import { CalendarSource } from '@/types/app';
+import { generateCalendarSourcesHash } from '@/lib/calendarUtils';
 
 interface CalendarContextType {
   events: CalendarEvent[];
@@ -17,18 +19,23 @@ interface CalendarProviderProps {
   startDate: Date;
   endDate: Date;
   enabled?: boolean;
+  calendarSources?: CalendarSource[];
 }
 
 export const CalendarProvider: React.FC<CalendarProviderProps> = ({ 
   children, 
   startDate, 
   endDate, 
-  enabled = true 
+  enabled = true,
+  calendarSources
 }) => {
+  const calendarSourcesHash = generateCalendarSourcesHash(calendarSources);
+  
   const calendarData = useCalendarEvents({
     startDate,
     endDate,
     enabled,
+    calendarSourcesHash,
   });
 
   return (

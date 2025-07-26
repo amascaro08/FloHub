@@ -82,7 +82,14 @@ const SettingsModularPage = () => {
 
   // Handle settings update
   const handleSettingsChange = async (newSettings: UserSettings) => {
+    const oldSettings = settings;
     setSettings(newSettings);
+    
+    // Check if calendar sources have changed
+    const oldSourcesHash = JSON.stringify(oldSettings.calendarSources?.filter(s => s.isEnabled) || []);
+    const newSourcesHash = JSON.stringify(newSettings.calendarSources?.filter(s => s.isEnabled) || []);
+    const calendarSourcesChanged = oldSourcesHash !== newSourcesHash;
+    
     if (userId) {
       try {
         const response = await fetch("/api/userSettings/update", {
@@ -98,6 +105,22 @@ const SettingsModularPage = () => {
           throw new Error(errorData.error || "Failed to update settings");
         }
         console.log("Settings updated successfully!");
+        
+        // Clear calendar cache if sources changed
+        if (calendarSourcesChanged) {
+          console.log("Calendar sources changed, clearing caches...");
+          try {
+            const { clearAllCalendarCaches } = await import('@/lib/calendarUtils');
+            await clearAllCalendarCaches();
+            
+            // Also force refresh calendar API cache
+            await fetch('/api/calendar?forceRefresh=true&timeMin=2024-01-01T00:00:00Z&timeMax=2024-12-31T23:59:59Z');
+            
+            console.log("Calendar caches cleared and refreshed");
+          } catch (cacheError) {
+            console.error("Error clearing calendar cache:", cacheError);
+          }
+        }
       } catch (e) {
         console.error("Error updating settings: ", e);
       }
