@@ -59,6 +59,18 @@ const cachePowerAutomateData = (url: string, data: any[]): void => {
   };
 };
 
+// Helper function to clear Power Automate cache for a specific URL
+const clearPowerAutomateCache = (url?: string): void => {
+  if (url) {
+    delete powerAutomateCache[url];
+  } else {
+    // Clear all cache
+    Object.keys(powerAutomateCache).forEach(key => {
+      delete powerAutomateCache[key];
+    });
+  }
+};
+
 // Helper function for timeout protection
 const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout: number = 5000): Promise<Response> => {
   const controller = new AbortController();
@@ -204,7 +216,7 @@ export default async function handler(
       }
     }
     
-    const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true" } = req.query;
+    const { calendarId = "primary", timeMin, timeMax, o365Url, timezone, useCalendarSources = "true", forceRefresh = "false" } = req.query;
 
     // Normalize and validate dates
     const safeTimeMin = typeof timeMin === "string" ? timeMin : "";
@@ -406,9 +418,14 @@ export default async function handler(
       
       console.log("Attempting to fetch O365 events from URL:", url);
       
-      // Check cache first
+      // Check cache first (unless force refresh is requested)
+      if (forceRefresh === "true") {
+        console.log("Force refresh requested, clearing cache for URL:", url);
+        clearPowerAutomateCache(url);
+      }
+      
       const cachedData = getCachedPowerAutomateData(url);
-      if (cachedData) {
+      if (cachedData && forceRefresh !== "true") {
         console.log("Using cached O365 data for URL:", url);
         return cachedData.map((event: any) => ({
           ...event,
@@ -470,27 +487,34 @@ export default async function handler(
           console.log("Expanded events count:", expandedEvents.length);
           
           const o365Events: any[] = expandedEvents
-            .map((e: any) => ({
-              id: `o365_${e.startTime || e.start?.dateTime || e.title || e.subject}_${Math.random().toString(36).substring(7)}`,
-              calendarId: `o365_${source?.id || "default"}`,
-              summary: e.title || e.subject || "No Title (Work)",
-              start: { 
-                dateTime: e.startTime || e.start?.dateTime || e.start?.date,
-                date: e.start?.date // Handle all-day events
-              },
-              end: { 
-                dateTime: e.endTime || e.end?.dateTime || e.end?.date,
-                date: e.end?.date // Handle all-day events
-              },
-              source: isWork ? "work" : "personal",
-              description: e.description || e.body || "",
-              calendarName: sourceName,
-              tags,
-              // Preserve recurring event metadata
-              isRecurring: e.isRecurring || false,
-              seriesMasterId: e.seriesMasterId,
-              instanceIndex: e.instanceIndex
-            }))
+            .map((e: any) => {
+              // Create a stable ID based on content, not random values
+              const startTime = e.startTime || e.start?.dateTime || e.start?.date;
+              const summary = e.title || e.subject || "No Title (Work)";
+              const stableId = `o365_${encodeURIComponent(summary)}_${startTime}_${source?.id || "default"}`;
+              
+              return {
+                id: stableId,
+                calendarId: `o365_${source?.id || "default"}`,
+                summary,
+                start: { 
+                  dateTime: e.startTime || e.start?.dateTime || e.start?.date,
+                  date: e.start?.date // Handle all-day events
+                },
+                end: { 
+                  dateTime: e.endTime || e.end?.dateTime || e.end?.date,
+                  date: e.end?.date // Handle all-day events
+                },
+                source: isWork ? "work" : "personal",
+                description: e.description || e.body || "",
+                calendarName: sourceName,
+                tags,
+                // Preserve recurring event metadata
+                isRecurring: e.isRecurring || false,
+                seriesMasterId: e.seriesMasterId,
+                instanceIndex: e.instanceIndex
+              };
+            })
             .filter((event: any) => {
               // Enhanced filtering for O365 events by timeMin and timeMax
               const eventStart = event.start.dateTime || event.start.date;
@@ -527,7 +551,7 @@ export default async function handler(
             
           console.log("O365 mapped and filtered events count:", o365Events.length);
           
-          // Cache the processed data
+          // Cache the processed data (replaces any existing cache for this URL)
           cachePowerAutomateData(url, o365Events);
           
           return o365Events;

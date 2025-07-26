@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseIS
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { generateCalendarSourcesHash } from '@/lib/calendarUtils';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -102,6 +103,11 @@ const CalendarPage = () => {
 
   const { start: startDate, end: endDate } = getDateRange();
 
+  // Generate hash of calendar sources to detect changes
+  const calendarSourcesHash = useMemo(() => {
+    return generateCalendarSourcesHash(settings?.calendarSources);
+  }, [settings?.calendarSources]);
+
   // Use cached calendar events hook
   const {
     events,
@@ -115,7 +121,8 @@ const CalendarPage = () => {
   } = useCalendarEvents({
     startDate,
     endDate,
-    enabled: !!user && !!settings?.selectedCals
+    enabled: !!user && !!settings?.selectedCals,
+    calendarSourcesHash
   });
 
   // Handle errors gracefully
