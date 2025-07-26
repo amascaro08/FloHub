@@ -102,7 +102,11 @@ const CalendarPage = () => {
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  // Use cached calendar events hook
+  // Use cached calendar events hook with stable enabled flag
+  const eventsEnabled = useMemo(() => {
+    return !!user && (!settings || !!settings?.selectedCals);
+  }, [user, settings?.selectedCals]);
+
   const {
     events,
     isLoading,
@@ -115,7 +119,7 @@ const CalendarPage = () => {
   } = useCalendarEvents({
     startDate,
     endDate,
-    enabled: !!user && !!settings?.selectedCals
+    enabled: eventsEnabled
   });
 
   // Handle errors gracefully
