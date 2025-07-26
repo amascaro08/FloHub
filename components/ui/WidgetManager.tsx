@@ -20,8 +20,8 @@ const availableWidgets: WidgetConfig[] = [
   {
     id: "ataglance",
     name: "At a Glance",
-    description: "Quick overview of your day",
-    component: "AtAGlanceWidget",
+    description: "AI-powered intelligent dashboard with insights and quick actions",
+    component: "SmartAtAGlanceWidget",
   },
   {
     id: "quicknote",

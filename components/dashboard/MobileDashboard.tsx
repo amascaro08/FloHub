@@ -17,7 +17,7 @@ const WidgetSkeleton = ({ type }: { type?: string }) => (
 // Lazy load widgets
 const TaskWidget = lazy(() => import("@/components/widgets/TaskWidget"));
 const CalendarWidget = lazy(() => import("@/components/widgets/CalendarWidget"));
-const AtAGlanceWidget = lazy(() => import("@/components/widgets/AtAGlanceWidget"));
+const SmartAtAGlanceWidget = lazy(() => import("@/components/widgets/SmartAtAGlanceWidget"));
 const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"));
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 
@@ -27,7 +27,7 @@ type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-trac
 const widgetComponents: Record<WidgetType, ReactElement> = {
   tasks: <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>,
   calendar: <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget /></Suspense>,
-  ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><AtAGlanceWidget /></Suspense>,
+  ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>,
   quicknote: <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>,
   "habit-tracker": <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>,
 };
