@@ -186,6 +186,16 @@ export default async function handler(
       (lowerPrompt.includes("what") && (lowerPrompt.includes("today") || lowerPrompt.includes("tomorrow")) && 
        (lowerPrompt.includes("meeting") || lowerPrompt.includes("event") || lowerPrompt.includes("schedule")))) {
     
+    // Fetch user timezone for calendar operations
+    const userSettingsForTimezone = await db.query.userSettings.findFirst({
+      where: eq(userSettings.user_email, email),
+      columns: { timezone: true },
+    });
+    const calendarTimezone = userSettingsForTimezone?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Store timezone globally for calendar capabilities
+    (global as any).currentUserTimezone = calendarTimezone;
+    
     try {
       // Fetch calendar events for the next 7 days
       const now = new Date();
@@ -204,14 +214,14 @@ export default async function handler(
         
         // Filter today's and upcoming events using user timezone
         const now = new Date();
-        const nowInUserTz = toZonedTime(now, userTimezone);
+        const nowInUserTz = toZonedTime(now, calendarTimezone);
         const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
         const todayEvents = events.filter((event: any) => {
           const eventDate = new Date(event.start?.dateTime || event.start?.date);
-          const eventInUserTz = toZonedTime(eventDate, userTimezone);
+          const eventInUserTz = toZonedTime(eventDate, calendarTimezone);
           return eventInUserTz >= today && eventInUserTz < tomorrow;
         });
 
@@ -252,11 +262,7 @@ export default async function handler(
             if (lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting")) {
               // Show only the first meeting
               const firstEvent = dayEvents[0];
-              const time = new Date(firstEvent.start?.dateTime || firstEvent.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(firstEvent.start?.dateTime || firstEvent.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse = `📅 **Your first meeting on ${dayName}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
               if (firstEvent.location) {
                 scheduleResponse += `  📍 ${firstEvent.location}\n`;
@@ -268,11 +274,7 @@ export default async function handler(
               // Show all events for the day
               scheduleResponse = `📅 **${dayName}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
               dayEvents.forEach((event: any) => {
-                const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                  hour: 'numeric', 
-                  minute: '2-digit', 
-                  hour12: true 
-                });
+                const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
                 scheduleResponse += `• ${time} - **${event.summary}**\n`;
                 if (event.location) {
                   scheduleResponse += `  📍 ${event.location}\n`;
@@ -285,11 +287,7 @@ export default async function handler(
           
           if (todayEvents.length > 0) {
             todayEvents.forEach((event: any) => {
-              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${time} - **${event.summary}**\n`;
               if (event.location) {
                 scheduleResponse += `  📍 ${event.location}\n`;
@@ -305,11 +303,7 @@ export default async function handler(
           scheduleResponse += `**Today** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n`;
           if (todayEvents.length > 0) {
             todayEvents.slice(0, 3).forEach((event: any) => {
-              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${time} - ${event.summary}\n`;
             });
             if (todayEvents.length > 3) {
@@ -324,16 +318,8 @@ export default async function handler(
           if (upcomingEvents.length > 0) {
             upcomingEvents.forEach((event: any) => {
               const eventDate = new Date(event.start?.dateTime || event.start?.date);
-              const dateStr = eventDate.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-              });
-              const timeStr = eventDate.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const dateStr = formatInTimeZone(eventDate, calendarTimezone, 'eee MMM d');
+              const timeStr = formatInTimeZone(eventDate, calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${dateStr} at ${timeStr} - **${event.summary}**\n`;
             });
           } else {
