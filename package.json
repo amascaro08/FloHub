@@ -14,7 +14,8 @@
     "db:init": "tsx scripts/init-db.ts",
     "notifications:setup": "node scripts/setup-notifications.js",
     "notifications:generate-keys": "node scripts/generate-vapid-keys.js",
-    "notifications:run-scheduler": "node scripts/notification-scheduler.js"
+    "notifications:run-scheduler": "node scripts/notification-scheduler.js",
+    "notifications:check-db": "node scripts/check-db-connection.js"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",

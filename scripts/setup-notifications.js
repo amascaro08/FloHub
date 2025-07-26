@@ -29,7 +29,7 @@ if (!fs.existsSync(envPath)) {
   console.log('- VAPID_PRIVATE_KEY');
   console.log('- VAPID_MAILTO');
   console.log('- INTERNAL_API_KEY');
-  console.log('- NEXT_PUBLIC_BASE_URL');
+  console.log('- NEON_DATABASE_URL');
   
   console.log('\n🔑 Run the following to generate VAPID keys:');
   console.log('node scripts/generate-vapid-keys.js');
@@ -65,6 +65,27 @@ if (missingVars.length > 0) {
 }
 
 console.log('✅ All required environment variables are set');
+
+// Check database configuration
+const databaseUrl = process.env.NEON_DATABASE_URL;
+if (!databaseUrl || databaseUrl === 'your-neon-database-url-here') {
+  console.log('⚠️  Database URL not configured for local development');
+  console.log('💡 This is normal - database URL is configured in Vercel for production');
+  console.log('📝 For local development with notifications:');
+  console.log('   1. Get your Neon database URL from your dashboard');
+  console.log('   2. Add it to .env.local as NEON_DATABASE_URL');
+  console.log('   3. Run: npm run notifications:check-db');
+} else {
+  console.log('✅ Database URL configured');
+  
+  // Run database check
+  try {
+    console.log('🔍 Checking database connection...');
+    execSync('npm run notifications:check-db', { stdio: 'inherit' });
+  } catch (error) {
+    console.log('⚠️  Database check failed (this may be expected for local development)');
+  }
+}
 
 // Test VAPID configuration
 try {
@@ -103,11 +124,17 @@ console.log('3. Click "Enable" to test notifications');
 console.log('4. Send a test notification to verify everything works');
 
 console.log('\n📅 To enable automatic reminders:');
-console.log('Set up a cron job to run: node -e "fetch(\'http://localhost:3000/api/notifications/scheduler\', { method: \'POST\', headers: { \'x-api-key\': \'your-internal-api-key\' } })"');
+console.log('Set up a cron job to run: npm run notifications:run-scheduler');
 console.log('Recommended: Every 5 minutes (*/5 * * * *)');
 
-console.log('\n📝 For production:');
-console.log('1. Update NEXT_PUBLIC_BASE_URL to your production domain');
-console.log('2. Generate new VAPID keys for production');
-console.log('3. Set up proper cron job or scheduled task');
-console.log('4. Configure email settings for user notifications');
+console.log('\n🔧 Troubleshooting commands:');
+console.log('- Check database: npm run notifications:check-db');
+console.log('- Generate new keys: npm run notifications:generate-keys');
+console.log('- Test manually: npm run notifications:run-scheduler');
+
+console.log('\n📝 For production deployment:');
+console.log('1. Database URL is already configured in Vercel environment variables');
+console.log('2. Update NEXT_PUBLIC_BASE_URL to your production domain');
+console.log('3. Generate new VAPID keys for production');
+console.log('4. Set up proper cron job or scheduled task');
+console.log('5. Configure email settings for user notifications');
