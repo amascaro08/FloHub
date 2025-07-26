@@ -1,4 +1,23 @@
 import type { FloCatCapability } from "../floCatCapabilities";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+// Helper to get user timezone
+function getUserTimezone(): string {
+  return (global as any).currentUserTimezone || 'UTC';
+}
+
+// Helper to get timezone-aware dates
+function getTimezoneAwareDates() {
+  const userTimezone = getUserTimezone();
+  const now = new Date();
+  const nowInUserTz = toZonedTime(now, userTimezone);
+  
+  const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return { now: nowInUserTz, today, tomorrow, userTimezone };
+}
 
 async function handleCalendarCommand(command: string, args: string, userId: string): Promise<string> {
   console.log(`[DEBUG] handleCalendarCommand called with command: "${command}", args: "${args}", userId: "${userId}"`);
@@ -34,6 +53,14 @@ async function handleCalendarCommand(command: string, args: string, userId: stri
 
 async function showCalendarEvents(args: string, userId: string): Promise<string> {
   const lowerArgs = args.toLowerCase();
+  
+  // ENHANCED: Handle contextual queries like "when do I take mum to the airport"
+  if ((lowerArgs.includes("when") && (lowerArgs.includes("do") || lowerArgs.includes("am"))) ||
+      lowerArgs.includes("airport") || lowerArgs.includes("flight") || 
+      lowerArgs.includes("mum") || lowerArgs.includes("mom") || lowerArgs.includes("dad")) {
+    console.log(`[DEBUG] Calendar capability handling contextual query: "${args}"`);
+    return await handleContextualQuery(args, userId);
+  }
   
   // Check for specific day queries
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -127,10 +154,7 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
 
 async function showTodayEvents(userId: string): Promise<string> {
   try {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { now, today, tomorrow, userTimezone } = getTimezoneAwareDates();
 
     // Use global context data if available
     const contextData = (global as any).currentContextData;
@@ -138,7 +162,8 @@ async function showTodayEvents(userId: string): Promise<string> {
     
     const todayEvents = events.filter((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      return eventDate >= today && eventDate < tomorrow;
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      return eventInUserTz >= today && eventInUserTz < tomorrow;
     });
 
     if (todayEvents.length === 0) {
@@ -149,11 +174,7 @@ async function showTodayEvents(userId: string): Promise<string> {
     
     todayEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      const time = eventDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       response += `• ${time} - **${event.summary}**\n`;
       if (event.location) {
         response += `  📍 ${event.location}\n`;
@@ -313,6 +334,176 @@ async function showUpcomingEvents(userId: string): Promise<string> {
   }
 }
 
+async function handleContextualQuery(query: string, userId: string): Promise<string> {
+  try {
+    const { now, today, userTimezone } = getTimezoneAwareDates();
+    
+    const contextData = (global as any).currentContextData;
+    const events = contextData?.events || contextData?.allEvents || [];
+    console.log(`[DEBUG] Available events: ${events.length}`);
+    if (events.length > 0) {
+      console.log(`[DEBUG] Sample event: ${JSON.stringify(events[0])}`);
+    }
+    
+    // Extract keywords for contextual search
+    const contextKeywords = extractCalendarKeywords(query);
+    
+    if (contextKeywords.length === 0) {
+      return "Could you be more specific about what event you're looking for?";
+    }
+    
+    // Search for events that match the context keywords
+    const matchingEvents = events.filter((event: any) => {
+      const eventText = `${event.summary || ''} ${event.description || ''} ${event.location || ''}`.toLowerCase();
+      return contextKeywords.some(keyword => eventText.includes(keyword));
+    });
+    
+    if (matchingEvents.length === 0) {
+      return `📅 I couldn't find any events matching "${contextKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
+    }
+    
+    // Sort by date and get the next occurrence
+    const upcomingMatches = matchingEvents
+      .filter((event: any) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= today;
+      })
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+        const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+        return dateA.getTime() - dateB.getTime();
+      });
+    
+    if (upcomingMatches.length > 0) {
+      const nextEvent = upcomingMatches[0];
+      const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.start);
+      const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
+      const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
+      const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+      
+      // Calculate time difference for more natural response
+      const timeDiff = eventDate.getTime() - now.getTime();
+      const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      
+      let whenText = "";
+      if (daysUntil === 0) {
+        whenText = "today";
+      } else if (daysUntil === 1) {
+        whenText = "tomorrow";
+      } else if (daysUntil <= 7) {
+        whenText = `this ${dayName}`;
+      } else {
+        whenText = `on ${dayName}, ${dateStr}`;
+      }
+      
+      let response = `📅 **${nextEvent.summary}** is scheduled for **${whenText}** at **${timeStr}**`;
+      
+      if (nextEvent.location) {
+        response += `\n📍 Location: ${nextEvent.location}`;
+      }
+      
+      if (nextEvent.description) {
+        response += `\n📝 ${nextEvent.description.substring(0, 150)}${nextEvent.description.length > 150 ? '...' : ''}`;
+      }
+      
+      // Add helpful context about time remaining
+      if (daysUntil === 0) {
+        const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+        if (hoursUntil > 0) {
+          response += `\n\n⏰ That's in about ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}!`;
+        }
+      } else if (daysUntil === 1) {
+        response += `\n\n⏰ That's tomorrow!`;
+      } else if (daysUntil <= 7) {
+        response += `\n\n⏰ That's in ${daysUntil} days.`;
+      }
+      
+      return response;
+    } else {
+      // No upcoming matches, check for past events
+      const pastMatches = matchingEvents
+        .filter((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+          return eventDate < today;
+        })
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+          const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+          return dateB.getTime() - dateA.getTime(); // Most recent first
+        });
+      
+      if (pastMatches.length > 0) {
+        const lastEvent = pastMatches[0];
+        const eventDate = new Date(lastEvent.start?.dateTime || lastEvent.start?.date || lastEvent.start);
+        const timeAgo = formatTimeAgo(eventDate);
+        
+        return `📅 I found "${lastEvent.summary}" but it was ${timeAgo}. I don't see any upcoming events matching your query.`;
+      } else {
+        return `📅 I couldn't find any events matching "${contextKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
+      }
+    }
+  } catch (error) {
+    console.error("Error handling contextual query:", error);
+    return "Sorry, I couldn't search your calendar. Please try again.";
+  }
+}
+
+function extractCalendarKeywords(query: string): string[] {
+  const lowerQuery = query.toLowerCase();
+  
+  // Remove question words and common phrases
+  const stopWords = ['when', 'do', 'i', 'am', 'is', 'are', 'the', 'a', 'an', 'and', 'or', 'but', 'to', 'for', 'with', 'at', 'on', 'in', 'take', 'have', 'get', 'go', 'my', 'me'];
+  
+  // Extract meaningful keywords
+  const words = lowerQuery
+    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word));
+  
+  // Add common synonyms and variations
+  const expandedKeywords = [...words];
+  words.forEach(word => {
+    switch(word) {
+      case 'mum':
+      case 'mom':
+      case 'mother':
+        expandedKeywords.push('mum', 'mom', 'mother');
+        break;
+      case 'dad':
+      case 'father':
+        expandedKeywords.push('dad', 'father');
+        break;
+      case 'airport':
+        expandedKeywords.push('flight', 'plane', 'travel');
+        break;
+      case 'flight':
+        expandedKeywords.push('airport', 'plane', 'travel');
+        break;
+      case 'doctor':
+        expandedKeywords.push('appointment', 'medical', 'clinic');
+        break;
+      case 'meeting':
+        expandedKeywords.push('call', 'conference', 'discussion');
+        break;
+    }
+  });
+  
+  return Array.from(new Set(expandedKeywords)); // Remove duplicates
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
+
 export const calendarCapability: FloCatCapability = {
   featureName: "Calendar Management",
   supportedCommands: ["show", "list", "view", "get", "today", "tomorrow", "week"],
@@ -325,7 +516,9 @@ export const calendarCapability: FloCatCapability = {
     "first meeting", "next meeting", "meeting on", "events on",
     "what do I have on", "what's on", "meetings on monday", "meetings on tuesday",
     "meetings on wednesday", "meetings on thursday", "meetings on friday",
-    "meetings on saturday", "meetings on sunday", "my meetings", "show meetings"
+    "meetings on saturday", "meetings on sunday", "my meetings", "show meetings",
+    "when do I", "when am I", "when is", "what time do I", "what time am I",
+    "airport", "flight", "mum", "mom", "dad", "doctor", "appointment"
   ],
   handler: async (command: string, args: string) => {
     const userId = (global as any).currentUserId;

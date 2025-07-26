@@ -54,7 +54,10 @@ export function findMatchingCapability(userInput: string): { capability: FloCatC
           lowerInput.includes("events") || lowerInput.includes("agenda") ||
           lowerInput.includes("meeting") || lowerInput.includes("first meeting") ||
           lowerInput.includes("next meeting") || lowerInput.includes("what do i have") ||
-          lowerInput.includes("what's on")) {
+          lowerInput.includes("what's on") || 
+          (lowerInput.includes("when") && (lowerInput.includes("do i") || lowerInput.includes("am i"))) ||
+          lowerInput.includes("airport") || lowerInput.includes("flight") || 
+          lowerInput.includes("mum") || lowerInput.includes("mom") || lowerInput.includes("dad")) {
         
         if (lowerInput.includes("today")) {
           const command = "today";

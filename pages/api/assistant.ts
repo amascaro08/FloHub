@@ -16,6 +16,7 @@ import {
 import { ChatCompletionMessageParam } from "openai/resources";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 // Types
 type ChatRequest = {
@@ -177,12 +178,23 @@ export default async function handler(
       lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting") ||
       lowerPrompt.includes("meeting on") || lowerPrompt.includes("events on") ||
       lowerPrompt.includes("what do i have on") || lowerPrompt.includes("what's on") ||
+      (lowerPrompt.includes("when") && (lowerPrompt.includes("do i") || lowerPrompt.includes("am i"))) ||
       (lowerPrompt.includes("meeting") && (lowerPrompt.includes("monday") || lowerPrompt.includes("tuesday") || 
        lowerPrompt.includes("wednesday") || lowerPrompt.includes("thursday") || lowerPrompt.includes("friday") ||
        lowerPrompt.includes("saturday") || lowerPrompt.includes("sunday") || lowerPrompt.includes("today") ||
        lowerPrompt.includes("tomorrow"))) ||
       (lowerPrompt.includes("what") && (lowerPrompt.includes("today") || lowerPrompt.includes("tomorrow")) && 
        (lowerPrompt.includes("meeting") || lowerPrompt.includes("event") || lowerPrompt.includes("schedule")))) {
+    
+    // Fetch user timezone for calendar operations
+    const userSettingsForTimezone = await db.query.userSettings.findFirst({
+      where: eq(userSettings.user_email, email),
+      columns: { timezone: true },
+    });
+    const calendarTimezone = userSettingsForTimezone?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Store timezone globally for calendar capabilities
+    (global as any).currentUserTimezone = calendarTimezone;
     
     try {
       // Fetch calendar events for the next 7 days
@@ -200,15 +212,17 @@ export default async function handler(
         const calendarData = await calendarResponse.json();
         const events = calendarData.events || [];
         
-        // Filter today's and upcoming events
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Filter today's and upcoming events using user timezone
+        const now = new Date();
+        const nowInUserTz = toZonedTime(now, calendarTimezone);
+        const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
         const todayEvents = events.filter((event: any) => {
           const eventDate = new Date(event.start?.dateTime || event.start?.date);
-          return eventDate >= today && eventDate < tomorrow;
+          const eventInUserTz = toZonedTime(eventDate, calendarTimezone);
+          return eventInUserTz >= today && eventInUserTz < tomorrow;
         });
 
         const upcomingEvents = events.filter((event: any) => {
@@ -248,11 +262,7 @@ export default async function handler(
             if (lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting")) {
               // Show only the first meeting
               const firstEvent = dayEvents[0];
-              const time = new Date(firstEvent.start?.dateTime || firstEvent.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(firstEvent.start?.dateTime || firstEvent.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse = `📅 **Your first meeting on ${dayName}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
               if (firstEvent.location) {
                 scheduleResponse += `  📍 ${firstEvent.location}\n`;
@@ -264,11 +274,7 @@ export default async function handler(
               // Show all events for the day
               scheduleResponse = `📅 **${dayName}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
               dayEvents.forEach((event: any) => {
-                const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                  hour: 'numeric', 
-                  minute: '2-digit', 
-                  hour12: true 
-                });
+                const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
                 scheduleResponse += `• ${time} - **${event.summary}**\n`;
                 if (event.location) {
                   scheduleResponse += `  📍 ${event.location}\n`;
@@ -281,11 +287,7 @@ export default async function handler(
           
           if (todayEvents.length > 0) {
             todayEvents.forEach((event: any) => {
-              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${time} - **${event.summary}**\n`;
               if (event.location) {
                 scheduleResponse += `  📍 ${event.location}\n`;
@@ -301,11 +303,7 @@ export default async function handler(
           scheduleResponse += `**Today** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n`;
           if (todayEvents.length > 0) {
             todayEvents.slice(0, 3).forEach((event: any) => {
-              const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${time} - ${event.summary}\n`;
             });
             if (todayEvents.length > 3) {
@@ -320,16 +318,8 @@ export default async function handler(
           if (upcomingEvents.length > 0) {
             upcomingEvents.forEach((event: any) => {
               const eventDate = new Date(event.start?.dateTime || event.start?.date);
-              const dateStr = eventDate.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-              });
-              const timeStr = eventDate.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
+              const dateStr = formatInTimeZone(eventDate, calendarTimezone, 'eee MMM d');
+              const timeStr = formatInTimeZone(eventDate, calendarTimezone, 'h:mm a');
               scheduleResponse += `• ${dateStr} at ${timeStr} - **${event.summary}**\n`;
             });
           } else {
@@ -346,8 +336,8 @@ export default async function handler(
   }
 
   // Check for natural language queries first
-  if (lowerPrompt.includes("when did") || lowerPrompt.includes("show me") || 
-      lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
+  if (lowerPrompt.includes("when did") || lowerPrompt.includes("when do") || lowerPrompt.includes("when am") ||
+      lowerPrompt.includes("show me") || lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
       lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
@@ -603,18 +593,23 @@ export default async function handler(
     // Fetch conversations (notes and meetings will be handled in settings section)
     const conversations = await fetchUserConversations(email).catch(() => []);
     
-    // Fetch user settings to get FloCat style preference
+    // Fetch user settings to get FloCat style preference and timezone
     const userSettingsData = await db.query.userSettings.findFirst({
       where: eq(userSettings.user_email, email),
       columns: {
         floCatStyle: true,
         floCatPersonality: true,
         preferredName: true,
+        timezone: true,
       },
     });
     const floCatStyle = bodyFloCatStyle || userSettingsData?.floCatStyle || "default";
     const floCatPersonality = userSettingsData?.floCatPersonality || [];
     const preferredName = bodyPreferredName || userSettingsData?.preferredName || "";
+    const userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Store timezone globally for calendar operations
+    (global as any).currentUserTimezone = userTimezone;
     
     // Use notes and meetings from request body if provided, otherwise fetch from database
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
