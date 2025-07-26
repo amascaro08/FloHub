@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Skip middleware for other public paths.
-  const publicPaths = ['/login', '/register', '/api/auth', '/privacy', '/terms'];
+  const publicPaths = ['/login', '/register', '/api/auth', '/privacy', '/terms', '/feedback'];
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
@@ -56,7 +56,8 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      * - auth routes (login, register, etc)
+     * - feedback page (should be publicly accessible)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|login|register|api/auth|privacy|terms).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|login|register|api/auth|privacy|terms|feedback).*)',
   ],
 };

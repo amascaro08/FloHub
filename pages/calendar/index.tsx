@@ -117,7 +117,8 @@ const CalendarPage = () => {
     updateEvent,
     removeEvent,
     invalidateCache,
-    refetch
+    refetch,
+    isBackgroundRefreshing
   } = useCalendarEvents({
     startDate,
     endDate,
@@ -343,15 +344,25 @@ const CalendarPage = () => {
     }
   };
 
-  // Handle authentication and loading states with better UI
-  if (!user) {
+  // Improved loading state management - show loading only for initial load
+  const isInitialLoad = !user && !fetchError;
+  const hasLoadingError = fetchError && !events.length && !isLoading;
+  const showContent = user && !hasLoadingError;
+  const hasEvents = events && events.length > 0;
+
+  // Handle authentication - only show this if we're certain user is not authenticated
+  if (isInitialLoad) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto py-8 px-4">
           <div className="max-w-7xl mx-auto">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Please sign in</h1>
-              <p className="text-gray-600 dark:text-gray-400">You need to be signed in to view your calendar.</p>
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <div className="text-lg text-gray-900 dark:text-white">Loading your calendar...</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -359,7 +370,8 @@ const CalendarPage = () => {
     );
   }
 
-  if (fetchError) {
+  // Handle error states - only show if we have a persistent error
+  if (hasLoadingError) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto py-8 px-4">
@@ -380,15 +392,25 @@ const CalendarPage = () => {
     );
   }
 
-  if (isLoading) {
+  // Show skeleton only during initial loading, not during background refreshes
+  if (isLoading && !hasEvents) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto py-8 px-4">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calendar</h1>
-              <p className="text-gray-600 dark:text-gray-400">Manage your events and schedule</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calendar</h1>
+                  <p className="text-gray-600 dark:text-gray-400">Loading your events...</p>
+                </div>
+                {/* Loading indicator */}
+                <div className="flex items-center space-x-2 text-blue-500">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                  <span className="text-sm">Loading...</span>
+                </div>
+              </div>
             </div>
             
             {/* Loading skeleton */}
@@ -492,18 +514,38 @@ const CalendarPage = () => {
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calendar</h1>
                 <p className="text-gray-600 dark:text-gray-400">Manage your events and schedule</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingEvent(null);
-                  setIsEventFormOpen(true);
-                }}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Event</span>
-              </button>
+              <div className="flex items-center space-x-4">
+                {/* Background refresh indicator */}
+                {isBackgroundRefreshing && (
+                  <div className="flex items-center space-x-2 text-blue-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    <span className="text-sm">Syncing...</span>
+                  </div>
+                )}
+                {/* Manual refresh button */}
+                <button
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                  className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  title="Refresh calendar"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingEvent(null);
+                    setIsEventFormOpen(true);
+                  }}
+                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Add Event</span>
+                </button>
+              </div>
             </div>
           </div>
 

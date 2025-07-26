@@ -7,6 +7,28 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Set CORS headers for cross-domain support
+  const allowedOrigins = [
+    'https://flohub.xyz',
+    'https://www.flohub.xyz', 
+    'https://flohub.vercel.app',
+    'http://localhost:3000' // for development
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
@@ -38,6 +60,7 @@ export default async function handler(
 
   if (!githubToken || !repoOwner || !repoName) {
     console.error("Missing GitHub configuration in environment variables");
+    console.error("Required env vars: GITHUB_TOKEN, GITHUB_REPO_OWNER, GITHUB_REPO_NAME");
     return res.status(500).json({ 
       error: "GitHub integration not configured. Please contact admin." 
     });
