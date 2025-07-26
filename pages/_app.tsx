@@ -7,6 +7,7 @@ import MainLayout from '@/components/ui/MainLayout';
 import PageTransition from '@/components/ui/PageTransition';
 import ProgressBar from '@/components/ui/ProgressBar';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
+import PWAStatus from '@/components/ui/PWAStatus';
 import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
 const App = ({ Component, pageProps }: AppProps) => {
@@ -65,6 +66,7 @@ const App = ({ Component, pageProps }: AppProps) => {
           </MainLayout>
         </PageTransition>
         <PWAInstallPrompt />
+        <PWAStatus />
       </ChatProvider>
     </>
   );

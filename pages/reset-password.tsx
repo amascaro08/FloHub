@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import PasswordInput from '@/components/ui/PasswordInput';
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -112,42 +113,25 @@ export default function ResetPassword() {
               </div>
             )}
             <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="new-password"
-                  className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                >
-                  New Password
-                </label>
-                <input
-                  id="new-password"
-                  name="new-password"
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="input-modern"
-                  placeholder="Enter your new password"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="confirm-password"
-                  className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                >
-                  Confirm New Password
-                </label>
-                <input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-modern"
-                  placeholder="Confirm your new password"
-                />
-              </div>
+              <PasswordInput
+                id="new-password"
+                value={newPassword}
+                onChange={setNewPassword}
+                label="New Password"
+                placeholder="Enter your new password"
+                autoComplete="new-password"
+                required
+              />
+              
+              <PasswordInput
+                id="confirm-password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                label="Confirm New Password"
+                placeholder="Confirm your new password"
+                autoComplete="new-password"
+                required
+              />
             </div>
 
             <div>

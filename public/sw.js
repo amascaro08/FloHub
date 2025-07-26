@@ -1,5 +1,5 @@
 // Service Worker for FlowHub Push Notifications
-const CACHE_NAME = 'flohub-v1';
+const CACHE_NAME = 'flohub-v2'; // Updated version to force refresh
 const urlsToCache = [
   '/',
   '/offline.html',
@@ -45,6 +45,37 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Helper function to check if user is truly offline
+function isReallyOffline() {
+  return !navigator.onLine;
+}
+
+// Helper function to check if request should show offline page
+function shouldShowOfflinePage(request, error) {
+  // Only show offline page for navigation requests
+  if (request.mode !== 'navigate') {
+    return false;
+  }
+  
+  // Don't show offline page for API requests
+  if (request.url.includes('/api/')) {
+    return false;
+  }
+  
+  // Only show offline page if user is actually offline
+  // or if it's a genuine network error (not just a slow response)
+  if (isReallyOffline()) {
+    return true;
+  }
+  
+  // Check if it's a genuine network error
+  if (error && (error.name === 'TypeError' || error.message === 'Failed to fetch')) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Fetch event
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
@@ -60,11 +91,34 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         
-        return fetch(event.request).catch(() => {
-          // If network fails, return offline page for navigation requests
-          if (event.request.mode === 'navigate') {
+        // Add timeout to prevent hanging requests from triggering offline mode
+        const fetchWithTimeout = new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Request timeout'));
+          }, 10000); // 10 second timeout
+          
+          fetch(event.request)
+            .then(response => {
+              clearTimeout(timeoutId);
+              resolve(response);
+            })
+            .catch(error => {
+              clearTimeout(timeoutId);
+              reject(error);
+            });
+        });
+        
+        return fetchWithTimeout.catch((error) => {
+          console.log('Service Worker: Fetch failed for', event.request.url, error);
+          
+          // Only return offline page if conditions are met
+          if (shouldShowOfflinePage(event.request, error)) {
+            console.log('Service Worker: Serving offline page');
             return caches.match('/offline.html');
           }
+          
+          // For other errors, throw to let the browser handle it
+          throw error;
         });
       })
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import PasswordInput from './PasswordInput';
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -61,21 +62,17 @@ export default function RegisterForm() {
           className="input-modern"
         />
       </div>
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-        >
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input-modern"
-        />
-      </div>
+      
+      <PasswordInput
+        id="password"
+        value={password}
+        onChange={setPassword}
+        label="Password"
+        placeholder="Create a secure password"
+        autoComplete="new-password"
+        required
+      />
+      
       <button
         type="submit"
         className="btn-primary w-full"
