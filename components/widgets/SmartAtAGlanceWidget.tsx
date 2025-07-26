@@ -330,11 +330,11 @@ const SmartAtAGlanceWidget = () => {
       const [tasksData, notesData, meetingsData, habitsData, habitCompletionsData] = await Promise.allSettled(fetchPromises);
 
       // Process results with fallbacks
-      const tasks = tasksData.status === 'fulfilled' ? tasksData.value.tasks || [] : [];
+      const tasks = tasksData.status === 'fulfilled' ? tasksData.value || [] : [];
       const notes = notesData.status === 'fulfilled' ? notesData.value.notes || [] : [];
-      const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value.meetings || [] : [];
-      const habits = habitsData.status === 'fulfilled' ? habitsData.value.habits || [] : [];
-      const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value.completions || [] : [];
+      const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value.meetingNotes || [] : [];
+      const habits = habitsData.status === 'fulfilled' ? habitsData.value || [] : [];
+      const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value || [] : [];
 
       // Debug logging
       console.log('SmartAtAGlanceWidget Debug:', {
@@ -346,6 +346,23 @@ const SmartAtAGlanceWidget = () => {
           done: t.done,
           status: t.status 
         })).slice(0, 5)
+      });
+
+      // Debug task filtering specifically
+      const completedTasks = tasks.filter((t: any) => t.done);
+      const incompleteTasks = tasks.filter((t: any) => !t.done);
+      console.log('SmartAtAGlanceWidget Task Count Debug:', {
+        totalTasksReceived: tasks.length,
+        completedTasksCount: completedTasks.length,
+        incompleteTasksCount: incompleteTasks.length,
+        completedTasksPreview: completedTasks.slice(0, 2).map((t: any) => ({
+          text: t.text?.substring(0, 20),
+          done: t.done
+        })),
+        incompleteTasksPreview: incompleteTasks.slice(0, 2).map((t: any) => ({
+          text: t.text?.substring(0, 20),
+          done: t.done
+        }))
       });
 
       // Analyze and set data

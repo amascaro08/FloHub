@@ -496,11 +496,11 @@ const AtAGlanceWidget = () => {
       const [tasksData, notesData, meetingsData, habitsData, habitCompletionsData] = await Promise.allSettled(fetchPromises);
 
       // Process results with fallbacks
-      const tasks = tasksData.status === 'fulfilled' ? tasksData.value : { tasks: [] };
-      const notes = notesData.status === 'fulfilled' ? notesData.value : { notes: [] };
-      const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value : { meetings: [] };
-      const habits = habitsData.status === 'fulfilled' ? habitsData.value : { habits: [] };
-      const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value : { completions: [] };
+      const tasks = tasksData.status === 'fulfilled' ? tasksData.value || [] : [];
+      const notes = notesData.status === 'fulfilled' ? notesData.value.notes || [] : [];
+      const meetings = meetingsData.status === 'fulfilled' ? meetingsData.value.meetingNotes || [] : [];
+      const habits = habitsData.status === 'fulfilled' ? habitsData.value || [] : [];
+      const habitCompletions = habitCompletionsData.status === 'fulfilled' ? habitCompletionsData.value || [] : [];
 
       // Process events data with timezone conversion (using shared calendar events)
       const eventsInUserTimezone = calendarEvents.map((event: CalendarEvent) => {
@@ -575,10 +575,10 @@ const AtAGlanceWidget = () => {
 
       // Generate widget content
       const widgetContent = generateDashboardWidget(
-        tasks.tasks || [],
+        tasks || [],
         upcomingEventsForPrompt,
-        habits.habits || [],
-        habitCompletions.completions || [],
+                  habits || [],
+          habitCompletions || [],
         user.name || user.email,
         userTimezone
       );
@@ -586,11 +586,11 @@ const AtAGlanceWidget = () => {
       setWidgetData({
         content: widgetContent,
         events: upcomingEventsForPrompt,
-        tasks: tasks.tasks || [],
-        notes: notes.notes || [],
-        meetings: meetings.meetings || [],
-        habits: habits.habits || [],
-        habitCompletions: habitCompletions.completions || [],
+        tasks: tasks || [],
+                  notes: notes || [],
+          meetings: meetings || [],
+          habits: habits || [],
+                  habitCompletions: habitCompletions || [],
         lastUpdated: new Date()
       });
 
