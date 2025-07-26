@@ -6,6 +6,11 @@ import { useRouter } from 'next/router';
 const FeedbackPage: NextPage = () => {
   const router = useRouter();
   const { user, isLoading: isUserLoading, isError } = useUser();
+  
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('Feedback page mounted - user:', !!user, 'loading:', isUserLoading, 'error:', !!isError);
+  }, [user, isUserLoading, isError]);
   const [feedbackType, setFeedbackType] = useState('general');
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
