@@ -36,6 +36,7 @@ import {
   Coffee,
   CheckSquare
 } from 'lucide-react';
+import Image from 'next/image';
 import type { CalendarEvent, Task, Note } from '../../types/calendar';
 import type { Habit, HabitCompletion } from '../../types/habit-tracker';
 
@@ -373,7 +374,7 @@ const SmartAtAGlanceWidget = () => {
         <CardContent>
           <div className="text-center py-8 text-[var(--fg-muted)] dark:text-gray-300">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-500" />
-                         <p className="font-medium">FloHub AI is Recharging</p>
+                         <p className="font-medium">FloCat is Taking a Quick Nap 😴</p>
              <p className="text-sm mt-1">Smart insights temporarily unavailable</p>
             <Button 
               variant="secondary" 
@@ -401,7 +402,7 @@ const SmartAtAGlanceWidget = () => {
         <CardContent>
           <div className="flex items-center justify-center py-8">
                           <RefreshCw className="w-6 h-6 animate-spin text-teal-500" />
-            <span className="ml-2 text-[var(--fg)] dark:text-gray-100">FloHub AI is analyzing your day...</span>
+            <span className="ml-2 text-[var(--fg)] dark:text-gray-100">FloCat is analyzing your day...</span>
           </div>
         </CardContent>
       </Card>
@@ -422,10 +423,18 @@ const SmartAtAGlanceWidget = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-[var(--fg)] dark:text-gray-100">
-              <Brain className="w-5 h-5 text-teal-500" />
+              <div className="relative w-6 h-6">
+                <Image 
+                  src="/flocat-sidepeek.png" 
+                  alt="FloCat" 
+                  width={24} 
+                  height={24}
+                  className="rounded-full object-cover"
+                />
+              </div>
               Smart Dashboard
               <Badge variant="secondary" className="ml-2 bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
-                AI Powered
+                FloCat AI
               </Badge>
             </CardTitle>
             <Button
@@ -672,9 +681,20 @@ const SmartAtAGlanceWidget = () => {
 
       {/* FloCat Footer */}
               <div className="text-center p-3 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
-          <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300 italic">
-            🐱 FloHub AI insights • Last updated {data.lastUpdated.toLocaleTimeString()}
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <div className="relative w-6 h-6">
+              <Image 
+                src="/flocat-sidepeek.png" 
+                alt="FloCat" 
+                width={24} 
+                height={24}
+                className="rounded-full object-cover"
+              />
+            </div>
+            <p className="text-sm text-[var(--fg-muted)] dark:text-gray-300 italic">
+              FloCat's insights • Last updated {data.lastUpdated.toLocaleTimeString()}
+            </p>
+          </div>
         </div>
     </div>
   );
