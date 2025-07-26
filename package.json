@@ -15,7 +15,8 @@
     "notifications:setup": "node scripts/setup-notifications.js",
     "notifications:generate-keys": "node scripts/generate-vapid-keys.js",
     "notifications:run-scheduler": "node scripts/notification-scheduler.js",
-    "notifications:check-db": "node scripts/check-db-connection.js"
+    "notifications:check-db": "node scripts/check-db-connection.js",
+    "notifications:create-table": "node scripts/create-push-table.js"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",
