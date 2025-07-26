@@ -477,7 +477,7 @@ function extractCalendarKeywords(query: string): string[] {
     }
   });
   
-  return [...new Set(expandedKeywords)]; // Remove duplicates
+  return Array.from(new Set(expandedKeywords)); // Remove duplicates
 }
 
 function formatTimeAgo(date: Date): string {

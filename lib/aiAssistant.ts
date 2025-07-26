@@ -947,7 +947,7 @@ export class SmartAIAssistant {
       }
     });
     
-    return [...new Set(expandedKeywords)]; // Remove duplicates
+    return Array.from(new Set(expandedKeywords)); // Remove duplicates
   }
 
   private handleTaskTimeQueries(query: string): string {
