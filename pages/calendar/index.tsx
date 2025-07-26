@@ -72,6 +72,13 @@ const CalendarPage = () => {
   // Track if user has manually changed the view
   const [hasUserChangedView, setHasUserChangedView] = useState(false);
 
+  // Fetch user settings first
+  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
+    user ? '/api/userSettings' : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
+  );
+
   // Set default view from user settings
   useEffect(() => {
     if (settings?.defaultCalendarView && !hasUserChangedView) {
@@ -97,12 +104,6 @@ const CalendarPage = () => {
       return { start, end };
     }
   }, [currentDate, currentView]);
-
-  const { data: settings, error: settingsError } = useSWR<CalendarSettings>(
-    user ? '/api/userSettings' : null,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
-  );
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
