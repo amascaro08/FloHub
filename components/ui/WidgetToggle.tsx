@@ -140,19 +140,12 @@ export default function WidgetToggle({ isLocked }: WidgetToggleProps) {
   };
 
   // Don't show if layout is locked
-  // Temporarily always show for debugging
-  // if (isLocked) {
-  //   return null;
-  // }
-
-  console.log('WidgetToggle rendering:', { isLocked, user, isLoading });
+  if (isLocked) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999]">
-      {/* Debug element */}
-      <div className="fixed bottom-20 right-6 bg-red-500 text-white p-2 text-sm rounded">
-        Debug: Toggle {isLocked ? 'LOCKED' : 'UNLOCKED'}
-      </div>
       
       {/* Toggle Button */}
       <button
