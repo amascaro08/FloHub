@@ -136,7 +136,7 @@ function LandingPage() {
             </p>
             <Link href="/login" passHref>
               <button className="btn-primary px-8 py-4 text-lg font-bold mb-6 w-full md:w-auto">
-                Login to FloHub
+                Login/Register
               </button>
             </Link>
           
@@ -182,7 +182,7 @@ function LandingPage() {
           </p>
           <Link href="/login" passHref>
             <button className="btn-primary px-8 py-4 text-lg font-bold">
-              Login to FloHub
+              Login/Register
             </button>
           </Link>
         </section>
