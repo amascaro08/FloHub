@@ -21,23 +21,67 @@ const App = ({ Component, pageProps }: AppProps) => {
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          // Unregister any existing service workers first
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            console.log('Unregistering old service worker');
+            await registration.unregister();
+          }
+          
+          // Force clear all caches
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+              console.log('Deleting cache:', cacheName);
+              await caches.delete(cacheName);
+            }
+          }
+          
+          // Register new service worker
+          const registration = await navigator.serviceWorker.register('/sw.js', { 
+            scope: '/',
+            updateViaCache: 'none' // Force update without cache
+          });
+          
           console.log('SW registered: ', registration);
           
-          // Handle updates
+          // Force immediate update
+          if (registration.waiting) {
+            console.log('Service worker waiting, activating immediately');
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            window.location.reload();
+          }
+          
+          // Handle updates aggressively
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
+              console.log('New service worker found, forcing update');
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New content is available, show update prompt
-                  if (confirm('New version available! Reload to update?')) {
-                    window.location.reload();
-                  }
+                if (newWorker.state === 'installed') {
+                  console.log('New service worker installed, reloading immediately');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  window.location.reload();
                 }
               });
             }
           });
+          
+          // Listen for service worker messages
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('Received message from SW:', event.data);
+            if (event.data.type === 'SW_UPDATED') {
+              console.log('Service worker updated, reloading page');
+              window.location.reload();
+            }
+          });
+          
+          // Check for updates every 30 seconds
+          setInterval(() => {
+            console.log('Checking for service worker updates');
+            registration.update();
+          }, 30000);
+          
         } catch (err) {
           console.error('SW registration failed: ', err);
         }

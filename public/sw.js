@@ -1,16 +1,15 @@
 // Service Worker for FlowHub Push Notifications
-const CACHE_NAME = 'flohub-v2'; // Updated version to force refresh
+const CACHE_NAME = 'flohub-v3-' + Date.now(); // Dynamic cache name to force updates
 const urlsToCache = [
   '/',
-  '/offline.html',
   '/dashboard',
 ];
 
-console.log('Service Worker: Starting up...');
+console.log('Service Worker: Starting up v3...');
 
-// Install event
+// Install event - force immediate activation
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Install event');
+  console.log('Service Worker: Install event v3');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -21,26 +20,39 @@ self.addEventListener('install', (event) => {
         console.error('Service Worker: Cache installation failed', error);
       })
   );
-  // Skip waiting to activate immediately
+  // Force immediate activation without waiting
   self.skipWaiting();
 });
 
-// Activate event
+// Activate event - immediately claim all clients
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activate event');
+  console.log('Service Worker: Activate event v3');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Deleting old cache', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('Service Worker: Claiming clients');
-      return self.clients.claim();
+    Promise.all([
+      // Delete ALL old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Service Worker: Deleting old cache', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Immediately claim all clients
+      self.clients.claim()
+    ]).then(() => {
+      console.log('Service Worker: All clients claimed, cache cleared');
+      // Notify all clients about the update
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            message: 'Service Worker updated - offline issues fixed'
+          });
+        });
+      });
     })
   );
 });
@@ -52,72 +64,80 @@ function isReallyOffline() {
 
 // Helper function to check if request should show offline page
 function shouldShowOfflinePage(request, error) {
+  console.log('Service Worker: Checking if should show offline page for', request.url);
+  console.log('Service Worker: Navigator online status:', navigator.onLine);
+  console.log('Service Worker: Error details:', error);
+  
   // Only show offline page for navigation requests
   if (request.mode !== 'navigate') {
+    console.log('Service Worker: Not a navigation request, not showing offline page');
     return false;
   }
   
   // Don't show offline page for API requests
   if (request.url.includes('/api/')) {
+    console.log('Service Worker: API request, not showing offline page');
     return false;
   }
   
   // Only show offline page if user is actually offline
-  // or if it's a genuine network error (not just a slow response)
-  if (isReallyOffline()) {
+  if (!navigator.onLine) {
+    console.log('Service Worker: User is offline, showing offline page');
     return true;
   }
   
-  // Check if it's a genuine network error
-  if (error && (error.name === 'TypeError' || error.message === 'Failed to fetch')) {
-    return true;
-  }
-  
+  // For now, let's be very conservative and NOT show offline page
+  // unless we're absolutely certain the user is offline
+  console.log('Service Worker: User appears online, not showing offline page');
   return false;
 }
 
-// Fetch event
+// Fetch event - simplified and less aggressive
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') {
     return;
   }
   
+  // Skip caching for API requests - let them fail naturally
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+  
+  console.log('Service Worker: Handling fetch for', event.request.url);
+  
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
+    // Try network first, only use cache as fallback
+    fetch(event.request)
+      .then(response => {
+        console.log('Service Worker: Network request successful for', event.request.url);
+        // If it's a navigation request and successful, cache it
+        if (event.request.mode === 'navigate' && response.ok) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
         }
+        return response;
+      })
+      .catch((error) => {
+        console.log('Service Worker: Network request failed for', event.request.url, error);
         
-        // Add timeout to prevent hanging requests from triggering offline mode
-        const fetchWithTimeout = new Promise((resolve, reject) => {
-          const timeoutId = setTimeout(() => {
-            reject(new Error('Request timeout'));
-          }, 10000); // 10 second timeout
+        // Check cache first
+        return caches.match(event.request).then(cachedResponse => {
+          if (cachedResponse) {
+            console.log('Service Worker: Serving from cache for', event.request.url);
+            return cachedResponse;
+          }
           
-          fetch(event.request)
-            .then(response => {
-              clearTimeout(timeoutId);
-              resolve(response);
-            })
-            .catch(error => {
-              clearTimeout(timeoutId);
-              reject(error);
-            });
-        });
-        
-        return fetchWithTimeout.catch((error) => {
-          console.log('Service Worker: Fetch failed for', event.request.url, error);
-          
-          // Only return offline page if conditions are met
+          // Only show offline page if we're certain the user is offline
           if (shouldShowOfflinePage(event.request, error)) {
             console.log('Service Worker: Serving offline page');
             return caches.match('/offline.html');
           }
           
-          // For other errors, throw to let the browser handle it
+          // Let the error propagate to the browser
+          console.log('Service Worker: Letting error propagate to browser');
           throw error;
         });
       })
@@ -316,4 +336,4 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('Service Worker: Unhandled rejection', event);
 });
 
-console.log('Service Worker: Setup complete');
+console.log('Service Worker: Setup complete v3');

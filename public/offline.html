@@ -50,6 +50,14 @@
     .button:hover {
       background-color: #4338ca;
     }
+    .debug-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f3f4f6;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
@@ -59,6 +67,24 @@
     <p>It looks like you've lost your internet connection. FloHub requires an internet connection to function properly.</p>
     <p>Please check your connection and try again.</p>
     <a href="/" class="button">Try Again</a>
+    
+    <div class="debug-info">
+      <strong>Debug Info:</strong><br>
+      Time: <span id="timestamp"></span><br>
+      Navigator Online: <span id="navigator-online"></span><br>
+      If you're seeing this page incorrectly, please refresh your browser.
+    </div>
   </div>
+  
+  <script>
+    // Update debug info
+    document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    document.getElementById('navigator-online').textContent = navigator.onLine ? 'true' : 'false';
+    
+    // Auto-refresh when connection is restored
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
 </body>
 </html>
