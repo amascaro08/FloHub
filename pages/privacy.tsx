@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Privacy Policy for FloHub - Learn how we collect, use, and protect your data.',
 };
 
-export default function PrivacyPolicy() {
+function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -225,3 +225,8 @@ export default function PrivacyPolicy() {
     </div>
   );
 }
+
+// Mark this page as public (no authentication required)
+PrivacyPolicy.auth = false;
+
+export default PrivacyPolicy;

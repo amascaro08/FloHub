@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Skip middleware for other public paths.
-  const publicPaths = ['/login', '/register', '/api/auth'];
+  const publicPaths = ['/login', '/register', '/api/auth', '/privacy', '/terms'];
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
@@ -57,6 +57,6 @@ export const config = {
      * - public folder
      * - auth routes (login, register, etc)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|login|register|api/auth).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|login|register|api/auth|privacy|terms).*)',
   ],
 };
