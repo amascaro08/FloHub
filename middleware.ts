@@ -4,69 +4,55 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  console.log('[Middleware] Processing path:', pathname);
-
-  // Skip middleware for static files and other assets
-  if (pathname.includes('.') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
-    console.log('[Middleware] Skipping static/api path:', pathname);
+  // Skip middleware entirely for static files, API routes, and Next.js internals
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    pathname === '/favicon.ico'
+  ) {
     return NextResponse.next();
   }
 
-  // Public paths that don't require authentication
+  // Public paths that should always be accessible
   const publicPaths = [
     '/',
-    '/login', 
+    '/login',
     '/register', 
-    '/privacy', 
-    '/terms', 
+    '/privacy',
+    '/terms',
     '/feedback'
   ];
+
+  // Allow public paths without any authentication checks
+  if (publicPaths.includes(pathname) || publicPaths.some(path => pathname.startsWith(path + '/'))) {
+    return NextResponse.next();
+  }
+
+  // For all other paths, check if user has auth token
+  const token = request.cookies.get('auth-token')?.value;
   
-  // Check if current path is public
-  const isPublicPath = publicPaths.some(path => {
-    if (path === '/') {
-      return pathname === '/';
-    }
-    return pathname.startsWith(path);
-  });
-
-  if (isPublicPath) {
-    console.log('[Middleware] Allowing public path:', pathname);
-    return NextResponse.next();
+  if (!token) {
+    // Redirect to login with return URL
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  try {
-    // For protected paths, check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    
-    console.log('[Middleware] Protected path:', pathname, 'Auth token exists:', !!token);
-    
-    if (!token) {
-      console.log('[Middleware] No auth token, redirecting to login');
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    console.log('[Middleware] Auth token found, allowing request to:', pathname);
-    return NextResponse.next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // Allow the request to proceed
+  return NextResponse.next();
 }
 
-// Only run middleware on page routes (not static files or API routes)
+// Use a very conservative matcher that only targets page routes
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder files
+     * Match all request paths except for:
+     * - api routes (/api/*)
+     * - static files (_next/static/*)
+     * - image optimization (_next/image/*)
+     * - favicon
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

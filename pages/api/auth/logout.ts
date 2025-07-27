@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
-import { createClearCookie, getDomainInfo } from '@/lib/cookieUtils';
+import { clearCookie } from '@/lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,13 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Clear the auth token with dynamic domain detection
-    const domainInfo = getDomainInfo(req);
-    console.log('Logout - Domain info:', domainInfo);
-    
-    const cookie = createClearCookie(req, 'auth-token');
-
-    res.setHeader('Set-Cookie', cookie);
+    // Clear the auth token using simplified function
+    clearCookie(res, 'auth-token');
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);

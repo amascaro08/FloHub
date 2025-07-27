@@ -1,9 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from '@/lib/auth';
+import { auth, signToken, setCookie } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
-import jwt from 'jsonwebtoken';
-import { serialize } from 'cookie';
-import { createSecureCookie, getDomainInfo } from '@/lib/cookieUtils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,20 +20,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ message: 'User not found' });
     }
 
-    // Generate a new token with extended expiration (always 30 days for refresh)
-    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET as string, {
-      expiresIn: '30d',
-    });
+    // Generate a new token
+    const token = signToken({ userId: user.id, email: user.email });
 
-    // Create secure cookie with dynamic domain detection
-    const domainInfo = getDomainInfo(req);
-    console.log('Refresh - Domain info:', domainInfo);
-    
-    const cookie = createSecureCookie(req, 'auth-token', token, {
-      maxAge: 60 * 60 * 24 * 30, // 30 days for refresh
-    });
+    // Set cookie with 30 days expiration for refresh
+    setCookie(res, 'auth-token', token, 30 * 24 * 60 * 60);
 
-    res.setHeader('Set-Cookie', cookie);
     res.status(200).json({ message: 'Token refreshed successfully' });
   } catch (error) {
     console.error('Token refresh error:', error);
