@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   try {
     const { pathname } = request.nextUrl;
+    const host = request.headers.get('host');
     
     // Skip middleware entirely for static files, API routes, and Next.js internals
     if (
@@ -33,10 +34,25 @@ export async function middleware(request: NextRequest) {
     // For all other paths, check if user has auth token
     const token = request.cookies.get('auth-token')?.value;
     
+    // Temporary debugging for dashboard access issues
+    if (pathname === '/dashboard') {
+      console.log(`[Middleware Debug] Dashboard access attempt:`);
+      console.log(`  Host: ${host}`);
+      console.log(`  Pathname: ${pathname}`);
+      console.log(`  Token present: ${!!token}`);
+      console.log(`  Token preview: ${token ? token.substring(0, 20) + '...' : 'None'}`);
+      console.log(`  All cookies: ${Object.keys(request.cookies).join(', ')}`);
+    }
+    
     if (!token) {
       // Redirect to login with return URL
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
+      
+      if (pathname === '/dashboard') {
+        console.log(`[Middleware Debug] Redirecting to: ${loginUrl.toString()}`);
+      }
+      
       return NextResponse.redirect(loginUrl);
     }
 
