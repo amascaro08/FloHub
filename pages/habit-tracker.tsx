@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import HabitCalendar from "@/components/habit-tracker/HabitCalendar";
+import HabitTrackerMain from "@/components/habit-tracker/HabitTrackerMain";
 import { useUser } from '@/lib/hooks/useUser';
 
 const HabitTrackerPage = () => {
@@ -10,33 +10,32 @@ const HabitTrackerPage = () => {
     <>
       <Head>
         <title>Habit Tracker | FlowHub</title>
-        <meta name="description" content="Track and manage your daily habits with FlowHub's habit tracker" />
+        <meta name="description" content="Track and build lasting habits with FlowHub's intelligent habit tracker and FloCat insights" />
       </Head>
       
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--fg)] mb-2">Habit Tracker</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
-            Build better habits by tracking your daily, weekly, or custom routines. 
-            Visualize your progress and maintain streaks to stay motivated.
-          </p>
-        </div>
-        
+      <div className="min-h-screen bg-gradient-to-br from-soft-white via-gray-50 to-primary-50 dark:from-dark-base dark:via-gray-900 dark:to-gray-800">
         {!user ? (
-          <div className="glass rounded-2xl p-8 text-center">
-            <h2 className="text-xl font-semibold text-[var(--fg)] mb-4">Sign in to use the Habit Tracker</h2>
-            <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-              You need to be signed in to create and track your habits.
-            </p>
-            <button 
-              onClick={() => {}} // 
-              className="btn-primary"
-            >
-              Sign In
-            </button>
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="glass rounded-2xl p-8 text-center max-w-md w-full">
+              <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🎯</span>
+              </div>
+              <h2 className="text-xl font-semibold text-[var(--fg)] mb-4">
+                Sign in to start building habits
+              </h2>
+              <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+                Track your progress, build streaks, and get personalized insights from FloCat
+              </p>
+              <button 
+                onClick={() => {}} 
+                className="btn-primary w-full"
+              >
+                Sign In to Continue
+              </button>
+            </div>
           </div>
         ) : (
-          <HabitCalendar />
+          <HabitTrackerMain />
         )}
       </div>
     </>

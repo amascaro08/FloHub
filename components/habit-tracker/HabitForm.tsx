@@ -161,164 +161,161 @@ const HabitForm: React.FC<HabitFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="bg-red-100 dark:bg-red-900 bg-opacity-100 dark:bg-opacity-50 text-red-700 dark:text-white p-3 rounded-lg text-sm transition-colors">
-          {error}
-        </div>
-      )}
-      
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-          Habit Name *
-        </label>
-        <input
-          type="text"
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
-          placeholder="e.g., Drink water, Exercise, Read"
-          required
-        />
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {habit ? 'Edit Habit' : 'Create New Habit'}
+        </h3>
+        <button 
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <XMarkIcon className="w-6 h-6" />
+        </button>
       </div>
-      
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-          Description (Optional)
-        </label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
-          placeholder="Add details about your habit"
-          rows={2}
-        />
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-          Frequency *
-        </label>
-        <div className="space-y-2">
-          <div className="flex items-center">
-            <input
-              type="radio"
-              id="daily"
-              name="frequency"
-              value="daily"
-              checked={frequency === 'daily'}
-              onChange={() => setFrequency('daily')}
-              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
-            />
-            <label htmlFor="daily" className="text-gray-800 dark:text-white transition-colors">Daily</label>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 p-4 rounded-xl text-sm">
+            {error}
           </div>
-          
-          <div className="flex items-center">
-            <input
-              type="radio"
-              id="weekly"
-              name="frequency"
-              value="weekly"
-              checked={frequency === 'weekly'}
-              onChange={() => setFrequency('weekly')}
-              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
-            />
-            <label htmlFor="weekly" className="text-gray-800 dark:text-white transition-colors">Weekly (Sundays)</label>
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="radio"
-              id="custom"
-              name="frequency"
-              value="custom"
-              checked={frequency === 'custom'}
-              onChange={() => setFrequency('custom')}
-              className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
-            />
-            <label htmlFor="custom" className="text-gray-800 dark:text-white transition-colors">Custom Days</label>
-          </div>
-        </div>
-      </div>
-      
-      {frequency === 'custom' && (
-        <div className="pl-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">
-            Select Days
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {daysOfWeek.map(day => (
-              <div key={day.value} className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={`day-${day.value}`}
-                  checked={customDays.includes(day.value)}
-                  onChange={() => handleCustomDayToggle(day.value)}
-                  className="mr-2 text-teal-500 focus:ring-teal-500 transition-colors"
-                />
-                <label htmlFor={`day-${day.value}`} className="text-gray-800 dark:text-white text-sm transition-colors">
-                  {day.label}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      <div>
-        <label htmlFor="color" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-          Color
-        </label>
-        <div className="flex items-center">
-          <input
-            type="color"
-            id="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="h-10 w-10 rounded-lg border-0 p-0 mr-2 transition-colors"
-          />
-          <span className="text-gray-800 dark:text-white text-sm transition-colors">{color}</span>
-        </div>
-      </div>
-      
-      <div className="flex justify-between pt-4">
-        {habit && onDelete ? (
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="flex items-center px-3 py-2 bg-red-600 dark:bg-red-700 hover:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors"
-            disabled={isSubmitting}
-          >
-            <TrashIcon className="w-4 h-4 mr-1" />
-            Delete
-          </button>
-        ) : (
-          <div></div>
         )}
         
-        <div className="flex space-x-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-          
-          <button
-            type="submit"
-            className="px-4 py-2 bg-teal-600 dark:bg-teal-600 hover:bg-teal-500 dark:hover:bg-teal-500 text-white rounded-lg transition-colors"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving...' : habit ? 'Update' : 'Create'}
-          </button>
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+            Habit Name *
+          </label>
+          <input
+            type="text"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            placeholder="e.g., Drink water, Exercise, Read"
+            required
+          />
         </div>
-      </div>
-    </form>
+      
+              <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+            Description (Optional)
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none"
+            placeholder="Add details about your habit"
+            rows={3}
+          />
+        </div>
+      
+              <div>
+          <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+            Frequency *
+          </label>
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="daily"
+                name="frequency"
+                value="daily"
+                checked={frequency === 'daily'}
+                onChange={() => setFrequency('daily')}
+                className="mr-3 text-primary-500 focus:ring-primary-500 focus:ring-2"
+              />
+              <label htmlFor="daily" className="text-gray-900 dark:text-white cursor-pointer">Daily</label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="weekly"
+                name="frequency"
+                value="weekly"
+                checked={frequency === 'weekly'}
+                onChange={() => setFrequency('weekly')}
+                className="mr-3 text-primary-500 focus:ring-primary-500 focus:ring-2"
+              />
+              <label htmlFor="weekly" className="text-gray-900 dark:text-white cursor-pointer">Weekly (Mondays)</label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="custom"
+                name="frequency"
+                value="custom"
+                checked={frequency === 'custom'}
+                onChange={() => setFrequency('custom')}
+                className="mr-3 text-primary-500 focus:ring-primary-500 focus:ring-2"
+              />
+              <label htmlFor="custom" className="text-gray-900 dark:text-white cursor-pointer">Custom Days</label>
+            </div>
+          </div>
+        </div>
+      
+              {frequency === 'custom' && (
+          <div className="ml-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Select Days
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {daysOfWeek.map(day => (
+                <div key={day.value} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`day-${day.value}`}
+                    checked={customDays.includes(day.value)}
+                    onChange={() => handleCustomDayToggle(day.value)}
+                    className="mr-3 text-primary-500 focus:ring-primary-500 focus:ring-2 rounded"
+                  />
+                  <label htmlFor={`day-${day.value}`} className="text-gray-900 dark:text-white text-sm cursor-pointer">
+                    {day.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      
+              <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+          {habit && onDelete ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium"
+              disabled={isSubmitting}
+            >
+              <TrashIcon className="w-4 h-4 mr-2" />
+              Delete Habit
+            </button>
+          ) : (
+            <div></div>
+          )}
+          
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl transition-colors font-medium"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            
+            <button
+              type="submit"
+              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors font-medium"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : habit ? 'Update Habit' : 'Create Habit'}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
-};
 
 export default HabitForm;
