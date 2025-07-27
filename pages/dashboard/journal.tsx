@@ -7,7 +7,6 @@ import useSWR from "swr";
 import { getCurrentDate, formatDate } from "@/lib/dateUtils";
 import axios from "axios";
 import { useUser } from "@/lib/hooks/useUser";
-import MainLayout from "@/components/ui/MainLayout";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
@@ -39,28 +38,24 @@ export default function JournalPage() {
   // Handle loading state
   if (status === 'unauthenticated') {
     return (
-      <MainLayout requiresAuth={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-pulse text-center">
-            <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
-            <p className="text-grey-tint">Loading your journal...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-grey-tint">Loading your journal...</p>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   // Handle unauthenticated state
   if (status !== 'authenticated' || !user) {
     return (
-      <MainLayout requiresAuth={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🔒</div>
-            <p className="text-grey-tint">Please sign in to access your journal.</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-grey-tint">Please sign in to access your journal.</p>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
@@ -233,7 +228,7 @@ export default function JournalPage() {
   ];
 
   return (
-    <MainLayout requiresAuth={true}>
+    <>
       <Head>
         <title>Journal | FlowHub</title>
         <meta name="description" content="Capture your thoughts, track moods, and reflect on your journey with FlowHub's intelligent journal" />
@@ -546,6 +541,6 @@ export default function JournalPage() {
           </div>
         )}
       </div>
-    </MainLayout>
+    </>
   );
 }
