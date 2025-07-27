@@ -8,6 +8,21 @@ import { useUser } from "@/lib/hooks/useUser";
 import { CalendarProvider } from "@/contexts/CalendarContext";
 
 import OptimizedSkeleton from '@/components/ui/OptimizedSkeleton';
+import { 
+  Lock, 
+  Unlock, 
+  Settings, 
+  Sparkles, 
+  Plus, 
+  Grid3X3,
+  ChevronUp,
+  ChevronDown,
+  Move,
+  CheckSquare,
+  Calendar,
+  Clock,
+  FileText
+} from 'lucide-react';
 
 // Widget skeleton for loading state
 const WidgetSkeleton = ({ type }: { type?: string }) => (
@@ -30,6 +45,24 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>,
   quicknote: <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>,
   "habit-tracker": <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>,
+};
+
+// Helper function to get the appropriate icon for each widget
+const getWidgetIcon = (widgetKey: string) => {
+  switch(widgetKey) {
+    case 'tasks':
+      return <CheckSquare className="w-5 h-5" />;
+    case 'calendar':
+      return <Calendar className="w-5 h-5" />;
+    case 'ataglance':
+      return <Clock className="w-5 h-5" />;
+    case 'quicknote':
+      return <FileText className="w-5 h-5" />;
+    case 'habit-tracker':
+      return <Sparkles className="w-5 h-5" />;
+    default:
+      return null;
+  }
 };
 
 // Default widget order for mobile
@@ -71,10 +104,6 @@ export default function MobileDashboard() {
 
   // Use useUser to trigger auth state, but NOT for lock
   const { user, isLoading: isUserLoading } = useUser();
-
-  // ----
-  // (In your original, you had user.primaryEmail. If you're now using Stack Auth, email is at user.primaryEmail)
-  // ----
 
   // user logic (Stack Auth: user object replaces user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
@@ -241,14 +270,16 @@ export default function MobileDashboard() {
 
   if (isUserLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 px-2 py-4">
-        <div className="glass px-2 py-2 rounded-xl shadow-md animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2"></div>
-          <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-        <div className="glass px-2 py-2 rounded-xl shadow-md animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
+        <div className="container mx-auto px-4 py-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass p-4 rounded-2xl animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3 mb-3"></div>
+                <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -260,55 +291,127 @@ export default function MobileDashboard() {
       endDate={oneWeekFromNow}
       enabled={!!user?.primaryEmail}
     >
-      <div className="grid grid-cols-1 gap-4 px-2 py-4">
-        {activeWidgets.length === 0 ? (
-          <div className="glass px-4 py-4 rounded-xl shadow-md text-center">
-            <p className="text-gray-500 dark:text-gray-400">No widgets selected. Visit settings to add widgets.</p>
-          </div>
-        ) : (
-          visibleWidgets.map((widgetId, index) => (
-            <div key={widgetId} className="glass px-2 py-2 rounded-xl shadow-md mobile-widget">
-              <h2 className="font-semibold capitalize mb-2 flex justify-between items-center">
-                <span>
-                  {widgetId === "ataglance" ? "Your Day at a Glance" : widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
-                </span>
-                {!isLocked && (
-                  <div className="flex space-x-1">
-                    <button
-                      onClick={() => moveWidgetUp(widgetId)}
-                      disabled={index === 0}
-                      className={`p-1 rounded ${index === 0 ? 'opacity-50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                      aria-label="Move widget up"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m18 15-6-6-6 6"/>
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => moveWidgetDown(widgetId)}
-                      disabled={index === activeWidgets.length - 1}
-                      className={`p-1 rounded ${index === activeWidgets.length - 1 ? 'opacity-50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                      aria-label="Move widget down"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m6 9 6 6 6-6"/>
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </h2>
-              <div className="flex-1 overflow-auto">
-                {widgetComponents[widgetId]}
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
+        {/* Mobile Dashboard Header */}
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-heading font-bold text-dark-base dark:text-soft-white">
+                Dashboard
+              </h1>
+              <p className="text-grey-tint font-body text-sm">
+                Your mobile overview
+              </p>
             </div>
-          ))
-        )}
-        {visibleWidgets.length < activeWidgets.length && (
-          <div className="glass px-2 py-2 rounded-xl shadow-md animate-pulse">
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2"></div>
-            <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            
+            {/* Mobile Controls */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  const newLockState = !isLocked;
+                  setIsLocked(newLockState);
+                  localStorage.setItem("dashboardLocked", newLockState.toString());
+                  window.dispatchEvent(new Event('lockStateChanged'));
+                }}
+                className={`p-2 rounded-xl transition-all duration-200 ${
+                  isLocked 
+                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300' 
+                    : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                }`}
+              >
+                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+              </button>
+              
+              <button
+                onClick={() => window.location.href = '/dashboard/settings'}
+                className="p-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* Mobile Widgets */}
+          <div className="space-y-4">
+            {activeWidgets.length === 0 ? (
+              <div className="glass p-6 rounded-2xl text-center">
+                <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Grid3X3 className="w-8 h-8 text-primary-500" />
+                </div>
+                <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-2">
+                  No widgets configured
+                </h3>
+                <p className="text-grey-tint font-body text-sm mb-4">
+                  Add widgets to your dashboard to get started
+                </p>
+                <button
+                  onClick={() => window.location.href = '/dashboard/settings'}
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-all duration-200"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Configure Widgets</span>
+                </button>
+              </div>
+            ) : (
+              visibleWidgets.map((widgetId, index) => (
+                <div key={widgetId} className="glass p-4 rounded-2xl mobile-widget">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+                        {getWidgetIcon(widgetId)}
+                      </div>
+                      <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
+                        {widgetId === "ataglance" ? "Your Day at a Glance" : 
+                         widgetId === "habit-tracker" ? "Habit Tracker" :
+                         widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
+                      </h2>
+                    </div>
+                    
+                    {!isLocked && (
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => moveWidgetUp(widgetId)}
+                          disabled={index === 0}
+                          className={`p-1 rounded-lg transition-all duration-200 ${
+                            index === 0 
+                              ? 'opacity-30 text-grey-tint' 
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
+                          }`}
+                          aria-label="Move widget up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => moveWidgetDown(widgetId)}
+                          disabled={index === activeWidgets.length - 1}
+                          className={`p-1 rounded-lg transition-all duration-200 ${
+                            index === activeWidgets.length - 1 
+                              ? 'opacity-30 text-grey-tint' 
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
+                          }`}
+                          aria-label="Move widget down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 overflow-auto">
+                    {widgetComponents[widgetId]}
+                  </div>
+                </div>
+              ))
+            )}
+            
+            {visibleWidgets.length < activeWidgets.length && (
+              <div className="glass p-4 rounded-2xl animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3 mb-3"></div>
+                <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </CalendarProvider>
   );

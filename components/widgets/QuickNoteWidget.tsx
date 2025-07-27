@@ -1,189 +1,284 @@
-"use client";
+'use client'
 
-
-import { useState, FormEvent, useMemo, memo, useEffect } from "react"; // Added useEffect
-import useSWR from "swr";
-import dynamic from 'next/dynamic'; // Import dynamic for lazy loading
-import type { UserSettings, Note } from "@/types/app";
-import type { GetNotesResponse } from "@/pages/api/notes";
+import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
+import { 
+  Plus, 
+  Save, 
+  Edit3, 
+  Trash2, 
+  FileText,
+  Clock,
+  Tag
+} from 'lucide-react';
 
-
-// Lazy load CreatableSelect to improve initial load time
-const CreatableSelect = dynamic(() => import('react-select/creatable'), {
-  ssr: false,
-  loading: () => <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-});
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-function QuickNoteWidget() {
-  const { user, isLoading } = useUser();
-  const status = user ? "authenticated" : "unauthenticated";
-
-  if (!user) {
-    return <div>Loading...</div>; // Or any other fallback UI
-  }
-  const [content, setContent] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
-  const [isComponentMounted, setIsComponentMounted] = useState(false);
-  const [isTagsLoaded, setIsTagsLoaded] = useState(false);
-
-  // Set component as mounted after initial render
-  useEffect(() => {
-    setIsComponentMounted(true);
-  }, []);
-
-  const shouldFetch = status === "authenticated" && isComponentMounted;
-
-  // Fetch user settings to get global tags with reduced priority
-  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
-    shouldFetch ? "/api/userSettings" : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60000, // Cache for 1 minute
-      errorRetryCount: 2
-    }
-  );
-
-  // Memoize tags to prevent unnecessary re-renders
-  const allAvailableTags = useMemo(() => {
-    const globalTags = userSettings?.globalTags || [];
-    return Array.from(new Set(globalTags)).sort();
-  }, [userSettings]);
-
-  const tagOptions = useMemo(() =>
-    allAvailableTags.map(tag => ({ value: tag, label: tag })),
-    [allAvailableTags]
-  );
-
-  // Set tags as loaded when available
-  useEffect(() => {
-    if (userSettings || settingsError) {
-      setIsTagsLoaded(true);
-    }
-  }, [userSettings, settingsError]);
-
-  const handleTagChange = (selectedOptions: any) => {
-    setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
-  };
-
-
-  const handleSaveNote = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() || isSaving) return;
-
-    setIsSaving(true);
-    setSaveStatus("idle");
-
-    try {
-      const response = await fetch("/api/notes/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, tags: selectedTags, source: "quicknote" }), // Include source and selectedTags
-      });
-
-      if (response.ok) {
-        setContent(""); // Clear content on success
-        setSelectedTags([]); // Clear selected tags on success
-        setSaveStatus("success");
-        // Optionally, trigger a re-fetch of notes in the Notes list if it were visible
-      } else {
-        const errorData = await response.json();
-        setSaveStatus("error");
-        console.error("Failed to save note:", errorData.error);
-      }
-    } catch (error) {
-      setSaveStatus("error");
-      console.error("Error saving note:", error);
-    } finally {
-      setIsSaving(false);
-      // Reset status after a few seconds
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }
-  };
-
-
-  // Simplified loading state
-  if (!user) return <p>Please sign in to add notes.</p>;
-
-  if (settingsError) {
-    console.error("Error loading settings:", settingsError);
-    // Continue rendering even with error, just without tags
-  }
-
-
-  return (
-    <div className="flex flex-col h-full">
-      <form onSubmit={handleSaveNote} className="flex flex-col flex-1 gap-3">
-        <textarea
-          className="input-modern flex-1 resize-none"
-          placeholder="Write your note here..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          disabled={isSaving}
-        />
-        {isTagsLoaded && (
-          <CreatableSelect
-            isMulti
-            options={tagOptions}
-            onChange={handleTagChange}
-            placeholder="Select or create tags..."
-            isDisabled={isSaving}
-            isSearchable
-            value={selectedTags.map(tag => ({ value: tag, label: tag }))}
-            classNamePrefix="react-select"
-            theme={(theme) => ({
-              ...theme,
-              colors: {
-                ...theme.colors,
-                primary: '#14B8A6',
-                primary25: '#99F6E4',
-              },
-            })}
-            // Add performance optimization
-            isLoading={!isTagsLoaded}
-          />
-        )}
-        <div className="flex justify-between items-center mt-1">
-          {saveStatus === "success" && (
-            <p className="text-green-600 dark:text-green-400 text-sm flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Note saved!
-            </p>
-          )}
-          {saveStatus === "error" && (
-            <p className="text-red-600 dark:text-red-400 text-sm flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              Failed to save note
-            </p>
-          )}
-          <button
-            type="submit"
-            className={`btn-primary ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </span>
-            ) : "Save Note"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+interface QuickNote {
+  id: string;
+  content: string;
+  timestamp: string;
+  tags?: string[];
 }
 
-export default memo(QuickNoteWidget);
+const QuickNoteWidget: React.FC = () => {
+  const { user } = useUser();
+  const [notes, setNotes] = useState<QuickNote[]>([]);
+  const [currentNote, setCurrentNote] = useState('');
+  const [editingNote, setEditingNote] = useState<QuickNote | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load notes from localStorage
+  useEffect(() => {
+    if (user?.email) {
+      const savedNotes = localStorage.getItem(`quickNotes_${user.email}`);
+      if (savedNotes) {
+        try {
+          setNotes(JSON.parse(savedNotes));
+        } catch (error) {
+          console.error('Error loading quick notes:', error);
+        }
+      }
+      setIsLoading(false);
+    }
+  }, [user?.email]);
+
+  // Save notes to localStorage
+  const saveNotes = (newNotes: QuickNote[]) => {
+    if (user?.email) {
+      localStorage.setItem(`quickNotes_${user.email}`, JSON.stringify(newNotes));
+      setNotes(newNotes);
+    }
+  };
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [currentNote]);
+
+  const handleSaveNote = () => {
+    if (!currentNote.trim()) return;
+
+    if (editingNote) {
+      // Update existing note
+      const updatedNotes = notes.map(note =>
+        note.id === editingNote.id
+          ? { ...note, content: currentNote.trim(), tags: selectedTags }
+          : note
+      );
+      saveNotes(updatedNotes);
+      setEditingNote(null);
+    } else {
+      // Create new note
+      const newNote: QuickNote = {
+        id: Date.now().toString(),
+        content: currentNote.trim(),
+        timestamp: new Date().toISOString(),
+        tags: selectedTags
+      };
+      saveNotes([newNote, ...notes]);
+    }
+
+    setCurrentNote('');
+    setSelectedTags([]);
+  };
+
+  const handleEditNote = (note: QuickNote) => {
+    setEditingNote(note);
+    setCurrentNote(note.content);
+    setSelectedTags(note.tags || []);
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    const updatedNotes = notes.filter(note => note.id !== noteId);
+    saveNotes(updatedNotes);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNote(null);
+    setCurrentNote('');
+    setSelectedTags([]);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSaveNote();
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-6 h-6 text-primary-500" />
+        </div>
+        <p className="text-grey-tint font-body">Please sign in to use quick notes.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Add/Edit Note Form */}
+      <div className="space-y-3">
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={currentNote}
+            onChange={(e) => setCurrentNote(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder={editingNote ? "Edit your note..." : "Write a quick note..."}
+            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none min-h-[80px]"
+            rows={3}
+          />
+          
+          {/* Tags Input */}
+          <div className="mt-2">
+            <label className="text-xs font-medium text-grey-tint flex items-center space-x-1 mb-2">
+              <Tag className="w-3 h-3" />
+              <span>Tags (comma separated)</span>
+            </label>
+            <input
+              type="text"
+              value={selectedTags.join(', ')}
+              onChange={(e) => setSelectedTags(e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+              placeholder="work, ideas, todo"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleSaveNote}
+              disabled={!currentNote.trim()}
+              className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-1"
+            >
+              {editingNote ? <Edit3 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              <span>{editingNote ? 'Update' : 'Save'}</span>
+            </button>
+            
+            {editingNote && (
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          <div className="text-xs text-grey-tint">
+            Press ⌘+Enter to save
+          </div>
+        </div>
+      </div>
+
+      {/* Notes List */}
+      <div className="space-y-3">
+        {notes.length > 0 && (
+          <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <FileText className="w-4 h-4 text-primary-500" />
+            <span>Recent Notes ({notes.length})</span>
+          </h3>
+        )}
+
+        {notes.map((note) => (
+          <div
+            key={note.id}
+            className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-dark-base dark:text-soft-white whitespace-pre-wrap">
+                  {note.content}
+                </p>
+                
+                <div className="flex items-center space-x-3 mt-3">
+                  <span className="text-xs text-grey-tint flex items-center space-x-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatTimestamp(note.timestamp)}</span>
+                  </span>
+                  
+                  {note.tags && note.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {note.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="text-xs px-2 py-1 bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-1 ml-3">
+                <button
+                  onClick={() => handleEditNote(note)}
+                  className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteNote(note.id)}
+                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Empty State */}
+        {notes.length === 0 && (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              No notes yet. Write your first quick note above!
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default QuickNoteWidget;

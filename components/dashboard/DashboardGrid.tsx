@@ -8,6 +8,15 @@ import {
   Calendar,
   Clock,
   FileText,
+  Lock,
+  Unlock,
+  Settings,
+  Sparkles,
+  Plus,
+  Grid3X3,
+  LayoutGrid,
+  Smartphone,
+  Monitor,
 } from 'lucide-react';
 import OptimizedSkeleton from '@/components/ui/OptimizedSkeleton';
 import { CalendarProvider } from '@/contexts/CalendarContext';
@@ -75,7 +84,7 @@ const getWidgetIcon = (widgetKey: string) => {
     case 'quicknote':
       return <FileText className="w-5 h-5" />;
     case 'habit-tracker':
-      return <Clock className="w-5 h-5" />;
+      return <Sparkles className="w-5 h-5" />;
     default:
       return null;
   }
@@ -93,7 +102,16 @@ const DashboardGrid = () => {
 
   // Not signed in? Show loading or redirect to login
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
+            <p className="mt-4 text-grey-tint font-body">Loading your dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Locking: Read lock state from localStorage
@@ -130,28 +148,28 @@ const DashboardGrid = () => {
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
   const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
 
-  // Default layouts
+  // Default layouts with improved responsive design
   const defaultLayouts = {
     lg: [
-      { i: "tasks", x: 0, y: 0, w: 3, h: 5 },
-      { i: "calendar", x: 3, y: 0, w: 3, h: 5 },
-      { i: "ataglance", x: 0, y: 5, w: 3, h: 5 },
-      { i: "quicknote", x: 3, y: 5, w: 3, h: 5 },
-      { i: "habit-tracker", x: 0, y: 10, w: 6, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
+      { i: "ataglance", x: 8, y: 0, w: 4, h: 6 },
+      { i: "quicknote", x: 0, y: 6, w: 6, h: 5 },
+      { i: "habit-tracker", x: 6, y: 6, w: 6, h: 5 },
     ],
     md: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 5 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 5 },
-      { i: "ataglance", x: 0, y: 5, w: 4, h: 5 },
-      { i: "quicknote", x: 4, y: 5, w: 4, h: 5 },
-      { i: "habit-tracker", x: 0, y: 10, w: 8, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
+      { i: "ataglance", x: 0, y: 6, w: 4, h: 6 },
+      { i: "quicknote", x: 4, y: 6, w: 4, h: 6 },
+      { i: "habit-tracker", x: 0, y: 12, w: 8, h: 5 },
     ],
     sm: [
-      { i: "tasks", x: 0, y: 0, w: 6, h: 5 },
-      { i: "calendar", x: 0, y: 5, w: 6, h: 5 },
-      { i: "ataglance", x: 0, y: 10, w: 6, h: 5 },
-      { i: "quicknote", x: 0, y: 15, w: 6, h: 5 },
-      { i: "habit-tracker", x: 0, y: 20, w: 6, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 6, h: 6 },
+      { i: "calendar", x: 0, y: 6, w: 6, h: 6 },
+      { i: "ataglance", x: 0, y: 12, w: 6, h: 6 },
+      { i: "quicknote", x: 0, y: 18, w: 6, h: 5 },
+      { i: "habit-tracker", x: 0, y: 23, w: 6, h: 5 },
     ],
   };
 
@@ -195,10 +213,10 @@ const DashboardGrid = () => {
       } catch (e) {
         setActiveWidgets([]);
       } finally {
-                setLoadedSettings(true);
+        setLoadedSettings(true);
       }
-      }
-    }, [isClient, user?.email]);
+    }
+  }, [isClient, user?.email]);
 
   useEffect(() => {
     if (isClient) {
@@ -221,7 +239,7 @@ const DashboardGrid = () => {
     };
   }, []);
 
-  // Load layout from Firestore on component mount (client-side only)
+  // Load layout from database on component mount (client-side only)
   useEffect(() => {
     const fetchLayout = async () => {
       if (isClient && user?.email) {
@@ -275,7 +293,7 @@ const DashboardGrid = () => {
     if (!loadedSettings || activeWidgets.length === 0) return;
 
     // Priority order for widget loading
-            const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
+    const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
     const sortedWidgets = activeWidgets.sort((a, b) => {
       const aIndex = priority.indexOf(a);
       const bIndex = priority.indexOf(b);
@@ -339,14 +357,16 @@ const DashboardGrid = () => {
 
   if (!loadedSettings) {
     return (
-      <div className="grid-bg">
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="glass p-5 rounded-xl animate-pulse">
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-          ))}
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass p-6 rounded-2xl animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3 mb-4"></div>
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -358,34 +378,116 @@ const DashboardGrid = () => {
       endDate={oneWeekFromNow}
       enabled={!!user?.email}
     >
-      <div className="grid-bg">
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={layouts}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
-          rowHeight={30}
-          onLayoutChange={onLayoutChange}
-          isDraggable={!isLocked}
-          isResizable={!isLocked}
-          margin={[16, 16]}
-        >
-          {activeWidgets.map((key) => (
-            <div key={key} className="glass p-5 rounded-2xl flex flex-col">
-              <h2 className="widget-header">
-                {getWidgetIcon(key)}
-                {key === "ataglance" ? "Your Day at a Glance" : key.charAt(0).toUpperCase() + key.slice(1)}
-              </h2>
-              <div className="widget-content">
-                {visibleWidgets.includes(key) ? (
-                  memoizedWidgetComponents[key as WidgetType]
-                ) : (
-                  <WidgetSkeleton type={key} />
-                )}
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
+        {/* Dashboard Header */}
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-heading font-bold text-dark-base dark:text-soft-white mb-2">
+                Dashboard
+              </h1>
+              <p className="text-grey-tint font-body">
+                Welcome back! Here's your personalized overview.
+              </p>
             </div>
-          ))}
-        </ResponsiveGridLayout>
+            
+            {/* Dashboard Controls */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  const newLockState = !isLocked;
+                  setIsLocked(newLockState);
+                  localStorage.setItem("dashboardLocked", newLockState.toString());
+                  window.dispatchEvent(new Event('lockStateChanged'));
+                }}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                  isLocked 
+                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300' 
+                    : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                }`}
+              >
+                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                <span className="hidden sm:inline">{isLocked ? 'Unlock' : 'Lock'} Layout</span>
+              </button>
+              
+              <button
+                onClick={() => window.location.href = '/dashboard/settings'}
+                className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Dashboard Grid */}
+          <ResponsiveGridLayout
+            className="layout"
+            layouts={layouts}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
+            rowHeight={40}
+            onLayoutChange={onLayoutChange}
+            isDraggable={!isLocked}
+            isResizable={!isLocked}
+            margin={[20, 20]}
+            containerPadding={[0, 0]}
+          >
+            {activeWidgets.map((key) => (
+              <div key={key} className="glass p-6 rounded-2xl border border-white/20 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+                      {getWidgetIcon(key)}
+                    </div>
+                    <h2 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">
+                      {key === "ataglance" ? "Your Day at a Glance" : 
+                       key === "habit-tracker" ? "Habit Tracker" :
+                       key.charAt(0).toUpperCase() + key.slice(1)}
+                    </h2>
+                  </div>
+                  
+                  {!isLocked && (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
+                      <span className="text-xs text-grey-tint">Resizable</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="widget-content">
+                  {visibleWidgets.includes(key) ? (
+                    memoizedWidgetComponents[key as WidgetType]
+                  ) : (
+                    <WidgetSkeleton type={key} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </ResponsiveGridLayout>
+
+          {/* Empty State */}
+          {activeWidgets.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Grid3X3 className="w-12 h-12 text-primary-500" />
+              </div>
+              <h3 className="text-2xl font-heading font-semibold text-dark-base dark:text-soft-white mb-2">
+                No widgets configured
+              </h3>
+              <p className="text-grey-tint font-body mb-6">
+                Add widgets to your dashboard to get started
+              </p>
+              <button
+                onClick={() => window.location.href = '/dashboard/settings'}
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Configure Widgets</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </CalendarProvider>
   );
