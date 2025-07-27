@@ -7,8 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Clear the auth token using simplified function
-    clearCookie(res, 'auth-token');
+    // Clear the auth token with security awareness
+    clearCookie(res, 'auth-token', req);
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);

@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = signToken({ userId: user.id, email: user.email });
 
     // Set cookie with 30 days expiration for refresh
-    setCookie(res, 'auth-token', token, 30 * 24 * 60 * 60);
+    setCookie(res, 'auth-token', token, 30 * 24 * 60 * 60, req);
 
     res.status(200).json({ message: 'Token refreshed successfully' });
   } catch (error) {

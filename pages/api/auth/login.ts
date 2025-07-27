@@ -6,6 +6,24 @@ import bcrypt from 'bcryptjs';
 import { signToken, setCookie } from '@/lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Add CORS headers for cross-domain support
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.includes('flohub.xyz') || 
+    origin.includes('flohub.vercel.app') || 
+    origin.includes('localhost:3000')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -38,9 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create JWT token
     const token = signToken({ userId: user.id, email: user.email });
 
-    // Set cookie with simplified function
+    // Set cookie with security awareness
     const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
-    setCookie(res, 'auth-token', token, maxAge);
+    setCookie(res, 'auth-token', token, maxAge, req);
 
     // Add cache control headers
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

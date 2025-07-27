@@ -54,28 +54,64 @@ export function auth(req: NextApiRequest): AuthPayload | null {
   }
 }
 
-// Simplified cookie setting function
-export function setCookie(res: any, name: string, value: string, maxAge: number = 7 * 24 * 60 * 60) {
-  const cookieString = [
+// Helper to determine if we need secure cookies
+function isSecureEnvironment(req?: NextApiRequest): boolean {
+  if (req) {
+    const host = req.headers.host;
+    const protocol = req.headers['x-forwarded-proto'] || req.headers['x-forwarded-protocol'];
+    
+    // Check if it's HTTPS or a production domain
+    return protocol === 'https' || 
+           (host?.includes('flohub.xyz') ?? false) || 
+           (host?.includes('vercel.app') ?? false);
+  }
+  
+  // Default to secure in production
+  return process.env.NODE_ENV === 'production';
+}
+
+// Enhanced cookie setting function with security awareness
+export function setCookie(res: any, name: string, value: string, maxAge: number = 7 * 24 * 60 * 60, req?: NextApiRequest) {
+  const isSecure = isSecureEnvironment(req);
+  
+  const cookieParts = [
     `${name}=${value}`,
     `Max-Age=${maxAge}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax'
-  ].join('; ');
+  ];
   
+  // Add Secure flag for HTTPS environments
+  if (isSecure) {
+    cookieParts.push('Secure');
+  }
+  
+  const cookieString = cookieParts.join('; ');
   res.setHeader('Set-Cookie', cookieString);
+  
+  console.log(`Cookie set (secure: ${isSecure}):`, cookieString);
 }
 
-// Simplified cookie clearing function  
-export function clearCookie(res: any, name: string) {
-  const cookieString = [
+// Enhanced cookie clearing function with security awareness  
+export function clearCookie(res: any, name: string, req?: NextApiRequest) {
+  const isSecure = isSecureEnvironment(req);
+  
+  const cookieParts = [
     `${name}=`,
     'Max-Age=0',
     'Path=/',
     'HttpOnly',
     'SameSite=Lax'
-  ].join('; ');
+  ];
   
+  // Add Secure flag for HTTPS environments
+  if (isSecure) {
+    cookieParts.push('Secure');
+  }
+  
+  const cookieString = cookieParts.join('; ');
   res.setHeader('Set-Cookie', cookieString);
+  
+  console.log(`Cookie cleared (secure: ${isSecure}):`, cookieString);
 }
