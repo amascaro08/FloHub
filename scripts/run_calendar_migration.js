@@ -4,9 +4,35 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-console.log('🗄️  Running calendar events table migration...');
+// Helper function for node-postgres migration
+async function tryNodePostgresMigration(databaseUrl, migrationSQL) {
+  try {
+    const { Client } = require('pg');
+    
+    const client = new Client({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+    
+    await client.connect();
+    console.log('🔌 Connected to database');
+    
+    await client.query(migrationSQL);
+    console.log('✅ Migration completed successfully using node-postgres!');
+    
+    await client.end();
+    
+  } catch (pgError) {
+    console.error('❌ Failed to run migration with node-postgres:', pgError);
+    throw pgError;
+  }
+}
 
-try {
+// Main migration function
+async function runMigration() {
+  console.log('🗄️  Running calendar events table migration...');
+
+  try {
   // Read the migration SQL file
   const migrationPath = path.join(__dirname, 'migrate_calendar_events.sql');
   const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
@@ -44,35 +70,23 @@ try {
     console.log('📦 psql not found, trying alternative method...');
     
     // Alternative: Use node-postgres if psql is not available
-    try {
-      const { Client } = require('pg');
-      
-      const client = new Client({
-        connectionString: databaseUrl,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-      });
-      
-      await client.connect();
-      console.log('🔌 Connected to database');
-      
-      await client.query(migrationSQL);
-      console.log('✅ Migration completed successfully using node-postgres!');
-      
-      await client.end();
-      
-    } catch (pgError) {
-      console.error('❌ Failed to run migration with node-postgres:', pgError);
-      throw pgError;
-    }
+    await tryNodePostgresMigration(databaseUrl, migrationSQL);
     
     // Clean up temporary file
     fs.unlinkSync(tempSqlFile);
   }
   
-} catch (error) {
-  console.error('❌ Migration failed:', error);
-  process.exit(1);
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    process.exit(1);
+  }
+
+  console.log('🎉 Calendar events table migration completed!');
+  console.log('📝 Local FloHub calendar is now ready to use.');
 }
 
-console.log('🎉 Calendar events table migration completed!');
-console.log('📝 Local FloHub calendar is now ready to use.');
+// Run the migration
+runMigration().catch(error => {
+  console.error('❌ Migration failed:', error);
+  process.exit(1);
+});
