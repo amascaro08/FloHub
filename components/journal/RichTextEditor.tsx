@@ -85,7 +85,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       title: 'Table',
       description: 'Insert a table',
       icon: TableCellsIcon,
-      action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      action: (editor) => {
+        editor.chain().focus().insertTable({ 
+          rows: 3, 
+          cols: 3, 
+          withHeaderRow: true 
+        }).run();
+        console.log('Table inserted');
+      },
     },
     {
       id: 'codeBlock',
@@ -399,27 +406,79 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         {/* Table controls */}
         {editor?.isActive('table') && (
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300 mr-2">Table:</span>
+            
             <button
               onClick={() => editor?.chain().focus().addColumnBefore().run()}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
               title="Add Column Before"
             >
-              <TableCellsIcon className="w-4 h-4" />
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 3h8v18h-8v-8H5V3h8v10zm-2 8V9H9v2H7v2h2v2h2v-2h2v-2h-2z"/>
+              </svg>
             </button>
+            
+            <button
+              onClick={() => editor?.chain().focus().addColumnAfter().run()}
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
+              title="Add Column After"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11 3H3v18h8v-8h8V3h-8v10zm2 8V9h2v2h2v2h-2v2h-2v-2h-2v-2h2z"/>
+              </svg>
+            </button>
+            
+            <button
+              onClick={() => editor?.chain().focus().addRowBefore().run()}
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
+              title="Add Row Before"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 13v8h18v-8H11v-2h10V3H3v8h10v2H3zm8-2V9h2v2h2v2h-2v2h-2v-2H9v-2h2z"/>
+              </svg>
+            </button>
+            
             <button
               onClick={() => editor?.chain().focus().addRowAfter().run()}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
               title="Add Row After"
             >
-              <span className="text-xs">+R</span>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 11V3h18v8H11v2h10v8H3v-8h10v-2H3zm8 2v2h2v-2h2v2h-2v2h-2v-2H9v-2h2z"/>
+              </svg>
             </button>
+            
+            <div className="h-4 w-px bg-blue-300 dark:bg-blue-600 mx-1"></div>
+            
+            <button
+              onClick={() => editor?.chain().focus().deleteColumn().run()}
+              className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-all"
+              title="Delete Column"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
+              </svg>
+            </button>
+            
+            <button
+              onClick={() => editor?.chain().focus().deleteRow().run()}
+              className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-all"
+              title="Delete Row"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h14zm-10 8V8H5v6h4zm2 0h4V8h-4v6zm6 0h4V8h-4v6z"/>
+              </svg>
+            </button>
+            
             <button
               onClick={() => editor?.chain().focus().deleteTable().run()}
-              className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-all"
+              className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-all"
               title="Delete Table"
             >
-              <span className="text-xs">Del</span>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H6zm0 2h12v16H6V4zm10 14l-1.41-1.41L12 14.17l-2.59 2.42L8 15.17l2.59-2.42L8 10.34l1.41-1.42L12 11.34l2.59-2.42L16 10.34l-2.59 2.41L16 15.17z"/>
+              </svg>
             </button>
           </div>
         )}
@@ -429,6 +488,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
             Type "/" for commands {showSlashMenu && '(MENU ACTIVE)'}
           </span>
+          
+          <button
+            onClick={() => {
+              console.log('Manual slash menu trigger');
+              setShowSlashMenu(!showSlashMenu);
+              setSlashMenuPosition({ x: 300, y: 200 });
+            }}
+            className="p-1 rounded text-xs bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Test /
+          </button>
           
           <button
             onClick={() => editor?.chain().focus().undo().run()}
@@ -461,13 +531,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           className="prose-editor"
         />
         
+        {/* Debug indicator */}
+        {showSlashMenu && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs z-50">
+            SLASH MENU ACTIVE
+          </div>
+        )}
+        
         {/* Slash Command Menu */}
         {showSlashMenu && (
           <div 
             className="fixed z-[999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
             style={{
-              left: slashMenuPosition.x,
-              top: slashMenuPosition.y,
+              left: Math.max(10, slashMenuPosition.x),
+              top: Math.max(10, slashMenuPosition.y),
             }}
           >
             <div className="px-3 py-1 text-xs text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-600 mb-1">
@@ -654,16 +731,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           overflow: hidden;
           table-layout: fixed;
           width: 100%;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         
         .prose-editor .ProseMirror table td,
         .prose-editor .ProseMirror table th {
           border: 1px solid rgb(226 232 240);
           box-sizing: border-box;
-          min-width: 1em;
-          padding: 0.5rem;
+          min-width: 3rem;
+          padding: 0.75rem;
           position: relative;
           vertical-align: top;
+          transition: background-color 0.15s ease;
+        }
+        
+        .prose-editor .ProseMirror table td:hover,
+        .prose-editor .ProseMirror table th:hover {
+          background-color: rgb(249 250 251);
         }
         
         .dark .prose-editor .ProseMirror table td,
@@ -671,17 +756,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           border-color: rgb(71 85 105);
         }
         
+        .dark .prose-editor .ProseMirror table td:hover,
+        .dark .prose-editor .ProseMirror table th:hover {
+          background-color: rgb(51 65 85);
+        }
+        
         .prose-editor .ProseMirror table th {
           background-color: rgb(248 250 252);
           font-weight: 600;
+          border-bottom: 2px solid rgb(13 148 136);
         }
         
         .dark .prose-editor .ProseMirror table th {
           background-color: rgb(30 41 59);
+          border-bottom-color: rgb(13 148 136);
         }
         
         .prose-editor .ProseMirror table .selectedCell:after {
-          background: rgba(13, 148, 136, 0.1);
+          background: rgba(13, 148, 136, 0.15);
           content: "";
           left: 0;
           right: 0;
@@ -690,6 +782,63 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           pointer-events: none;
           position: absolute;
           z-index: 2;
+          border-radius: 4px;
+        }
+        
+        /* Row hover effects */
+        .prose-editor .ProseMirror table tr:hover td {
+          background-color: rgb(240 253 250);
+        }
+        
+        .dark .prose-editor .ProseMirror table tr:hover td {
+          background-color: rgb(20 83 75);
+        }
+        
+        /* Column resize handle */
+        .prose-editor .ProseMirror table .column-resize-handle {
+          background-color: rgb(13 148 136);
+          bottom: -2px;
+          position: absolute;
+          right: -2px;
+          top: 0;
+          width: 4px;
+          pointer-events: none;
+        }
+        
+        /* Table cell selection indicators */
+        .prose-editor .ProseMirror table td.selectedCell,
+        .prose-editor .ProseMirror table th.selectedCell {
+          background-color: rgba(13, 148, 136, 0.1);
+          border: 2px solid rgb(13 148 136);
+        }
+        
+        /* Add/remove button hover zones */
+        .prose-editor .ProseMirror table td:before,
+        .prose-editor .ProseMirror table th:before {
+          content: '';
+          position: absolute;
+          top: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 16px;
+          height: 8px;
+          background: transparent;
+          cursor: pointer;
+          z-index: 10;
+        }
+        
+        .prose-editor .ProseMirror table td:after,
+        .prose-editor .ProseMirror table th:after {
+          content: '';
+          position: absolute;
+          left: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 8px;
+          height: 16px;
+          background: transparent;
+          cursor: pointer;
+          z-index: 10;
         }
         
         .prose-editor .ProseMirror p.is-editor-empty:first-child::before {
