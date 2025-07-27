@@ -33,7 +33,7 @@ export default async function handler(
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PUT,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PUT,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie');
 
   if (req.method === 'OPTIONS') {
@@ -102,8 +102,8 @@ export default async function handler(
       return res.status(201).json(task);
     }
 
-    // ── PATCH: toggle done ───────────────────────────────────────
-    if (req.method === "PATCH") {
+    // ── PUT/PATCH: toggle done ───────────────────────────────────────
+    if (req.method === "PATCH" || req.method === "PUT") {
       const { id, done, source } = req.body as { id: string; done?: boolean; source?: "personal" | "work" };
       if (!id || (typeof done === "undefined" && typeof source === "undefined")) {
         return res.status(400).json({ error: "Invalid payload" });
@@ -145,7 +145,7 @@ export default async function handler(
     }
 
     // ── 405 for other methods
-    res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
+    res.setHeader("Allow", ["GET", "POST", "PATCH", "PUT", "DELETE"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err: any) {
     console.error("Error in /api/tasks:", err);

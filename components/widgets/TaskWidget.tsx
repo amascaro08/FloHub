@@ -162,7 +162,7 @@ function TaskWidget() {
       const response = await fetch(`/api/tasks/${t.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !t.done }),
+        body: JSON.stringify({ id: t.id, done: !t.done }),
       });
       if (response.ok) {
         mutate();
