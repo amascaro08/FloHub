@@ -149,28 +149,42 @@ const DashboardGrid = () => {
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
   const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
 
-  // Default layouts with improved responsive design
+  // Default layouts with improved responsive design and larger default sizes
   const defaultLayouts = {
     lg: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
-      { i: "ataglance", x: 8, y: 0, w: 4, h: 6 },
-      { i: "quicknote", x: 0, y: 6, w: 6, h: 5 },
-      { i: "habit-tracker", x: 6, y: 6, w: 6, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "ataglance", x: 8, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "quicknote", x: 0, y: 10, w: 6, h: 8, minW: 3, minH: 6 },
+      { i: "habit-tracker", x: 6, y: 10, w: 6, h: 8, minW: 3, minH: 6 },
     ],
     md: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 6 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 6 },
-      { i: "ataglance", x: 0, y: 6, w: 4, h: 6 },
-      { i: "quicknote", x: 4, y: 6, w: 4, h: 6 },
-      { i: "habit-tracker", x: 0, y: 12, w: 8, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "ataglance", x: 0, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "quicknote", x: 4, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "habit-tracker", x: 0, y: 20, w: 8, h: 8, minW: 4, minH: 6 },
     ],
     sm: [
-      { i: "tasks", x: 0, y: 0, w: 6, h: 6 },
-      { i: "calendar", x: 0, y: 6, w: 6, h: 6 },
-      { i: "ataglance", x: 0, y: 12, w: 6, h: 6 },
-      { i: "quicknote", x: 0, y: 18, w: 6, h: 5 },
-      { i: "habit-tracker", x: 0, y: 23, w: 6, h: 5 },
+      { i: "tasks", x: 0, y: 0, w: 6, h: 10, minW: 4, minH: 8 },
+      { i: "calendar", x: 0, y: 10, w: 6, h: 10, minW: 4, minH: 8 },
+      { i: "ataglance", x: 0, y: 20, w: 6, h: 10, minW: 4, minH: 8 },
+      { i: "quicknote", x: 0, y: 30, w: 6, h: 8, minW: 4, minH: 6 },
+      { i: "habit-tracker", x: 0, y: 38, w: 6, h: 8, minW: 4, minH: 6 },
+    ],
+    xs: [
+      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "calendar", x: 0, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "ataglance", x: 0, y: 20, w: 4, h: 10, minW: 3, minH: 8 },
+      { i: "quicknote", x: 0, y: 30, w: 4, h: 8, minW: 3, minH: 6 },
+      { i: "habit-tracker", x: 0, y: 38, w: 4, h: 8, minW: 3, minH: 6 },
+    ],
+    xxs: [
+      { i: "tasks", x: 0, y: 0, w: 2, h: 10, minW: 2, minH: 8 },
+      { i: "calendar", x: 0, y: 10, w: 2, h: 10, minW: 2, minH: 8 },
+      { i: "ataglance", x: 0, y: 20, w: 2, h: 10, minW: 2, minH: 8 },
+      { i: "quicknote", x: 0, y: 30, w: 2, h: 8, minW: 2, minH: 6 },
+      { i: "habit-tracker", x: 0, y: 38, w: 2, h: 8, minW: 2, minH: 6 },
     ],
   };
 
@@ -438,13 +452,13 @@ const DashboardGrid = () => {
             containerPadding={[0, 0]}
           >
             {activeWidgets.map((key) => (
-              <div key={key} className="glass p-6 rounded-2xl border border-white/20 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+              <div key={key} className="glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col h-full overflow-hidden">
+                <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
+                    <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
                       {getWidgetIcon(key)}
                     </div>
-                    <h2 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">
+                    <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white truncate">
                       {key === "ataglance" ? "Your Day at a Glance" : 
                        key === "habit-tracker" ? "Habit Tracker" :
                        key.charAt(0).toUpperCase() + key.slice(1)}
@@ -452,17 +466,19 @@ const DashboardGrid = () => {
                   </div>
                   
                   {!isLocked && (
-                    <div className="flex items-center space-x-1">
-                      <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-                      <span className="text-xs text-grey-tint">Resizable</span>
+                    <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                      <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                      <span className="text-xs text-grey-tint hidden sm:inline">Resizable</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="widget-content">
+                <div className="widget-content flex-1 overflow-hidden">
                   {visibleWidgets.includes(key) ? (
                     <ErrorBoundary>
-                      {memoizedWidgetComponents[key as WidgetType]}
+                      <div className="h-full overflow-y-auto overflow-x-hidden">
+                        {memoizedWidgetComponents[key as WidgetType]}
+                      </div>
                     </ErrorBoundary>
                   ) : (
                     <WidgetSkeleton type={key} />

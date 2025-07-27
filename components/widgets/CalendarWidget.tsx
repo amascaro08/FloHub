@@ -188,47 +188,47 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   }, [selectedDate, eventsByDate, todayEvents]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 h-full flex flex-col">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-1 min-w-0">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3 h-3" />
           </button>
-          <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
-            {format(currentDate, 'MMMM yyyy')}
+          <h3 className="text-base font-heading font-semibold text-dark-base dark:text-soft-white truncate">
+            {format(currentDate, 'MMM yyyy')}
           </h3>
           <button
             onClick={goToNextMonth}
-            className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3 h-3" />
           </button>
         </div>
         <button
           onClick={goToToday}
-          className="px-3 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+          className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors flex-shrink-0"
         >
           Today
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div className="space-y-2">
+      <div className="space-y-1 flex-shrink-0">
         {/* Day Headers */}
-        <div className="grid grid-cols-7 gap-1">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center">
+        <div className="grid grid-cols-7 gap-0.5">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div key={index} className="text-center">
               <span className="text-xs font-medium text-grey-tint">{day}</span>
             </div>
           ))}
         </div>
 
         {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {calendarDays.map((day, index) => {
             const isCurrentMonth = isSameMonth(day, currentDate);
             const isTodayDate = isToday(day);
@@ -240,7 +240,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
               <button
                 key={index}
                 onClick={() => handleDateClick(day)}
-                className={`relative p-2 text-sm rounded-lg transition-all duration-200 ${
+                className={`relative p-1 text-xs rounded transition-all duration-200 min-h-[28px] ${
                   isSelected
                     ? 'bg-primary-500 text-white'
                     : isTodayDate
@@ -280,22 +280,22 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
 
       {/* Selected Date Events or Today's Events Preview */}
       {displayEvents.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-primary-500" />
+        <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2 flex-shrink-0">
+            <Clock className="w-3 h-3 text-primary-500" />
             <span>{displayTitle} ({displayEvents.length})</span>
           </h4>
-                     <div className="space-y-2">
-             {displayEvents.slice(0, 3).map((event) => (
+          <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
+             {displayEvents.slice(0, 5).map((event) => (
               <button
                 key={event.id}
                 onClick={() => handleEventClick(event)}
-                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
+                className="w-full text-left p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
               >
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="flex items-start space-x-2">
+                  <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                    <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
                       {event.summary}
                     </p>
                     <div className="flex items-center space-x-2 mt-1">
@@ -323,9 +323,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                 </div>
               </button>
             ))}
-            {displayEvents.length > 3 && (
+            {displayEvents.length > 5 && (
               <p className="text-xs text-grey-tint text-center">
-                +{displayEvents.length - 3} more events
+                +{displayEvents.length - 5} more events
               </p>
             )}
           </div>

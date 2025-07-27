@@ -229,9 +229,9 @@ function TaskWidget() {
   const completedTasks = tasks?.filter(t => t.done) || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Add Task Form */}
-      <form onSubmit={addOrUpdate} className="space-y-3">
+      <form onSubmit={addOrUpdate} className="space-y-3 flex-shrink-0">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -391,7 +391,7 @@ function TaskWidget() {
       </form>
 
       {/* Tasks List */}
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
           <div className="space-y-2">
@@ -408,16 +408,16 @@ function TaskWidget() {
             {incompleteTasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+                className="flex items-start space-x-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700"
               >
                 <button
                   onClick={() => toggleComplete(task)}
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 mt-0.5"
                 >
-                  <Circle className="w-5 h-5 text-gray-400 hover:text-primary-500 transition-colors" />
+                  <Circle className="w-4 h-4 text-gray-400 hover:text-primary-500 transition-colors" />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                  <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
                     {task.text}
                   </p>
                   <div className="flex items-center space-x-2 mt-1">
@@ -449,18 +449,18 @@ function TaskWidget() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-start space-x-1 flex-shrink-0 mt-0.5">
                   <button
                     onClick={() => startEdit(task)}
                     className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => remove(task.id)}
                     className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -486,19 +486,19 @@ function TaskWidget() {
             {completedTasks.slice(0, 3).map((task) => (
               <div
                 key={task.id}
-                className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl"
+                className="flex items-start space-x-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
               >
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through truncate">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through break-words leading-relaxed">
                     {task.text}
                   </p>
                 </div>
                 <button
                   onClick={() => remove(task.id)}
-                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
+                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors flex-shrink-0 mt-0.5"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
             ))}
