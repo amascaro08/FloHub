@@ -380,27 +380,33 @@ const CalendarPage = () => {
   // Simplified loading state management
   const hasEvents = events && events.length > 0;
 
-  if (!user || status === 'unauthenticated') {
-    return (
-      <MainLayout requiresAuth={true}>
+  const viewTabs = [
+    { id: 'day', label: 'Day', icon: CalendarIcon },
+    { id: 'week', label: 'Week', icon: ViewColumnsIcon },
+    { id: 'month', label: 'Month', icon: CalendarDaysIcon },
+    { id: 'agenda', label: 'Agenda', icon: ListBulletIcon },
+    { id: 'timeline', label: 'Timeline', icon: ChartBarIcon }
+  ];
+
+  return (
+    <MainLayout requiresAuth={true}>
+      <Head>
+        <title>Calendar | FlowHub</title>
+        <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
+      </Head>
+      
+      {/* Unauthenticated state */}
+      {(!user || status === 'unauthenticated') && (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="text-6xl mb-4">🔒</div>
             <p className="text-grey-tint">Please sign in to access your calendar.</p>
           </div>
         </div>
-      </MainLayout>
-    );
-  }
+      )}
 
-  // Show skeleton only during initial loading, not during background refreshes
-  if (isLoading && !hasEvents && !fetchError) {
-    return (
-      <MainLayout requiresAuth={true}>
-        <Head>
-          <title>Calendar | FlowHub</title>
-          <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
-        </Head>
+      {/* Loading state */}
+      {(isLoading && !hasEvents && !fetchError && user && status === 'authenticated') && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Header */}
           <div className="mb-8">
@@ -467,18 +473,10 @@ const CalendarPage = () => {
             </div>
           </div>
         </div>
-      </MainLayout>
-    );
-  }
+      )}
 
-  // Handle persistent errors that should show error state
-  if ((settingsError || fetchError) && !isLoading && !hasEvents) {
-    return (
-      <MainLayout requiresAuth={true}>
-        <Head>
-          <title>Calendar | FlowHub</title>
-          <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
-        </Head>
+      {/* Error state */}
+      {((settingsError || fetchError) && !isLoading && !hasEvents && user && status === 'authenticated') && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-6 rounded-2xl shadow-xl">
             <h3 className="font-heading font-bold text-lg mb-3">Calendar Load Error</h3>
@@ -510,25 +508,10 @@ const CalendarPage = () => {
             </div>
           </div>
         </div>
-      </MainLayout>
-    );
-  }
+      )}
 
-  const viewTabs = [
-    { id: 'day', label: 'Day', icon: CalendarIcon },
-    { id: 'week', label: 'Week', icon: ViewColumnsIcon },
-    { id: 'month', label: 'Month', icon: CalendarDaysIcon },
-    { id: 'agenda', label: 'Agenda', icon: ListBulletIcon },
-    { id: 'timeline', label: 'Timeline', icon: ChartBarIcon }
-  ];
-
-  return (
-    <MainLayout requiresAuth={true}>
-      <Head>
-        <title>Calendar | FlowHub</title>
-        <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
-      </Head>
-      
+      {/* Main calendar content */}
+      {(user && status === 'authenticated' && !(isLoading && !hasEvents && !fetchError) && !((settingsError || fetchError) && !isLoading && !hasEvents)) && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
@@ -1329,6 +1312,7 @@ const CalendarPage = () => {
           }
         />
       </div>
+      )}
     </MainLayout>
   );
 };

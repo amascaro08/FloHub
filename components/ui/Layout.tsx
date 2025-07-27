@@ -95,12 +95,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
       {/* sidebar */}
       <aside
         className={`
-          bg-[var(--surface)] shadow-glass z-30 transition-all duration-300 ease-in-out
-          fixed inset-y-0 left-0 transform
-          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:static md:translate-x-0 md:shadow-none md:transform-none
+          bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
+          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
+          md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
-          w-64 md:w-auto
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
         `}
       >

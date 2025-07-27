@@ -36,33 +36,7 @@ export default function JournalPage() {
   const status = user ? "authenticated" : "unauthenticated";
   const router = useRouter();
 
-  // Handle loading state
-  if (status === 'unauthenticated') {
-    return (
-      <MainLayout requiresAuth={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-pulse text-center">
-            <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
-            <p className="text-grey-tint">Loading your journal...</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Handle unauthenticated state
-  if (status !== 'authenticated' || !user) {
-    return (
-      <MainLayout requiresAuth={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🔒</div>
-            <p className="text-grey-tint">Please sign in to access your journal.</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
+  // Handle loading state and authentication logic inside the single MainLayout wrapper
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
@@ -239,6 +213,28 @@ export default function JournalPage() {
         <meta name="description" content="Capture your thoughts, track moods, and reflect on your journey with FlowHub's intelligent journal" />
       </Head>
       
+      {/* Loading state */}
+      {status === 'unauthenticated' && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-pulse text-center">
+            <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+            <p className="text-grey-tint">Loading your journal...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Unauthenticated state */}
+      {(status !== 'authenticated' || !user) && status !== 'unauthenticated' && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <p className="text-grey-tint">Please sign in to access your journal.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Main journal content */}
+      {status === 'authenticated' && user && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
@@ -546,6 +542,7 @@ export default function JournalPage() {
           </div>
         )}
       </div>
+      )}
     </MainLayout>
   );
 }
