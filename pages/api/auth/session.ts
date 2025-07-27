@@ -3,6 +3,24 @@ import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Add CORS headers for cross-domain support
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.includes('flohub.xyz') || 
+    origin.includes('flohub.vercel.app') || 
+    origin.includes('localhost:3000')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   try {
     const decoded = auth(req);
 

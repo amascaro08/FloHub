@@ -3,11 +3,27 @@ import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { serialize } from 'cookie';
-import { createSecureCookie, getDomainInfo } from '@/lib/cookieUtils';
+import { signToken, setCookie } from '@/lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Add CORS headers for cross-domain support
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.includes('flohub.xyz') || 
+    origin.includes('flohub.vercel.app') || 
+    origin.includes('localhost:3000')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -37,33 +53,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET as string, {
-      expiresIn: rememberMe ? '30d' : '24h', // 30 days if remember me, 24 hours if not
-    });
+    // Create JWT token
+    const token = signToken({ userId: user.id, email: user.email });
 
-    // Create secure cookie with dynamic domain detection
-    const domainInfo = getDomainInfo(req);
-    console.log('Login - Domain info:', domainInfo);
-    
-    const cookie = createSecureCookie(req, 'auth-token', token, {
-      maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 days or 24 hours
-    });
+    // Set cookie with security awareness
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
+    setCookie(res, 'auth-token', token, maxAge, req);
 
-    // Check if this is a PWA request (moved from cookie utility for header logic)
-    const userAgent = req.headers['user-agent'] || '';
-    const isPWA = userAgent.includes('standalone') || req.headers['sec-fetch-site'] === 'none';
-
-    // Add PWA-specific headers
-    res.setHeader('Set-Cookie', cookie);
-    
-    // Add headers to help with PWA caching and authentication
+    // Add cache control headers
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    
-    if (isPWA) {
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
 
     res.status(200).json({ 
       message: 'Logged in successfully',
@@ -71,18 +71,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: user.id,
         email: user.email,
         name: user.name
-      },
-      isPWA
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ 
       message: 'Internal server error', 
-      error: error instanceof Error ? error.message : 'An unknown error occurred',
-      details: process.env.NODE_ENV === 'development' ? {
-        jwtSecret: !!process.env.JWT_SECRET,
-        dbUrl: !!process.env.NEON_DATABASE_URL
-      } : undefined
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
     });
   }
 }
