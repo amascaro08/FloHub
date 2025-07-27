@@ -3,11 +3,19 @@ import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@/lib/hooks/useUser";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import AddNoteModal from "@/components/notes/AddNoteModal"; // Import the modal component
-import NoteList from "@/components/notes/NoteList"; // Import NoteList component
-import NoteDetail from "@/components/notes/NoteDetail"; // Import NoteDetail component
-import type { GetNotesResponse } from "../api/notes/index"; // Import the API response type
-import type { Note, UserSettings } from "@/types/app"; // Import shared Note and UserSettings types
+import AddNoteModal from "@/components/notes/AddNoteModal";
+import NoteList from "@/components/notes/NoteList";
+import NoteDetail from "@/components/notes/NoteDetail";
+import type { GetNotesResponse } from "../api/notes/index";
+import type { Note, UserSettings } from "@/types/app";
+import { 
+  PlusIcon, 
+  MagnifyingGlassIcon,
+  TagIcon,
+  DocumentTextIcon,
+  ArchiveBoxIcon,
+  SparklesIcon
+} from '@heroicons/react/24/solid';
 
 // Define a type for calendar items based on the API response
 type CalendarItem = {
@@ -17,26 +25,37 @@ type CalendarItem = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-
 export default function NotesPage() {
-   const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
-
   const router = useRouter();
 
   // Handle loading state
   if (status === 'unauthenticated') {
-    return <p className="text-center p-8">Loading notes...</p>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-grey-tint">Loading your notes...</p>
+        </div>
+      </div>
+    );
   }
 
   // Handle unauthenticated state
   if (status !== 'authenticated' || !user) {
-    // Redirect to login or show a message
-    // For now, showing a message
-    return <p className="text-center p-8">Please sign in to access your notes.</p>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-grey-tint">Please sign in to access your notes.</p>
+        </div>
+      </div>
+    );
   }
 
   const shouldFetch = status === "authenticated";
+  
   // Fetch notes
   const { data: notesResponse, error: notesError, mutate } = useSWR<GetNotesResponse>(
     shouldFetch ? "/api/notes" : null,
@@ -55,21 +74,29 @@ export default function NotesPage() {
     fetcher
   );
 
-  // Log the fetched data and errors for debugging
-
-
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
-  const [showModal, setShowModal] = useState(false); // State to control modal visibility
-  const [isSaving, setIsSaving] = useState(false); // State to indicate saving in progress
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]); // State for selected notes for deletion
+  const [showModal, setShowModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Use only global tags from settings
   const allAvailableTags = useMemo(() => {
-    return userSettings?.globalTags?.sort() || []; // Get global tags and sort them
-  }, [userSettings]); // Dependency array includes userSettings
-
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null); // State for selected note ID
+    return userSettings?.globalTags?.sort() || [];
+  }, [userSettings]);
 
   // Function to handle toggling selection of a note for deletion
   const handleToggleSelectNote = (noteId: string, isSelected: boolean) => {
@@ -84,34 +111,29 @@ export default function NotesPage() {
   const handleDeleteSelected = async () => {
     if (selectedNotes.length === 0) return;
 
-    setIsSaving(true); // Indicate saving/deleting in progress
+    setIsSaving(true);
     try {
-      // Assuming your delete API can handle multiple IDs or you make multiple calls
-      // For now, let's assume the API can take an array of IDs
       const response = await fetch(`/api/notes/delete`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedNotes }), // Send array of IDs
+        body: JSON.stringify({ ids: selectedNotes }),
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
-        setSelectedNoteId(null); // Deselect any currently selected note
-        setSelectedNotes([]); // Clear selected notes after deletion
+        mutate();
+        setSelectedNoteId(null);
+        setSelectedNotes([]);
       } else {
-        console.error("Failed to delete selected notes. Status:", response.status); // Log response status
+        console.error("Failed to delete selected notes. Status:", response.status);
         try {
           const errorData = await response.json();
           console.error("Error details:", errorData.error);
         } catch (jsonError) {
           console.error("Could not parse error response as JSON:", jsonError);
         }
-        // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error deleting selected notes:", error);
-      console.error("Error details:", error); // Log error object
-       // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
@@ -121,7 +143,7 @@ export default function NotesPage() {
   const handleExportSelected = async () => {
     if (selectedNotes.length === 0) return;
 
-    setIsSaving(true); // Indicate saving/exporting in progress
+    setIsSaving(true);
     try {
       const response = await fetch("/api/notes/export-pdf", {
         method: "POST",
@@ -130,16 +152,15 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        // Assuming the backend sends the PDF as a Blob
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "exported_notes.pdf"; // Set the desired filename
+        a.download = "exported_notes.pdf";
         document.body.appendChild(a);
         a.click();
-        a.remove(); // Clean up the element
-        window.URL.revokeObjectURL(url); // Free up memory
+        a.remove();
+        window.URL.revokeObjectURL(url);
       } else {
         console.error("Failed to export notes. Status:", response.status);
         try {
@@ -148,16 +169,13 @@ export default function NotesPage() {
         } catch (jsonError) {
           console.error("Could not parse error response as JSON:", jsonError);
         }
-        // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error exporting notes:", error);
-      // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
   };
-
 
   // Update handleSaveNote to include new fields
   const handleSaveNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
@@ -166,7 +184,6 @@ export default function NotesPage() {
       const response = await fetch("/api/notes/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Include all relevant fields in the body
         body: JSON.stringify({
           title: note.title,
           content: note.content,
@@ -178,23 +195,20 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
+        mutate();
+        setShowModal(false);
       } else {
         const errorData = await response.json();
         console.error("Failed to save note:", errorData.error);
-        // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error saving note:", error);
-       // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
   };
 
-
   const filteredNotes = useMemo(() => {
-    // Extract the notes array from the fetched data
     const notesArray = notesResponse?.notes || [];
 
     if (notesArray.length === 0) return [];
@@ -203,48 +217,59 @@ export default function NotesPage() {
 
     // Filter by content
     if (searchContent.trim() !== "") {
-      filtered = filtered.filter((note: Note) => // Explicitly type note
-        note.content.toLowerCase().includes(searchContent.toLowerCase())
+      filtered = filtered.filter((note: Note) =>
+        note.content.toLowerCase().includes(searchContent.toLowerCase()) ||
+        note.title?.toLowerCase().includes(searchContent.toLowerCase())
       );
     }
 
     // Filter by tag
     if (filterTag.trim() !== "") {
-      filtered = filtered.filter((note: Note) => // Explicitly type note
-        note.tags.some((tag: string) => tag.toLowerCase() === filterTag.toLowerCase()) // Exact match for tag filter
+      filtered = filtered.filter((note: Note) =>
+        note.tags.some((tag: string) => tag.toLowerCase() === filterTag.toLowerCase())
       );
     }
 
-
     return filtered;
-  }, [notesResponse, searchContent, filterTag]); // Update dependency to notesResponse
+  }, [notesResponse, searchContent, filterTag]);
 
   // Find the selected note object
   const selectedNote = useMemo(() => {
-    // filteredNotes is now an array of Note objects
     if (!selectedNoteId || !filteredNotes) return null;
     return filteredNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredNotes]);
 
   // Show loading state if data is still loading
   if ((!notesResponse && !notesError) || (!calendarEvents && !calendarError && shouldFetch) || (!userSettings && !settingsError && shouldFetch)) {
-    return <p>Loading notes and calendar events…</p>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-grey-tint">Loading your notes...</p>
+        </div>
+      </div>
+    );
   }
 
-
   // Show error state if either notes or calendar events failed to load
-  if (notesError || calendarError || settingsError) { // Add settingsError check
-    return <p>Error loading data.</p>;
+  if (notesError || calendarError || settingsError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <p className="text-grey-tint">Error loading your notes. Please try again.</p>
+        </div>
+      </div>
+    );
   }
 
   // Update handleUpdateNote to include new fields
-  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean) => { // Include new fields
+  const handleUpdateNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean) => {
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/notes/update`, { // Assuming update endpoint is /api/notes/update
-        method: "PUT", // Or PATCH, depending on API design
+      const response = await fetch(`/api/notes/update`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // Include all relevant fields in the body
         body: JSON.stringify({
           id: noteId,
           title: updatedTitle,
@@ -257,111 +282,172 @@ export default function NotesPage() {
       });
 
       if (response.ok) {
-        mutate(); // Re-fetch notes to update the list
+        mutate();
       } else {
         const errorData = await response.json();
         console.error("Failed to update note:", errorData.error);
-        // Optionally show an error message to the user
       }
     } catch (error) {
       console.error("Error updating note:", error);
-       // Optionally show an error message to the user
     } finally {
       setIsSaving(false);
     }
   };
 
-
   return (
-    <div className="p-4 flex flex-col md:flex-row h-full"> {/* Use flex-col on mobile, flex-row on medium and up */}
-      {/* Left Column: Note List */}
-      <div className="w-full md:w-80 border-r md:border-r-[var(--neutral-300)] pr-4 overflow-y-auto flex-shrink-0 mb-4 md:mb-0"> {/* Adjust width and add bottom margin for mobile */}
-        <h1 className="text-2xl font-semibold mb-4">Notes</h1>
-
-        <button
-          className="btn-primary mb-4 w-full flex items-center justify-center" // Use btn-primary class and make button full width
-          onClick={() => setShowModal(true)} // Open modal on button click
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add Note
-        </button>
-
-        {/* Add the modal component */}
-        <AddNoteModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveNote}
-          isSaving={isSaving}
-          existingTags={allAvailableTags} // Pass allAvailableTags to the modal
-        />
-
-
-        <div className="flex gap-4 mb-4">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Header */}
+      <div className="border-b border-neutral-200/50 dark:border-neutral-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center shadow-sm">
+                <DocumentTextIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notes</h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {filteredNotes.length} {filteredNotes.length === 1 ? 'note' : 'notes'}
+                </p>
+              </div>
             </div>
-            <input
-              type="text"
-              className="input-modern pl-10" // Use input-modern class with padding for the icon
-              placeholder="Search note content…"
-              value={searchContent}
-              onChange={(e) => setSearchContent(e.target.value)}
-            />
+            
+            <button
+              onClick={() => setShowModal(true)}
+              className="btn-primary flex items-center space-x-2 shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Note</span>
+            </button>
           </div>
-          <select
-            className="input-modern"
-            value={filterTag}
-            onChange={(e) => setFilterTag(e.target.value)}
-          >
-            <option value="">All Tags</option>
-            {allAvailableTags.map(tag => (
-              <option key={tag} value={tag}>{tag}</option>
-            ))}
-          </select>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-81px)]"> {/* Adjust height for header */}
+        {/* Sidebar */}
+        <div className={`${isMobile && selectedNote ? 'hidden' : 'flex'} flex-col bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-r border-neutral-200/50 dark:border-neutral-700/50 ${isMobile ? 'w-full' : 'w-80 flex-shrink-0'}`}>
+          {/* Search and Filter */}
+          <div className="p-4 border-b border-neutral-200/50 dark:border-neutral-700/50">
+            <div className="space-y-3">
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  className="input-modern pl-10 text-sm"
+                  placeholder="Search notes..."
+                  value={searchContent}
+                  onChange={(e) => setSearchContent(e.target.value)}
+                />
+              </div>
+              
+              <div className="relative">
+                <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                <select
+                  className="input-modern pl-10 text-sm appearance-none"
+                  value={filterTag}
+                  onChange={(e) => setFilterTag(e.target.value)}
+                >
+                  <option value="">All Tags</option>
+                  {allAvailableTags.map(tag => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes List */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4">
+              <NoteList
+                notes={filteredNotes}
+                selectedNoteId={selectedNoteId}
+                onSelectNote={setSelectedNoteId}
+                selectedNotes={selectedNotes}
+                onToggleSelectNote={handleToggleSelectNote}
+                onDeleteSelected={handleDeleteSelected}
+              />
+              
+              {selectedNotes.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <button
+                    className="btn-secondary w-full flex items-center justify-center space-x-2 text-sm"
+                    onClick={handleExportSelected}
+                    disabled={isSaving}
+                  >
+                    <ArchiveBoxIcon className="w-4 h-4" />
+                    <span>Export Selected ({selectedNotes.length})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Render the NoteList component */}
-        <NoteList
-          notes={filteredNotes}
-          selectedNoteId={selectedNoteId}
-          onSelectNote={setSelectedNoteId}
-          selectedNotes={selectedNotes} // Pass selected notes state
-          onToggleSelectNote={handleToggleSelectNote} // Pass toggle select handler
-          onDeleteSelected={handleDeleteSelected} // Pass delete selected handler
-        />
-        {selectedNotes.length > 0 && (
-          <button
-            className="btn-secondary mt-4 w-full flex items-center justify-center" // Use btn-secondary class
-            onClick={handleExportSelected} // Call the export handler
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
-            </svg>
-            Export Selected as PDF ({selectedNotes.length})
-          </button>
-        )}
+        {/* Main Content Area */}
+        <div className={`flex-1 flex flex-col ${isMobile && !selectedNote ? 'hidden' : ''}`}>
+          {selectedNote ? (
+            <>
+              {/* Mobile back button */}
+              {isMobile && (
+                <div className="p-4 border-b border-neutral-200/50 dark:border-neutral-700/50 bg-white/90 dark:bg-slate-800/90">
+                  <button
+                    onClick={() => setSelectedNoteId(null)}
+                    className="flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Back to Notes</span>
+                  </button>
+                </div>
+              )}
+              
+              {/* Note Detail */}
+              <div className="flex-1 overflow-hidden">
+                <NoteDetail
+                  note={selectedNote}
+                  onSave={handleUpdateNote}
+                  onDelete={handleDeleteSelected}
+                  isSaving={isSaving}
+                  existingTags={allAvailableTags}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-50 to-primary-50/20 dark:from-slate-800 dark:to-slate-900">
+              <div className="text-center max-w-md px-8">
+                <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-800 dark:to-primary-900 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <SparklesIcon className="w-10 h-10 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                  Select a note to get started
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">
+                  Choose a note from the sidebar to view and edit it with our rich text editor.
+                </p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="btn-primary flex items-center space-x-2 mx-auto"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  <span>Create Your First Note</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right Column: Note Detail */}
-      <div className="flex-1 p-6 overflow-y-auto"> {/* Increase padding */}
-        {selectedNote ? (
-          // Render the NoteDetail component if a note is selected
-          <NoteDetail
-            note={selectedNote}
-            onSave={handleUpdateNote}
-            onDelete={handleDeleteSelected} // Pass the delete handler (consider if this should delete single or selected)
-            isSaving={isSaving} // Pass isSaving state
-            existingTags={allAvailableTags} // Pass allAvailableTags to NoteDetail
-          />
-        ) : (
-          <p className="text-[var(--neutral-500)]">Select a note to view details.</p>
-        )}
-      </div>
+      {/* Add Note Modal */}
+      <AddNoteModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={handleSaveNote}
+        isSaving={isSaving}
+        existingTags={allAvailableTags}
+      />
     </div>
   );
 }

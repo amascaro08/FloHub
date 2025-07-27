@@ -1,19 +1,26 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import type { Note } from "@/types/app"; // Import shared Note type
+import type { Note } from "@/types/app";
 import CreatableSelect from 'react-select/creatable';
+import RichTextEditor from '../journal/RichTextEditor';
+import { 
+  TagIcon, 
+  ClockIcon, 
+  TrashIcon, 
+  CheckIcon 
+} from '@heroicons/react/24/solid';
 
 type NoteDetailProps = {
   note: Note;
-  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => Promise<void>; // Include updatedTitle
-  onDelete: (noteId: string) => Promise<void>; // Add onDelete prop
+  onSave: (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[]) => Promise<void>;
+  onDelete: (noteId: string) => Promise<void>;
   isSaving: boolean;
-  existingTags: string[]; // Add existingTags to props
+  existingTags: string[];
 };
 
-export default function NoteDetail({ note, onSave, onDelete, isSaving, existingTags }: NoteDetailProps) { // Destructure existingTags
-  const [title, setTitle] = useState(note.title || ""); // Add state for title
+export default function NoteDetail({ note, onSave, onDelete, isSaving, existingTags }: NoteDetailProps) {
+  const [title, setTitle] = useState(note.title || "");
   const [content, setContent] = useState(note.content);
   const [tags, setTags] = useState(note.tags);
 
@@ -48,120 +55,151 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
   };
 
   return (
-    <div className="flex flex-col h-full space-y-5">
-      {/* Title input */}
-      <div>
-        <label htmlFor="note-detail-title" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Title</label>
-        <input
-          type="text"
-          id="note-detail-title"
-          className="input-modern text-xl font-semibold"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          disabled={isSaving}
-          placeholder="Note Title"
-        />
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800">
+      {/* Header */}
+      <div className="border-b border-neutral-200/50 dark:border-neutral-700/50 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Title */}
+            <div>
+              <input
+                type="text"
+                id="note-detail-title"
+                className="w-full text-2xl font-bold bg-transparent border-none outline-none resize-none placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={isSaving}
+                placeholder="Untitled Note..."
+              />
+            </div>
+
+            {/* Tags */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                  <TagIcon className="w-4 h-4 inline mr-1" />
+                  Tags
+                </label>
+                <CreatableSelect
+                  isMulti
+                  options={tagOptions}
+                  value={selectedOptions}
+                  onChange={handleTagChange}
+                  isDisabled={isSaving}
+                  isSearchable
+                  placeholder="Add tags..."
+                  classNamePrefix="react-select"
+                  className="text-sm"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      border: '1px solid rgb(203 213 225)',
+                      borderRadius: '1rem',
+                      minHeight: '40px',
+                      fontSize: '0.875rem',
+                    }),
+                    multiValue: (base) => ({
+                      ...base,
+                      backgroundColor: 'rgb(240 253 250)',
+                      borderRadius: '0.5rem',
+                    }),
+                    multiValueLabel: (base) => ({
+                      ...base,
+                      color: 'rgb(13 148 136)',
+                      fontSize: '0.75rem',
+                    }),
+                    multiValueRemove: (base) => ({
+                      ...base,
+                      color: 'rgb(13 148 136)',
+                      ':hover': {
+                        backgroundColor: 'rgb(13 148 136)',
+                        color: 'white',
+                      },
+                    }),
+                  }}
+                  theme={(theme) => ({
+                    ...theme,
+                    colors: {
+                      ...theme.colors,
+                      primary: '#0D9488',
+                      primary25: '#F0FDF9',
+                    },
+                  })}
+                />
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200"
+                  onClick={() => onDelete(note.id)}
+                  disabled={isSaving}
+                  title="Delete note"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+                
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                >
+                  {isSaving ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="hidden sm:inline">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="w-4 h-4" />
+                      <span className="hidden sm:inline">Save</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1">
-        <div>
-          <label htmlFor="note-content" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            <span className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-              </svg>
-              Content
-            </span>
-          </label>
-          <textarea
-            id="note-content"
-            className="input-modern flex-1"
-            rows={10}
-            placeholder="Write your note here..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={isSaving}
+      {/* Rich Text Editor */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full">
+          <RichTextEditor
+            content={content}
+            onChange={setContent}
+            placeholder="Start writing your note..."
           />
         </div>
-        
-        <div>
-          <label htmlFor="note-tags" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            <span className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-              Tags
-            </span>
-          </label>
-          <CreatableSelect
-            isMulti
-            options={tagOptions}
-            value={selectedOptions}
-            onChange={handleTagChange}
-            isDisabled={isSaving}
-            isSearchable
-            placeholder="Select or create tags..."
-            classNamePrefix="react-select"
-            theme={(theme) => ({
-              ...theme,
-              colors: {
-                ...theme.colors,
-                primary: '#14B8A6',
-                primary25: '#99F6E4',
-              },
-            })}
-          />
-        </div>
+      </div>
 
-        <div className="flex flex-wrap justify-between items-center gap-3 mt-4 border-t border-neutral-200 dark:border-neutral-700 pt-4">
-          {/* Created date */}
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-            </svg>
-            Created: {new Date(note.createdAt).toLocaleString()}
-          </p>
-          
-          <div className="flex flex-wrap gap-2 ml-auto">
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                onClick={() => onDelete(note.id)}
-                disabled={isSaving}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                Delete
-              </button>
-              <button
-                type="submit"
-                className="btn-primary flex items-center"
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Save
-                  </>
-                )}
-              </button>
+      {/* Footer with metadata */}
+      <div className="border-t border-neutral-200/50 dark:border-neutral-700/50 bg-slate-50/50 dark:bg-slate-900/50 px-6 py-3">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1">
+              <ClockIcon className="w-3 h-3" />
+              <span>Created: {new Date(note.createdAt).toLocaleDateString()}</span>
             </div>
+            {note.updatedAt && note.updatedAt !== note.createdAt && (
+              <div className="flex items-center space-x-1">
+                <span>•</span>
+                <span>Updated: {new Date(note.updatedAt).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
+          
+          {content && (
+            <div className="text-xs">
+              {content.replace(/<[^>]*>/g, '').trim().split(/\s+/).length} words
+            </div>
+          )}
         </div>
-      </form>
+      </div>
     </div>
   );
 }
