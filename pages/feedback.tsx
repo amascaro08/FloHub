@@ -114,7 +114,7 @@ const FeedbackPage: NextPage = () => {
   // Show loading state only briefly
   if (isUserLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Submit Feedback</h1>
           <p className="text-neutral-600 dark:text-neutral-400">
@@ -126,7 +126,7 @@ const FeedbackPage: NextPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Submit Feedback</h1>
         <p className="text-neutral-600 dark:text-neutral-400">
