@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/terms', '/privacy', '/feedback'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/terms', '/privacy'];
 
 interface MainLayoutProps {
   children: React.ReactNode;
