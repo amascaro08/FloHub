@@ -122,7 +122,7 @@ const CalendarPage = () => {
   } = useCalendarEvents({
     startDate,
     endDate,
-    enabled: !!user && !!settings?.selectedCals,
+    enabled: !!user, // Always enabled if user is authenticated (includes local events)
     calendarSourcesHash
   });
 

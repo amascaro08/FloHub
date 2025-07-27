@@ -190,10 +190,20 @@ export const pushSubscriptions = pgTable("pushSubscriptions", {
 // CALENDAR EVENTS TABLE
 export const calendarEvents = pgTable("calendarEvents", {
   id: text("id").notNull().primaryKey(),
-  userId: varchar("userId", { length: 255 }).notNull(),
+  user_email: varchar("user_email", { length: 255 }).notNull(),
   summary: text("summary").notNull(),
-  start: jsonb("start").notNull(),
-  end: jsonb("end").notNull(),
+  description: text("description"),
+  location: text("location"),
+  start: jsonb("start").notNull(), // { dateTime?: string; date?: string; timeZone?: string }
+  end: jsonb("end"), // { dateTime?: string; date?: string; timeZone?: string }
+  calendarId: varchar("calendar_id", { length: 255 }).default("flohub_local"),
+  source: varchar("source", { length: 50 }).default("personal"), // "personal" | "work"
+  tags: text("tags").array(),
+  isRecurring: boolean("is_recurring").default(false),
+  seriesMasterId: text("series_master_id"),
+  instanceIndex: integer("instance_index"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
 // ANALYTICS PERFORMANCE METRICS TABLE

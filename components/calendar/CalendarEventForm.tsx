@@ -69,7 +69,7 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         description: '',
         start: format(now, "yyyy-MM-dd'T'HH:mm"),
         end: format(inOneHour, "yyyy-MM-dd'T'HH:mm"),
-        calendarId: availableCalendars.length > 0 ? availableCalendars[0].id : '',
+        calendarId: availableCalendars && availableCalendars.length > 0 ? availableCalendars[0].id : 'flohub_local',
         source: 'personal',
         tags: [],
         location: ''
@@ -99,11 +99,8 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
       if (new Date(formData.start) >= new Date(formData.end)) {
         throw new Error('End time must be after start time');
       }
-      if (availableCalendars.length > 0 && !formData.calendarId) {
+      if (!formData.calendarId) {
         throw new Error('Please select a calendar');
-      }
-      if (availableCalendars.length === 0) {
-        throw new Error('No calendars available. Please check your calendar settings.');
       }
 
       const eventData = {
@@ -230,28 +227,32 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
             {/* Calendar Selection */}
             <div>
               <label htmlFor="calendarId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Calendar {availableCalendars.length === 0 && <span className="text-red-500">*</span>}
+                Calendar *
               </label>
-              {availableCalendars.length > 0 ? (
-                <select
-                  id="calendarId"
-                  value={formData.calendarId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, calendarId: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  required
-                >
-                  <option value="">Select a calendar</option>
-                  {availableCalendars.map(calendar => (
-                    <option key={calendar.id} value={calendar.id}>
-                      {calendar.summary}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="w-full px-4 py-3 border border-red-300 dark:border-red-600 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
-                  No calendars available. Please check your calendar settings.
-                </div>
-              )}
+              <select
+                id="calendarId"
+                value={formData.calendarId}
+                onChange={(e) => setFormData(prev => ({ ...prev, calendarId: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                required
+              >
+                <option value="">Select a calendar</option>
+                {/* Always show FloHub Local option */}
+                <option value="flohub_local">🏠 FloHub Local</option>
+                {/* Show connected calendars if available */}
+                {availableCalendars && availableCalendars.length > 0 && availableCalendars.map(calendar => (
+                  <option key={calendar.id} value={calendar.id}>
+                    {calendar.source === 'work' ? '💼' : '📅'} {calendar.summary}
+                  </option>
+                ))}
+                {/* Show message if no external calendars are connected */}
+                {(!availableCalendars || availableCalendars.length === 0) && (
+                  <option disabled>📍 Connect external calendars in Settings</option>
+                )}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                FloHub Local events are stored locally and always available. Connect Google Calendar or other services in Settings for additional options.
+              </p>
             </div>
 
             {/* Event Type */}
