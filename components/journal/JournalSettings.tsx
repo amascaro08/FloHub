@@ -44,7 +44,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
 
   if (!user) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="w-full p-6">
         <div className="animate-pulse text-center">
           <div className="w-16 h-16 bg-teal-200 dark:bg-teal-800 rounded-full mx-auto mb-4"></div>
           <p className="text-slate-600 dark:text-slate-300">Loading settings...</p>

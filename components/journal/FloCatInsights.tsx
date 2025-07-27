@@ -451,8 +451,14 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center flocat-wiggle">
-            <span className="text-2xl">🐱</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center flocat-wiggle overflow-hidden">
+            <Image
+              src="/flocat-sidepeek.png"
+              alt="FloCat"
+              width={48}
+              height={48}
+              className="rounded-full object-cover"
+            />
           </div>
           <div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">FloCat's Insights</h3>
