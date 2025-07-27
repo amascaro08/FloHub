@@ -17,7 +17,8 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [savedContent, setSavedContent] = useState('');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
- const { user, isLoading } = useUser();
+  const [userSettings, setUserSettings] = useState<any>(null);
+  const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
   if (!user) {
@@ -53,6 +54,21 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
       fetchEntry();
     }
   }, [user, entryDate, timezone]);
+
+  // Load user settings for prompts
+  useEffect(() => {
+    if (user?.primaryEmail) {
+      const savedSettings = localStorage.getItem(`journal_settings_${user.primaryEmail}`);
+      if (savedSettings) {
+        try {
+          const settings = JSON.parse(savedSettings);
+          setUserSettings(settings);
+        } catch (error) {
+          console.error('Error loading user settings:', error);
+        }
+      }
+    }
+  }, [user]);
   
   // Journaling prompts
   const journalingPrompts = [
@@ -191,7 +207,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
       )}
 
       <div className="flex flex-col h-full overflow-auto">
-        {showPrompts && isTodayDate && (
+        {showPrompts && isTodayDate && userSettings?.dailyPrompts !== false && (
           <div className="mb-4">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Journal Prompts (click to add)

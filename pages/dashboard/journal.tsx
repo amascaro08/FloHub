@@ -20,31 +20,45 @@ import ActivityTracker from "@/components/journal/ActivityTracker";
 import MoodStatistics from "@/components/journal/MoodStatistics";
 import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
+import JournalImport from "@/components/journal/JournalImport";
+import FloCatInsights from "@/components/journal/FloCatInsights";
 
 export default function JournalPage() {
-   const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
-
   const router = useRouter();
 
   // Handle loading state
   if (status === 'unauthenticated') {
-    return <p className="text-center p-8">Loading journal...</p>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-teal-200 dark:bg-teal-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-300">Loading your journal...</p>
+        </div>
+      </div>
+    );
   }
 
   // Handle unauthenticated state
   if (status !== 'authenticated' || !user) {
-    return <p className="text-center p-8">Please sign in to access your journal.</p>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-slate-600 dark:text-slate-300">Please sign in to access your journal.</p>
+        </div>
+      </div>
+    );
   }
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
-  const [showNewEntryButton, setShowNewEntryButton] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
+  const [activeTab, setActiveTab] = useState<"today" | "timeline" | "insights" | "settings">("today");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
@@ -70,12 +84,10 @@ export default function JournalPage() {
     }
   }, [timezone, selectedDate]);
 
-  
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      setShowNewEntryButton(window.innerWidth < 768);
     };
 
     checkIfMobile();
@@ -89,51 +101,40 @@ export default function JournalPage() {
   // Handle saving journal entry
   const handleSaveEntry = (entry: { content: string; timestamp: string }) => {
     console.log("Saving entry:", entry);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new entry immediately
     setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle saving mood
   const handleSaveMood = (mood: { emoji: string; label: string; tags: string[] }) => {
     console.log("Saving mood:", mood);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new mood immediately
     setRefreshTrigger(prev => prev + 1);
   };
   
   // Handle saving activities
   const handleSaveActivities = (activities: string[]) => {
     console.log("Saving activities:", activities);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
     setSelectedActivities(activities);
-    
-    // Trigger a refresh of the timeline to show the new activities immediately
     setRefreshTrigger(prev => prev + 1);
   };
   
   // Handle saving sleep data
   const handleSaveSleep = (sleep: { quality: string; hours: number }) => {
     console.log("Saving sleep data:", sleep);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new sleep data immediately
     setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle selecting a date from the timeline
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
-    // Always allow editing regardless of date
     setIsEditing(true);
+    setActiveTab("today"); // Switch to today tab when selecting a date
     console.log("Selected date:", date);
+  };
+
+  // Handle import success
+  const handleImportSuccess = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setShowImport(false);
   };
 
   // Function to save all journal data for the selected date
@@ -212,325 +213,325 @@ export default function JournalPage() {
     }
   };
 
+  const tabs = [
+    { id: 'today', label: 'Today', icon: '✍️' },
+    { id: 'timeline', label: 'Timeline', icon: '📅' },
+    { id: 'insights', label: 'Insights', icon: '🐱' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' }
+  ];
 
   return (
     <>
       <Head>
         <link rel="stylesheet" href="/styles/journal.css" />
       </Head>
-      <div className="relative max-w-full">
-        {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Journal</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {selectedDate === today ? "Today's" : formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} Entry
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          {/* Save All Button */}
-          <button
-            onClick={saveAllJournalData}
-            disabled={isSaving}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all ${
-              isSaving
-                ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm hover:shadow-md'
-            }`}
-          >
-            {isSaving ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                Save All
-              </>
-            )}
-          </button>
-          
-          {/* View Mode Toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
-            <button
-              onClick={() => setViewMode("timeline")}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                viewMode === "timeline"
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              Timeline
-            </button>
-            <button
-              onClick={() => setViewMode("calendar")}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                viewMode === "calendar"
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              Calendar
-            </button>
+      
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        {/* Header */}
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
+                  <span className="text-4xl mr-3">📔</span>
+                  Journal
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  {selectedDate === today 
+                    ? "Today's entry" 
+                    : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} entry`
+                  }
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
+                >
+                  Import Data
+                </button>
+                
+                <button
+                  onClick={saveAllJournalData}
+                  disabled={isSaving}
+                  className={`px-6 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isSaving
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-[#00C9A7] text-white hover:bg-teal-600 shadow-lg shadow-teal-500/25'
+                  }`}
+                >
+                  {isSaving ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin h-4 w-4 border-2 border-slate-400 rounded-full border-t-transparent mr-2"></div>
+                      Saving...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save All
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 -mb-px">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-all ${
+                    activeTab === tab.id
+                      ? 'border-[#00C9A7] text-[#00C9A7] bg-[#00C9A7]/5'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span className="text-lg mr-2">{tab.icon}</span>
+                    {tab.label}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
+
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-200px)] overflow-hidden">
           
-          {/* Settings Button */}
+          {/* Today Tab */}
+          {activeTab === 'today' && (
+            <div className="max-w-4xl mx-auto space-y-8 h-full overflow-y-auto">
+              {/* Main Entry */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {isSelectedToday || isEditing ? (
+                  <TodayEntry
+                    onSave={handleSaveEntry}
+                    date={selectedDate}
+                    timezone={timezone}
+                    showPrompts={true}
+                    activities={selectedActivities}
+                  />
+                ) : (
+                  <JournalEntryViewer
+                    date={selectedDate}
+                    onEdit={() => setIsEditing(true)}
+                    timezone={timezone}
+                  />
+                )}
+              </div>
+
+              {/* Wellbeing Tracking */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Mood */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">😊</span>
+                    Mood
+                  </h3>
+                  <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+                </div>
+
+                {/* Activities */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">🎯</span>
+                    Activities
+                  </h3>
+                  <ActivityTracker
+                    onSave={handleSaveActivities}
+                    date={selectedDate}
+                    timezone={timezone}
+                  />
+                </div>
+
+                {/* Sleep */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">😴</span>
+                    Sleep
+                  </h3>
+                  <SleepTracker
+                    onSave={handleSaveSleep}
+                    timezone={timezone}
+                    date={selectedDate}
+                  />
+                </div>
+              </div>
+
+              {/* On This Day */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
+              </div>
+            </div>
+          )}
+
+          {/* Timeline Tab */}
+          {activeTab === 'timeline' && (
+            <div className="max-w-6xl mx-auto space-y-6 h-full overflow-y-auto">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Your Journal Timeline</h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setActiveTab('today')}
+                      className="px-4 py-2 rounded-xl bg-[#00C9A7] text-white text-sm font-medium hover:bg-teal-600 transition-colors"
+                    >
+                      Back to Today
+                    </button>
+                  </div>
+                </div>
+                <JournalTimeline
+                  onSelectDate={handleSelectDate}
+                  timezone={timezone}
+                  autoScrollToLatest={true}
+                />
+              </div>
+              
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <JournalCalendar
+                  onSelectDate={handleSelectDate}
+                  timezone={timezone}
+                  refreshTrigger={refreshTrigger}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Insights Tab */}
+          {activeTab === 'insights' && (
+            <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto">
+              <FloCatInsights 
+                refreshTrigger={refreshTrigger}
+                timezone={timezone}
+              />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <JournalSummary refreshTrigger={refreshTrigger} />
+                </div>
+                
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <MoodStatistics refreshTrigger={refreshTrigger} />
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">😴</span>
+                    Sleep Insights
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Avg Sleep Hours</span>
+                      <span className="font-medium text-slate-900 dark:text-white">7.5h</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Quality</span>
+                      <span className="font-medium text-slate-900 dark:text-white">Good</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Consistency</span>
+                      <span className="font-medium text-slate-900 dark:text-white">85%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">🎯</span>
+                    Activity Patterns
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Most Frequent</span>
+                      <span className="font-medium text-slate-900 dark:text-white">Exercise (12x)</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Variety</span>
+                      <span className="font-medium text-slate-900 dark:text-white">8 different</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Active Days</span>
+                      <span className="font-medium text-slate-900 dark:text-white">22/30</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">📈</span>
+                    Trends
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Mood Trend</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">↗ Improving</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Trend</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">→ Stable</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Trend</span>
+                      <span className="font-medium text-purple-600 dark:text-purple-400">↗ Increasing</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="max-w-4xl mx-auto h-full">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 h-full overflow-hidden">
+                <JournalSettings onClose={() => setActiveTab('today')} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Floating Action Button (Mobile) */}
+        {isMobile && activeTab === 'today' && (
           <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            aria-label="Journal Settings"
+            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#00C9A7] text-white flex items-center justify-center shadow-xl shadow-teal-500/25 hover:shadow-2xl hover:shadow-teal-500/30 transition-all duration-300 hover:scale-110 z-20"
+            onClick={() => {
+              setSelectedDate(today);
+              setIsEditing(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
           </button>
-        </div>
-      </div>
-      
-      {/* Timeline or Calendar view */}
-      <div className="mb-8 overflow-x-auto overflow-y-hidden w-full custom-scrollbar timeline-scroll">
-        <div className="min-w-full">
-        {viewMode === "timeline" ? (
-          <JournalTimeline
-            onSelectDate={(date) => {
-              handleSelectDate(date);
-              // Always allow editing regardless of date
-              setIsEditing(true);
-            }}
-            timezone={timezone}
-            autoScrollToLatest={true}
-          />
-        ) : (
-          <JournalCalendar
-            onSelectDate={(date) => {
-              handleSelectDate(date);
-              // Always allow editing regardless of date
-              setIsEditing(true);
-            }}
-            timezone={timezone}
-            refreshTrigger={refreshTrigger}
+        )}
+
+        {/* Import Modal */}
+        {showImport && (
+          <JournalImport 
+            onClose={() => setShowImport(false)}
+            onSuccess={handleImportSuccess}
           />
         )}
-        </div>
-      </div>
-      
-      {/* Mobile layout - single column */}
-      <div className="block md:hidden w-full space-y-6">
-        {/* FloCat Summary */}
-        <div className="w-full journal-card">
-          <JournalSummary refreshTrigger={refreshTrigger} />
-        </div>
-        
-        {/* Journal Entry */}
-        <div className="w-full journal-card">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-full overflow-hidden">
-            {isSelectedToday || isEditing ? (
-              <TodayEntry
-                onSave={handleSaveEntry}
-                date={selectedDate}
-                timezone={timezone}
-                showPrompts={true}
-                activities={selectedActivities}
-              />
-            ) : (
-              <JournalEntryViewer
-                date={selectedDate}
-                onEdit={() => setIsEditing(true)}
-                timezone={timezone}
-              />
-            )}
-          </div>
-        </div>
-        
-        {/* Wellbeing Tracking Section */}
-        <div className="w-full journal-card">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Wellbeing Tracking</h3>
-              <div className="h-1 w-16 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full"></div>
-            </div>
-            
-            {/* Mood Tracker */}
-            <div className="mb-8">
-              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-            </div>
-            
-            {/* Sleep Tracker */}
-            <div className="mb-8">
-              <SleepTracker
-                onSave={handleSaveSleep}
-                timezone={timezone}
-                date={selectedDate}
-              />
-            </div>
-            
-            {/* Activity Tracker */}
-            <div className="mb-8">
-              <ActivityTracker
-                onSave={handleSaveActivities}
-                date={selectedDate}
-                timezone={timezone}
-              />
-            </div>
-            
-            {/* On This Day */}
-            <div className="mb-8">
-              <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-            </div>
-            
-            {/* Linked Moments */}
-            <div>
-              <LinkedMoments date={selectedDate} timezone={timezone} />
+
+        {/* Success Message */}
+        {saveSuccess && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-[#00C9A7] to-teal-600 text-white rounded-2xl shadow-xl border border-teal-300 animate-fade-in-out z-50">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">All journal data saved successfully! ✨</span>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Desktop layout - multi-column */}
-      <div className="hidden md:grid md:grid-cols-3 gap-8">
-        {/* Left column (2/3 width on desktop) - Journal Entry */}
-        <div className="md:col-span-2 w-full space-y-6">
-          {/* FloCat Summary */}
-          <div className="journal-card">
-            <JournalSummary refreshTrigger={refreshTrigger} />
-          </div>
-          
-          {/* Main Entry */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-full journal-card">
-            {isSelectedToday || isEditing ? (
-              <TodayEntry
-                onSave={handleSaveEntry}
-                date={selectedDate}
-                timezone={timezone}
-                showPrompts={true}
-                activities={selectedActivities}
-              />
-            ) : (
-              <JournalEntryViewer
-                date={selectedDate}
-                onEdit={() => setIsEditing(true)}
-                timezone={timezone}
-              />
-            )}
-          </div>
-          
-          {/* Additional Sections */}
-          <div className="space-y-6">
-            <div className="journal-card">
-              <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-            </div>
-            <div className="journal-card">
-              <LinkedMoments date={selectedDate} timezone={timezone} />
-            </div>
-          </div>
-        </div>
-        
-        {/* Right column (1/3 width on desktop) - Wellbeing Tracking */}
-        <div className="space-y-6 w-full">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 journal-card">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Wellbeing</h3>
-              <div className="h-1 w-12 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full"></div>
-            </div>
-            
-            {/* Mood Tracker */}
-            <div className="mb-8">
-              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-            </div>
-            
-            {/* Sleep Tracker */}
-            <div className="mb-8">
-              <SleepTracker
-                onSave={handleSaveSleep}
-                timezone={timezone}
-                date={selectedDate}
-              />
-            </div>
-            
-            {/* Activity Tracker */}
-            <div>
-              <ActivityTracker
-                onSave={handleSaveActivities}
-                date={selectedDate}
-                timezone={timezone}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Floating New Entry button (mobile only) */}
-      {showNewEntryButton && (
-        <button
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-teal-600 text-white flex items-center justify-center z-10 hover:bg-teal-700 fab-button"
-          aria-label="New Journal Entry"
-          onClick={() => {
-            // Set to today's date and editing mode
-            setSelectedDate(today);
-            setIsEditing(true);
-            // Scroll to the top where the entry component is
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
-      
-      {/* Edit/View toggle button (when not viewing today) */}
-      {!isSelectedToday && (
-        <button
-          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center z-10 hover:bg-gray-200 dark:hover:bg-gray-600 fab-button"
-          aria-label={isEditing ? "View Entry" : "Edit Entry"}
-          onClick={() => setIsEditing(!isEditing)}
-        >
-          {isEditing ? (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          )}
-        </button>
-      )}
-      
-      {/* Voice-to-text button (stub/placeholder) */}
-      <button
-        className="fixed bottom-6 left-6 w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center z-10 hover:bg-gray-200 dark:hover:bg-gray-600 fab-button"
-        aria-label="Voice to Text"
-        onClick={() => {
-          alert("Voice-to-text feature coming soon!");
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-      </button>
-      
-      {/* Journal Settings Modal */}
-      {showSettings && (
-        <JournalSettings onClose={() => setShowSettings(false)} />
-      )}
-      
-      {/* Save success message */}
-      {saveSuccess && (
-        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm shadow-lg border border-green-200 dark:border-green-700 animate-fade-in-out">
-          <div className="flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            All journal data saved successfully!
-          </div>
-        </div>
-      )}
+        )}
       </div>
     </>
   );

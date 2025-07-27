@@ -1,4 +1,4 @@
-/* Journal Page Specific Styles */
+/* Journal Page Specific Styles - FloHub Brand Enhanced */
 
 /* Smooth fade-in animation for cards */
 @keyframes fadeInUp {
@@ -12,7 +12,7 @@
   }
 }
 
-/* Gradient hover animation for cards */
+/* Gradient shimmer effect */
 @keyframes shimmer {
   0% {
     background-position: -468px 0;
@@ -22,48 +22,73 @@
   }
 }
 
-/* Card hover animation */
+/* Scale animation for interactive elements */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Floating animation for action buttons */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Card hover animation with enhanced FloHub styling */
 .journal-card {
   animation: fadeInUp 0.5s ease-out;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .journal-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 201, 167, 0.15), 0 8px 16px -8px rgba(255, 107, 107, 0.1);
 }
 
-/* Mood tracker emoji animations */
+/* Enhanced mood tracker emoji animations */
 .mood-emoji {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
 }
 
 .mood-emoji:hover {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.15) rotate(5deg);
+  filter: brightness(1.1);
 }
 
 .mood-emoji.selected {
   animation: bounce 0.6s ease;
+  box-shadow: 0 0 0 3px rgba(0, 201, 167, 0.3);
 }
 
 @keyframes bounce {
   0%, 20%, 53%, 80%, 100% {
-    transform: translate3d(0,0,0) scale(1.1);
+    transform: translate3d(0,0,0) scale(1.15);
   }
   40%, 43% {
-    transform: translate3d(0,-30px,0) scale(1.1);
+    transform: translate3d(0,-30px,0) scale(1.15);
   }
   70% {
-    transform: translate3d(0,-15px,0) scale(1.1);
+    transform: translate3d(0,-15px,0) scale(1.15);
   }
   90% {
-    transform: translate3d(0,-4px,0) scale(1.1);
+    transform: translate3d(0,-4px,0) scale(1.15);
   }
 }
 
-/* Activity tag animations */
+/* Enhanced activity tag animations */
 .activity-tag {
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
@@ -75,15 +100,20 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 201, 167, 0.3), transparent);
   transition: left 0.5s ease;
+}
+
+.activity-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 201, 167, 0.2);
 }
 
 .activity-tag:hover::before {
   left: 100%;
 }
 
-/* Sleep quality button effects */
+/* Sleep quality button effects with brand colors */
 .sleep-button {
   transition: all 0.3s ease;
   position: relative;
@@ -91,36 +121,53 @@
 
 .sleep-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .sleep-button.selected {
-  animation: pulse 1s ease-in-out;
+  animation: pulse-brand 1s ease-in-out;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
-@keyframes pulse {
+@keyframes pulse-brand {
   0% {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }
 
-/* Floating action button animation */
+/* Enhanced floating action button animations */
 .fab-button {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px 0 rgba(0, 201, 167, 0.2);
+  animation: float 3s ease-in-out infinite;
 }
 
 .fab-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 10px 30px 0 rgba(0, 201, 167, 0.3);
+  animation-play-state: paused;
 }
 
-/* Success message animation */
+.fab-button:active {
+  transform: scale(0.95);
+}
+
+/* Voice button specific styling */
+.fab-button.voice-button {
+  box-shadow: 0 6px 20px 0 rgba(255, 107, 107, 0.2);
+}
+
+.fab-button.voice-button:hover {
+  box-shadow: 0 10px 30px 0 rgba(255, 107, 107, 0.3);
+}
+
+/* Success message animation with brand styling */
 @keyframes slideInBottom {
   from {
     opacity: 0;
@@ -144,10 +191,10 @@
 }
 
 .animate-fade-in-out {
-  animation: slideInBottom 0.3s ease-out, slideOutBottom 0.3s ease-in 2.7s;
+  animation: slideInBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), slideOutBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1) 2.6s;
 }
 
-/* Timeline scroll indicator */
+/* Timeline scroll indicator with brand colors */
 .timeline-scroll {
   position: relative;
 }
@@ -158,22 +205,24 @@
   bottom: -8px;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(14, 165, 233, 0.3) 20%, 
-    rgba(14, 165, 233, 0.6) 50%, 
-    rgba(14, 165, 233, 0.3) 80%, 
+    rgba(0, 201, 167, 0.3) 20%, 
+    rgba(0, 201, 167, 0.6) 50%, 
+    rgba(255, 107, 107, 0.6) 50%, 
+    rgba(255, 107, 107, 0.3) 80%, 
     transparent 100%
   );
-  animation: shimmer 2s infinite linear;
-}
-
-/* Header gradient accent */
-.header-accent {
-  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
   border-radius: 9999px;
   animation: shimmer 3s ease-in-out infinite alternate;
+}
+
+/* Header gradient accent with brand colors */
+.header-accent {
+  background: linear-gradient(135deg, #00C9A7, #FF6B6B);
+  border-radius: 9999px;
+  animation: shimmer 4s ease-in-out infinite alternate;
 }
 
 /* Insight panel animation */
@@ -187,12 +236,48 @@
   max-height: 500px;
 }
 
-/* Smooth transitions for dark mode */
-* {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+/* Sidebar transition animations */
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Custom scrollbar for webkit browsers */
+/* Modal entrance animations */
+.modal-enter {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Brand gradient backgrounds */
+.brand-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgba(253, 253, 253, 1) 0%, 
+    rgba(248, 250, 252, 1) 25%, 
+    rgba(0, 201, 167, 0.03) 50%, 
+    rgba(255, 107, 107, 0.02) 75%, 
+    rgba(248, 250, 252, 1) 100%
+  );
+}
+
+.dark .brand-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgba(15, 23, 42, 1) 0%, 
+    rgba(30, 41, 59, 1) 25%, 
+    rgba(0, 201, 167, 0.05) 50%, 
+    rgba(255, 107, 107, 0.03) 75%, 
+    rgba(30, 41, 59, 1) 100%
+  );
+}
+
+/* Enhanced focus states for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #00C9A7;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 201, 167, 0.1);
+}
+
+/* Custom scrollbar with brand styling */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -204,20 +289,97 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(0, 201, 167, 0.6), rgba(255, 107, 107, 0.6));
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(0, 201, 167, 0.8), rgba(255, 107, 107, 0.8));
 }
 
-/* Focus states for accessibility */
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #0ea5e9;
-  outline-offset: 2px;
+/* Progress bar animations */
+.progress-bar {
+  transition: width 0.3s ease;
+  background: linear-gradient(90deg, #00C9A7, #FF6B6B);
+}
+
+/* Card stacking effect */
+.card-stack {
+  position: relative;
+}
+
+.card-stack::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: -4px;
+  bottom: -4px;
+  background: rgba(0, 201, 167, 0.1);
+  border-radius: 1rem;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.card-stack:hover::before {
+  transform: translate(-2px, -2px);
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(203, 213, 225, 0.3) 25%, 
+    rgba(0, 201, 167, 0.1) 50%, 
+    rgba(203, 213, 225, 0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.dark .loading-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(51, 65, 85, 0.3) 25%, 
+    rgba(0, 201, 167, 0.1) 50%, 
+    rgba(51, 65, 85, 0.3) 75%
+  );
+}
+
+/* Import wizard specific styles */
+.import-step {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.import-progress {
+  background: linear-gradient(90deg, #00C9A7, #FF6B6B);
+  border-radius: 9999px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced responsive behavior */
+@media (max-width: 768px) {
+  .journal-card {
+    margin-bottom: 1rem;
+  }
+  
+  .fab-button {
+    animation-duration: 4s;
+  }
+  
+  .timeline-scroll::after {
+    height: 2px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .journal-card {
+    border: 2px solid;
+  }
+  
+  .fab-button {
+    border: 2px solid;
+  }
 }
 
 /* Reduced motion for accessibility */
@@ -227,4 +389,74 @@ textarea:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  
+  .fab-button {
+    animation: none;
+  }
+  
+  .timeline-scroll::after {
+    animation: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .fab-button,
+  .sidebar,
+  .mobile-header {
+    display: none !important;
+  }
+  
+  .journal-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
+
+/* Dark mode specific enhancements */
+.dark .journal-card:hover {
+  box-shadow: 0 20px 40px -12px rgba(0, 201, 167, 0.2), 0 8px 16px -8px rgba(255, 107, 107, 0.15);
+}
+
+.dark .activity-tag:hover {
+  box-shadow: 0 4px 12px rgba(0, 201, 167, 0.3);
+}
+
+/* Glassmorphism effect for modern cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+/* FloCat personality animations */
+.flocat-wiggle {
+  animation: wiggle 2s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 7% { transform: rotateZ(0); }
+  15% { transform: rotateZ(-15deg); }
+  20% { transform: rotateZ(10deg); }
+  25% { transform: rotateZ(-10deg); }
+  30% { transform: rotateZ(6deg); }
+  35% { transform: rotateZ(-4deg); }
+  40%, 100% { transform: rotateZ(0); }
+}
+
+/* FloCat mascot wiggle animation */
+@keyframes flocat-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.flocat-wiggle {
+  animation: flocat-wiggle 2s ease-in-out infinite;
 }
