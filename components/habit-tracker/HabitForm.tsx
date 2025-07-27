@@ -317,5 +317,6 @@ const HabitForm: React.FC<HabitFormProps> = ({
       </form>
     </div>
   );
+};
 
 export default HabitForm;
