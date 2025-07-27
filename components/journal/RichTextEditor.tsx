@@ -200,24 +200,42 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const handleTransaction = () => {
       const { selection } = editor.state;
       const { from } = selection;
-      const text = editor.state.doc.textBetween(Math.max(0, from - 10), from, '\n');
       
-      if (text.endsWith('/')) {
-        const coords = editor.view.coordsAtPos(from);
-        setSlashMenuPosition({ 
-          x: coords.left, 
-          y: coords.bottom + 10 
-        });
-        setShowSlashMenu(true);
-        setSelectedCommand(0);
-      } else if (showSlashMenu && !text.includes('/')) {
+      // Get text before cursor position
+      const textBefore = editor.state.doc.textBetween(Math.max(0, from - 20), from, '\n');
+      console.log('Text before cursor:', textBefore, 'Position:', from); // Debug log
+      
+      // Check if text ends with '/' and is not part of a larger word
+      if (textBefore.endsWith('/') && (textBefore.length === 1 || textBefore[textBefore.length - 2] === ' ' || textBefore[textBefore.length - 2] === '\n')) {
+        try {
+          const coords = editor.view.coordsAtPos(from);
+          console.log('Showing slash menu at:', coords); // Debug log
+          setSlashMenuPosition({ 
+            x: coords.left, 
+            y: coords.bottom + 10 
+          });
+          setShowSlashMenu(true);
+          setSelectedCommand(0);
+        } catch (error) {
+          console.error('Error getting cursor position:', error);
+        }
+      } else if (showSlashMenu && !textBefore.includes('/')) {
+        console.log('Hiding slash menu'); // Debug log
         setShowSlashMenu(false);
       }
     };
 
+    const handleUpdate = () => {
+      handleTransaction();
+    };
+
+    // Listen to both transaction and update events
     editor.on('transaction', handleTransaction);
+    editor.on('update', handleUpdate);
+    
     return () => {
       editor.off('transaction', handleTransaction);
+      editor.off('update', handleUpdate);
     };
   }, [editor, showSlashMenu]);
 
@@ -409,7 +427,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         {/* Utility */}
         <div className="flex items-center space-x-1 ml-auto">
           <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
-            Type "/" for commands
+            Type "/" for commands {showSlashMenu && '(MENU ACTIVE)'}
           </span>
           
           <button
@@ -446,7 +464,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         {/* Slash Command Menu */}
         {showSlashMenu && (
           <div 
-            className="absolute z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
+            className="fixed z-[999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
             style={{
               left: slashMenuPosition.x,
               top: slashMenuPosition.y,
