@@ -71,8 +71,46 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields for create" });
     }
     
+    // Check if this is a FloHub local calendar
+    if (calendarId === 'flohub_local') {
+      try {
+        console.log("Creating event in FloHub local calendar");
+        
+        // Use the local calendar API
+        const localResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/local`, {
+          method: 'POST',
+          headers: {
+            'Cookie': req.headers.cookie || '',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            summary,
+            description,
+            location: req.body.location,
+            start,
+            end,
+            source,
+            tags
+          }),
+        });
+
+        if (localResponse.ok) {
+          const localEvent = await localResponse.json();
+          console.log("Successfully created local event:", localEvent);
+          return res.status(201).json(localEvent);
+        } else {
+          const errorData = await localResponse.json();
+          console.error("Failed to create local event:", errorData);
+          return res.status(localResponse.status).json(errorData);
+        }
+      } catch (error) {
+        console.error("Error creating local event:", error);
+        return res.status(500).json({ error: "Failed to create local event" });
+      }
+    }
+
     // Check if this is a Google Calendar or another type
-    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_');
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_') && calendarId !== 'flohub_local';
     // Check if this is an OAuth-based O365 calendar
     const isO365OAuth = calendarId.startsWith('o365_') && description?.includes("oauth:");
     
@@ -455,8 +493,46 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields for update" });
     }
     
+    // Check if this is a FloHub local calendar
+    if (calendarId === 'flohub_local') {
+      try {
+        console.log("Updating event in FloHub local calendar");
+        
+        // Use the local calendar API
+        const localResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/local?id=${id}`, {
+          method: 'PUT',
+          headers: {
+            'Cookie': req.headers.cookie || '',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            summary,
+            description,
+            location: req.body.location,
+            start,
+            end,
+            source,
+            tags
+          }),
+        });
+
+        if (localResponse.ok) {
+          const localEvent = await localResponse.json();
+          console.log("Successfully updated local event:", localEvent);
+          return res.status(200).json(localEvent);
+        } else {
+          const errorData = await localResponse.json();
+          console.error("Failed to update local event:", errorData);
+          return res.status(localResponse.status).json(errorData);
+        }
+      } catch (error) {
+        console.error("Error updating local event:", error);
+        return res.status(500).json({ error: "Failed to update local event" });
+      }
+    }
+    
     // Check if this is a Google Calendar or another type
-    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_');
+    const isGoogleCalendar = !calendarId.startsWith('o365_') && !calendarId.startsWith('apple_') && !calendarId.startsWith('ical_') && !calendarId.startsWith('other_') && calendarId !== 'flohub_local';
     
     // If not a Google Calendar, we need to handle it differently
     if (!isGoogleCalendar) {
@@ -635,9 +711,39 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields for delete" });
     }
     
-    // Check if this is a Google Calendar or another type
     const calId = calendarId as string;
-    const isGoogleCalendar = !calId.startsWith('o365_') && !calId.startsWith('apple_') && !calId.startsWith('ical_') && !calId.startsWith('other_');
+    
+    // Check if this is a FloHub local calendar
+    if (calId === 'flohub_local') {
+      try {
+        console.log("Deleting event from FloHub local calendar");
+        
+        // Use the local calendar API
+        const localResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/local?id=${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Cookie': req.headers.cookie || '',
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (localResponse.ok) {
+          const result = await localResponse.json();
+          console.log("Successfully deleted local event:", id);
+          return res.status(200).json(result);
+        } else {
+          const errorData = await localResponse.json();
+          console.error("Failed to delete local event:", errorData);
+          return res.status(localResponse.status).json(errorData);
+        }
+      } catch (error) {
+        console.error("Error deleting local event:", error);
+        return res.status(500).json({ error: "Failed to delete local event" });
+      }
+    }
+    
+    // Check if this is a Google Calendar or another type
+    const isGoogleCalendar = !calId.startsWith('o365_') && !calId.startsWith('apple_') && !calId.startsWith('ical_') && !calId.startsWith('other_') && calId !== 'flohub_local';
     
     // If not a Google Calendar, we need to handle it differently
     if (!isGoogleCalendar) {

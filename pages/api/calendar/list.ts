@@ -63,62 +63,56 @@ export default async function handler(
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // Authenticate
-  const decoded = auth(req);
-  if (!decoded) {
-    return res.status(401).json({ error: "Not signed in" });
-  }
-  
-  const user = await getUserById(decoded.userId);
-  if (!user?.email) {
-    return res.status(401).json({ error: "User not found" });
-  }
+  try {
+    const decoded = auth(req);
+    if (!decoded) {
+      return res.status(401).json({ error: "Not signed in" });
+    }
 
-  console.log('Calendar list API request for user:', user.email);
+    const user = await getUserById(decoded.userId);
+    if (!user?.email) {
+      return res.status(401).json({ error: "User not found" });
+    }
 
-  const googleAccount = user.accounts?.find(account => account.provider === 'google');
-  let accessToken = googleAccount?.access_token;
+    console.log('Calendar list API request for user:', user.email);
 
-  console.log('Google account found:', !!googleAccount);
-  console.log('Initial access token exists:', !!accessToken);
+    const calendars: Array<{ id: string; summary: string; source?: string }> = [];
 
-  if (!googleAccount) {
-    console.log('No Google account found for user');
-    return res.status(401).json({ 
-      error: "Google Calendar not connected", 
-      details: "Please connect your Google account in settings"
+    // Always include FloHub Local calendar
+    calendars.push({
+      id: 'flohub_local',
+      summary: 'FloHub Local',
+      source: 'local'
     });
-  }
 
-  // Check if token is expired and refresh if needed
-  if (googleAccount && accessToken) {
-    const expiresAt = googleAccount.expires_at;
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    console.log('Token expires at:', expiresAt, 'Current time:', currentTime);
-    
-    if (expiresAt && expiresAt <= currentTime && googleAccount.refresh_token) {
-      console.log('Google access token expired, attempting to refresh...');
-      accessToken = await refreshGoogleToken(decoded.userId, googleAccount.refresh_token);
-      if (!accessToken) {
-        console.warn("Failed to refresh Google access token");
-        return res.status(401).json({ 
-          error: "Google Calendar authentication expired", 
-          details: "Please reconnect your Google account in settings"
-        });
+    // Get Google OAuth access token from user's accounts
+    const googleAccount = user.accounts?.find(account => account.provider === 'google');
+    let accessToken = googleAccount?.access_token;
+
+    console.log('Google account found:', !!googleAccount);
+    console.log('Initial access token exists:', !!accessToken);
+
+    // Check if token is expired and refresh if needed
+    if (googleAccount && accessToken) {
+      const expiresAt = googleAccount.expires_at;
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      console.log('Token expires at:', expiresAt, 'Current time:', currentTime);
+
+      if (expiresAt && expiresAt <= currentTime && googleAccount.refresh_token) {
+        console.log('Google access token expired, attempting to refresh...');
+        accessToken = await refreshGoogleToken(decoded.userId, googleAccount.refresh_token);
+        if (!accessToken) {
+          console.warn("Failed to refresh Google access token");
+        }
       }
     }
-  }
 
-  if (!accessToken) {
-    console.warn("No Google access token available");
-    return res.status(401).json({ 
-      error: "Google Calendar not connected", 
-      details: "Please connect your Google account in settings"
-    });
-  }
+    if (!accessToken) {
+      console.log("No Google access token available, returning only local calendar");
+      return res.status(200).json(calendars);
+    }
 
-  try {
     // Call Google Calendar API
     console.log('Fetching calendar list from Google API...');
     const resp = await fetch(
@@ -142,30 +136,46 @@ export default async function handler(
           );
           if (retryResp.ok) {
             const retryBody = await retryResp.json();
-            const items = Array.isArray(retryBody.items)
-              ? retryBody.items.map((c: any) => ({ id: c.id, summary: c.summary }))
+            const retryGoogleCalendars = Array.isArray(retryBody.items)
+              ? retryBody.items
+                  .filter((c: any) => c.accessRole && (c.accessRole === 'owner' || c.accessRole === 'writer'))
+                  .map((c: any) => ({ 
+                    id: c.id, 
+                    summary: c.summary,
+                    source: c.primary ? 'personal' : 'work'
+                  }))
               : [];
-            console.log(`Successfully fetched ${items.length} calendars after token refresh`);
-            return res.status(200).json(items);
+            
+            // Add Google calendars to the calendars array
+            calendars.push(...retryGoogleCalendars);
+            
+            console.log(`Successfully fetched ${retryGoogleCalendars.length} Google calendars after token refresh, total: ${calendars.length}`);
+            return res.status(200).json(calendars);
           }
         }
       }
       
-      return res
-        .status(resp.status)
-        .json({ 
-          error: err.error?.message || "Google Calendar error",
-          details: err
-        });
+      // Return local calendar only if Google API fails completely
+      console.log('Google API failed completely, returning only local calendar');
+      return res.status(200).json(calendars);
     }
 
     const body = await resp.json();
-    const items = Array.isArray(body.items)
-      ? body.items.map((c: any) => ({ id: c.id, summary: c.summary }))
+    const googleCalendars = Array.isArray(body.items)
+      ? body.items
+          .filter((c: any) => c.accessRole && (c.accessRole === 'owner' || c.accessRole === 'writer'))
+          .map((c: any) => ({ 
+            id: c.id, 
+            summary: c.summary,
+            source: c.primary ? 'personal' : 'work'
+          }))
       : [];
 
-    console.log(`Successfully fetched ${items.length} calendars`);
-    return res.status(200).json(items);
+    // Add Google calendars to the calendars array
+    calendars.push(...googleCalendars);
+
+    console.log(`Successfully fetched ${googleCalendars.length} Google calendars, total: ${calendars.length}`);
+    return res.status(200).json(calendars);
   } catch (error) {
     console.error('Error fetching calendar list:', error);
     return res.status(500).json({ 

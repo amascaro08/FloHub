@@ -335,14 +335,53 @@ export default async function handler(
 
     console.log('iCal URLs to process:', icalUrls);
 
-    // Check if we have any calendar sources to process
+    // Always fetch local FloHub calendar events
+    console.log("Fetching local FloHub calendar events...");
+    try {
+      const localCalendarResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/local?timeMin=${encodeURIComponent(safeTimeMin)}&timeMax=${encodeURIComponent(safeTimeMax)}`, {
+        method: 'GET',
+        headers: {
+          'Cookie': req.headers.cookie || '',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (localCalendarResponse.ok) {
+        const localData = await localCalendarResponse.json();
+        const localEvents = localData.events || [];
+        console.log(`Successfully fetched ${localEvents.length} local calendar events`);
+        allEvents.push(...localEvents);
+      } else {
+        console.warn('Failed to fetch local calendar events:', localCalendarResponse.status);
+      }
+    } catch (error) {
+      console.error('Error fetching local calendar events:', error);
+    }
+
+    // Check if we have any external calendar sources to process
     if (googleCalendarIds.length === 0 && o365Urls.length === 0 && icalUrls.length === 0) {
-      console.log("No calendar sources found");
+      console.log("No external calendar sources found");
       
-      // If no access token and no O365 URLs, return empty events
+      // If no access token and no O365 URLs, still return local events if we have them
       if (!accessToken) {
-        console.log("No access token available, returning empty events");
-        return res.status(200).json({ events: [] });
+        console.log("No access token available, returning local events only");
+        // Sort events by start time
+        allEvents.sort((a, b) => {
+          const aStart = a.start?.dateTime || a.start?.date;
+          const bStart = b.start?.dateTime || b.start?.date;
+          
+          if (!aStart && !bStart) return 0;
+          if (!aStart) return 1;
+          if (!bStart) return -1;
+          
+          const aTime = new Date(aStart).getTime();
+          const bTime = new Date(bStart).getTime();
+          
+          return aTime - bTime;
+        });
+
+        console.log(`Total events (local only): ${allEvents.length}`);
+        return res.status(200).json({ events: allEvents });
       }
       
       // If we have access token but no calendar sources, use primary calendar as fallback
