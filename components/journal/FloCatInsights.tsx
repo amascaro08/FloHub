@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
+import Image from 'next/image';
 
 interface FloCatInsightsProps {
   refreshTrigger: number;
@@ -398,8 +399,14 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     return (
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center animate-pulse">
-            <span className="text-2xl">🐱</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center animate-pulse overflow-hidden">
+            <Image
+              src="/flocat-sidepeek.png"
+              alt="FloCat"
+              width={48}
+              height={48}
+              className="rounded-full object-cover"
+            />
           </div>
           <div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">FloCat's Insights</h3>
@@ -415,8 +422,14 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     return (
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center">
-            <span className="text-2xl">🐱</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-[#00C9A7] to-[#FF6B6B] rounded-full flex items-center justify-center overflow-hidden">
+            <Image
+              src="/flocat-sidepeek.png"
+              alt="FloCat"
+              width={48}
+              height={48}
+              className="rounded-full object-cover"
+            />
           </div>
           <div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">FloCat's Insights</h3>
