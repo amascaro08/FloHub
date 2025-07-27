@@ -185,12 +185,6 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
               <ClockIcon className="w-3 h-3" />
               <span>Created: {new Date(note.createdAt).toLocaleDateString()}</span>
             </div>
-            {note.updatedAt && note.updatedAt !== note.createdAt && (
-              <div className="flex items-center space-x-1">
-                <span>•</span>
-                <span>Updated: {new Date(note.updatedAt).toLocaleDateString()}</span>
-              </div>
-            )}
           </div>
           
           {content && (

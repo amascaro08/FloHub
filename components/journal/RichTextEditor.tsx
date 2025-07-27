@@ -216,7 +216,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     };
 
     editor.on('transaction', handleTransaction);
-    return () => editor.off('transaction', handleTransaction);
+    return () => {
+      editor.off('transaction', handleTransaction);
+    };
   }, [editor, showSlashMenu]);
 
   // Close slash menu when clicking outside
