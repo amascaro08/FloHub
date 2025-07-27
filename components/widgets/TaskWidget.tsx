@@ -162,11 +162,11 @@ function TaskWidget() {
       const response = await fetch(`/api/tasks/${t.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !t.completed }),
+        body: JSON.stringify({ completed: !t.done }),
       });
       if (response.ok) {
         mutate();
-        if (!t.completed) {
+        if (!t.done) {
           setCelebrating(true);
           setTimeout(() => setCelebrating(false), 2000);
         }
@@ -221,8 +221,8 @@ function TaskWidget() {
   };
 
   // Filter tasks for display
-  const incompleteTasks = tasks?.filter(t => !t.completed) || [];
-  const completedTasks = tasks?.filter(t => t.completed) || [];
+  const incompleteTasks = tasks?.filter(t => !t.done) || [];
+  const completedTasks = tasks?.filter(t => t.done) || [];
 
   return (
     <div className="space-y-4">

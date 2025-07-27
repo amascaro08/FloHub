@@ -285,9 +285,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                         <span className="text-xs text-grey-tint flex items-center space-x-1">
                           <Clock className="w-3 h-3" />
                           <span>
-                            {event.start.dateTime 
-                              ? format(new Date(event.start.dateTime), 'h:mm a')
-                              : 'All day'
+                            {event.start instanceof Date 
+                              ? format(event.start, 'h:mm a')
+                              : event.start.dateTime 
+                                ? format(new Date(event.start.dateTime), 'h:mm a')
+                                : 'All day'
                             }
                           </span>
                         </span>
