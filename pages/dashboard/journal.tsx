@@ -20,21 +20,35 @@ import ActivityTracker from "@/components/journal/ActivityTracker";
 import MoodStatistics from "@/components/journal/MoodStatistics";
 import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
+import JournalImport from "@/components/journal/JournalImport";
 
 export default function JournalPage() {
-   const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
-
   const router = useRouter();
 
   // Handle loading state
   if (status === 'unauthenticated') {
-    return <p className="text-center p-8">Loading journal...</p>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-teal-200 dark:bg-teal-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-300">Loading your journal...</p>
+        </div>
+      </div>
+    );
   }
 
   // Handle unauthenticated state
   if (status !== 'authenticated' || !user) {
-    return <p className="text-center p-8">Please sign in to access your journal.</p>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-slate-600 dark:text-slate-300">Please sign in to access your journal.</p>
+        </div>
+      </div>
+    );
   }
 
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -45,8 +59,10 @@ export default function JournalPage() {
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Fetch user settings to get timezone
   const { data: userSettings } = useSWR(
@@ -70,12 +86,13 @@ export default function JournalPage() {
     }
   }, [timezone, selectedDate]);
 
-  
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      setShowNewEntryButton(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setShowNewEntryButton(mobile);
+      setSidebarOpen(!mobile); // Sidebar open by default on desktop
     };
 
     checkIfMobile();
@@ -89,51 +106,39 @@ export default function JournalPage() {
   // Handle saving journal entry
   const handleSaveEntry = (entry: { content: string; timestamp: string }) => {
     console.log("Saving entry:", entry);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new entry immediately
     setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle saving mood
   const handleSaveMood = (mood: { emoji: string; label: string; tags: string[] }) => {
     console.log("Saving mood:", mood);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new mood immediately
     setRefreshTrigger(prev => prev + 1);
   };
   
   // Handle saving activities
   const handleSaveActivities = (activities: string[]) => {
     console.log("Saving activities:", activities);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
     setSelectedActivities(activities);
-    
-    // Trigger a refresh of the timeline to show the new activities immediately
     setRefreshTrigger(prev => prev + 1);
   };
   
   // Handle saving sleep data
   const handleSaveSleep = (sleep: { quality: string; hours: number }) => {
     console.log("Saving sleep data:", sleep);
-    // In a real app, this would save to Firebase or another backend
-    // For now, we're using localStorage in the component itself
-    
-    // Trigger a refresh of the timeline to show the new sleep data immediately
     setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle selecting a date from the timeline
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
-    // Always allow editing regardless of date
     setIsEditing(true);
     console.log("Selected date:", date);
+  };
+
+  // Handle import success
+  const handleImportSuccess = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setShowImport(false);
   };
 
   // Function to save all journal data for the selected date
@@ -212,325 +217,391 @@ export default function JournalPage() {
     }
   };
 
-
   return (
     <>
       <Head>
         <link rel="stylesheet" href="/styles/journal.css" />
       </Head>
-      <div className="relative max-w-full">
-        {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Journal</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {selectedDate === today ? "Today's" : formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} Entry
-          </p>
-        </div>
+      
+      {/* Main Container with FloHub gradient background */}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         
-        <div className="flex items-center space-x-3">
-          {/* Save All Button */}
-          <button
-            onClick={saveAllJournalData}
-            disabled={isSaving}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all ${
-              isSaving
-                ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm hover:shadow-md'
-            }`}
-          >
-            {isSaving ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 sticky top-0 z-40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
-                Save All
-              </>
-            )}
-          </button>
-          
-          {/* View Mode Toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Journal</h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {formatDate(selectedDate, timezone, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={saveAllJournalData}
+                disabled={isSaving}
+                className={`p-2 rounded-xl transition-all ${
+                  isSaving
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                    : 'bg-[#00C9A7] text-white shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30'
+                }`}
+              >
+                {isSaving ? (
+                  <div className="animate-spin h-5 w-5 border-2 border-slate-400 rounded-full border-t-transparent"></div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex h-screen lg:h-auto">
+          {/* Sidebar */}
+          <div className={`${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 fixed lg:relative z-30 w-80 h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-transform duration-300 ease-in-out overflow-y-auto`}>
+            
+            {/* Desktop Header */}
+            <div className="hidden lg:block p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
+                    <span className="text-3xl mr-3">📔</span>
+                    Journal
+                  </h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    {selectedDate === today ? "Today's" : formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} Entry
+                  </p>
+                </div>
+                <div className="w-3 h-12 bg-gradient-to-b from-[#00C9A7] to-[#FF6B6B] rounded-full"></div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={saveAllJournalData}
+                  disabled={isSaving}
+                  className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isSaving
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-[#00C9A7] text-white shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30 hover:scale-105'
+                  }`}
+                >
+                  {isSaving ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin h-4 w-4 border-2 border-slate-400 rounded-full border-t-transparent mr-2"></div>
+                      Saving...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save All
+                    </div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  title="Settings"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  title="Import Data"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 p-1">
+                <button
+                  onClick={() => setViewMode("timeline")}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                    viewMode === "timeline"
+                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Timeline
+                  </div>
+                </button>
+                <button
+                  onClick={() => setViewMode("calendar")}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                    viewMode === "calendar"
+                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                    Calendar
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            {/* Timeline/Calendar Container */}
+            <div className="p-4">
+              {viewMode === "timeline" ? (
+                <JournalTimeline
+                  onSelectDate={handleSelectDate}
+                  timezone={timezone}
+                  autoScrollToLatest={true}
+                />
+              ) : (
+                <JournalCalendar
+                  onSelectDate={handleSelectDate}
+                  timezone={timezone}
+                  refreshTrigger={refreshTrigger}
+                />
+              )}
+            </div>
+
+            {/* Quick Stats */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+              <JournalSummary refreshTrigger={refreshTrigger} />
+            </div>
+
+            {/* FloCat Insights */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="bg-gradient-to-br from-[#00C9A7]/10 to-[#FF6B6B]/10 dark:from-[#00C9A7]/20 dark:to-[#FF6B6B]/20 rounded-2xl p-4">
+                <div className="flex items-center mb-2">
+                  <span className="text-2xl mr-2">🐱</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">FloCat Says</h3>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  "Looking good! You've been consistent with your journaling. Keep the momentum going! 🌟"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-4 lg:p-8">
+              
+              {/* Mobile Quick Actions */}
+              <div className={`lg:hidden transition-all duration-300 overflow-hidden ${
+                sidebarOpen ? 'max-h-0 opacity-0' : 'max-h-96 opacity-100'
+              }`}>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm"
+                  >
+                    <svg className="w-5 h-5 mr-2 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Settings</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowImport(true)}
+                    className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm"
+                  >
+                    <svg className="w-5 h-5 mr-2 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Import</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Main Entry Card */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 mb-6 overflow-hidden">
+                {isSelectedToday || isEditing ? (
+                  <TodayEntry
+                    onSave={handleSaveEntry}
+                    date={selectedDate}
+                    timezone={timezone}
+                    showPrompts={true}
+                    activities={selectedActivities}
+                  />
+                ) : (
+                  <JournalEntryViewer
+                    date={selectedDate}
+                    onEdit={() => setIsEditing(true)}
+                    timezone={timezone}
+                  />
+                )}
+              </div>
+
+              {/* Wellbeing Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* Mood & Sleep */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center">
+                        <span className="text-2xl mr-3">💭</span>
+                        How are you feeling?
+                      </h3>
+                      <div className="w-1 h-8 bg-gradient-to-b from-[#00C9A7] to-[#FF6B6B] rounded-full"></div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+                      <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                        <SleepTracker
+                          onSave={handleSaveSleep}
+                          timezone={timezone}
+                          date={selectedDate}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* On This Day */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                    <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-6">
+                  {/* Activities */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center">
+                        <span className="text-2xl mr-3">🎯</span>
+                        Activities
+                      </h3>
+                      <div className="w-1 h-8 bg-gradient-to-b from-[#00C9A7] to-[#FF6B6B] rounded-full"></div>
+                    </div>
+                    
+                    <ActivityTracker
+                      onSave={handleSaveActivities}
+                      date={selectedDate}
+                      timezone={timezone}
+                    />
+                  </div>
+
+                  {/* Linked Moments */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                    <LinkedMoments date={selectedDate} timezone={timezone} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Action Buttons */}
+        {isMobile && (
+          <div className="fixed bottom-6 right-6 flex flex-col space-y-3 z-20">
+            {/* New Entry Button */}
             <button
-              onClick={() => setViewMode("timeline")}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                viewMode === "timeline"
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className="w-14 h-14 rounded-full bg-[#00C9A7] text-white flex items-center justify-center shadow-xl shadow-teal-500/25 hover:shadow-2xl hover:shadow-teal-500/30 transition-all duration-300 hover:scale-110"
+              onClick={() => {
+                setSelectedDate(today);
+                setIsEditing(true);
+                setSidebarOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             >
-              Timeline
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
             </button>
+            
+            {/* Edit/View Toggle */}
+            {!isSelectedToday && (
+              <button
+                className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110"
+                onClick={() => setIsEditing(!isEditing)}
+              >
+                {isEditing ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                )}
+              </button>
+            )}
+            
+            {/* Voice Note Button */}
             <button
-              onClick={() => setViewMode("calendar")}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                viewMode === "calendar"
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className="w-12 h-12 rounded-full bg-[#FF6B6B] text-white flex items-center justify-center shadow-lg shadow-red-500/25 transition-all duration-300 hover:scale-110"
+              onClick={() => alert("Voice notes coming soon! 🎤")}
             >
-              Calendar
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
             </button>
           </div>
-          
-          {/* Settings Button */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            aria-label="Journal Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      {/* Timeline or Calendar view */}
-      <div className="mb-8 overflow-x-auto overflow-y-hidden w-full custom-scrollbar timeline-scroll">
-        <div className="min-w-full">
-        {viewMode === "timeline" ? (
-          <JournalTimeline
-            onSelectDate={(date) => {
-              handleSelectDate(date);
-              // Always allow editing regardless of date
-              setIsEditing(true);
-            }}
-            timezone={timezone}
-            autoScrollToLatest={true}
-          />
-        ) : (
-          <JournalCalendar
-            onSelectDate={(date) => {
-              handleSelectDate(date);
-              // Always allow editing regardless of date
-              setIsEditing(true);
-            }}
-            timezone={timezone}
-            refreshTrigger={refreshTrigger}
+        )}
+
+        {/* Sidebar Overlay */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
         )}
-        </div>
-      </div>
-      
-      {/* Mobile layout - single column */}
-      <div className="block md:hidden w-full space-y-6">
-        {/* FloCat Summary */}
-        <div className="w-full journal-card">
-          <JournalSummary refreshTrigger={refreshTrigger} />
-        </div>
+
+        {/* Modals */}
+        {showSettings && (
+          <JournalSettings onClose={() => setShowSettings(false)} />
+        )}
         
-        {/* Journal Entry */}
-        <div className="w-full journal-card">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-full overflow-hidden">
-            {isSelectedToday || isEditing ? (
-              <TodayEntry
-                onSave={handleSaveEntry}
-                date={selectedDate}
-                timezone={timezone}
-                showPrompts={true}
-                activities={selectedActivities}
-              />
-            ) : (
-              <JournalEntryViewer
-                date={selectedDate}
-                onEdit={() => setIsEditing(true)}
-                timezone={timezone}
-              />
-            )}
-          </div>
-        </div>
-        
-        {/* Wellbeing Tracking Section */}
-        <div className="w-full journal-card">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Wellbeing Tracking</h3>
-              <div className="h-1 w-16 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full"></div>
-            </div>
-            
-            {/* Mood Tracker */}
-            <div className="mb-8">
-              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-            </div>
-            
-            {/* Sleep Tracker */}
-            <div className="mb-8">
-              <SleepTracker
-                onSave={handleSaveSleep}
-                timezone={timezone}
-                date={selectedDate}
-              />
-            </div>
-            
-            {/* Activity Tracker */}
-            <div className="mb-8">
-              <ActivityTracker
-                onSave={handleSaveActivities}
-                date={selectedDate}
-                timezone={timezone}
-              />
-            </div>
-            
-            {/* On This Day */}
-            <div className="mb-8">
-              <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-            </div>
-            
-            {/* Linked Moments */}
-            <div>
-              <LinkedMoments date={selectedDate} timezone={timezone} />
+        {showImport && (
+          <JournalImport 
+            onClose={() => setShowImport(false)}
+            onSuccess={handleImportSuccess}
+          />
+        )}
+
+        {/* Success Message */}
+        {saveSuccess && (
+          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-[#00C9A7] to-teal-600 text-white rounded-2xl shadow-xl border border-teal-300 animate-fade-in-out z-50">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">All journal data saved successfully! ✨</span>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Desktop layout - multi-column */}
-      <div className="hidden md:grid md:grid-cols-3 gap-8">
-        {/* Left column (2/3 width on desktop) - Journal Entry */}
-        <div className="md:col-span-2 w-full space-y-6">
-          {/* FloCat Summary */}
-          <div className="journal-card">
-            <JournalSummary refreshTrigger={refreshTrigger} />
-          </div>
-          
-          {/* Main Entry */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-full journal-card">
-            {isSelectedToday || isEditing ? (
-              <TodayEntry
-                onSave={handleSaveEntry}
-                date={selectedDate}
-                timezone={timezone}
-                showPrompts={true}
-                activities={selectedActivities}
-              />
-            ) : (
-              <JournalEntryViewer
-                date={selectedDate}
-                onEdit={() => setIsEditing(true)}
-                timezone={timezone}
-              />
-            )}
-          </div>
-          
-          {/* Additional Sections */}
-          <div className="space-y-6">
-            <div className="journal-card">
-              <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-            </div>
-            <div className="journal-card">
-              <LinkedMoments date={selectedDate} timezone={timezone} />
-            </div>
-          </div>
-        </div>
-        
-        {/* Right column (1/3 width on desktop) - Wellbeing Tracking */}
-        <div className="space-y-6 w-full">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 journal-card">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Wellbeing</h3>
-              <div className="h-1 w-12 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full"></div>
-            </div>
-            
-            {/* Mood Tracker */}
-            <div className="mb-8">
-              <MoodTracker onSave={handleSaveMood} timezone={timezone} />
-            </div>
-            
-            {/* Sleep Tracker */}
-            <div className="mb-8">
-              <SleepTracker
-                onSave={handleSaveSleep}
-                timezone={timezone}
-                date={selectedDate}
-              />
-            </div>
-            
-            {/* Activity Tracker */}
-            <div>
-              <ActivityTracker
-                onSave={handleSaveActivities}
-                date={selectedDate}
-                timezone={timezone}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Floating New Entry button (mobile only) */}
-      {showNewEntryButton && (
-        <button
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-teal-600 text-white flex items-center justify-center z-10 hover:bg-teal-700 fab-button"
-          aria-label="New Journal Entry"
-          onClick={() => {
-            // Set to today's date and editing mode
-            setSelectedDate(today);
-            setIsEditing(true);
-            // Scroll to the top where the entry component is
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
-      
-      {/* Edit/View toggle button (when not viewing today) */}
-      {!isSelectedToday && (
-        <button
-          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center z-10 hover:bg-gray-200 dark:hover:bg-gray-600 fab-button"
-          aria-label={isEditing ? "View Entry" : "Edit Entry"}
-          onClick={() => setIsEditing(!isEditing)}
-        >
-          {isEditing ? (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          )}
-        </button>
-      )}
-      
-      {/* Voice-to-text button (stub/placeholder) */}
-      <button
-        className="fixed bottom-6 left-6 w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center z-10 hover:bg-gray-200 dark:hover:bg-gray-600 fab-button"
-        aria-label="Voice to Text"
-        onClick={() => {
-          alert("Voice-to-text feature coming soon!");
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-      </button>
-      
-      {/* Journal Settings Modal */}
-      {showSettings && (
-        <JournalSettings onClose={() => setShowSettings(false)} />
-      )}
-      
-      {/* Save success message */}
-      {saveSuccess && (
-        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm shadow-lg border border-green-200 dark:border-green-700 animate-fade-in-out">
-          <div className="flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            All journal data saved successfully!
-          </div>
-        </div>
-      )}
+        )}
       </div>
     </>
   );
