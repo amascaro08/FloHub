@@ -189,16 +189,28 @@ export default function NotesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: "",
-          content: "",
+          content: "<p></p>", // Provide minimal HTML content for the rich text editor
           tags: [],
           isAdhoc: false,
         }),
       });
 
       if (response.ok) {
-        const newNote = await response.json();
-        await mutate(); // Refresh the notes list
-        setSelectedNoteId(newNote.id); // Open the new note immediately
+        const result = await response.json();
+        console.log("Note created with ID:", result.noteId); // Debug log
+        
+        // Refresh the notes list and wait for it to complete
+        const refreshedData = await mutate();
+        console.log("Data refreshed:", refreshedData?.notes?.length, "notes"); // Debug log
+        
+        // Select the new note with a small delay to ensure data is available
+        if (result.noteId) {
+          // Small delay to ensure the mutated data is available
+          setTimeout(() => {
+            setSelectedNoteId(result.noteId);
+            console.log("Selected note ID set to:", result.noteId); // Debug log
+          }, 150);
+        }
       } else {
         const errorData = await response.json();
         console.error("Failed to create note:", errorData.error);

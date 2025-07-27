@@ -41,8 +41,8 @@ export default async function handler(
 
   // 2) Validate input
   const { title, content, tags, eventId, eventTitle, isAdhoc } = req.body as CreateNoteRequest; // Include new fields
-  if (typeof content !== "string" || content.trim() === "") {
-    return res.status(400).json({ error: "Note content is required" });
+  if (typeof content !== "string") {
+    return res.status(400).json({ error: "Note content must be a string" });
   }
   if (tags !== undefined && (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string'))) {
      return res.status(400).json({ error: "Invalid tags format" });
