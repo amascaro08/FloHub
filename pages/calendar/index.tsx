@@ -931,56 +931,35 @@ const CalendarPage = () => {
               </div>
               
               <div className="space-y-4">
-                {events
-                  .filter(event => {
-                    const eventDate = getEventDate(event);
-                    const rangeStart = startOfDay(currentDate);
-                    const rangeEnd = addDays(rangeStart, 30);
-                    return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
-                  })
-                  .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime())
-                  .reduce((acc, event) => {
-                    const eventDate = format(getEventDate(event), 'yyyy-MM-dd');
-                    if (!acc[eventDate]) acc[eventDate] = [];
-                    acc[eventDate].push(event);
-                    return acc;
-                  }, {} as Record<string, CalendarEvent[]>)
-                }
-                {Object.keys(events
-                  .filter(event => {
-                    const eventDate = getEventDate(event);
-                    const rangeStart = startOfDay(currentDate);
-                    const rangeEnd = addDays(rangeStart, 30);
-                    return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
-                  })
-                  .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime())
-                  .reduce((acc, event) => {
-                    const eventDate = format(getEventDate(event), 'yyyy-MM-dd');
-                    if (!acc[eventDate]) acc[eventDate] = [];
-                    acc[eventDate].push(event);
-                    return acc;
-                  }, {} as Record<string, CalendarEvent[]>)).length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                      <ListBulletIcon className="w-8 h-8 text-grey-tint" />
-                    </div>
-                    <p className="text-grey-tint">No upcoming events</p>
-                  </div>
-                ) : (
-                  Object.entries(events
+                {(() => {
+                  const filteredEvents = events
                     .filter(event => {
                       const eventDate = getEventDate(event);
                       const rangeStart = startOfDay(currentDate);
                       const rangeEnd = addDays(rangeStart, 30);
                       return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
                     })
-                    .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime())
-                    .reduce((acc, event) => {
-                      const eventDate = format(getEventDate(event), 'yyyy-MM-dd');
-                      if (!acc[eventDate]) acc[eventDate] = [];
-                      acc[eventDate].push(event);
-                      return acc;
-                    }, {} as Record<string, CalendarEvent[]>)).map(([dateStr, dayEvents]) => {
+                    .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime());
+
+                  const groupedEvents = filteredEvents.reduce((acc, event) => {
+                    const eventDate = format(getEventDate(event), 'yyyy-MM-dd');
+                    if (!acc[eventDate]) acc[eventDate] = [];
+                    acc[eventDate].push(event);
+                    return acc;
+                  }, {} as Record<string, CalendarEvent[]>);
+
+                  if (Object.keys(groupedEvents).length === 0) {
+                    return (
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                          <ListBulletIcon className="w-8 h-8 text-grey-tint" />
+                        </div>
+                        <p className="text-grey-tint">No upcoming events</p>
+                      </div>
+                    );
+                  }
+
+                  return Object.entries(groupedEvents).map(([dateStr, dayEvents]) => {
                     const date = parseISO(dateStr);
                     const isTodayDate = isToday(date);
                     
@@ -1044,8 +1023,8 @@ const CalendarPage = () => {
                         </div>
                       </div>
                     );
-                  })
-                )}
+                  });
+                })()}
               </div>
             </div>
           )}
