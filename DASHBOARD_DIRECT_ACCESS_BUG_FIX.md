@@ -88,6 +88,9 @@ const clearAuthCookie = createClearCookie(req, 'auth-token');
 res.setHeader('Set-Cookie', clearAuthCookie);
 ```
 
+### 4. Fixed MainLayout Public Paths
+Updated `components/ui/MainLayout.tsx` to include `/feedback` in the public paths list for consistency with middleware.
+
 ### Key Improvements
 
 #### 1. Proper Domain Handling
@@ -105,37 +108,43 @@ res.setHeader('Set-Cookie', clearAuthCookie);
 - Consistent domain detection logic across the application
 - Proper cookie clearing that matches the setting logic
 
-## Expected Results
+## Current Status
 
-After this fix:
+✅ **Build Fixed**: Application builds successfully without TypeScript errors  
+⚠️ **Issue Persists**: User reports the direct dashboard access issue still occurs
 
-### ✅ Direct Dashboard Access
-- `flohub.xyz/dashboard` → Works correctly (redirects to login if not authenticated, shows dashboard if authenticated)
-- `flohub.vercel.app/dashboard` → Works correctly
-- `www.flohub.xyz/dashboard` → Works correctly
+## Next Steps for Debugging
 
-### ✅ Authentication Flow
-- Login sets cookies with proper domain attributes
-- Middleware can read cookies consistently across subdomains
-- Authentication state persists across page refreshes and direct URL access
+Since the cookie domain fix didn't resolve the issue, the problem might be:
 
-### ✅ Cross-Subdomain Compatibility
-- Cookies work seamlessly between `flohub.xyz` and `www.flohub.xyz`
-- No authentication loops or session loss
-- Consistent behavior across all access methods
+1. **API Endpoint Failure**: The `/api/auth/session` endpoint might be failing completely
+2. **Database Connection**: Issues with user lookup or database connectivity
+3. **Environment Variables**: Missing JWT_SECRET or other configuration
+4. **Infinite Redirect Loop**: Middleware logic causing redirect loops
+5. **CORS Issues**: Cross-origin request problems
 
-## Testing Recommendations
+### Available Debug Tools
 
-1. **Clear existing cookies** in your browser for the domain
-2. **Test direct dashboard access** on both domains
-3. **Verify login persistence** across page refreshes
-4. **Test cross-subdomain navigation** between `flohub.xyz` and `www.flohub.xyz`
+The codebase now includes:
+- `/api/debug/auth-test` - Comprehensive authentication debugging endpoint
+- Enhanced error handling in authentication flow
+- Better cookie domain detection
+
+### Recommended Testing Steps
+
+1. **Test the debug endpoint**: Visit `/api/debug/auth-test` to check authentication status
+2. **Check browser console**: Look for JavaScript errors or failed network requests
+3. **Check network tab**: Look for failed API calls or 500 errors
+4. **Clear browser cookies**: Ensure no stale cookies are interfering
+5. **Test different browsers**: Check if the issue is browser-specific
 
 ## Files Modified
 
 - `pages/api/auth/login.ts` - Updated to use `createSecureCookie`
 - `pages/api/auth/refresh.ts` - Updated to use `createSecureCookie`
 - `pages/api/auth/logout.ts` - Updated to use `createClearCookie`
+- `components/ui/MainLayout.tsx` - Added `/feedback` to public paths
+- `pages/api/debug/auth-test.ts` - Added comprehensive debugging endpoint
 
 ## Technical Details
 
@@ -163,3 +172,7 @@ function getCookieDomain(req: NextApiRequest): string | undefined {
 ```
 
 This ensures proper cookie behavior across all deployment environments while maintaining security best practices.
+
+## Important Note
+
+While the cookie domain fix was necessary and important for proper authentication flow, the user reports that the "page can't connect" error persists. This suggests the root cause may be different than initially diagnosed. Further investigation using the debug tools is recommended to identify the actual issue.

@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     // Test JWT decoding
-    let authResult = null;
+    let authResult: any = null;
     try {
       const decoded = auth(req);
       if (decoded) {
