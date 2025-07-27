@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/router';
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText, Users } from 'lucide-react'
+import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText, Users, User } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ChatSideModal from './ChatSideModal';
@@ -12,6 +12,7 @@ import ThemeToggle from './ThemeToggle'
 import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
 import WidgetToggle from './WidgetToggle';
+import LogoutButton from './LogoutButton';
 
 const nav = [
   { name: "Hub", href: "/dashboard", icon: Home },
@@ -22,7 +23,6 @@ const nav = [
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
   { name: "Feedback", href: "/feedback", icon: NotebookPen },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {
@@ -99,7 +99,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
-          border-r border-neutral-200 dark:border-neutral-700
+          border-r border-neutral-200 dark:border-neutral-700 flex flex-col
         `}
       >
         <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
@@ -122,7 +122,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <Menu className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
           </button>
         </div>
-        <nav className="p-4 space-y-1">
+        
+        {/* Main navigation - top half */}
+        <nav className="p-4 space-y-1 flex-1">
           {nav.map((x) => (
             <Link
               key={x.href}
@@ -155,7 +157,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 setMobileSidebarOpen(false);
               }}
             >
-              <Settings className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
+              <Users className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
                 !desktopSidebarCollapsed && 'mr-3'
               }`} />
               {!desktopSidebarCollapsed && (
@@ -165,28 +167,79 @@ const Layout = ({ children }: { children: ReactNode }) => {
               )}
             </Link>
           )}
-          {/* Sign Out button */}
-          <button
-            className={`flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
-              desktopSidebarCollapsed ? 'justify-center' : ''
-            } group mt-4`}
-            onClick={() => {
-              setMobileSidebarOpen(false);
-              // Implement sign out
-            }}
-          >
-            <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
-              !desktopSidebarCollapsed && 'mr-3'
-            }`} />
-            {!desktopSidebarCollapsed && (
-              <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
-                Sign Out
-              </span>
-            )}
-          </button>
         </nav>
-        <div className={`p-4 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-center ${desktopSidebarCollapsed ? 'hidden' : ''}`}>
-          <ThemeToggle />
+
+        {/* User account section - bottom third */}
+        <div className="border-t border-neutral-200 dark:border-neutral-700">
+          {/* User account indicator */}
+          {!desktopSidebarCollapsed && user && (
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                    {user.primaryEmail || user.email || 'User'}
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                    FlowHub Account
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Collapsed user indicator */}
+          {desktopSidebarCollapsed && user && (
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-center">
+              <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          )}
+
+          {/* Settings and Sign Out */}
+          <div className="p-4 space-y-1">
+            <Link
+              href="/dashboard/settings"
+              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+                desktopSidebarCollapsed ? 'justify-center' : ''
+              } group`}
+              onClick={() => {
+                setMobileSidebarOpen(false);
+              }}
+            >
+              <Settings className={`w-5 h-5 text-neutral-500 group-hover:text-neutral-600 transition-colors ${
+                !desktopSidebarCollapsed && 'mr-3'
+              }`} />
+              {!desktopSidebarCollapsed && (
+                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                  Settings
+                </span>
+              )}
+            </Link>
+
+            <LogoutButton
+              className={`flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+                desktopSidebarCollapsed ? 'justify-center' : ''
+              } group`}
+            >
+              <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
+                !desktopSidebarCollapsed && 'mr-3'
+              }`} />
+              {!desktopSidebarCollapsed && (
+                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                  Sign Out
+                </span>
+              )}
+            </LogoutButton>
+          </div>
+
+          {/* Theme toggle */}
+          <div className={`p-4 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-center ${desktopSidebarCollapsed ? 'hidden' : ''}`}>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
