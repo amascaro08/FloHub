@@ -239,62 +239,54 @@ export default function JournalPage() {
         <meta name="description" content="Capture your thoughts, track moods, and reflect on your journey with FlowHub's intelligent journal" />
       </Head>
       
-      <div className="min-h-screen">
-        {/* Header */}
-        <div className="bg-soft-white dark:bg-dark-base border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
-                    <span className="text-white text-lg">📔</span>
-                  </div>
-                  <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
-                    Journal
-                  </h1>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowImport(true)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-grey-tint hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
-                >
-                  <span className="hidden sm:inline">Import Data</span>
-                  <span className="sm:hidden">Import</span>
-                </button>
-                
-                <button
-                  onClick={saveAllJournalData}
-                  disabled={isSaving}
-                  className={`inline-flex items-center px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
-                    isSaving
-                      ? 'bg-gray-100 dark:bg-gray-700 text-grey-tint cursor-not-allowed'
-                      : 'bg-primary-500 hover:bg-primary-600 text-white'
-                  }`}
-                >
-                  {isSaving ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin h-4 w-4 border-2 border-grey-tint rounded-full border-t-transparent mr-2"></div>
-                      <span className="hidden sm:inline">Saving...</span>
-                      <span className="sm:hidden">...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="hidden sm:inline">Save All</span>
-                      <span className="sm:hidden">Save</span>
-                    </div>
-                  )}
-                </button>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
+              <span className="text-white text-lg">📔</span>
             </div>
+            <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
+              Journal
+            </h1>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-grey-tint hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+            >
+              <span className="hidden sm:inline">Import Data</span>
+              <span className="sm:hidden">Import</span>
+            </button>
+            
+            <button
+              onClick={saveAllJournalData}
+              disabled={isSaving}
+              className={`inline-flex items-center px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
+                isSaving
+                  ? 'bg-gray-100 dark:bg-gray-700 text-grey-tint cursor-not-allowed'
+                  : 'bg-primary-500 hover:bg-primary-600 text-white'
+              }`}
+            >
+              {isSaving ? (
+                <div className="flex items-center">
+                  <div className="animate-spin h-4 w-4 border-2 border-grey-tint rounded-full border-t-transparent mr-2"></div>
+                  <span className="hidden sm:inline">Saving...</span>
+                  <span className="sm:hidden">...</span>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="hidden sm:inline">Save All</span>
+                  <span className="sm:hidden">Save</span>
+                </div>
+              )}
+            </button>
           </div>
         </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Navigation Tabs */}
           <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
             {tabs.map((tab) => (
@@ -517,7 +509,6 @@ export default function JournalPage() {
               <JournalSettings onClose={() => setActiveTab('today')} />
             </div>
           )}
-        </div>
 
         {/* Floating Action Button (Mobile) */}
         {isMobile && activeTab === 'today' && (
