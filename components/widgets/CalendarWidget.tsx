@@ -6,7 +6,7 @@ import { useWidgetTracking } from '@/lib/analyticsTracker';
 import { useCalendarContext } from '@/contexts/CalendarContext';
 import { CalendarEvent } from '@/types/calendar';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import EventDetailModal from '@/components/ui/EventDetailModal';
 
 interface CalendarWidgetProps {
@@ -106,7 +106,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   const goToToday = useCallback(() => {
     setCurrentDate(new Date());
     setSelectedDate(new Date());
-    trackingHook.trackInteraction('go_to_today');
+    trackingHook.trackInteraction('navigate_today');
   }, [trackingHook]);
 
   // Handle date selection
@@ -119,235 +119,221 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   const handleEventClick = useCallback((event: CalendarEvent) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
-    trackingHook.trackInteraction('view_event_details');
+    trackingHook.trackInteraction('view_event');
   }, [trackingHook]);
 
-  // Handle modal close
-  const handleModalClose = useCallback(() => {
+  // Close modal
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedEvent(null);
   }, []);
 
-  // Loading state management
-  useEffect(() => {
-    if (user?.email) {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  // Error handling
-  useEffect(() => {
-    if (eventsError) {
-      setError(eventsError.message);
-    } else {
-      setError(null);
-    }
-  }, [eventsError]);
-
-  if (!user?.email) {
+  // Loading state
+  if (eventsLoading && events.length === 0) {
     return (
-      <div className={`p-4 border rounded-lg shadow-sm ${className}`}>
-        <div className="text-center text-gray-500">
-          <CalendarIcon className="w-8 h-8 mx-auto mb-2" />
-          <p>Please sign in to view your calendar</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`p-4 border rounded-lg shadow-sm ${className}`}>
-        <div className="text-amber-600 dark:text-amber-400">
-          <h3 className="font-medium mb-2">Calendar Loading Error</h3>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className={`p-4 border rounded-lg shadow-sm ${className}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Calendar
-          </h3>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={goToPreviousMonth}
-              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Previous month"
-            >
-              <ChevronLeftIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={goToToday}
-              className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Today
-            </button>
-            <button
-              onClick={goToNextMonth}
-              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Next month"
-            >
-              <ChevronRightIcon className="w-4 h-4" />
-            </button>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
+          <div className="flex space-x-2">
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         </div>
-
-        {/* Month/Year Display */}
-        <div className="text-center mb-4">
-          <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-            {format(currentDate, 'MMMM yyyy')}
-          </h4>
-          {isBackgroundRefreshing && (
-            <p className="text-xs text-gray-500 mt-1">Refreshing...</p>
-          )}
-        </div>
-
-        {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-1">
-          {/* Day headers */}
+          {Array.from({ length: 42 }).map((_, i) => (
+            <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || eventsError) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Calendar className="w-6 h-6 text-accent-500" />
+        </div>
+        <p className="text-grey-tint font-body text-sm">
+          Unable to load calendar events
+        </p>
+      </div>
+    );
+  }
+
+  // Get today's events for preview
+  const todayEvents = useMemo(() => {
+    const today = new Date();
+    const todayKey = format(today, 'yyyy-MM-dd');
+    return eventsByDate.get(todayKey) || [];
+  }, [eventsByDate]);
+
+  return (
+    <div className="space-y-4">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={goToPreviousMonth}
+            className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
+            {format(currentDate, 'MMMM yyyy')}
+          </h3>
+          <button
+            onClick={goToNextMonth}
+            className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <button
+          onClick={goToToday}
+          className="px-3 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+        >
+          Today
+        </button>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="space-y-2">
+        {/* Day Headers */}
+        <div className="grid grid-cols-7 gap-1">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div
-              key={day}
-              className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
-            >
-              {day}
+            <div key={day} className="text-center">
+              <span className="text-xs font-medium text-grey-tint">{day}</span>
             </div>
           ))}
+        </div>
 
-          {/* Calendar days */}
+        {/* Calendar Days */}
+        <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((day, index) => {
             const isCurrentMonth = isSameMonth(day, currentDate);
+            const isTodayDate = isToday(day);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const isCurrentDay = isToday(day);
-            const dateKey = format(day, 'yyyy-MM-dd');
-            const dayEvents = eventsByDate.get(dateKey) || [];
+            const dayKey = format(day, 'yyyy-MM-dd');
+            const dayEvents = eventsByDate.get(dayKey) || [];
 
             return (
               <button
                 key={index}
                 onClick={() => handleDateClick(day)}
-                className={`
-                  relative p-2 text-sm rounded transition-colors
-                  ${isCurrentMonth 
-                    ? 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700' 
-                    : 'text-gray-400 dark:text-gray-500'
-                  }
-                  ${isCurrentDay ? 'bg-blue-100 dark:bg-blue-900' : ''}
-                  ${isSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
-                  ${dayEvents.length > 0 ? 'font-semibold' : ''}
-                `}
+                className={`relative p-2 text-sm rounded-lg transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-primary-500 text-white'
+                    : isTodayDate
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                    : isCurrentMonth
+                    ? 'text-dark-base dark:text-soft-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                    : 'text-gray-400 dark:text-gray-600'
+                }`}
               >
-                <span>{format(day, 'd')}</span>
+                <span className="font-medium">{format(day, 'd')}</span>
                 
-                {/* Event indicators */}
+                {/* Event Indicators */}
                 {dayEvents.length > 0 && (
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
-                    <div className="flex space-x-1">
-                      {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                        <div
-                          key={eventIndex}
-                          className={`w-1 h-1 rounded-full ${
-                            event.source === 'work' 
-                              ? 'bg-red-500' 
-                              : 'bg-green-500'
-                          }`}
-                        />
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <div className="w-1 h-1 rounded-full bg-gray-400" />
-                      )}
-                    </div>
+                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-0.5">
+                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
+                      <div
+                        key={eventIndex}
+                        className={`w-1 h-1 rounded-full ${
+                          isSelected ? 'bg-white' : 'bg-primary-500'
+                        }`}
+                      />
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <span className={`text-xs ${
+                        isSelected ? 'text-white' : 'text-primary-500'
+                      }`}>
+                        +{dayEvents.length - 3}
+                      </span>
+                    )}
                   </div>
                 )}
               </button>
             );
           })}
         </div>
-
-        {/* Loading indicator */}
-        {eventsLoading && (
-          <div className="mt-4 text-center">
-            <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-            <p className="text-xs text-gray-500 mt-1">Loading events...</p>
-          </div>
-        )}
-
-        {/* Selected date events */}
-        {selectedDate && (
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded">
-            <h5 className="font-medium text-gray-900 dark:text-white mb-2">
-              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-            </h5>
-            {(() => {
-              const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
-              const selectedEvents = eventsByDate.get(selectedDateKey) || [];
-              
-              if (selectedEvents.length === 0) {
-                return (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No events scheduled
-                  </p>
-                );
-              }
-
-              return (
-                <div className="space-y-2">
-                  {selectedEvents.map(event => (
-                    <button
-                      key={event.id}
-                      onClick={() => handleEventClick(event)}
-                      className={`w-full text-left p-2 rounded text-sm transition-colors hover:bg-white dark:hover:bg-gray-700 ${
-                        event.source === 'work'
-                          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                          : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                      }`}
-                    >
-                      <div className="font-medium flex items-center gap-2">
-                        {event.summary}
-                        {event.isRecurring && (
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded">
-                            🔄
-                          </span>
-                        )}
-                      </div>
-                      {(() => {
-                        let startTime: string | null = null;
-                        
-                        if (event.start instanceof Date) {
-                          startTime = event.start.toISOString();
-                        } else if (event.start?.dateTime) {
-                          startTime = event.start.dateTime;
-                        }
-                        
-                        return startTime ? (
-                          <div className="text-xs opacity-75">
-                            {format(new Date(startTime), 'h:mm a')}
-                          </div>
-                        ) : null;
-                      })()}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
-        )}
       </div>
 
+      {/* Today's Events Preview */}
+      {todayEvents.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <Clock className="w-4 h-4 text-primary-500" />
+            <span>Today's Events ({todayEvents.length})</span>
+          </h4>
+          <div className="space-y-2">
+            {todayEvents.slice(0, 3).map((event) => (
+              <button
+                key={event.id}
+                onClick={() => handleEventClick(event)}
+                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                      {event.summary}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {event.start && (
+                        <span className="text-xs text-grey-tint flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {event.start.dateTime 
+                              ? format(new Date(event.start.dateTime), 'h:mm a')
+                              : 'All day'
+                            }
+                          </span>
+                        </span>
+                      )}
+                      {event.location && (
+                        <span className="text-xs text-grey-tint flex items-center space-x-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{event.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+            {todayEvents.length > 3 && (
+              <p className="text-xs text-grey-tint text-center">
+                +{todayEvents.length - 3} more events today
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {events.length === 0 && (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-6 h-6 text-primary-500" />
+          </div>
+          <p className="text-grey-tint font-body text-sm">
+            No events scheduled
+          </p>
+        </div>
+      )}
+
       {/* Event Detail Modal */}
-      <EventDetailModal
-        event={selectedEvent}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-      />
-    </>
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
+    </div>
   );
 };
 
-export default React.memo(CalendarWidget);
+export default CalendarWidget;

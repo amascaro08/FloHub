@@ -1,13 +1,21 @@
 // components/widgets/TaskWidget.tsx
 "use client";
 
-
-import useSWR         from "swr";
-import { useState, FormEvent, useMemo, memo } from "react"; // Import useMemo and memo
-import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
-import type { Task, UserSettings } from "@/types/app"; // Import Task and UserSettings types
+import useSWR from "swr";
+import { useState, FormEvent, useMemo, memo } from "react";
+import CreatableSelect from 'react-select/creatable';
+import type { Task, UserSettings } from "@/types/app";
 import { useUser } from '@/lib/hooks/useUser';
-
+import { 
+  Plus, 
+  CheckCircle, 
+  Circle, 
+  Trash2, 
+  Edit3, 
+  Calendar,
+  Tag,
+  Clock
+} from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r) => {
   if (!r.ok) {
@@ -17,7 +25,7 @@ const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r)
 });
 
 function TaskWidget() {
-  const { user, isLoading } = useUser(); // Just user object or null
+  const { user, isLoading } = useUser();
   const isLoggedIn = !!user;
 
   // Only fetch tasks if logged in
@@ -27,10 +35,27 @@ function TaskWidget() {
   );
 
   if (!isLoggedIn) {
-    return <div className="text-gray-400">Please sign in to view your tasks.</div>;
+    return (
+      <div className="text-center py-8">
+        <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-6 h-6 text-primary-500" />
+        </div>
+        <p className="text-grey-tint font-body">Please sign in to view your tasks.</p>
+      </div>
+    );
   }
+  
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   // Fetch user settings to get global tags
@@ -39,15 +64,15 @@ function TaskWidget() {
     fetcher
   );
 
-  const [input, setInput]         = useState("");
-  const [due, setDue]             = useState<"today"|"tomorrow"|"custom">("today");
+  const [input, setInput] = useState("");
+  const [due, setDue] = useState<"today"|"tomorrow"|"custom">("today");
   const [customDate, setCustomDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [editing, setEditing]     = useState<Task | null>(null);
-  const [celebrating, setCelebrating] = useState(false); // State for celebration
-  const [taskSource, setTaskSource] = useState<"personal" | "work">("personal"); // State for task source
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // State for selected tags
+  const [editing, setEditing] = useState<Task | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+  const [taskSource, setTaskSource] = useState<"personal" | "work">("personal");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Combine unique tags from tasks and global tags from settings
   const allAvailableTags = useMemo(() => {
@@ -55,14 +80,13 @@ function TaskWidget() {
     const globalTags = userSettings?.globalTags || [];
     const combinedTags = [...taskTags, ...globalTags];
     return Array.from(new Set(combinedTags)).sort();
-  }, [tasks, userSettings]); // Add userSettings to dependency array
+  }, [tasks, userSettings]);
 
   const tagOptions = allAvailableTags.map(tag => ({ value: tag, label: tag }));
 
   const handleTagChange = (selectedOptions: any) => {
     setSelectedTags(Array.isArray(selectedOptions) ? selectedOptions.map(option => option.value) : []);
   };
-
 
   // Friendly formatter: "Jan 5"
   const fmt = (iso: string | null) => {
@@ -71,7 +95,7 @@ function TaskWidget() {
     if (isNaN(d.getTime())) return "Invalid date";
     return d.toLocaleDateString(undefined, {
       month: "short",
-      day:   "numeric",
+      day: "numeric",
     });
   };
 
@@ -94,257 +118,399 @@ function TaskWidget() {
     }
 
     // Build payload
-    const payload: Partial<Task> = { // Use Partial<Task> since not all fields are required for create/update
-      text:    input.trim(),
+    const payload: Partial<Task> = {
+      text: input.trim(),
       dueDate: dueISO,
-      source:  taskSource, // Include task source
-      tags: selectedTags, // Include selected tags
+      source: taskSource,
+      tags: selectedTags,
     };
-    // If you're editing, send PATCH; else POST
-    const method = editing ? "PATCH" : "POST";
 
-    // For PATCH, include id & done
-    if (editing) {
-      payload.id   = editing.id;
-      payload.done = editing.done;
-      // If editing, don't change source unless explicitly added to form
-      if (taskSource !== (editing.source || "personal")) { // Check if source changed from original
-         payload.source = taskSource;
+    try {
+      if (editing) {
+        // Update existing task
+        const response = await fetch(`/api/tasks/${editing.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          setEditing(null);
+          setInput("");
+          setSelectedTags([]);
+          mutate();
+        }
       } else {
-         delete payload.source; // Don't send source if it's the same as original or default
+        // Create new task
+        const response = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          setInput("");
+          setSelectedTags([]);
+          mutate();
+        }
       }
-      // If editing, don't change tags unless explicitly changed in form (more complex, skip for now)
-      // For simplicity, we'll always send the selectedTags from the form on edit
+    } catch (error) {
+      console.error("Error saving task:", error);
     }
-
-    console.log("Payload:", payload);
-    await fetch("/api/tasks", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(payload),
-    });
-
-    // Reset form
-    setInput("");
-    setDue("today");
-    setCustomDate(new Date().toISOString().slice(0, 10));
-    setEditing(null);
-    setTaskSource("personal"); // Reset source to default
-    setSelectedTags([]); // Clear selected tags
-    mutate();
   };
 
   const toggleComplete = async (t: Task) => {
-    // Optimistically update the UI by filtering out completed tasks
-    if (tasks) {
-      mutate(tasks.filter(task => task.id !== t.id), false);
+    try {
+      const response = await fetch(`/api/tasks/${t.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !t.completed }),
+      });
+      if (response.ok) {
+        mutate();
+        if (!t.completed) {
+          setCelebrating(true);
+          setTimeout(() => setCelebrating(false), 2000);
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling task:", error);
     }
-
-    // Trigger celebration
-    setCelebrating(true);
-    setTimeout(() => setCelebrating(false), 3000); // Hide celebration after 3 seconds
-
-    // Send API request
-    await fetch("/api/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ id: t.id, done: !t.done }),
-    });
-
-    // Revalidate data after API call
-    mutate();
   };
 
   const remove = async (id: string) => {
-     // Optimistically update the UI
-     if (tasks) {
-      mutate(tasks.filter(task => task.id !== id), false); // Remove task and don't revalidate yet
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        mutate();
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
     }
-
-    await fetch("/api/tasks", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ id }),
-    });
-
-    // Revalidate data after API call
-    mutate();
   };
 
   const startEdit = (t: Task) => {
     setEditing(t);
     setInput(t.text);
-    setDue(t.dueDate ? "custom" : "today");
+    setSelectedTags(t.tags || []);
     if (t.dueDate) {
-      setCustomDate(t.dueDate.slice(0, 10));
+      const dueDate = new Date(t.dueDate);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      if (dueDate.toDateString() === today.toDateString()) {
+        setDue("today");
+      } else if (dueDate.toDateString() === tomorrow.toDateString()) {
+        setDue("tomorrow");
+      } else {
+        setDue("custom");
+        setCustomDate(dueDate.toISOString().slice(0, 10));
+      }
+    } else {
+      setDue("today");
     }
-    setTaskSource(t.source || "personal"); // Set source when editing
-    setSelectedTags(t.tags || []); // Set tags when editing
+    setTaskSource(t.source || "personal");
   };
 
-  if (!user) {
-    return <p>Please sign in to see your tasks.</p>;
-  }
+  const cancelEdit = () => {
+    setEditing(null);
+    setInput("");
+    setSelectedTags([]);
+    setDue("today");
+  };
 
-  if (settingsError) { // Add error check for settings
-    return <p>Error loading settings.</p>;
-  }
-
-
-  // Filter out completed tasks for display
-  const incompleteTasks = tasks ? tasks.filter(task => !task.done) : [];
+  // Filter tasks for display
+  const incompleteTasks = tasks?.filter(t => !t.completed) || [];
+  const completedTasks = tasks?.filter(t => t.completed) || [];
 
   return (
-    <div className="relative"> {/* Removed glass class as it's now in the parent */}
-      {/* Celebration Message */}
-      {celebrating && (
-        <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-75 text-white text-2xl font-bold z-10 rounded-xl animate-fade-in">
-          Task Complete! 🎉
-        </div>
-      )}
-
-      <form onSubmit={addOrUpdate} className="flex flex-col gap-3 mb-5">
-        {/* Task input and date selection - responsive layout */}
-        <div className="flex flex-col md:flex-row gap-2">
+    <div className="space-y-4">
+      {/* Add Task Form */}
+      <form onSubmit={addOrUpdate} className="space-y-3">
+        <div className="flex space-x-2">
           <input
             type="text"
-            className="input-modern flex-1 order-1"
-            placeholder="New task…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            placeholder="Add a new task..."
+            className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add</span>
+          </button>
+        </div>
 
-          <div className="flex gap-2 order-2 md:order-1 w-full md:w-auto">
-            <select
-              value={due}
-              onChange={(e) => setDue(e.target.value as "today" | "tomorrow" | "custom")}
-              className="input-modern w-auto min-w-[100px] md:min-w-0 flex-shrink-0"
-            >
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-              <option value="custom">Custom</option>
-            </select>
-
+        {/* Task Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Due Date */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
+              <Calendar className="w-3 h-3" />
+              <span>Due Date</span>
+            </label>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => setDue("today")}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  due === "today"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setDue("tomorrow")}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  due === "tomorrow"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                Tomorrow
+              </button>
+              <button
+                type="button"
+                onClick={() => setDue("custom")}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  due === "custom"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                Custom
+              </button>
+            </div>
             {due === "custom" && (
               <input
                 type="date"
-                className="input-modern w-auto flex-shrink-0"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             )}
           </div>
+
+          {/* Task Source */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-grey-tint">Source</label>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => setTaskSource("personal")}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  taskSource === "personal"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskSource("work")}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  taskSource === "work"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                Work
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Source and Tags */}
-        <div className="flex flex-row gap-2 items-center w-full">
-           <div className="flex items-center">
-             <label className="text-sm font-medium mr-2">Source:</label>
-             <select
-               value={taskSource}
-               onChange={(e) => setTaskSource(e.target.value as "personal" | "work")}
-               className="input-modern w-auto py-1"
-             >
-               <option value="personal">Personal</option>
-               <option value="work">Work</option>
-             </select>
-           </div>
-
-           {/* Tags Input */}
-           <div className="flex-1 flex-grow">
-             <label htmlFor="task-tags" className="sr-only">Tags</label>
-             <CreatableSelect
-               isMulti
-               options={tagOptions}
-               onChange={handleTagChange}
-               placeholder="Select or create tags..."
-               isDisabled={false}
-               isSearchable
-               value={selectedTags.map(tag => ({ value: tag, label: tag }))}
-               classNamePrefix="react-select"
-               theme={(theme) => ({
-                 ...theme,
-                 colors: {
-                   ...theme.colors,
-                   primary: '#14B8A6',
-                   primary25: '#99F6E4',
-                 },
-               })}
-             />
-           </div>
+        {/* Tags */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
+            <Tag className="w-3 h-3" />
+            <span>Tags</span>
+          </label>
+          <CreatableSelect
+            isMulti
+            value={selectedTags.map(tag => ({ value: tag, label: tag }))}
+            onChange={handleTagChange}
+            options={tagOptions}
+            placeholder="Add tags..."
+            className="text-sm"
+            classNamePrefix="react-select"
+            styles={{
+              control: (base) => ({
+                ...base,
+                backgroundColor: 'transparent',
+                borderColor: '#e5e7eb',
+                borderRadius: '0.75rem',
+                '&:hover': {
+                  borderColor: '#00C9A7'
+                }
+              }),
+              menu: (base) => ({
+                ...base,
+                backgroundColor: '#ffffff',
+                borderRadius: '0.75rem',
+                border: '1px solid #e5e7eb'
+              }),
+              option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isSelected ? '#00C9A7' : state.isFocused ? '#f0fdfa' : 'transparent',
+                color: state.isSelected ? 'white' : '#374151'
+              })
+            }}
+          />
         </div>
 
-        <button
-          type="submit"
-          className="btn-primary self-end"
-        >
-          {editing ? "Save" : "Add Task"}
-        </button>
+        {editing && (
+          <div className="flex space-x-2">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200"
+            >
+              Update Task
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="px-4 py-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </form>
 
-      <ul className="space-y-3">
-        {incompleteTasks.length > 0 ? (
-          incompleteTasks.map((t) => (
-            <li
-              key={t.id}
-              className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <div className="flex items-center flex-wrap">
-                <div className="flex items-center min-w-0">
-                  <input
-                    type="checkbox"
-                    checked={t.done}
-                    onChange={() => toggleComplete(t)}
-                    className="mr-3 h-5 w-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="font-medium truncate">
-                    {t.text}
-                  </span>
-                </div>
-                
-                <div className="flex flex-wrap items-center ml-2 mt-1">
-                  {/* Display task source tag */}
-                  {t.source && (
-                    <span className={`tag ${t.source === "work" ? "tag-work" : "tag-personal"} mr-1`}>
-                      {t.source === "work" ? "Work" : "Personal"}
-                    </span>
+      {/* Tasks List */}
+      <div className="space-y-3">
+        {/* Incomplete Tasks */}
+        {incompleteTasks.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-primary-500" />
+              <span>Incomplete ({incompleteTasks.length})</span>
+            </h3>
+            {incompleteTasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+              >
+                <button
+                  onClick={() => toggleComplete(task)}
+                  className="flex-shrink-0"
+                >
+                  <Circle className="w-5 h-5 text-gray-400 hover:text-primary-500 transition-colors" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                    {task.text}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {task.dueDate && (
+                      <span className="text-xs text-grey-tint">
+                        Due {fmt(task.dueDate)}
+                      </span>
+                    )}
+                    {task.source && (
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        task.source === 'work' 
+                          ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
+                          : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                      }`}>
+                        {task.source}
+                      </span>
+                    )}
+                  </div>
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {task.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                  
-                  {/* Display task tags */}
-                  {t.tags && t.tags.map(tag => (
-                    <span key={tag} className="tag mr-1 mb-1">
-                      {tag}
-                    </span>
-                  ))}
-                  
-                  <span className="text-neutral-500 text-sm ml-1">
-                    ({fmt(t.dueDate)})
-                  </span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => startEdit(task)}
+                    className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => remove(task.id)}
+                    className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              
-              <div className="flex gap-2 ml-2 shrink-0">
+            ))}
+          </div>
+        )}
+
+        {/* Completed Tasks */}
+        {completedTasks.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span>Completed ({completedTasks.length})</span>
+            </h3>
+            {completedTasks.slice(0, 3).map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl"
+              >
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through truncate">
+                    {task.text}
+                  </p>
+                </div>
                 <button
-                  onClick={() => startEdit(t)}
-                  className="text-sm text-primary-500 hover:text-primary-700 transition-colors"
-                  aria-label="Edit task"
+                  onClick={() => remove(task.id)}
+                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                </button>
-                <button
-                  onClick={() => remove(t.id)}
-                  className="text-sm text-red-500 hover:text-red-700 transition-colors"
-                  aria-label="Delete task"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            </li>
-          ))
-        ) : (
-          <li className="text-neutral-500 text-center py-4">No tasks yet. Add one above!</li>
+            ))}
+            {completedTasks.length > 3 && (
+              <p className="text-xs text-grey-tint text-center">
+                +{completedTasks.length - 3} more completed tasks
+              </p>
+            )}
+          </div>
         )}
-      </ul>
+
+        {/* Empty State */}
+        {(!tasks || tasks.length === 0) && (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              No tasks yet. Add your first task above!
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Celebration Animation */}
+      {celebrating && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div className="animate-bounce text-6xl">🎉</div>
+        </div>
+      )}
     </div>
   );
 }

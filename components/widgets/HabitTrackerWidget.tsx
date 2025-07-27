@@ -1,365 +1,424 @@
+'use client'
+
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useUser } from '@/lib/hooks/useUser';
-import { Habit, HabitCompletion, HabitStats } from '@/types/habit-tracker';
-import { CheckIcon, XMarkIcon, ArrowRightIcon, FireIcon, TrophyIcon, ChartBarIcon } from '@heroicons/react/24/solid';
+import { 
+  Plus, 
+  CheckCircle, 
+  Circle, 
+  Trash2, 
+  Edit3, 
+  Sparkles,
+  Calendar,
+  TrendingUp,
+  Target
+} from 'lucide-react';
 
-// Helper functions moved from habitService
-const formatDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
-};
+interface Habit {
+  id: string;
+  name: string;
+  frequency: 'daily' | 'weekly' | 'custom';
+  customDays?: number[];
+  streak: number;
+  lastCompleted?: string;
+}
 
-const getTodayFormatted = (): string => {
-  return formatDate(new Date());
-};
+interface HabitCompletion {
+  id: string;
+  habitId: string;
+  date: string;
+}
 
-const shouldCompleteToday = (habit: Habit): boolean => {
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  
-  if (habit.frequency === 'daily') {
-    return true;
-  } else if (habit.frequency === 'weekly') {
-    // For weekly habits, check if today matches the target day
-    // This is a simplified implementation - you may need to adjust based on your schema
-    return dayOfWeek === 1; // Monday for example
-  } else if (habit.frequency === 'custom' && habit.customDays) {
-    return habit.customDays.includes(dayOfWeek);
-  }
-  return false;
-};
-
-const shouldCompleteOnDate = (habit: Habit, date: Date): boolean => {
-  const dayOfWeek = date.getDay();
-  
-  if (habit.frequency === 'daily') {
-    return true;
-  } else if (habit.frequency === 'weekly') {
-    return dayOfWeek === 1; // Simplified - adjust as needed
-  } else if (habit.frequency === 'custom' && habit.customDays) {
-    return habit.customDays.includes(dayOfWeek);
-  }
-  return false;
-};
-
-const HabitTrackerWidget = () => {
-  const { user, isLoading } = useUser();
+const HabitTrackerWidget: React.FC = () => {
+  const { user } = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [overallStats, setOverallStats] = useState({
-    totalHabits: 0,
-    weeklyCompletionRate: 0,
-    monthlyCompletionRate: 0,
-    longestStreak: 0
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily');
+  const [newHabitCustomDays, setNewHabitCustomDays] = useState<number[]>([]);
 
-  // Load habits and today's completions
+  // Load habits and completions
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.primaryEmail) return;
+      if (!user?.email) return;
       
-      setLoading(true);
+      setIsLoading(true);
       try {
-        // Get user habits via API
+        // Load habits
         const habitsResponse = await fetch('/api/habits');
-        if (!habitsResponse.ok) {
-          throw new Error('Failed to fetch habits');
+        if (habitsResponse.ok) {
+          const userHabits = await habitsResponse.json();
+          setHabits(userHabits);
         }
-        const userHabits = await habitsResponse.json();
-        setHabits(userHabits);
         
-        // Get current month's completions via API
+        // Load completions for current month
         const today = new Date();
         const completionsResponse = await fetch(
           `/api/habits/completions?year=${today.getFullYear()}&month=${today.getMonth()}`
         );
-        if (!completionsResponse.ok) {
-          throw new Error('Failed to fetch habit completions');
-        }
-        const monthCompletions = await completionsResponse.json();
-        setCompletions(monthCompletions);
-        
-        // Calculate overall stats
-        if (userHabits.length > 0) {
-          // Calculate longest streak across all habits
-          let maxStreak = 0;
-          
-          for (const habit of userHabits) {
-            try {
-              const statsResponse = await fetch(`/api/habits/stats?habitId=${habit.id}`);
-              if (statsResponse.ok) {
-                const stats = await statsResponse.json();
-                if (stats.longestStreak > maxStreak) {
-                  maxStreak = stats.longestStreak;
-                }
-              }
-            } catch (error) {
-              console.error(`Error calculating stats for habit ${habit.id}:`, error);
-            }
-          }
-          
-          // Calculate weekly completion rate
-          const oneWeekAgo = new Date();
-          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-          const weeklyCompletions = monthCompletions.filter((c: HabitCompletion) =>
-            new Date(c.date) >= oneWeekAgo && c.completed
-          );
-          
-          const weeklyTotal = userHabits.reduce((total: number, habit: Habit) => {
-            // Count how many days in the past week this habit should have been completed
-            let daysCount = 0;
-            for (let i = 0; i < 7; i++) {
-              const checkDate = new Date();
-              checkDate.setDate(checkDate.getDate() - i);
-              if (shouldCompleteOnDate(habit, checkDate)) {
-                daysCount++;
-              }
-            }
-            return total + daysCount;
-          }, 0);
-          
-          const weeklyRate = weeklyTotal > 0 ? (weeklyCompletions.length / weeklyTotal) * 100 : 0;
-          
-          // Calculate monthly completion rate
-          const monthlyTotal = userHabits.reduce((total: number, habit: Habit) => {
-            // Simplified: assume 30 days per month
-            let daysCount = 0;
-            for (let i = 0; i < 30; i++) {
-              const checkDate = new Date();
-              checkDate.setDate(checkDate.getDate() - i);
-              if (shouldCompleteOnDate(habit, checkDate)) {
-                daysCount++;
-              }
-            }
-            return total + daysCount;
-          }, 0);
-          
-          const monthlyRate = monthlyTotal > 0 ? (monthCompletions.filter((c: HabitCompletion) => c.completed).length / monthlyTotal) * 100 : 0;
-          
-          setOverallStats({
-            totalHabits: userHabits.length,
-            weeklyCompletionRate: Math.round(weeklyRate),
-            monthlyCompletionRate: Math.round(monthlyRate),
-            longestStreak: maxStreak
-          });
+        if (completionsResponse.ok) {
+          const monthCompletions = await completionsResponse.json();
+          setCompletions(monthCompletions);
         }
       } catch (error) {
         console.error('Error loading habit data:', error);
-        setError('Failed to load habits');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
     
     loadData();
-  }, [user]);
+  }, [user?.email]);
 
-  // Handle habit completion toggle
-  const handleToggleCompletion = async (habit: Habit) => {
-    if (!user?.primaryEmail) return;
+  const shouldCompleteToday = (habit: Habit): boolean => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
     
+    if (habit.frequency === 'daily') return true;
+    if (habit.frequency === 'weekly') return dayOfWeek === 1; // Monday
+    if (habit.frequency === 'custom' && habit.customDays) {
+      return habit.customDays.includes(dayOfWeek);
+    }
+    return false;
+  };
+
+  const isCompletedToday = (habitId: string): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return completions.some(completion => 
+      completion.habitId === habitId && completion.date === today
+    );
+  };
+
+  const handleToggleCompletion = async (habit: Habit) => {
+    const today = new Date().toISOString().split('T')[0];
+    const isCompleted = isCompletedToday(habit.id);
+
     try {
-      const today = getTodayFormatted();
-      const toggleResponse = await fetch('/api/habits/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          habitId: habit.id,
-          date: today
-        })
-      });
-      
-      if (!toggleResponse.ok) {
-        throw new Error('Failed to toggle habit completion');
-      }
-      
-      const updatedCompletion = await toggleResponse.json();
-      
-      // Update local state
-      setCompletions(prev => {
-        const existingIndex = prev.findIndex(
-          c => c.habitId === habit.id && c.date === today
+      if (isCompleted) {
+        // Remove completion
+        const completion = completions.find(c => 
+          c.habitId === habit.id && c.date === today
         );
-        
-        if (existingIndex >= 0) {
-          const updated = [...prev];
-          updated[existingIndex] = updatedCompletion;
-          return updated;
-        } else {
-          return [...prev, updatedCompletion];
+        if (completion) {
+          await fetch(`/api/habits/completions/${completion.id}`, {
+            method: 'DELETE'
+          });
+          setCompletions(prev => prev.filter(c => c.id !== completion.id));
         }
-      });
+      } else {
+        // Add completion
+        const response = await fetch('/api/habits/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            habitId: habit.id,
+            date: today
+          })
+        });
+        if (response.ok) {
+          const newCompletion = await response.json();
+          setCompletions(prev => [...prev, newCompletion]);
+        }
+      }
     } catch (error) {
       console.error('Error toggling habit completion:', error);
     }
   };
 
-  // Check if a habit is completed today
-  const isHabitCompletedToday = (habitId: string): boolean => {
-    const today = getTodayFormatted();
-    return completions.some(
-      c => c.habitId === habitId && c.date === today && c.completed
-    );
-  };
+  const handleAddHabit = async () => {
+    if (!newHabitName.trim()) return;
 
-  // Helper function to check if a habit should be completed on a specific date
-  const shouldCompleteOnDate = (habit: Habit, date: Date): boolean => {
-    const dayOfWeek = date.getDay(); // 0-6, Sunday-Saturday
-    
-    switch (habit.frequency) {
-      case 'daily':
-        return true;
-      case 'weekly':
-        return dayOfWeek === 0; // Sunday
-      case 'custom':
-        return habit.customDays?.includes(dayOfWeek) || false;
-      default:
-        return false;
+    try {
+      const response = await fetch('/api/habits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newHabitName.trim(),
+          frequency: newHabitFrequency,
+          customDays: newHabitFrequency === 'custom' ? newHabitCustomDays : undefined
+        })
+      });
+
+      if (response.ok) {
+        const newHabit = await response.json();
+        setHabits(prev => [...prev, newHabit]);
+        setNewHabitName('');
+        setNewHabitFrequency('daily');
+        setNewHabitCustomDays([]);
+        setShowAddForm(false);
+      }
+    } catch (error) {
+      console.error('Error adding habit:', error);
     }
   };
 
-  // Filter habits that should be completed today
-  const todaysHabits = habits.filter(habit => shouldCompleteToday(habit));
+  const handleDeleteHabit = async (habitId: string) => {
+    try {
+      await fetch(`/api/habits/${habitId}`, {
+        method: 'DELETE'
+      });
+      setHabits(prev => prev.filter(h => h.id !== habitId));
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+    }
+  };
 
-  // Calculate completion progress
-  const completedCount = todaysHabits.filter(habit => isHabitCompletedToday(habit.id)).length;
-  const totalCount = todaysHabits.length;
-  const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const getFrequencyLabel = (habit: Habit): string => {
+    if (habit.frequency === 'daily') return 'Daily';
+    if (habit.frequency === 'weekly') return 'Weekly';
+    if (habit.frequency === 'custom') {
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return habit.customDays?.map(day => dayNames[day]).join(', ') || 'Custom';
+    }
+    return 'Unknown';
+  };
 
-  if (loading) {
+  const getTodayHabits = (): Habit[] => {
+    return habits.filter(habit => shouldCompleteToday(habit));
+  };
+
+  if (!user) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 transition-colors">Habit Tracker</h2>
-        <div className="flex justify-center items-center h-24">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-teal-500"></div>
+      <div className="text-center py-8">
+        <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-6 h-6 text-primary-500" />
         </div>
+        <p className="text-grey-tint font-body">Please sign in to track your habits.</p>
       </div>
     );
   }
 
-  if (error) {
+  if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2 transition-colors">Habit Tracker</h2>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-3 transition-colors">{error}</p>
-        <Link href="/habit-tracker" className="text-teal-600 dark:text-teal-500 hover:text-teal-500 dark:hover:text-teal-400 flex items-center transition-colors">
-          <span>Open Full Tracker</span>
-          <ArrowRightIcon className="w-4 h-4 ml-1" />
-        </Link>
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        ))}
       </div>
     );
   }
+
+  const todayHabits = getTodayHabits();
+  const completedToday = todayHabits.filter(habit => isCompletedToday(habit.id)).length;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-colors">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 transition-colors">Habit Tracker</h2>
-      
-      {habits.length === 0 ? (
-        <div className="mb-3">
-          <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 transition-colors">You don't have any habits yet.</p>
+    <div className="space-y-4">
+      {/* Stats Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+            <Target className="w-5 h-5 text-primary-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white">
+              Today's Progress
+            </h3>
+            <p className="text-xs text-grey-tint">
+              {completedToday} of {todayHabits.length} completed
+            </p>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* Progress bar */}
-          <div className="mb-3">
-            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1 transition-colors">
-              <span>Today's Progress</span>
-              <span>{completedCount}/{totalCount} completed</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 transition-colors">
-              <div
-                className="bg-teal-600 dark:bg-teal-600 h-2.5 rounded-full transition-colors"
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
-          </div>
+        
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-3 py-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="text-sm">Add Habit</span>
+        </button>
+      </div>
+
+      {/* Progress Bar */}
+      {todayHabits.length > 0 && (
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div 
+            className="bg-primary-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(completedToday / todayHabits.length) * 100}%` }}
+          />
+        </div>
+      )}
+
+      {/* Add Habit Form */}
+      {showAddForm && (
+        <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white mb-3">
+            Add New Habit
+          </h4>
           
-          {/* Overall Stats */}
-          <div className="mb-3">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">Overall Stats</h3>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
-                <div className="flex items-center mb-1">
-                  <ChartBarIcon className="w-3 h-3 text-blue-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Total Habits</span>
-                </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.totalHabits}</span>
-              </div>
-              
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
-                <div className="flex items-center mb-1">
-                  <FireIcon className="w-3 h-3 text-orange-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Longest Streak</span>
-                </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.longestStreak}</span>
-              </div>
-              
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
-                <div className="flex items-center mb-1">
-                  <TrophyIcon className="w-3 h-3 text-yellow-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Weekly Rate</span>
-                </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.weeklyCompletionRate}%</span>
-              </div>
-              
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex flex-col items-center transition-colors">
-                <div className="flex items-center mb-1">
-                  <CheckIcon className="w-3 h-3 text-green-400 mr-1" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 transition-colors">Monthly Rate</span>
-                </div>
-                <span className="text-lg font-bold text-gray-800 dark:text-white transition-colors">{overallStats.monthlyCompletionRate}%</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Today's habits */}
-          <div className="mb-3">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors">Today's Habits</h3>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={newHabitName}
+              onChange={(e) => setNewHabitName(e.target.value)}
+              placeholder="Habit name..."
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
             
-            {todaysHabits.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400 text-xs transition-colors">No habits scheduled for today</p>
-            ) : (
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {todaysHabits.map(habit => {
-                  const isCompleted = isHabitCompletedToday(habit.id);
-                  
-                  return (
-                    <div 
-                      key={habit.id}
-                      className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
-                        isCompleted ? 'bg-green-100 dark:bg-green-900 bg-opacity-100 dark:bg-opacity-30' : 'bg-gray-100 dark:bg-gray-700'
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-grey-tint">Frequency</label>
+              <div className="flex space-x-2">
+                {['daily', 'weekly', 'custom'].map((freq) => (
+                  <button
+                    key={freq}
+                    onClick={() => setNewHabitFrequency(freq as any)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      newHabitFrequency === freq
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    }`}
+                  >
+                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {newHabitFrequency === 'custom' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-grey-tint">Days</label>
+                <div className="flex space-x-1">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                    <button
+                      key={day}
+                      onClick={() => {
+                        const newDays = newHabitCustomDays.includes(index)
+                          ? newHabitCustomDays.filter(d => d !== index)
+                          : [...newHabitCustomDays, index];
+                        setNewHabitCustomDays(newDays);
+                      }}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                        newHabitCustomDays.includes(index)
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                       }`}
-                      onClick={() => handleToggleCompletion(habit)}
                     >
-                      <div 
-                        className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center transition-colors ${
-                          isCompleted ? 'bg-green-500 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      >
-                        {isCompleted && <CheckIcon className="w-3 h-3 text-white" />}
-                      </div>
-                      <span className="text-sm text-gray-800 dark:text-white truncate flex-grow transition-colors">{habit.name}</span>
-                      <div 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: '#4fd1c5' }}
-                      ></div>
-                    </div>
-                  );
-                })}
+                      {day}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
+
+            <div className="flex space-x-2">
+              <button
+                onClick={handleAddHabit}
+                disabled={!newHabitName.trim()}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                Add Habit
+              </button>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       )}
-      
-      <Link href="/habit-tracker" className="text-teal-600 dark:text-teal-500 hover:text-teal-500 dark:hover:text-teal-400 flex items-center text-sm transition-colors">
-        <span>Open Full Tracker</span>
-        <ArrowRightIcon className="w-4 h-4 ml-1" />
-      </Link>
+
+      {/* Today's Habits */}
+      <div className="space-y-3">
+        {todayHabits.length > 0 ? (
+          todayHabits.map((habit) => {
+            const completed = isCompletedToday(habit.id);
+            return (
+              <div
+                key={habit.id}
+                className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+              >
+                <button
+                  onClick={() => handleToggleCompletion(habit)}
+                  className="flex-shrink-0"
+                >
+                  {completed ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-gray-400 hover:text-primary-500 transition-colors" />
+                  )}
+                </button>
+                
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${
+                    completed 
+                      ? 'text-gray-500 dark:text-gray-400 line-through' 
+                      : 'text-dark-base dark:text-soft-white'
+                  }`}>
+                    {habit.name}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-xs text-grey-tint">
+                      {getFrequencyLabel(habit)}
+                    </span>
+                    <span className="text-xs text-grey-tint flex items-center space-x-1">
+                      <TrendingUp className="w-3 h-3" />
+                      <span>{habit.streak} day streak</span>
+                    </span>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => handleDeleteHabit(habit.id)}
+                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              No habits scheduled for today
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* All Habits Summary */}
+      {habits.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <Calendar className="w-4 h-4 text-primary-500" />
+            <span>All Habits ({habits.length})</span>
+          </h4>
+          <div className="space-y-2">
+            {habits.slice(0, 3).map((habit) => (
+              <div
+                key={habit.id}
+                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-dark-base dark:text-soft-white truncate">
+                    {habit.name}
+                  </p>
+                  <p className="text-xs text-grey-tint">
+                    {getFrequencyLabel(habit)}
+                  </p>
+                </div>
+                <span className="text-xs text-grey-tint">
+                  {habit.streak} day streak
+                </span>
+              </div>
+            ))}
+            {habits.length > 3 && (
+              <p className="text-xs text-grey-tint text-center">
+                +{habits.length - 3} more habits
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

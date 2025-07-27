@@ -32,21 +32,37 @@ export default async function handler(
   } else if (req.method === 'POST') {
     // Save user layout
     try {
-      const { layout } = req.body;
+      const { layouts } = req.body;
       
       // Validate layout data
-      if (!layout || typeof layout !== 'object') {
-        return res.status(400).json({ error: 'Invalid layout data' });
+      if (!layouts || typeof layouts !== 'object') {
+        return res.status(400).json({ error: 'Invalid layouts data' });
       }
 
-      // In a real implementation, you would save to database
-      // For now, we'll just return success
+      // Check if user settings exist
+      const existingSettings = await db.query.userSettings.findFirst({
+        where: eq(userSettings.user_email, user_email),
+      });
+
+      if (existingSettings) {
+        // Update existing settings
+        await db.update(userSettings)
+          .set({ layouts })
+          .where(eq(userSettings.user_email, user_email));
+      } else {
+        // Create new settings
+        await db.insert(userSettings).values({
+          user_email,
+          layouts,
+        });
+      }
+
       return res.status(200).json({ 
-        message: 'Layout saved successfully',
-        layout 
+        message: 'Layouts saved successfully',
+        layouts 
       });
     } catch (error) {
-      console.error('Error saving layout:', error);
+      console.error('Error saving layouts:', error);
       return res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
     }
   } else {
