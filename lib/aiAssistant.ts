@@ -191,7 +191,7 @@ export class SmartAIAssistant {
 
         // Calendar events (last 7 days + next 7 days)
         db.select().from(calendarEvents)
-          .where(eq(calendarEvents.userId, this.userId)),
+          .where(eq(calendarEvents.user_email, this.userId)),
 
         // Meetings (last 30 days)
         db.select().from(meetings)

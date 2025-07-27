@@ -78,7 +78,7 @@ export async function checkUpcomingMeetings() {
       const events = await db
         .select()
         .from(calendarEvents)
-        .where(and(eq(calendarEvents.userId, user_email), gt(sql`"start"->>'dateTime'`, now.toISOString())))
+        .where(and(eq(calendarEvents.user_email, user_email), gt(sql`"start"->>'dateTime'`, now.toISOString())))
         .orderBy(sql`"start"->>'dateTime' ASC`)
         .limit(10);
       
