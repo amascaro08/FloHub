@@ -85,14 +85,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       title: 'Table',
       description: 'Insert a table',
       icon: TableCellsIcon,
-      action: (editor) => {
-        editor.chain().focus().insertTable({ 
-          rows: 3, 
-          cols: 3, 
-          withHeaderRow: true 
-        }).run();
-        console.log('Table inserted');
-      },
+      action: (editor) => editor.chain().focus().insertTable({ 
+        rows: 3, 
+        cols: 3, 
+        withHeaderRow: true 
+      }).run(),
     },
     {
       id: 'codeBlock',
@@ -210,13 +207,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       
       // Get text before cursor position
       const textBefore = editor.state.doc.textBetween(Math.max(0, from - 20), from, '\n');
-      console.log('Text before cursor:', textBefore, 'Position:', from); // Debug log
       
       // Check if text ends with '/' and is not part of a larger word
       if (textBefore.endsWith('/') && (textBefore.length === 1 || textBefore[textBefore.length - 2] === ' ' || textBefore[textBefore.length - 2] === '\n')) {
         try {
           const coords = editor.view.coordsAtPos(from);
-          console.log('Showing slash menu at:', coords); // Debug log
           setSlashMenuPosition({ 
             x: coords.left, 
             y: coords.bottom + 10 
@@ -227,7 +222,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           console.error('Error getting cursor position:', error);
         }
       } else if (showSlashMenu && !textBefore.includes('/')) {
-        console.log('Hiding slash menu'); // Debug log
         setShowSlashMenu(false);
       }
     };
@@ -486,19 +480,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         {/* Utility */}
         <div className="flex items-center space-x-1 ml-auto">
           <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
-            Type "/" for commands {showSlashMenu && '(MENU ACTIVE)'}
+            Type "/" for commands
           </span>
-          
-          <button
-            onClick={() => {
-              console.log('Manual slash menu trigger');
-              setShowSlashMenu(!showSlashMenu);
-              setSlashMenuPosition({ x: 300, y: 200 });
-            }}
-            className="p-1 rounded text-xs bg-blue-500 text-white hover:bg-blue-600"
-          >
-            Test /
-          </button>
           
           <button
             onClick={() => editor?.chain().focus().undo().run()}
@@ -530,13 +513,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           editor={editor} 
           className="prose-editor"
         />
-        
-        {/* Debug indicator */}
-        {showSlashMenu && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs z-50">
-            SLASH MENU ACTIVE
-          </div>
-        )}
         
         {/* Slash Command Menu */}
         {showSlashMenu && (
