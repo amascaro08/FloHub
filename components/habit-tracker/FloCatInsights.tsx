@@ -4,7 +4,7 @@ import { Habit, HabitCompletion } from '@/types/habit-tracker';
 import { 
   SparklesIcon, 
   LightBulbIcon, 
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   HeartIcon,
   ClockIcon,
   AcademicCapIcon,
@@ -130,7 +130,7 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({
             'Your dedication is impressive! Consistency like this creates lasting positive change.',
             'Sustained consistency over extended periods demonstrates excellent habit formation.'
           ),
-          icon: TrendingUpIcon,
+                     icon: ArrowTrendingUpIcon,
           color: 'orange'
         });
       }
