@@ -3,7 +3,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@/lib/hooks/useUser";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import AddNoteModal from "@/components/notes/AddNoteModal";
 import NoteList from "@/components/notes/NoteList";
 import NoteDetail from "@/components/notes/NoteDetail";
 import type { GetNotesResponse } from "../api/notes/index";
@@ -76,11 +75,11 @@ export default function NotesPage() {
 
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
-  const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
 
   // Check if device is mobile
   useEffect(() => {
@@ -177,34 +176,38 @@ export default function NotesPage() {
     }
   };
 
-  // Update handleSaveNote to include new fields
-  const handleSaveNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean }) => {
+  // OneNote-style note creation - immediately create and open new note
+  const handleCreateNewNote = async () => {
+    if (isCreatingNote) return;
+    
+    setIsCreatingNote(true);
     setIsSaving(true);
+    
     try {
       const response = await fetch("/api/notes/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: note.title,
-          content: note.content,
-          tags: note.tags,
-          eventId: note.eventId,
-          eventTitle: note.eventTitle,
-          isAdhoc: note.isAdhoc,
+          title: "",
+          content: "",
+          tags: [],
+          isAdhoc: false,
         }),
       });
 
       if (response.ok) {
-        mutate();
-        setShowModal(false);
+        const newNote = await response.json();
+        await mutate(); // Refresh the notes list
+        setSelectedNoteId(newNote.id); // Open the new note immediately
       } else {
         const errorData = await response.json();
-        console.error("Failed to save note:", errorData.error);
+        console.error("Failed to create note:", errorData.error);
       }
     } catch (error) {
-      console.error("Error saving note:", error);
+      console.error("Error creating note:", error);
     } finally {
       setIsSaving(false);
+      setIsCreatingNote(false);
     }
   };
 
@@ -313,11 +316,21 @@ export default function NotesPage() {
             </div>
             
             <button
-              onClick={() => setShowModal(true)}
-              className="btn-primary flex items-center space-x-2 shadow-sm hover:shadow-md transition-all duration-200"
+              onClick={handleCreateNewNote}
+              disabled={isCreatingNote}
+              className="btn-primary flex items-center space-x-2 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
             >
-              <PlusIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Note</span>
+              {isCreatingNote ? (
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <PlusIcon className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">
+                {isCreatingNote ? 'Creating...' : 'New Note'}
+              </span>
             </button>
           </div>
         </div>
@@ -422,32 +435,31 @@ export default function NotesPage() {
                   <SparklesIcon className="w-10 h-10 text-primary-600 dark:text-primary-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                  Select a note to get started
+                  Ready to capture your thoughts?
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-6">
-                  Choose a note from the sidebar to view and edit it with our rich text editor.
+                  Click "New Note" to start writing with our rich text editor and slash commands.
                 </p>
                 <button
-                  onClick={() => setShowModal(true)}
-                  className="btn-primary flex items-center space-x-2 mx-auto"
+                  onClick={handleCreateNewNote}
+                  disabled={isCreatingNote}
+                  className="btn-primary flex items-center space-x-2 mx-auto disabled:opacity-50"
                 >
-                  <PlusIcon className="w-4 h-4" />
-                  <span>Create Your First Note</span>
+                  {isCreatingNote ? (
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <PlusIcon className="w-4 h-4" />
+                  )}
+                  <span>{isCreatingNote ? 'Creating Note...' : 'Create Your First Note'}</span>
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Add Note Modal */}
-      <AddNoteModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleSaveNote}
-        isSaving={isSaving}
-        existingTags={allAvailableTags}
-      />
     </div>
   );
 }

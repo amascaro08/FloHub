@@ -5,12 +5,33 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Color from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
-import { useState, useEffect } from 'react';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  ListBulletIcon, 
+  TableCellsIcon,
+  CodeBracketIcon,
+  PhotoIcon,
+  LinkIcon,
+  MinusIcon,
+  ChevronRightIcon
+} from '@heroicons/react/24/solid';
 
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
+}
+
+interface SlashCommand {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<any>;
+  action: (editor: any) => void;
 }
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -19,6 +40,75 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Write your thoughts...',
 }) => {
   const [isMounted, setIsMounted] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashMenuPosition, setSlashMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedCommand, setSelectedCommand] = useState(0);
+
+  const slashCommands: SlashCommand[] = [
+    {
+      id: 'heading1',
+      title: 'Heading 1',
+      description: 'Big section heading',
+      icon: () => <span className="font-bold text-lg">H1</span>,
+      action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+    },
+    {
+      id: 'heading2',
+      title: 'Heading 2',
+      description: 'Medium section heading',
+      icon: () => <span className="font-bold">H2</span>,
+      action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    },
+    {
+      id: 'heading3',
+      title: 'Heading 3',
+      description: 'Small section heading',
+      icon: () => <span className="font-bold text-sm">H3</span>,
+      action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+    },
+    {
+      id: 'bulletList',
+      title: 'Bullet List',
+      description: 'Create a simple bullet list',
+      icon: ListBulletIcon,
+      action: (editor) => editor.chain().focus().toggleBulletList().run(),
+    },
+    {
+      id: 'orderedList',
+      title: 'Numbered List',
+      description: 'Create a list with numbering',
+      icon: () => <span className="font-bold text-sm">1.</span>,
+      action: (editor) => editor.chain().focus().toggleOrderedList().run(),
+    },
+    {
+      id: 'table',
+      title: 'Table',
+      description: 'Insert a table',
+      icon: TableCellsIcon,
+      action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    },
+    {
+      id: 'codeBlock',
+      title: 'Code Block',
+      description: 'Insert a code block',
+      icon: CodeBracketIcon,
+      action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+    },
+    {
+      id: 'blockquote',
+      title: 'Quote',
+      description: 'Insert a quote block',
+      icon: () => <span className="text-lg">"</span>,
+      action: (editor) => editor.chain().focus().toggleBlockquote().run(),
+    },
+    {
+      id: 'divider',
+      title: 'Divider',
+      description: 'Insert a horizontal line',
+      icon: MinusIcon,
+      action: (editor) => editor.chain().focus().setHorizontalRule().run(),
+    },
+  ];
 
   // Initialize the editor
   const editor = useEditor({
@@ -36,6 +126,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
       }),
       Color,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -45,8 +141,45 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       attributes: {
         class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none p-4 min-h-[300px]',
       },
+      handleKeyDown: (view, event) => {
+        if (showSlashMenu) {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setSelectedCommand((prev) => (prev + 1) % slashCommands.length);
+            return true;
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setSelectedCommand((prev) => (prev - 1 + slashCommands.length) % slashCommands.length);
+            return true;
+          }
+          if (event.key === 'Enter' || event.key === 'Tab') {
+            event.preventDefault();
+            executeSlashCommand(slashCommands[selectedCommand]);
+            return true;
+          }
+          if (event.key === 'Escape') {
+            setShowSlashMenu(false);
+            return true;
+          }
+        }
+        return false;
+      },
     },
   });
+
+  const executeSlashCommand = useCallback((command: SlashCommand) => {
+    if (!editor) return;
+    
+    // Remove the "/" character
+    const { from } = editor.state.selection;
+    editor.chain().focus().deleteRange({ from: from - 1, to: from }).run();
+    
+    // Execute the command
+    command.action(editor);
+    setShowSlashMenu(false);
+    setSelectedCommand(0);
+  }, [editor]);
 
   // Handle client-side rendering
   useEffect(() => {
@@ -60,6 +193,44 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   }, [content, editor]);
 
+  // Handle slash command detection
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleTransaction = () => {
+      const { selection } = editor.state;
+      const { from } = selection;
+      const text = editor.state.doc.textBetween(Math.max(0, from - 10), from, '\n');
+      
+      if (text.endsWith('/')) {
+        const coords = editor.view.coordsAtPos(from);
+        setSlashMenuPosition({ 
+          x: coords.left, 
+          y: coords.bottom + 10 
+        });
+        setShowSlashMenu(true);
+        setSelectedCommand(0);
+      } else if (showSlashMenu && !text.includes('/')) {
+        setShowSlashMenu(false);
+      }
+    };
+
+    editor.on('transaction', handleTransaction);
+    return () => editor.off('transaction', handleTransaction);
+  }, [editor, showSlashMenu]);
+
+  // Close slash menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowSlashMenu(false);
+    };
+
+    if (showSlashMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showSlashMenu]);
+
   if (!isMounted) {
     return (
       <div className="animate-pulse">
@@ -70,7 +241,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }
 
   return (
-    <div className="rich-text-editor w-full">
+    <div className="rich-text-editor w-full relative">
       {/* Toolbar */}
       <div className="toolbar bg-white dark:bg-slate-800 rounded-t-xl p-3 flex flex-wrap gap-1 border border-slate-200 dark:border-slate-600 border-b-0">
         {/* Text formatting */}
@@ -172,24 +343,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             }`}
             title="Bullet List"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 4h13v2H8V4zM4.5 6.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 6.9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM8 11h13v2H8v-2zm0 7h13v2H8v-2z" />
-            </svg>
+            <ListBulletIcon className="w-4 h-4" />
           </button>
           
-          <button
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-            className={`p-2 rounded-lg transition-all ${
-              editor?.isActive('orderedList')
-                ? 'bg-[#00C9A7] text-white shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-            }`}
-            title="Numbered List"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 4h13v2H8V4zM5 3v3h1v1H3V6h1V4H3V3h2zM3 14v-2.5h2V11c0-.55-.45-1-1-1s-1 .45-1 1H2c0-1.1.9-2 2-2s2 .9 2 2v1.5c0 .55-.45 1-1 1h-1V14h2v1H3v-1zm2.25 5.5c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm-.75 1.5h-1v-1h1v1zm-1-2.5v-1h1v1h-1zM8 11h13v2H8v-2zm0 7h13v2H8v-2z" />
-            </svg>
-          </button>
+                      <button
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              className={`p-2 rounded-lg transition-all ${
+                editor?.isActive('orderedList')
+                  ? 'bg-[#00C9A7] text-white shadow-sm'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+              }`}
+              title="Numbered List"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 4h13v2H8V4zM5 3v3h1v1H3V6h1V4H3V3h2zM3 14v-2.5h2V11c0-.55-.45-1-1-1s-1 .45-1 1H2c0-1.1.9-2 2-2s2 .9 2 2v1.5c0 .55-.45 1-1 1h-1V14h2v1H3v-1zm2.25 5.5c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm-.75 1.5h-1v-1h1v1zm-1-2.5v-1h1v1h-1zM8 11h13v2H8v-2zm0 7h13v2H8v-2z" />
+              </svg>
+            </button>
           
           <button
             onClick={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -208,17 +377,38 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
         
+        {/* Table controls */}
+        {editor?.isActive('table') && (
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => editor?.chain().focus().addColumnBefore().run()}
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
+              title="Add Column Before"
+            >
+              <TableCellsIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor?.chain().focus().addRowAfter().run()}
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
+              title="Add Row After"
+            >
+              <span className="text-xs">+R</span>
+            </button>
+            <button
+              onClick={() => editor?.chain().focus().deleteTable().run()}
+              className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-all"
+              title="Delete Table"
+            >
+              <span className="text-xs">Del</span>
+            </button>
+          </div>
+        )}
+        
         {/* Utility */}
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
-            title="Horizontal Line"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M2 11h2v2H2v-2zm4 0h12v2H6v-2zm14 0h2v2h-2v-2z" />
-            </svg>
-          </button>
+        <div className="flex items-center space-x-1 ml-auto">
+          <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
+            Type "/" for commands
+          </span>
           
           <button
             onClick={() => editor?.chain().focus().undo().run()}
@@ -245,11 +435,53 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       {/* Editor Content */}
-      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden">
+      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative">
         <EditorContent 
           editor={editor} 
           className="prose-editor"
         />
+        
+        {/* Slash Command Menu */}
+        {showSlashMenu && (
+          <div 
+            className="absolute z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
+            style={{
+              left: slashMenuPosition.x,
+              top: slashMenuPosition.y,
+            }}
+          >
+            <div className="px-3 py-1 text-xs text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-600 mb-1">
+              Quick Insert
+            </div>
+            {slashCommands.map((command, index) => {
+              const Icon = command.icon;
+              return (
+                <button
+                  key={command.id}
+                  className={`w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-3 transition-colors ${
+                    index === selectedCommand ? 'bg-slate-100 dark:bg-slate-700' : ''
+                  }`}
+                  onClick={() => executeSlashCommand(command)}
+                >
+                  <div className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900 dark:text-white text-sm">
+                      {command.title}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {command.description}
+                    </div>
+                  </div>
+                  {index === selectedCommand && (
+                    <ChevronRightIcon className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       <style jsx global>{`
@@ -371,6 +603,73 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         .prose-editor .ProseMirror a:hover {
           color: rgb(13 148 136);
+        }
+        
+        .prose-editor .ProseMirror code {
+          background: rgb(248 250 252);
+          padding: 0.125rem 0.25rem;
+          border-radius: 0.25rem;
+          font-size: 0.875em;
+        }
+        
+        .dark .prose-editor .ProseMirror code {
+          background: rgb(30 41 59);
+        }
+        
+        .prose-editor .ProseMirror pre {
+          background: rgb(248 250 252);
+          padding: 1rem;
+          border-radius: 0.5rem;
+          overflow-x: auto;
+          margin: 1rem 0;
+        }
+        
+        .dark .prose-editor .ProseMirror pre {
+          background: rgb(30 41 59);
+        }
+        
+        .prose-editor .ProseMirror table {
+          border-collapse: collapse;
+          margin: 1rem 0;
+          overflow: hidden;
+          table-layout: fixed;
+          width: 100%;
+        }
+        
+        .prose-editor .ProseMirror table td,
+        .prose-editor .ProseMirror table th {
+          border: 1px solid rgb(226 232 240);
+          box-sizing: border-box;
+          min-width: 1em;
+          padding: 0.5rem;
+          position: relative;
+          vertical-align: top;
+        }
+        
+        .dark .prose-editor .ProseMirror table td,
+        .dark .prose-editor .ProseMirror table th {
+          border-color: rgb(71 85 105);
+        }
+        
+        .prose-editor .ProseMirror table th {
+          background-color: rgb(248 250 252);
+          font-weight: 600;
+        }
+        
+        .dark .prose-editor .ProseMirror table th {
+          background-color: rgb(30 41 59);
+        }
+        
+        .prose-editor .ProseMirror table .selectedCell:after {
+          background: rgba(13, 148, 136, 0.1);
+          content: "";
+          left: 0;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 2;
         }
         
         .prose-editor .ProseMirror p.is-editor-empty:first-child::before {
