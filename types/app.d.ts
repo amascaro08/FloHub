@@ -5,7 +5,7 @@
 // Define a type for user settings
 export type UserSettings = {
   selectedCals?: string[];
-  defaultView?: "today" | "tomorrow" | "week" | "month" | "custom";
+  defaultView?: "today" | "tomorrow" | "week" | "month" | "agenda" | "timeline" | "custom";
   customRange?: { start: string; end: string };
   powerAutomateUrl?: string;
   globalTags?: string[];

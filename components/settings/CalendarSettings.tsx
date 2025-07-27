@@ -545,6 +545,8 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
           <option value="tomorrow">Tomorrow</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
+          <option value="agenda">Agenda (30 days)</option>
+          <option value="timeline">Timeline (30 days)</option>
           <option value="custom">Custom Range</option>
         </select>
 
