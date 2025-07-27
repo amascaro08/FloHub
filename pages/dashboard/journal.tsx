@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { getCurrentDate, formatDate } from "@/lib/dateUtils";
 import axios from "axios";
 import { useUser } from "@/lib/hooks/useUser";
+import MainLayout from "@/components/ui/MainLayout";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
@@ -22,6 +23,13 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 import JournalImport from "@/components/journal/JournalImport";
 import FloCatInsights from "@/components/journal/FloCatInsights";
+import { 
+  PlusIcon, 
+  BookOpenIcon,
+  CalendarDaysIcon,
+  SparklesIcon,
+  CogIcon
+} from '@heroicons/react/24/solid';
 
 export default function JournalPage() {
   const { user, isLoading } = useUser();
@@ -31,24 +39,28 @@ export default function JournalPage() {
   // Handle loading state
   if (status === 'unauthenticated') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="animate-pulse text-center">
-          <div className="w-16 h-16 bg-teal-200 dark:bg-teal-800 rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-300">Loading your journal...</p>
+      <MainLayout requiresAuth={true}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-pulse text-center">
+            <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+            <p className="text-grey-tint">Loading your journal...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   // Handle unauthenticated state
   if (status !== 'authenticated' || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <p className="text-slate-600 dark:text-slate-300">Please sign in to access your journal.</p>
+      <MainLayout requiresAuth={true}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <p className="text-grey-tint">Please sign in to access your journal.</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
@@ -214,100 +226,111 @@ export default function JournalPage() {
   };
 
   const tabs = [
-    { id: 'today', label: 'Today', icon: '✍️' },
-    { id: 'timeline', label: 'Timeline', icon: '📅' },
-    { id: 'insights', label: 'Insights', icon: '🐱' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
+    { id: 'today', label: 'Today', icon: BookOpenIcon },
+    { id: 'timeline', label: 'Timeline', icon: CalendarDaysIcon },
+    { id: 'insights', label: 'FloCat Insights', icon: SparklesIcon },
+    { id: 'settings', label: 'Settings', icon: CogIcon }
   ];
 
   return (
-    <>
+    <MainLayout requiresAuth={true}>
       <Head>
-        <link rel="stylesheet" href="/styles/journal.css" />
+        <title>Journal | FlowHub</title>
+        <meta name="description" content="Capture your thoughts, track moods, and reflect on your journey with FlowHub's intelligent journal" />
       </Head>
       
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="bg-soft-white dark:bg-dark-base border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
-                  <span className="text-4xl mr-3">📔</span>
-                  Journal
-                </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  {selectedDate === today 
-                    ? "Today's entry" 
-                    : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} entry`
-                  }
-                </p>
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
+                    <span className="text-white text-lg">📔</span>
+                  </div>
+                  <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
+                    Journal
+                  </h1>
+                </div>
               </div>
               
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setShowImport(true)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
+                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-grey-tint hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                 >
-                  Import Data
+                  <span className="hidden sm:inline">Import Data</span>
+                  <span className="sm:hidden">Import</span>
                 </button>
                 
                 <button
                   onClick={saveAllJournalData}
                   disabled={isSaving}
-                  className={`px-6 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`inline-flex items-center px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
                     isSaving
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
-                      : 'bg-[#00C9A7] text-white hover:bg-teal-600 shadow-lg shadow-teal-500/25'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-grey-tint cursor-not-allowed'
+                      : 'bg-primary-500 hover:bg-primary-600 text-white'
                   }`}
                 >
                   {isSaving ? (
                     <div className="flex items-center">
-                      <div className="animate-spin h-4 w-4 border-2 border-slate-400 rounded-full border-t-transparent mr-2"></div>
-                      Saving...
+                      <div className="animate-spin h-4 w-4 border-2 border-grey-tint rounded-full border-t-transparent mr-2"></div>
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">...</span>
                     </div>
                   ) : (
                     <div className="flex items-center">
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Save All
+                      <span className="hidden sm:inline">Save All</span>
+                      <span className="sm:hidden">Save</span>
                     </div>
                   )}
                 </button>
               </div>
             </div>
-            
-            {/* Tab Navigation */}
-            <div className="flex space-x-1 -mb-px">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-all ${
-                    activeTab === tab.id
-                      ? 'border-[#00C9A7] text-[#00C9A7] bg-[#00C9A7]/5'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <span className="text-lg mr-2">{tab.icon}</span>
-                    {tab.label}
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-200px)] overflow-hidden">
-          
-          {/* Today Tab */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Navigation Tabs */}
+          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                    : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
+                }`}
+              >
+                <tab.icon className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">
+                  {tab.id === 'today' ? 'Today' : tab.id === 'timeline' ? 'Time' : tab.id === 'insights' ? '😺' : 'Set'}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Date indicator */}
+          <div className="mb-6">
+            <p className="text-sm text-grey-tint">
+              {selectedDate === today 
+                ? "Today's entry" 
+                : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} entry`
+              }
+            </p>
+          </div>
+
+          {/* Content based on current view */}
           {activeTab === 'today' && (
-            <div className="max-w-4xl mx-auto space-y-8 h-full overflow-y-auto">
+            <div className="space-y-6">
               {/* Main Entry */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">
                 {isSelectedToday || isEditing ? (
                   <TodayEntry
                     onSave={handleSaveEntry}
@@ -328,8 +351,8 @@ export default function JournalPage() {
               {/* Wellbeing Tracking */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Mood */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">😊</span>
                     Mood
                   </h3>
@@ -337,8 +360,8 @@ export default function JournalPage() {
                 </div>
 
                 {/* Activities */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">🎯</span>
                     Activities
                   </h3>
@@ -350,8 +373,8 @@ export default function JournalPage() {
                 </div>
 
                 {/* Sleep */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">😴</span>
                     Sleep
                   </h3>
@@ -364,7 +387,7 @@ export default function JournalPage() {
               </div>
 
               {/* On This Day */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                 <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
               </div>
             </div>
@@ -372,16 +395,17 @@ export default function JournalPage() {
 
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
-            <div className="max-w-6xl mx-auto space-y-6 h-full overflow-y-auto">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <div className="space-y-6">
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Your Journal Timeline</h3>
+                  <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">Your Journal Timeline</h3>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setActiveTab('today')}
-                      className="px-4 py-2 rounded-xl bg-[#00C9A7] text-white text-sm font-medium hover:bg-teal-600 transition-colors"
+                      className="px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
-                      Back to Today
+                      <span className="hidden sm:inline">Back to Today</span>
+                      <span className="sm:hidden">Today</span>
                     </button>
                   </div>
                 </div>
@@ -392,7 +416,7 @@ export default function JournalPage() {
                 />
               </div>
               
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                 <JournalCalendar
                   onSelectDate={handleSelectDate}
                   timezone={timezone}
@@ -404,81 +428,81 @@ export default function JournalPage() {
 
           {/* Insights Tab */}
           {activeTab === 'insights' && (
-            <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto">
+            <div className="space-y-6">
               <FloCatInsights 
                 refreshTrigger={refreshTrigger}
                 timezone={timezone}
               />
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                   <JournalSummary refreshTrigger={refreshTrigger} />
                 </div>
                 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                   <MoodStatistics refreshTrigger={refreshTrigger} />
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">😴</span>
                     Sleep Insights
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Avg Sleep Hours</span>
-                      <span className="font-medium text-slate-900 dark:text-white">7.5h</span>
+                      <span className="text-sm text-grey-tint">Avg Sleep Hours</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">7.5h</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Quality</span>
-                      <span className="font-medium text-slate-900 dark:text-white">Good</span>
+                      <span className="text-sm text-grey-tint">Sleep Quality</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">Good</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Consistency</span>
-                      <span className="font-medium text-slate-900 dark:text-white">85%</span>
+                      <span className="text-sm text-grey-tint">Consistency</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">85%</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">🎯</span>
                     Activity Patterns
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Most Frequent</span>
-                      <span className="font-medium text-slate-900 dark:text-white">Exercise (12x)</span>
+                      <span className="text-sm text-grey-tint">Most Frequent</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">Exercise (12x)</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Variety</span>
-                      <span className="font-medium text-slate-900 dark:text-white">8 different</span>
+                      <span className="text-sm text-grey-tint">Activity Variety</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">8 different</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Active Days</span>
-                      <span className="font-medium text-slate-900 dark:text-white">22/30</span>
+                      <span className="text-sm text-grey-tint">Active Days</span>
+                      <span className="font-medium text-dark-base dark:text-soft-white">22/30</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
                     <span className="text-2xl mr-3">📈</span>
                     Trends
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Mood Trend</span>
+                      <span className="text-sm text-grey-tint">Mood Trend</span>
                       <span className="font-medium text-green-600 dark:text-green-400">↗ Improving</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Trend</span>
+                      <span className="text-sm text-grey-tint">Sleep Trend</span>
                       <span className="font-medium text-blue-600 dark:text-blue-400">→ Stable</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Trend</span>
+                      <span className="text-sm text-grey-tint">Activity Trend</span>
                       <span className="font-medium text-purple-600 dark:text-purple-400">↗ Increasing</span>
                     </div>
                   </div>
@@ -489,10 +513,8 @@ export default function JournalPage() {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="max-w-4xl mx-auto h-full">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 h-full overflow-hidden">
-                <JournalSettings onClose={() => setActiveTab('today')} />
-              </div>
+            <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">
+              <JournalSettings onClose={() => setActiveTab('today')} />
             </div>
           )}
         </div>
@@ -500,7 +522,7 @@ export default function JournalPage() {
         {/* Floating Action Button (Mobile) */}
         {isMobile && activeTab === 'today' && (
           <button
-            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#00C9A7] text-white flex items-center justify-center shadow-xl shadow-teal-500/25 hover:shadow-2xl hover:shadow-teal-500/30 transition-all duration-300 hover:scale-110 z-20"
+            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 z-20"
             onClick={() => {
               setSelectedDate(today);
               setIsEditing(true);
@@ -523,7 +545,7 @@ export default function JournalPage() {
 
         {/* Success Message */}
         {saveSuccess && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-[#00C9A7] to-teal-600 text-white rounded-2xl shadow-xl border border-teal-300 animate-fade-in-out z-50">
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl shadow-xl border border-primary-300 animate-fade-in-out z-50">
             <div className="flex items-center">
               <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -533,6 +555,6 @@ export default function JournalPage() {
           </div>
         )}
       </div>
-    </>
+    </MainLayout>
   );
 }
