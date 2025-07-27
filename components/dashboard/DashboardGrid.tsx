@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, memo, useMemo, lazy, Suspense, useCallback
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
+import ErrorBoundary from '../ui/ErrorBoundary';
 import {
   CheckSquare,
   Calendar,
@@ -460,7 +461,9 @@ const DashboardGrid = () => {
                 
                 <div className="widget-content">
                   {visibleWidgets.includes(key) ? (
-                    memoizedWidgetComponents[key as WidgetType]
+                    <ErrorBoundary>
+                      {memoizedWidgetComponents[key as WidgetType]}
+                    </ErrorBoundary>
                   ) : (
                     <WidgetSkeleton type={key} />
                   )}

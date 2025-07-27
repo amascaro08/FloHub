@@ -63,6 +63,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
     
+    // Safety check to prevent errors when events is undefined
+    if (!events || !Array.isArray(events)) {
+      return grouped;
+    }
+    
     events.forEach(event => {
       let eventDate: Date;
       
@@ -169,6 +174,19 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
     return eventsByDate.get(todayKey) || [];
   }, [eventsByDate]);
 
+  // Get events to display (selected date or today)
+  const { displayEvents, displayTitle } = useMemo(() => {
+    const isSelectedDateToday = selectedDate && isSameDay(selectedDate, new Date());
+    const events = selectedDate && !isSelectedDateToday
+      ? eventsByDate.get(format(selectedDate, 'yyyy-MM-dd')) || []
+      : todayEvents;
+    const title = selectedDate && !isSelectedDateToday
+      ? `Events for ${format(selectedDate, 'MMM d')}`
+      : "Today's Events";
+    
+    return { displayEvents: events, displayTitle: title };
+  }, [selectedDate, eventsByDate, todayEvents]);
+
   return (
     <div className="space-y-4">
       {/* Calendar Header */}
@@ -261,20 +279,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
       </div>
 
       {/* Selected Date Events or Today's Events Preview */}
-      {(() => {
-        const displayEvents = selectedDate && !isSameDay(selectedDate, new Date()) 
-          ? eventsByDate.get(format(selectedDate, 'yyyy-MM-dd')) || []
-          : todayEvents;
-        const displayTitle = selectedDate && !isSameDay(selectedDate, new Date())
-          ? `Events for ${format(selectedDate, 'MMM d')}`
-          : "Today's Events";
-        
-        return displayEvents.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-primary-500" />
-              <span>{displayTitle} ({displayEvents.length})</span>
-            </h4>
+      {displayEvents.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <Clock className="w-4 h-4 text-primary-500" />
+            <span>{displayTitle} ({displayEvents.length})</span>
+          </h4>
                      <div className="space-y-2">
              {displayEvents.slice(0, 3).map((event) => (
               <button
@@ -318,10 +328,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                 +{displayEvents.length - 3} more events
               </p>
             )}
-            </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* Empty State */}
       {events.length === 0 && (
