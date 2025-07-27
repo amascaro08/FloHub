@@ -14,7 +14,9 @@ import {
   Edit3, 
   Calendar,
   Tag,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r) => {
@@ -73,6 +75,8 @@ function TaskWidget() {
   const [celebrating, setCelebrating] = useState(false);
   const [taskSource, setTaskSource] = useState<"personal" | "work">("personal");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showIncomplete, setShowIncomplete] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Combine unique tags from tasks and global tags from settings
   const allAvailableTags = useMemo(() => {
@@ -159,7 +163,7 @@ function TaskWidget() {
 
   const toggleComplete = async (t: Task) => {
     try {
-      const response = await fetch(`/api/tasks/${t.id}`, {
+      const response = await fetch(`/api/tasks`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: t.id, done: !t.done }),
@@ -391,10 +395,16 @@ function TaskWidget() {
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <button
+              onClick={() => setShowIncomplete(!showIncomplete)}
+              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+            >
+              {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               <Clock className="w-4 h-4 text-primary-500" />
               <span>Incomplete ({incompleteTasks.length})</span>
-            </h3>
+            </button>
+            {showIncomplete && (
+              <div className="space-y-2 ml-4">
             {incompleteTasks.map((task) => (
               <div
                 key={task.id}
@@ -455,16 +465,24 @@ function TaskWidget() {
                 </div>
               </div>
             ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Completed Tasks */}
         {completedTasks.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+            >
+              {showCompleted ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span>Completed ({completedTasks.length})</span>
-            </h3>
+            </button>
+            {showCompleted && (
+              <div className="space-y-2 ml-4">
             {completedTasks.slice(0, 3).map((task) => (
               <div
                 key={task.id}
@@ -488,6 +506,8 @@ function TaskWidget() {
               <p className="text-xs text-grey-tint text-center">
                 +{completedTasks.length - 3} more completed tasks
               </p>
+            )}
+              </div>
             )}
           </div>
         )}

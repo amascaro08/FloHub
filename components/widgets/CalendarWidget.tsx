@@ -260,15 +260,23 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
         </div>
       </div>
 
-      {/* Today's Events Preview */}
-      {todayEvents.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-primary-500" />
-            <span>Today's Events ({todayEvents.length})</span>
-          </h4>
+      {/* Selected Date Events or Today's Events Preview */}
+      {(() => {
+        const displayEvents = selectedDate && !isSameDay(selectedDate, new Date()) 
+          ? eventsByDate.get(format(selectedDate, 'yyyy-MM-dd')) || []
+          : todayEvents;
+        const displayTitle = selectedDate && !isSameDay(selectedDate, new Date())
+          ? `Events for ${format(selectedDate, 'MMM d')}`
+          : "Today's Events";
+        
+        return displayEvents.length > 0 && (
           <div className="space-y-2">
-            {todayEvents.slice(0, 3).map((event) => (
+            <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-primary-500" />
+              <span>{displayTitle} ({displayEvents.length})</span>
+            </h4>
+                     <div className="space-y-2">
+             {displayEvents.slice(0, 3).map((event) => (
               <button
                 key={event.id}
                 onClick={() => handleEventClick(event)}
@@ -305,14 +313,15 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
                 </div>
               </button>
             ))}
-            {todayEvents.length > 3 && (
+            {displayEvents.length > 3 && (
               <p className="text-xs text-grey-tint text-center">
-                +{todayEvents.length - 3} more events today
+                +{displayEvents.length - 3} more events
               </p>
             )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Empty State */}
       {events.length === 0 && (

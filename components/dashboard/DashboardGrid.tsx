@@ -300,16 +300,19 @@ const DashboardGrid = () => {
       return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
     });
 
-    setVisibleWidgets([]);
-    setLoadingProgress(0);
+    // Set all widgets as visible immediately to fix visibility issue
+    setVisibleWidgets(sortedWidgets);
+    setLoadingProgress(100);
 
-    // Load widgets progressively
-    sortedWidgets.forEach((widget, index) => {
-      setTimeout(() => {
-        setVisibleWidgets(prev => [...prev, widget]);
-        setLoadingProgress(((index + 1) / sortedWidgets.length) * 100);
-      }, index * 200); // 200ms delay between widgets
-    });
+    // If we want progressive loading, we can enable it with faster loading:
+    // setVisibleWidgets([]);
+    // setLoadingProgress(0);
+    // sortedWidgets.forEach((widget, index) => {
+    //   setTimeout(() => {
+    //     setVisibleWidgets(prev => [...prev, widget]);
+    //     setLoadingProgress(((index + 1) / sortedWidgets.length) * 100);
+    //   }, index * 100); // Reduced delay to 100ms
+    // });
   }, [activeWidgets, loadedSettings]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {

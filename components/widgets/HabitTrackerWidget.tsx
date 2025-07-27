@@ -11,7 +11,9 @@ import {
   Sparkles,
   Calendar,
   TrendingUp,
-  Target
+  Target,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface Habit {
@@ -39,6 +41,7 @@ const HabitTrackerWidget: React.FC = () => {
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily');
   const [newHabitCustomDays, setNewHabitCustomDays] = useState<number[]>([]);
+  const [showAllHabits, setShowAllHabits] = useState(false);
 
   // Load habits and completions
   useEffect(() => {
@@ -388,11 +391,16 @@ const HabitTrackerWidget: React.FC = () => {
       {/* All Habits Summary */}
       {habits.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+          <button
+            onClick={() => setShowAllHabits(!showAllHabits)}
+            className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+          >
+            {showAllHabits ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             <Calendar className="w-4 h-4 text-primary-500" />
             <span>All Habits ({habits.length})</span>
-          </h4>
-          <div className="space-y-2">
+          </button>
+          {showAllHabits && (
+            <div className="space-y-2 ml-4">
             {habits.slice(0, 3).map((habit) => (
               <div
                 key={habit.id}
@@ -416,7 +424,8 @@ const HabitTrackerWidget: React.FC = () => {
                 +{habits.length - 3} more habits
               </p>
             )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
