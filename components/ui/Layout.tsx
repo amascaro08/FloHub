@@ -15,14 +15,14 @@ import WidgetToggle from './WidgetToggle';
 import LogoutButton from './LogoutButton';
 
 const nav = [
-  { name: "Hub", href: "/dashboard", icon: Home },
+  { name: "Hub", href: "/dashboard", icon: LayoutDashboard },
   { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-  { name: "Notes", href: "/dashboard/notes", icon: NotepadText },
-  { name: "Habits", href: "/habit-tracker", icon: Book },
+  { name: "Notes", href: "/dashboard/notes", icon: StickyNote },
+  { name: "Habits", href: "/habit-tracker", icon: Repeat },
   { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
-  { name: "Feedback", href: "/feedback", icon: NotebookPen },
+  { name: "Feedback", href: "/feedback", icon: MessageSquareDashed },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {
