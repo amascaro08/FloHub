@@ -3,7 +3,8 @@ import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { signToken, setCookie } from '@/lib/auth';
+import { signToken } from '@/lib/auth';
+import { createSecureCookie } from '@/lib/cookieUtils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Add CORS headers for cross-domain support
@@ -56,9 +57,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create JWT token
     const token = signToken({ userId: user.id, email: user.email });
 
-    // Set cookie with security awareness
+    // Set cookie with proper domain handling using the new utility
     const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
-    setCookie(res, 'auth-token', token, maxAge, req);
+    const authCookie = createSecureCookie(req, 'auth-token', token, {
+      maxAge,
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    });
+    
+    res.setHeader('Set-Cookie', authCookie);
 
     // Add cache control headers
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
