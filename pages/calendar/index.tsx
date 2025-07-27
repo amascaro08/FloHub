@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useUser } from "@/lib/hooks/useUser";
 import Head from 'next/head';
-import MainLayout from "@/components/ui/MainLayout";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth, startOfDay, endOfDay, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
@@ -382,21 +381,19 @@ const CalendarPage = () => {
 
   if (!user || status === 'unauthenticated') {
     return (
-      <MainLayout requiresAuth={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🔒</div>
-            <p className="text-grey-tint">Please sign in to access your calendar.</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-grey-tint">Please sign in to access your calendar.</p>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   // Show skeleton only during initial loading, not during background refreshes
   if (isLoading && !hasEvents && !fetchError) {
     return (
-      <MainLayout requiresAuth={true}>
+      <>
         <Head>
           <title>Calendar | FlowHub</title>
           <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
@@ -467,14 +464,14 @@ const CalendarPage = () => {
             </div>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   // Handle persistent errors that should show error state
   if ((settingsError || fetchError) && !isLoading && !hasEvents) {
     return (
-      <MainLayout requiresAuth={true}>
+      <>
         <Head>
           <title>Calendar | FlowHub</title>
           <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
@@ -510,7 +507,7 @@ const CalendarPage = () => {
             </div>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
@@ -523,7 +520,7 @@ const CalendarPage = () => {
   ];
 
   return (
-    <MainLayout requiresAuth={true}>
+    <>
       <Head>
         <title>Calendar | FlowHub</title>
         <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
@@ -1329,7 +1326,7 @@ const CalendarPage = () => {
           }
         />
       </div>
-    </MainLayout>
+    </>
   );
 };
 
