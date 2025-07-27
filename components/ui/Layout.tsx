@@ -183,7 +183,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     {user.primaryEmail || user.email || 'User'}
                   </p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                    FlowHub Account
+                    FloHub Account
                   </p>
                 </div>
               </div>
