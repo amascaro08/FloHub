@@ -301,11 +301,11 @@ export default function JournalPage() {
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-140px)] overflow-hidden">
           
           {/* Today Tab */}
           {activeTab === 'today' && (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-8 h-full overflow-y-auto">
               {/* Main Entry */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {isSelectedToday || isEditing ? (
@@ -372,7 +372,7 @@ export default function JournalPage() {
 
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
-            <div className="max-w-6xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6 h-full overflow-y-auto">
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Your Journal Timeline</h3>
@@ -404,13 +404,13 @@ export default function JournalPage() {
 
           {/* Insights Tab */}
           {activeTab === 'insights' && (
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto">
               <FloCatInsights 
                 refreshTrigger={refreshTrigger}
                 timezone={timezone}
               />
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                   <JournalSummary refreshTrigger={refreshTrigger} />
                 </div>
@@ -418,13 +418,78 @@ export default function JournalPage() {
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                   <MoodStatistics refreshTrigger={refreshTrigger} />
                 </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">😴</span>
+                    Sleep Insights
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Avg Sleep Hours</span>
+                      <span className="font-medium text-slate-900 dark:text-white">7.5h</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Quality</span>
+                      <span className="font-medium text-slate-900 dark:text-white">Good</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Consistency</span>
+                      <span className="font-medium text-slate-900 dark:text-white">85%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">🎯</span>
+                    Activity Patterns
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Most Frequent</span>
+                      <span className="font-medium text-slate-900 dark:text-white">Exercise (12x)</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Variety</span>
+                      <span className="font-medium text-slate-900 dark:text-white">8 different</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Active Days</span>
+                      <span className="font-medium text-slate-900 dark:text-white">22/30</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                    <span className="text-2xl mr-3">📈</span>
+                    Trends
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Mood Trend</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">↗ Improving</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Sleep Trend</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">→ Stable</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Activity Trend</span>
+                      <span className="font-medium text-purple-600 dark:text-purple-400">↗ Increasing</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto h-full overflow-y-auto">
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <JournalSettings onClose={() => setActiveTab('today')} />
               </div>

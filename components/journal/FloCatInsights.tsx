@@ -166,14 +166,26 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     if (activityInsights.length > 0) {
       insights.push(...activityInsights);
     }
+
+    // Sleep quality insights
+    const sleepInsights = analyzeSleepPatterns(data);
+    if (sleepInsights.length > 0) {
+      insights.push(...sleepInsights);
+    }
+
+    // Activity consistency insights
+    const consistencyInsights = analyzeActivityConsistency(data);
+    if (consistencyInsights.length > 0) {
+      insights.push(...consistencyInsights);
+    }
     
     // If we don't have enough insights, add some encouragement
     if (insights.length < 2) {
       insights.push(...getEncouragementInsights(data));
     }
     
-    // Sort by confidence and return top 4
-    return insights.sort((a, b) => b.confidence - a.confidence).slice(0, 4);
+    // Sort by confidence and return top 6
+    return insights.sort((a, b) => b.confidence - a.confidence).slice(0, 6);
   };
 
   const calculateJournalingStreak = (data: JournalData[]): number => {
@@ -328,6 +340,104 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
         message: `You've done ${topActivity.toLowerCase()} ${count} times this month. You're really committed to this!`,
         icon: getActivityIcon(topActivity),
         confidence: 60
+      });
+    }
+    
+    return insights;
+  };
+
+  const analyzeSleepPatterns = (data: JournalData[]): Insight[] => {
+    const insights: Insight[] = [];
+    const sleepData = data.filter(day => day.sleep);
+    
+    if (sleepData.length < 5) return insights;
+    
+    // Analyze sleep duration patterns
+    const avgSleepHours = sleepData.reduce((sum, day) => sum + (day.sleep?.hours || 7), 0) / sleepData.length;
+    
+    if (avgSleepHours >= 8) {
+      insights.push({
+        id: 'good_sleep_duration',
+        type: 'encouragement',
+        title: 'Sleep Champion! 😴',
+        message: `You're averaging ${avgSleepHours.toFixed(1)} hours of sleep per night. That's excellent for your health!`,
+        icon: '😴',
+        confidence: 80
+      });
+    } else if (avgSleepHours < 6.5) {
+      insights.push({
+        id: 'low_sleep_warning',
+        type: 'suggestion',
+        title: 'Sleep Goals 🎯',
+        message: `You're averaging ${avgSleepHours.toFixed(1)} hours of sleep. Try aiming for 7-9 hours for better wellbeing!`,
+        icon: '⏰',
+        confidence: 85
+      });
+    }
+    
+    // Analyze sleep quality trends
+    const recentSleep = sleepData.slice(-7);
+    const goodSleepDays = recentSleep.filter(day => 
+      day.sleep?.quality === 'Great' || day.sleep?.quality === 'Good'
+    ).length;
+    
+    if (goodSleepDays >= 5) {
+      insights.push({
+        id: 'sleep_quality_streak',
+        type: 'encouragement',
+        title: 'Quality Sleep Streak! ✨',
+        message: `${goodSleepDays} out of 7 nights with good sleep this week. Your sleep routine is working!`,
+        icon: '🌙',
+        confidence: 75
+      });
+    }
+    
+    return insights;
+  };
+
+  const analyzeActivityConsistency = (data: JournalData[]): Insight[] => {
+    const insights: Insight[] = [];
+    const recentData = data.slice(-14); // Last 2 weeks
+    
+    // Find activities that appear consistently
+    const activityFreq: {[key: string]: number} = {};
+    recentData.forEach(day => {
+      if (day.activities) {
+        day.activities.forEach(activity => {
+          activityFreq[activity] = (activityFreq[activity] || 0) + 1;
+        });
+      }
+    });
+    
+    Object.entries(activityFreq).forEach(([activity, count]) => {
+      if (count >= 8) { // At least 8 out of 14 days
+        insights.push({
+          id: `consistent_${activity}`,
+          type: 'pattern',
+          title: `${activity} Consistency! 📈`,
+          message: `You've maintained ${activity.toLowerCase()} ${count} times in the last 2 weeks. Great consistency!`,
+          icon: getActivityIcon(activity),
+          confidence: 70
+        });
+      }
+    });
+    
+    // Check for activity variety
+    const uniqueActivities = new Set();
+    recentData.forEach(day => {
+      if (day.activities) {
+        day.activities.forEach(activity => uniqueActivities.add(activity));
+      }
+    });
+    
+    if (uniqueActivities.size >= 8) {
+      insights.push({
+        id: 'activity_variety',
+        type: 'encouragement',
+        title: 'Activity Explorer! 🗺️',
+        message: `You've engaged in ${uniqueActivities.size} different activities recently. Great variety keeps life interesting!`,
+        icon: '🎨',
+        confidence: 65
       });
     }
     
