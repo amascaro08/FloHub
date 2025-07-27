@@ -32,7 +32,7 @@ import type { CalendarSource } from './app';
 // Settings type for calendar components
 export interface CalendarSettings {
   selectedCals: string[];
-  defaultView: "today" | "tomorrow" | "week" | "month" | "custom";
+  defaultView: "today" | "tomorrow" | "week" | "month" | "agenda" | "timeline" | "custom";
   customRange: { start: string; end: string };
   powerAutomateUrl?: string;
   // Additional settings used in other components
