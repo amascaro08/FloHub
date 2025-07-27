@@ -11,7 +11,11 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/_next') ||
       pathname.startsWith('/api') ||
       pathname.includes('.') ||
-      pathname === '/favicon.ico'
+      pathname === '/favicon.ico' ||
+      pathname === '/manifest.json' ||
+      pathname.startsWith('/icons/') ||
+      pathname.startsWith('/sw.js') ||
+      pathname.startsWith('/workbox-')
     ) {
       return NextResponse.next();
     }

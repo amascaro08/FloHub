@@ -11,7 +11,9 @@ import {
   Sparkles,
   Calendar,
   TrendingUp,
-  Target
+  Target,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface Habit {
@@ -39,6 +41,7 @@ const HabitTrackerWidget: React.FC = () => {
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily');
   const [newHabitCustomDays, setNewHabitCustomDays] = useState<number[]>([]);
+  const [showAllHabits, setShowAllHabits] = useState(false);
 
   // Load habits and completions
   useEffect(() => {
@@ -208,15 +211,15 @@ const HabitTrackerWidget: React.FC = () => {
   const completedToday = todayHabits.filter(habit => isCompletedToday(habit.id)).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 h-full flex flex-col">
       {/* Stats Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-            <Target className="w-5 h-5 text-primary-500" />
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-2 min-w-0">
+          <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
+            <Target className="w-4 h-4 text-primary-500" />
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white">
+          <div className="min-w-0">
+            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
               Today's Progress
             </h3>
             <p className="text-xs text-grey-tint">
@@ -227,10 +230,10 @@ const HabitTrackerWidget: React.FC = () => {
         
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-3 py-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
+          className="px-2 py-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1 flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span className="text-sm">Add Habit</span>
+          <Plus className="w-3 h-3" />
+          <span className="text-xs hidden sm:inline">Add Habit</span>
         </button>
       </div>
 
@@ -388,11 +391,16 @@ const HabitTrackerWidget: React.FC = () => {
       {/* All Habits Summary */}
       {habits.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+          <button
+            onClick={() => setShowAllHabits(!showAllHabits)}
+            className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+          >
+            {showAllHabits ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             <Calendar className="w-4 h-4 text-primary-500" />
             <span>All Habits ({habits.length})</span>
-          </h4>
-          <div className="space-y-2">
+          </button>
+          {showAllHabits && (
+            <div className="space-y-2 ml-4">
             {habits.slice(0, 3).map((habit) => (
               <div
                 key={habit.id}
@@ -416,7 +424,8 @@ const HabitTrackerWidget: React.FC = () => {
                 +{habits.length - 3} more habits
               </p>
             )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -134,7 +134,6 @@ const SmartAtAGlanceWidget = () => {
     });
 
     // Get next meeting
-    const now = new Date();
     const upcomingEvents = events
       .filter(event => {
         let eventStart: Date;
@@ -347,12 +346,16 @@ const SmartAtAGlanceWidget = () => {
 
       setLoading(true);
       try {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, but API expects 1-12
+        
         const [tasks, notes, meetings, habits, habitCompletions] = await Promise.all([
           fetchTasks(),
           fetchNotes(),
           fetchMeetings(),
           fetchHabits(),
-          fetchHabitCompletions()
+          fetchHabitCompletions(currentYear, currentMonth)
         ]);
 
         const analyzedData = analyzeData(tasks, calendarEvents, habits, habitCompletions);
@@ -372,13 +375,17 @@ const SmartAtAGlanceWidget = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await invalidateCache();
+      await invalidateCache('*'); // Invalidate all cached data
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, but API expects 1-12
+      
       const [tasks, notes, meetings, habits, habitCompletions] = await Promise.all([
         fetchTasks(),
         fetchNotes(),
         fetchMeetings(),
         fetchHabits(),
-        fetchHabitCompletions()
+        fetchHabitCompletions(currentYear, currentMonth)
       ]);
 
       const analyzedData = analyzeData(tasks, calendarEvents, habits, habitCompletions);
@@ -507,7 +514,7 @@ const SmartAtAGlanceWidget = () => {
       {/* Insights */}
       <div className="space-y-3">
         {data.insights.length > 0 ? (
-          data.insights.slice(0, 3).map((insight, index) => (
+          data.insights.slice(0, 3).map((insight: SmartInsight, index: number) => (
             <div
               key={index}
               className={`p-3 rounded-xl border ${

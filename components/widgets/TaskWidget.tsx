@@ -14,7 +14,9 @@ import {
   Edit3, 
   Calendar,
   Tag,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r) => {
@@ -73,6 +75,8 @@ function TaskWidget() {
   const [celebrating, setCelebrating] = useState(false);
   const [taskSource, setTaskSource] = useState<"personal" | "work">("personal");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showIncomplete, setShowIncomplete] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Combine unique tags from tasks and global tags from settings
   const allAvailableTags = useMemo(() => {
@@ -159,14 +163,14 @@ function TaskWidget() {
 
   const toggleComplete = async (t: Task) => {
     try {
-      const response = await fetch(`/api/tasks/${t.id}`, {
+      const response = await fetch(`/api/tasks`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !t.completed }),
+        body: JSON.stringify({ id: t.id, done: !t.done }),
       });
       if (response.ok) {
         mutate();
-        if (!t.completed) {
+        if (!t.done) {
           setCelebrating(true);
           setTimeout(() => setCelebrating(false), 2000);
         }
@@ -221,13 +225,13 @@ function TaskWidget() {
   };
 
   // Filter tasks for display
-  const incompleteTasks = tasks?.filter(t => !t.completed) || [];
-  const completedTasks = tasks?.filter(t => t.completed) || [];
+  const incompleteTasks = tasks?.filter(t => !t.done) || [];
+  const completedTasks = tasks?.filter(t => t.done) || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Add Task Form */}
-      <form onSubmit={addOrUpdate} className="space-y-3">
+      <form onSubmit={addOrUpdate} className="space-y-3 flex-shrink-0">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -387,27 +391,33 @@ function TaskWidget() {
       </form>
 
       {/* Tasks List */}
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <button
+              onClick={() => setShowIncomplete(!showIncomplete)}
+              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+            >
+              {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               <Clock className="w-4 h-4 text-primary-500" />
               <span>Incomplete ({incompleteTasks.length})</span>
-            </h3>
+            </button>
+            {showIncomplete && (
+              <div className="space-y-2 ml-4">
             {incompleteTasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+                className="flex items-start space-x-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700"
               >
                 <button
                   onClick={() => toggleComplete(task)}
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 mt-0.5"
                 >
-                  <Circle className="w-5 h-5 text-gray-400 hover:text-primary-500 transition-colors" />
+                  <Circle className="w-4 h-4 text-gray-400 hover:text-primary-500 transition-colors" />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                  <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
                     {task.text}
                   </p>
                   <div className="flex items-center space-x-2 mt-1">
@@ -439,48 +449,56 @@ function TaskWidget() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-start space-x-1 flex-shrink-0 mt-0.5">
                   <button
                     onClick={() => startEdit(task)}
                     className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => remove(task.id)}
                     className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>
             ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Completed Tasks */}
         {completedTasks.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+            >
+              {showCompleted ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span>Completed ({completedTasks.length})</span>
-            </h3>
+            </button>
+            {showCompleted && (
+              <div className="space-y-2 ml-4">
             {completedTasks.slice(0, 3).map((task) => (
               <div
                 key={task.id}
-                className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl"
+                className="flex items-start space-x-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
               >
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through truncate">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through break-words leading-relaxed">
                     {task.text}
                   </p>
                 </div>
                 <button
                   onClick={() => remove(task.id)}
-                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
+                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors flex-shrink-0 mt-0.5"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
             ))}
@@ -488,6 +506,8 @@ function TaskWidget() {
               <p className="text-xs text-grey-tint text-center">
                 +{completedTasks.length - 3} more completed tasks
               </p>
+            )}
+              </div>
             )}
           </div>
         )}
