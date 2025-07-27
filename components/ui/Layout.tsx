@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/router';
-import { Menu, Home, ListTodo, Book, Calendar, Settings, LogOut, NotebookPen, UserIcon, NotebookPenIcon, NotepadText, Users, User } from 'lucide-react'
+import { Menu, Home, CheckSquare, BookOpen, Target, PenTool, Calendar, Settings, LogOut, Video, User, Users, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ChatSideModal from './ChatSideModal';
@@ -15,14 +15,14 @@ import WidgetToggle from './WidgetToggle';
 import LogoutButton from './LogoutButton';
 
 const nav = [
-  { name: "Hub", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Tasks", href: "/dashboard/tasks", icon: ListTodo },
-  { name: "Notes", href: "/dashboard/notes", icon: StickyNote },
-  { name: "Habits", href: "/habit-tracker", icon: Repeat },
-  { name: "Journal", href: "/dashboard/journal", icon: NotebookPenIcon },
+  { name: "Hub", href: "/dashboard", icon: Home },
+  { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
+  { name: "Notes", href: "/dashboard/notes", icon: BookOpen },
+  { name: "Habits", href: "/habit-tracker", icon: Target },
+  { name: "Journal", href: "/dashboard/journal", icon: PenTool },
   { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Meetings", href: "/dashboard/meetings", icon: UserIcon },
-  { name: "Feedback", href: "/feedback", icon: MessageSquareDashed },
+  { name: "Meetings", href: "/dashboard/meetings", icon: Video },
+  { name: "Feedback", href: "/feedback", icon: MessageCircle },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {
