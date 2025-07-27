@@ -13,6 +13,7 @@ export function useAuthPersistence(enabled: boolean = true) {
 
       if (!response.ok) {
         // If refresh fails, redirect to login
+        console.warn('Token refresh failed, redirecting to login');
         router.push('/login');
         return false;
       }
@@ -20,7 +21,8 @@ export function useAuthPersistence(enabled: boolean = true) {
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      router.push('/login');
+      // Temporarily comment out redirect to test
+      // router.push('/login');
       return false;
     }
   }, [router]);
@@ -56,10 +58,11 @@ export function useAuthPersistence(enabled: boolean = true) {
       document.addEventListener(event, handleUserActivity, true);
     });
 
+    // Temporarily disable immediate refresh to test
     // Initial refresh check
-    refreshToken().then(success => {
-      if (success) lastRefreshTime = Date.now();
-    });
+    // refreshToken().then(success => {
+    //   if (success) lastRefreshTime = Date.now();
+    // });
 
     return () => {
       clearInterval(refreshInterval);
