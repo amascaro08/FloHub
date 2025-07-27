@@ -1,90 +1,142 @@
 "use client";
 
-import type { Note } from "@/types/app"; // Import shared Note type
+import type { Note } from "@/types/app";
+import { useState } from "react";
+import { 
+  ChevronDownIcon, 
+  ClockIcon, 
+  TagIcon,
+  DocumentTextIcon,
+  SparklesIcon,
+  TrashIcon
+} from '@heroicons/react/24/solid';
 
 type NoteListProps = {
   notes: Note[];
   selectedNoteId: string | null;
   onSelectNote: (noteId: string) => void;
-  selectedNotes: string[]; // Add prop for selected notes from parent
-  onToggleSelectNote: (noteId: string, isSelected: boolean) => void; // Add prop for toggling selection
-  onDeleteSelected: () => void; // Add prop for deleting selected notes
+  selectedNotes: string[];
+  onToggleSelectNote: (noteId: string, isSelected: boolean) => void;
+  onDeleteSelected: () => void;
 };
 
-import { useState } from "react";
-
-export default function NoteList({ notes, selectedNoteId, onSelectNote, selectedNotes, onToggleSelectNote, onDeleteSelected }: NoteListProps) {
+export default function NoteList({ 
+  notes, 
+  selectedNoteId, 
+  onSelectNote, 
+  selectedNotes, 
+  onToggleSelectNote, 
+  onDeleteSelected 
+}: NoteListProps) {
   const [openMonthYear, setOpenMonthYear] = useState<Record<string, boolean>>({});
 
   const quickNotes = notes.filter((note) => note.source === "quicknote");
   const regularNotes = notes.filter((note) => note.source !== "quicknote");
 
+  // Helper function to extract text content from HTML
+  const getTextContent = (html: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  };
+
+  // Helper function to get note preview
+  const getNotePreview = (note: Note) => {
+    const textContent = getTextContent(note.content);
+    return textContent.substring(0, 120) + (textContent.length > 120 ? '...' : '');
+  };
+
+  if (notes.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-800 dark:to-primary-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <DocumentTextIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No notes yet</h3>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Create your first note to get started!</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Delete Selected Button */}
       {selectedNotes.length > 0 && (
-        <button
-          onClick={onDeleteSelected}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm md:text-base font-medium shadow-sm hover:bg-red-600 transition-colors flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          Delete Selected ({selectedNotes.length})
-        </button>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+          <button
+            onClick={onDeleteSelected}
+            className="w-full flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <TrashIcon className="w-4 h-4" />
+            <span>Delete Selected ({selectedNotes.length})</span>
+          </button>
+        </div>
       )}
 
+      {/* Quick Notes Section */}
       {quickNotes.length > 0 && (
-        <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-neutral-100 dark:bg-neutral-800 px-4 py-3 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">
-              Quick Notes <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">({quickNotes.length})</span>
-            </h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 px-4 py-3 border-b border-neutral-200/50 dark:border-neutral-700/50">
+            <div className="flex items-center space-x-2">
+              <SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-semibold text-slate-900 dark:text-white">
+                Quick Notes
+              </h3>
+              <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">
+                {quickNotes.length}
+              </span>
+            </div>
           </div>
-          <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
+          
+          <div className="divide-y divide-neutral-200/50 dark:divide-neutral-700/50">
             {quickNotes.map((note: Note) => (
               <div
                 key={note.id}
-                className={`p-4 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-start transition-colors ${
-                  selectedNoteId === note.id ? "bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500" : ""
+                className={`group relative transition-all duration-200 ${
+                  selectedNoteId === note.id 
+                    ? "bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500" 
+                    : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                 }`}
               >
-                <div className="flex items-center h-5 mr-3">
-                  <input
-                    type="checkbox"
-                    id={`note-${note.id}`}
-                    checked={selectedNotes.includes(note.id)}
-                    onChange={(e) => onToggleSelectNote(note.id, e.target.checked)}
-                    className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                  />
-                </div>
-                <label
-                  htmlFor={`note-${note.id}`}
-                  onClick={() => onSelectNote(note.id)}
-                  className="cursor-pointer flex-1"
-                >
-                  <h3 className="font-medium text-neutral-900 dark:text-neutral-100">
-                    {note.title || `${note.content.substring(0, 50)}...`}
-                  </h3>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {new Date(note.createdAt).toLocaleDateString()}
-                    </span>
-                    {note.source === "quicknote" && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <div className="flex items-start p-4 space-x-3">
+                  <div className="flex items-center mt-1">
+                    <input
+                      type="checkbox"
+                      id={`note-${note.id}`}
+                      checked={selectedNotes.includes(note.id)}
+                      onChange={(e) => onToggleSelectNote(note.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+                    />
+                  </div>
+                  
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => onSelectNote(note.id)}
+                  >
+                    <h4 className="font-medium text-slate-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {note.title || "Untitled Note"}
+                    </h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      {getNotePreview(note)}
+                    </p>
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-400">
+                        <ClockIcon className="w-3 h-3" />
+                        <span>{new Date(note.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">
                         Quick Note
                       </span>
-                    )}
+                    </div>
                   </div>
-                </label>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Regular Notes by Month/Year */}
       {regularNotes.length > 0 ? (
         Object.entries(
           regularNotes.reduce((groups, note) => {
@@ -97,7 +149,7 @@ export default function NoteList({ notes, selectedNoteId, onSelectNote, selected
             return groups;
           }, {} as Record<string, Note[]>),
         )
-          .sort(([aMonthYear, aNotes], [bMonthYear, bNotes]) => {
+          .sort(([aMonthYear], [bMonthYear]) => {
             const [aMonth, aYear] = aMonthYear.split(" ");
             const [bMonth, bYear] = bMonthYear.split(" ");
             const aDate = new Date(`${aMonth} 1, ${aYear}`);
@@ -105,9 +157,9 @@ export default function NoteList({ notes, selectedNoteId, onSelectNote, selected
             return bDate.getTime() - aDate.getTime();
           })
           .map(([monthYear, notesInGroup]) => (
-            <div key={monthYear} className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden shadow-sm">
-              <div
-                className={`bg-neutral-100 dark:bg-neutral-800 px-4 py-3 flex items-center justify-between cursor-pointer transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-700`}
+            <div key={monthYear} className="bg-white dark:bg-slate-800 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 shadow-sm overflow-hidden">
+              <button
+                className="w-full bg-gradient-to-r from-slate-50 to-neutral-50 dark:from-slate-800 dark:to-slate-900 px-4 py-3 flex items-center justify-between hover:from-slate-100 hover:to-neutral-100 dark:hover:from-slate-700 dark:hover:to-slate-800 transition-all duration-200 border-b border-neutral-200/50 dark:border-neutral-700/50"
                 onClick={() =>
                   setOpenMonthYear((prevState) => ({
                     ...prevState,
@@ -115,69 +167,97 @@ export default function NoteList({ notes, selectedNoteId, onSelectNote, selected
                   }))
                 }
               >
-                <h3 className="text-lg font-semibold">
-                  {monthYear} <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-1">({notesInGroup.length})</span>
-                </h3>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 text-neutral-500 transition-transform ${openMonthYear[monthYear] ? 'rotate-180' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+                <div className="flex items-center space-x-2">
+                  <DocumentTextIcon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  <h3 className="font-semibold text-slate-900 dark:text-white">
+                    {monthYear}
+                  </h3>
+                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs px-2 py-1 rounded-full font-medium">
+                    {notesInGroup.length}
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${
+                    openMonthYear[monthYear] ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
               
               {(openMonthYear[monthYear] !== false) && (
-                <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                <div className="divide-y divide-neutral-200/50 dark:divide-neutral-700/50">
                   {notesInGroup.map((note: Note) => (
                     <div
                       key={note.id}
-                      className={`p-4 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-start transition-colors ${
-                        selectedNoteId === note.id ? "bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500" : ""
+                      className={`group relative transition-all duration-200 ${
+                        selectedNoteId === note.id 
+                          ? "bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500" 
+                          : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                       }`}
                     >
-                      <div className="flex items-center h-5 mr-3">
-                        <input
-                          type="checkbox"
-                          id={`note-${note.id}`}
-                          checked={selectedNotes.includes(note.id)}
-                          onChange={(e) => onToggleSelectNote(note.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                        />
-                      </div>
-                      <label
-                        htmlFor={`note-${note.id}`}
-                        onClick={() => onSelectNote(note.id)}
-                        className="cursor-pointer flex-1"
-                      >
-                        <h3 className="font-medium text-neutral-900 dark:text-neutral-100">
-                          {note.title || `${note.content.substring(0, 50)}...`}
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {new Date(note.createdAt).toLocaleDateString()}
-                          </span>
+                      <div className="flex items-start p-4 space-x-3">
+                        <div className="flex items-center mt-1">
+                          <input
+                            type="checkbox"
+                            id={`note-${note.id}`}
+                            checked={selectedNotes.includes(note.id)}
+                            onChange={(e) => onToggleSelectNote(note.id, e.target.checked)}
+                            className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+                          />
                         </div>
-                      </label>
+                        
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => onSelectNote(note.id)}
+                        >
+                          <h4 className="font-medium text-slate-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                            {note.title || "Untitled Note"}
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                            {getNotePreview(note)}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-400">
+                              <ClockIcon className="w-3 h-3" />
+                              <span>{new Date(note.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            {note.tags && note.tags.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <TagIcon className="w-3 h-3 text-slate-400" />
+                                <div className="flex flex-wrap gap-1">
+                                  {note.tags.slice(0, 2).map((tag, index) => (
+                                    <span
+                                      key={index}
+                                      className="bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 text-xs px-2 py-1 rounded-full font-medium"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {note.tags.length > 2 && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                      +{note.tags.length - 2}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           ))
-      ) : (
-        <div className="text-center py-12 border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="mt-2 text-neutral-500 dark:text-neutral-400">No notes found.</p>
+      ) : quickNotes.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-800 dark:to-primary-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <DocumentTextIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No notes found</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Try adjusting your search or filters.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
