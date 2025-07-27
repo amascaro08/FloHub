@@ -2,6 +2,7 @@ import React from 'react';
 import { XMarkIcon, CalendarIcon, ClockIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { CalendarEvent, CalendarEventDateTime } from '@/types/calendar';
 import { format } from 'date-fns';
+import { extractTeamsLinks } from '@/lib/calendarUtils';
 
 interface EventDetailModalProps {
   event: CalendarEvent | null;
@@ -45,12 +46,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onCl
     }
   };
 
-  // Extract Teams links from description
-  const extractTeamsLinks = (description: string): string[] => {
-    const teamsRegex = /(https?:\/\/teams\.microsoft\.com\/[^\s]+)/gi;
-    const matches = description.match(teamsRegex);
-    return matches || [];
-  };
+
 
   // Parse HTML content safely
   const parseHTMLContent = (content: string): string => {

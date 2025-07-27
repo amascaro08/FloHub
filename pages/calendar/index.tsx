@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseIS
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
-import { generateCalendarSourcesHash } from '@/lib/calendarUtils';
+import { generateCalendarSourcesHash, extractTeamsLink } from '@/lib/calendarUtils';
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -35,29 +35,7 @@ const containsHTML = (content: string): boolean => {
          content.includes('&gt;');
 };
 
-// Function to extract Microsoft Teams meeting link from event description
-const extractTeamsLink = (description: string): string | null => {
-  if (!description) return null;
-  
-  // Common patterns for Teams meeting links
-  const patterns = [
-    /https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"'\s]+/gi,
-    /https:\/\/teams\.live\.com\/meet\/[^"'\s]+/gi,
-    /<a[^>]+href="(https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^"]+)"/gi,
-    /<a[^>]+href="(https:\/\/teams\.live\.com\/meet\/[^"]+)"/gi
-  ];
-  
-  for (const pattern of patterns) {
-    const match = pattern.exec(description);
-    if (match) {
-      // Return the full URL, cleaning up any HTML encoding
-      const url = match[1] || match[0];
-      return url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    }
-  }
-  
-  return null;
-};
+
 
 const CalendarPage = () => {
   const { user } = useUser();
@@ -94,6 +72,28 @@ const CalendarPage = () => {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
   );
+
+  // Set initial view based on settings
+  useEffect(() => {
+    if (settings?.defaultView) {
+      const viewMapping: Record<string, 'day' | 'week' | 'month'> = {
+        'today': 'day',
+        'tomorrow': 'day',
+        'week': 'week',
+        'month': 'month',
+        'custom': 'month' // Default to month for custom range
+      };
+      const newView = viewMapping[settings.defaultView] || 'month';
+      setCurrentView(newView);
+      
+      // If it's tomorrow view, set the current date to tomorrow
+      if (settings.defaultView === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setCurrentDate(tomorrow);
+      }
+    }
+  }, [settings?.defaultView]);
 
   // Fetch all available calendars
   const { data: calendarList, error: calendarListError } = useSWR<Array<{ id: string; summary: string }>>(
@@ -862,15 +862,30 @@ const CalendarPage = () => {
                                   </div>
                                 </div>
                               )}
-                              {event.description && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                                    {event.description.length > 200 
-                                      ? `${event.description.substring(0, 200)}...` 
+                              {(() => {
+                                const teamsLink = extractTeamsLink(event.description || '');
+                                return teamsLink ? (
+                                  <div className="mt-2">
+                                    <a
+                                      href={teamsLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                                    >
+                                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M24 12.01c0-1.02-.83-1.85-1.85-1.85H20.3c.13-.6.2-1.22.2-1.85C20.5 4.15 16.35 0 11.19 0S1.88 4.15 1.88 8.31c0 .63.07 1.25.2 1.85H.23C.1 10.16 0 11.07 0 12.01c0 6.63 5.37 12 12 12s12-5.37 12-12zM11.19 2.25c3.38 0 6.12 2.74 6.12 6.12s-2.74 6.12-6.12 6.12S5.07 11.75 5.07 8.37s2.74-6.12 6.12-6.12z"/>
+                                      </svg>
+                                      Join Teams Meeting
+                                    </a>
+                                  </div>
+                                ) : event.description && !containsHTML(event.description) ? (
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                    {event.description.length > 100 
+                                      ? `${event.description.substring(0, 100)}...` 
                                       : event.description}
                                   </div>
-                                </div>
-                              )}
+                                ) : null;
+                              })()}
                             </div>
                             <div className="ml-4">
                               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
