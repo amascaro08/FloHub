@@ -182,9 +182,9 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-[#00C9A7]/5 to-[#FF6B6B]/5">
+      <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-[#00C9A7]/5 to-[#FF6B6B]/5 flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
             <span className="text-3xl mr-3">⚙️</span>
@@ -216,7 +216,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="flex-1 overflow-y-auto p-6">
         
         {/* General Tab */}
         {activeTab === 'general' && (
@@ -605,7 +605,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
       </div>
       
       {/* Footer */}
-      <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
+      <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 flex-shrink-0">
         <div className="flex justify-between items-center">
           <button
             onClick={onClose}

@@ -301,7 +301,7 @@ export default function JournalPage() {
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-140px)] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-200px)] overflow-hidden">
           
           {/* Today Tab */}
           {activeTab === 'today' && (
@@ -489,8 +489,8 @@ export default function JournalPage() {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="max-w-4xl mx-auto h-full overflow-y-auto">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="max-w-4xl mx-auto h-full">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 h-full overflow-hidden">
                 <JournalSettings onClose={() => setActiveTab('today')} />
               </div>
             </div>
