@@ -17,6 +17,8 @@ const App = ({ Component, pageProps }: AppProps) => {
   useAuthPersistence(requiresAuth);
 
   useEffect(() => {
+    // Temporarily disable service worker registration to test connectivity issues
+    /*
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
@@ -43,6 +45,7 @@ const App = ({ Component, pageProps }: AppProps) => {
       }
     };
     registerSW();
+    */
   }, []);
 
   return (
