@@ -39,16 +39,16 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
   
   if (todaysHabits.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 shadow-xl">
         <div className="text-center">
-          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-            <ClockIcon className="w-6 h-6 text-gray-400" />
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 dark:bg-gradient-to-br dark:from-primary-800 dark:to-primary-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <ClockIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No habits scheduled for today
+          <h3 className="text-xl font-heading font-bold text-dark-base dark:text-soft-white mb-3">
+            Take a breather! 
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Enjoy your free day or create a new habit to start building consistency!
+          <p className="text-grey-tint leading-relaxed">
+            No habits scheduled for today. Enjoy your free time or create a new habit to start building consistency! 😊
           </p>
         </div>
       </div>
@@ -62,14 +62,14 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
   const progressPercentage = (completedCount / todaysHabits.length) * 100;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-heading font-bold text-dark-base dark:text-soft-white">
               Today's Focus
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-grey-tint">
               {completedCount} of {todaysHabits.length} habits completed
             </p>
           </div>
@@ -89,16 +89,21 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
 
         {/* Progress Bar */}
         <div className="relative">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
             <div 
-              className={`h-2 rounded-full transition-all duration-500 ${
+              className={`h-3 rounded-full transition-all duration-700 ${
                 progressPercentage === 100 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
-                  : 'bg-gradient-to-r from-primary-500 to-primary-600'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg' 
+                  : 'bg-gradient-to-r from-primary-500 to-primary-600 shadow-md'
               }`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
+          {progressPercentage === 100 && (
+            <div className="absolute -top-1 right-0 text-green-500 animate-bounce">
+              <span className="text-lg">🎉</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -113,7 +118,7 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
               <button
                 key={habit.id}
                 onClick={() => onToggleCompletion(habit)}
-                className={`flex items-center p-4 rounded-xl border-2 transition-all duration-200 ${
+                className={`flex items-center p-4 rounded-2xl border-2 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${
                   isCompleted
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                     : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-600'
@@ -132,18 +137,18 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
                 </div>
                 
                 <div className="flex-1 text-left">
-                  <h3 className={`font-medium ${
+                  <h3 className={`font-heading font-semibold ${
                     isCompleted 
                       ? 'text-green-900 dark:text-green-100' 
-                      : 'text-gray-900 dark:text-white'
+                      : 'text-dark-base dark:text-soft-white'
                   }`}>
                     {habit.name}
                   </h3>
                   {habit.description && (
-                    <p className={`text-sm mt-1 ${
+                    <p className={`text-sm mt-1 leading-relaxed ${
                       isCompleted 
                         ? 'text-green-700 dark:text-green-300' 
-                        : 'text-gray-600 dark:text-gray-400'
+                        : 'text-grey-tint'
                     }`}>
                       {habit.description}
                     </p>
@@ -164,15 +169,16 @@ const HabitQuickActions: React.FC<HabitQuickActionsProps> = ({
         </div>
 
         {completedCount === todaysHabits.length && todaysHabits.length > 0 && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
-            <div className="flex items-center justify-center space-x-2">
+          <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-800 shadow-lg">
+            <div className="flex items-center justify-center space-x-2 mb-2">
               <FireIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
-              <span className="font-medium text-green-900 dark:text-green-100">
+              <span className="font-heading font-bold text-green-900 dark:text-green-100">
                 Fantastic! All habits completed today!
               </span>
+              <span className="text-xl animate-pulse">🎉</span>
             </div>
-            <p className="text-center text-sm text-green-700 dark:text-green-300 mt-1">
-              You're building an amazing streak. Keep it up! 🎉
+            <p className="text-center text-sm text-green-700 dark:text-green-300">
+              You're building an amazing streak. FloCat is purr-oud of you! Keep flowing! 😺✨
             </p>
           </div>
         )}

@@ -216,15 +216,15 @@ const HabitTrackerMain = () => {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+      <div className="bg-soft-white dark:bg-dark-base border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
                   <span className="text-white text-lg">🎯</span>
                 </div>
-                <h1 className="text-xl font-heading font-semibold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
                   Habit Tracker
                 </h1>
               </div>
@@ -233,7 +233,7 @@ const HabitTrackerMain = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowAddHabit(true)}
-                className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
+                className="inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-2xl transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 <PlusIcon className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Add Habit</span>
@@ -246,7 +246,7 @@ const HabitTrackerMain = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: ChartBarIcon },
             { id: 'calendar', label: 'Calendar', icon: CalendarDaysIcon },
@@ -255,16 +255,16 @@ const HabitTrackerMain = () => {
             <button
               key={tab.id}
               onClick={() => setCurrentView(tab.id as any)}
-              className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 currentView === tab.id
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg transform translate-y-0'
+                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
               }`}
             >
               <tab.icon className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">{tab.label}</span>
               <span className="sm:hidden">
-                {tab.id === 'dashboard' ? 'Stats' : tab.id === 'calendar' ? 'Cal' : 'AI'}
+                {tab.id === 'dashboard' ? 'Stats' : tab.id === 'calendar' ? 'Cal' : '😺'}
               </span>
             </button>
           ))}
@@ -275,14 +275,14 @@ const HabitTrackerMain = () => {
           <div className="space-y-6">
             {/* Overview Stats */}
             {habits.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-grey-tint uppercase tracking-wide mb-2">
                         Today
                       </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
                         {dashboardStats.todayCompleted}/{dashboardStats.todayTotal}
                       </p>
                     </div>
@@ -290,41 +290,41 @@ const HabitTrackerMain = () => {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-grey-tint uppercase tracking-wide mb-2">
                         Streak
                       </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
                         {dashboardStats.longestStreak}
                       </p>
                     </div>
-                    <FireIcon className="w-8 h-8 text-orange-500" />
+                    <FireIcon className="w-8 h-8 text-accent-500" />
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-grey-tint uppercase tracking-wide mb-2">
                         Weekly
                       </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
                         {dashboardStats.weeklyRate}%
                       </p>
                     </div>
-                    <ArrowTrendingUpIcon className="w-8 h-8 text-blue-500" />
+                    <ArrowTrendingUpIcon className="w-8 h-8 text-primary-500" />
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-grey-tint uppercase tracking-wide mb-2">
                         Total
                       </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
                         {dashboardStats.totalHabits}
                       </p>
                     </div>
@@ -343,30 +343,33 @@ const HabitTrackerMain = () => {
 
             {/* Habits List */}
             {habits.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 dark:bg-gradient-to-br dark:from-primary-800 dark:to-primary-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
                   <span className="text-4xl">🎯</span>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No habits yet
+                <h3 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white mb-3">
+                  Ready to build amazing habits?
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-                  Start building positive habits today. Track your progress and build streaks!
+                <p className="text-grey-tint mb-8 max-w-md mx-auto leading-relaxed">
+                  Start your journey to better habits today. Track your progress, build streaks, and let FloCat guide you to success! 😺
                 </p>
                 <button
                   onClick={() => setShowAddHabit(true)}
-                  className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium"
+                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-2xl transition-all duration-200 font-medium shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
                 >
                   <PlusIcon className="w-5 h-5 mr-2" />
                   Create Your First Habit
                 </button>
               </div>
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-heading font-bold text-dark-base dark:text-soft-white">
                     Your Habits
                   </h2>
+                  <p className="text-grey-tint mt-1">
+                    Track your daily progress and build consistency
+                  </p>
                 </div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                   {habits.map(habit => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
 import { Habit } from '@/types/habit-tracker';
-import { TrashIcon } from '@heroicons/react/24/solid';
+import { TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 interface HabitFormProps {
   habit?: Habit | null;

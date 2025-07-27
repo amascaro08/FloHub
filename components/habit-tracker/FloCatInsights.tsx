@@ -293,70 +293,73 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-            <span className="text-lg">😺</span>
+      <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 shadow-xl">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:bg-gradient-to-br dark:from-purple-800 dark:to-purple-900 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="text-2xl animate-pulse">😺</span>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            FloCat Insights
-          </h2>
+          <div>
+            <h2 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
+              FloCat Insights
+            </h2>
+            <p className="text-grey-tint">Analyzing your habits...</p>
+          </div>
         </div>
         
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="animate-pulse space-y-6">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-2xl w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-2xl w-1/2"></div>
+          <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-            <span className="text-lg">😺</span>
+    <div className="space-y-8">
+      <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 shadow-xl">
+        <div className="flex items-center space-x-4 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:bg-gradient-to-br dark:from-purple-800 dark:to-purple-900 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="text-2xl">😺</span>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
               FloCat Insights
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-grey-tint leading-relaxed">
               Personalized insights and suggestions for your habit journey
             </p>
           </div>
         </div>
 
         {insights.length === 0 ? (
-          <div className="text-center py-8">
-            <SparklesIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <div className="text-center py-12">
+            <SparklesIcon className="w-16 h-16 text-grey-tint mx-auto mb-6" />
+            <h3 className="text-xl font-heading font-bold text-dark-base dark:text-soft-white mb-3">
               Building insights...
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Keep tracking your habits and FloCat will provide personalized insights!
+            <p className="text-grey-tint leading-relaxed max-w-md mx-auto">
+              Keep tracking your habits and FloCat will provide personalized insights to help you improve! 😺
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {insights.map(insight => (
-              <div
-                key={insight.id}
-                className={`p-4 rounded-xl border ${getColorClasses(insight.color)}`}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <insight.icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">
-                      {insight.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed">
-                      {insight.content}
-                    </p>
+                      <div className="grid gap-6">
+              {insights.map(insight => (
+                <div
+                  key={insight.id}
+                  className={`p-6 rounded-2xl border shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 ${getColorClasses(insight.color)}`}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <insight.icon className="w-7 h-7" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-heading font-bold mb-3 text-lg">
+                        {insight.title}
+                      </h3>
+                      <p className="leading-relaxed">
+                        {insight.content}
+                      </p>
                     {insight.action && (
                       <button
                         onClick={insight.action.onClick}
@@ -375,8 +378,8 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({
       </div>
 
       {/* Quick Stats Summary */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 shadow-xl">
+        <h3 className="text-xl font-heading font-bold text-dark-base dark:text-soft-white mb-6">
           Your Progress Summary
         </h3>
         
