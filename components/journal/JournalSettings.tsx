@@ -224,53 +224,41 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden modal-enter">
-        
-        {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-[#00C9A7]/5 to-[#FF6B6B]/5">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
-                <span className="text-3xl mr-3">⚙️</span>
-                Journal Settings
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Customize your journaling experience
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex mt-6 space-x-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <div className="flex items-center justify-center">
-                  <span className="text-base mr-2">{tab.icon}</span>
-                  {tab.label}
-                </div>
-              </button>
-            ))}
-          </div>
+    <div className="w-full">
+      {/* Header */}
+      <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-[#00C9A7]/5 to-[#FF6B6B]/5">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
+            <span className="text-3xl mr-3">⚙️</span>
+            Journal Settings
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Customize your journaling experience
+          </p>
         </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex mt-6 space-x-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <span className="text-base mr-2">{tab.icon}</span>
+                {tab.label}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+      <div className="p-6">
           
           {/* General Tab */}
           {activeTab === 'general' && (
@@ -670,7 +658,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
               onClick={onClose}
               className="px-6 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              Back to Journal
             </button>
             
             <div className="flex items-center space-x-3">

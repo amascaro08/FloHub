@@ -449,3 +449,14 @@ select:focus-visible {
   35% { transform: rotateZ(-4deg); }
   40%, 100% { transform: rotateZ(0); }
 }
+
+/* FloCat mascot wiggle animation */
+@keyframes flocat-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.flocat-wiggle {
+  animation: flocat-wiggle 2s ease-in-out infinite;
+}
