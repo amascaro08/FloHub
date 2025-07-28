@@ -415,33 +415,49 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
       <div className={`${isCompact ? 'space-y-1' : 'space-y-3'} flex-1 overflow-y-auto min-h-0`}>
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
-          <div className="space-y-2">
-            <button
-              onClick={() => setShowIncomplete(!showIncomplete)}
-              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
-            >
-              {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              <Clock className="w-4 h-4 text-primary-500" />
-              <span>Incomplete ({incompleteTasks.length})</span>
-            </button>
-            {showIncomplete && (
-              <div className="space-y-2 ml-4">
-            {incompleteTasks.map((task) => (
+          <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
+            {!isCompact && (
+              <button
+                onClick={() => setShowIncomplete(!showIncomplete)}
+                className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+              >
+                {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                <Clock className="w-4 h-4 text-primary-500" />
+                <span>Incomplete ({incompleteTasks.length})</span>
+              </button>
+            )}
+            {isCompact && (
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-medium text-dark-base dark:text-soft-white">
+                  Tasks ({incompleteTasks.length})
+                </h4>
+                <button
+                  onClick={() => setShowIncomplete(!showIncomplete)}
+                  className="p-1 text-gray-400 hover:text-primary-500"
+                >
+                  {showIncomplete ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </button>
+              </div>
+            )}
+            {(showIncomplete || isCompact) && (
+              <div className={`${isCompact ? 'space-y-1 ml-0' : 'space-y-2 ml-4'}`}>
+            {incompleteTasks.slice(0, isCompact ? 8 : undefined).map((task) => (
               <div
                 key={task.id}
-                className="flex items-start space-x-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700"
+                className={`flex items-start space-x-2 ${isCompact ? 'p-1.5' : 'p-2'} bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700`}
               >
                 <button
                   onClick={() => toggleComplete(task)}
                   className="flex-shrink-0 mt-0.5"
                 >
-                  <Circle className="w-4 h-4 text-gray-400 hover:text-primary-500 transition-colors" />
+                  <Circle className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} text-gray-400 hover:text-primary-500 transition-colors`} />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
-                    {task.text}
+                  <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white break-words leading-relaxed`}>
+                    {isCompact ? (task.text.length > 30 ? task.text.slice(0, 30) + '...' : task.text) : task.text}
                   </p>
-                  <div className="flex items-center space-x-2 mt-1">
+                  {!isCompact && (
+                    <div className="flex items-center space-x-2 mt-1">
                     {task.dueDate && (
                       <span className="text-xs text-grey-tint">
                         Due {fmt(task.dueDate)}
@@ -457,6 +473,7 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
                       </span>
                     )}
                   </div>
+                  )}
                   {task.tags && task.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {task.tags.map((tag) => (

@@ -150,9 +150,9 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`${isCompact ? 'space-y-2' : 'space-y-4'} h-full flex flex-col`}>
       {/* Add/Edit Note Form */}
-      <div className="space-y-3">
+      <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} flex-shrink-0`}>
         <div className="relative">
           <textarea
             ref={textareaRef}

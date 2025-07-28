@@ -426,13 +426,13 @@ const DashboardGrid: React.FC = () => {
     >
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
         {/* Dashboard Header */}
-        <div className="w-full px-2 py-4 max-w-none">
-          <div className="flex items-center justify-between mb-4">
+        <div className="w-full px-1 py-2 max-w-none">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-4xl font-heading font-bold text-dark-base dark:text-soft-white mb-2">
+              <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white mb-1">
                 Dashboard
               </h1>
-              <p className="text-grey-tint font-body">
+              <p className="text-grey-tint font-body text-sm">
                 Welcome back! Here's your personalized overview.
               </p>
             </div>
@@ -465,7 +465,7 @@ const DashboardGrid: React.FC = () => {
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
-            <div className="relative w-full min-h-[700px] lg:h-[700px] mx-2">
+            <div className="relative w-full min-h-[720px] lg:h-[720px] mx-1">
               {filledSlots.map((slot) => {
                 const widgetType = slotAssignments[slot.id] as WidgetType;
                 
@@ -480,8 +480,8 @@ const DashboardGrid: React.FC = () => {
                 const width = `${slot.position.colSpan * colWidth}%`;
                 
                 // Dynamic height calculation based on row span
-                const baseRowHeight = 175; // 175px per row (increased from 150px)
-                const containerHeight = 700; // Updated container height
+                const baseRowHeight = 180; // 180px per row (increased for better space)
+                const containerHeight = 720; // Updated container height
                 const height = `${slot.position.rowSpan * baseRowHeight}px`;
                 const top = `${slot.position.row * baseRowHeight}px`;
                 
