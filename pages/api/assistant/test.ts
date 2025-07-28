@@ -14,8 +14,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST or GET.' });
   }
 
   try {
@@ -30,9 +30,9 @@ export default async function handler(
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    const message = req.method === 'GET' ? 'test message' : req.body?.message;
+    if (!message && req.method === 'POST') {
+      return res.status(400).json({ error: 'Message is required for POST requests' });
     }
 
     // Test each component
