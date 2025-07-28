@@ -426,7 +426,7 @@ const DashboardGrid: React.FC = () => {
     >
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
         {/* Dashboard Header */}
-        <div className="container mx-auto px-2 py-4">
+        <div className="w-full px-2 py-4 max-w-none">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-4xl font-heading font-bold text-dark-base dark:text-soft-white mb-2">
@@ -465,7 +465,7 @@ const DashboardGrid: React.FC = () => {
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
-            <div className="relative w-full min-h-[700px] lg:h-[700px]">
+            <div className="relative w-full min-h-[700px] lg:h-[700px] mx-2">
               {filledSlots.map((slot) => {
                 const widgetType = slotAssignments[slot.id] as WidgetType;
                 
