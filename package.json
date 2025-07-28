@@ -18,7 +18,8 @@
     "notifications:check-db": "node scripts/check-db-connection.js",
     "notifications:create-table": "node scripts/create-push-table.js",
     "notifications:diagnose": "node scripts/test-push-notification.js",
-    "notifications:clean-subscriptions": "node scripts/clean-subscriptions.js"
+    "notifications:clean-subscriptions": "node scripts/clean-subscriptions.js",
+    "delete-user-accounts": "tsx scripts/delete-user-accounts.ts"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",
