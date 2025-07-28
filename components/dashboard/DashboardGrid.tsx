@@ -134,7 +134,7 @@ const DashboardGrid = () => {
   const [currentTemplate, setCurrentTemplate] = useState<LayoutTemplate>('auto');
 
   // Smart layout templates based on number of active widgets and template type
-  const generateSmartLayout = useCallback((widgets: string[], template: LayoutTemplate = 'auto') => {
+  const generateSmartLayout = (widgets: string[], template: LayoutTemplate = 'auto') => {
     const widgetCount = widgets.length;
     
     // Choose template based on type and widget count
@@ -338,7 +338,7 @@ const DashboardGrid = () => {
      });
 
      return layouts;
-  }, []);
+  };
 
   const [layouts, setLayouts] = useState({});
   const [loadedSettings, setLoadedSettings] = useState(false);
@@ -420,7 +420,7 @@ const DashboardGrid = () => {
     } else {
       setLayouts({});
     }
-  }, [activeWidgets, currentTemplate, generateSmartLayout]);
+  }, [activeWidgets, currentTemplate]);
 
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
