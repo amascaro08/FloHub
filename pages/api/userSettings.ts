@@ -75,6 +75,11 @@ export default async function handler(
           timezone: "UTC",
           floCatSettings: { enabledCapabilities: [] },
           layouts: {},
+          layoutTemplate: "primary-secondary",
+          slotAssignments: {
+            primary: "calendar",
+            secondary: "ataglance"
+          },
         };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
@@ -102,6 +107,8 @@ export default async function handler(
         timezone: data.timezone || "UTC",
         floCatSettings: (data.floCatSettings as any) || { enabledCapabilities: [] },
         layouts: (data.layouts as any) || {},
+        layoutTemplate: data.layoutTemplate || "primary-secondary",
+        slotAssignments: (data.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
       };
 
       console.log("User settings loaded for", user_email, settings);
