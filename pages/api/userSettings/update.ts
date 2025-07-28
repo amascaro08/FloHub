@@ -82,7 +82,7 @@ export default async function handler(
       floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
     };
 
-    console.log('📝 Prepared calendar sources for database:', settingsData.calendarSources.length);
+    console.log('📝 Prepared calendar sources for database:', settingsData.calendarSources?.length || 0);
 
     const result = await db
       .insert(userSettings)
