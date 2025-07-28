@@ -121,7 +121,7 @@ export default async function handler(
       ]
     };
 
-    const results = [];
+    const results: any[] = [];
     let successCount = 0;
     const debugInfo = {
       vapidConfigured: !!(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),

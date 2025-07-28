@@ -286,7 +286,7 @@ const CalendarPage = () => {
 
   // Generate hours for agenda view
   const agendaHours = useMemo(() => {
-    const hours = [];
+    const hours: Date[] = [];
     const baseDate = isToday(currentDate) ? new Date() : currentDate;
     const startHour = startOfDay(baseDate);
     

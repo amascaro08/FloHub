@@ -3,8 +3,8 @@ import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
 import OpenAI from "openai";
 import { db } from "@/lib/drizzle";
-import { userSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { userSettings, tasks, calendarEvents } from "@/db/schema";
+import { eq, and, gte, lte } from "drizzle-orm";
 import {
   findRelevantContextSemantic as findRelevantContext,
 } from "@/lib/context";
@@ -16,9 +16,11 @@ import {
 import { ChatCompletionMessageParam } from "openai/resources";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { getEnhancedNLPProcessor, EnhancedIntent } from "@/lib/enhancedNLP";
+import { EnhancedCalendarProcessor, CalendarEvent } from "@/lib/enhancedCalendarProcessor";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-// Types
+// Enhanced types for better contextual awareness
 type ChatRequest = {
   history?: { role: string; content: string }[];
   prompt?: string;
@@ -41,24 +43,46 @@ type ChatRequest = {
 type ChatResponse = {
   reply?: string;
   error?: string;
+  actions?: Array<{
+    type: 'create_task' | 'create_event' | 'update_calendar' | 'show_info';
+    data: any;
+    message: string;
+  }>;
 };
+
+// Enhanced Natural Language Processing for better intent recognition
+interface UserIntent {
+  type: 'question' | 'command' | 'request' | 'search' | 'general';
+  category: 'calendar' | 'tasks' | 'habits' | 'notes' | 'general';
+  action?: 'create' | 'read' | 'update' | 'delete' | 'search';
+  entities: {
+    timeRef?: string; // today, tomorrow, next week, etc.
+    person?: string; // mom, dad, colleague name
+    location?: string; // airport, office, home
+    task?: string; // task description
+    event?: string; // event description
+    urgency?: 'high' | 'medium' | 'low';
+  };
+  confidence: number;
+}
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
 
-// Utility to parse simple due phrases like "today", "tomorrow", "in 3 days", "next Monday"
-const parseDueDate = (phrase: string): string | undefined => {
+// Enhanced utility to parse natural language for dates with timezone awareness
+const parseDueDate = (phrase: string, userTimezone: string = 'UTC'): string | undefined => {
   const now = new Date();
   const dayMs = 86400000;
 
   if (phrase === "today") {
-    now.setHours(23, 59, 59, 999);
-    return now.toISOString();
+    const date = toZonedTime(now, userTimezone);
+    date.setHours(23, 59, 59, 999);
+    return date.toISOString();
   }
 
   if (phrase === "tomorrow") {
-    const date = new Date(now.getTime() + dayMs);
+    const date = toZonedTime(new Date(now.getTime() + dayMs), userTimezone);
     date.setHours(23, 59, 59, 999);
     return date.toISOString();
   }
@@ -66,7 +90,7 @@ const parseDueDate = (phrase: string): string | undefined => {
   const inDaysMatch = phrase.match(/^in (\d+) days?$/);
   if (inDaysMatch) {
     const days = parseInt(inDaysMatch[1], 10);
-    const date = new Date(now.getTime() + days * dayMs);
+    const date = toZonedTime(new Date(now.getTime() + days * dayMs), userTimezone);
     date.setHours(23, 59, 59, 999);
     return date.toISOString();
   }
@@ -80,7 +104,7 @@ const parseDueDate = (phrase: string): string | undefined => {
   if (nextWeekdayMatch) {
     const targetDay = weekdays.indexOf(nextWeekdayMatch[1].toLowerCase());
     if (targetDay >= 0) {
-      let date = new Date(now);
+      let date = toZonedTime(new Date(now), userTimezone);
       const currentDay = date.getDay();
       let daysToAdd = (targetDay - currentDay + 7) % 7;
       if (daysToAdd === 0) daysToAdd = 7;
@@ -92,6 +116,373 @@ const parseDueDate = (phrase: string): string | undefined => {
 
   return undefined;
 };
+
+// Enhanced intent recognition using NLP patterns
+function analyzeUserIntent(input: string): UserIntent {
+  const lowerInput = input.toLowerCase().trim();
+  
+  // Question patterns
+  const questionPatterns = [
+    /^(when|what|where|who|how|why)\s/,
+    /\?$/,
+    /^(is|are|do|does|can|could|will|would)\s/
+  ];
+  
+  // Command patterns  
+  const commandPatterns = [
+    /^(add|create|make|schedule|book|set|delete|remove|update|edit)\s/,
+    /^(remind|tell|show|list|find|search)\s/
+  ];
+
+  // Extract entities
+  const entities: UserIntent['entities'] = {};
+  
+  // Time references
+  const timeRefs = ['today', 'tomorrow', 'yesterday', 'next week', 'this week', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  entities.timeRef = timeRefs.find(ref => lowerInput.includes(ref));
+  
+  // Person references
+  const personRefs = ['mom', 'mum', 'dad', 'father', 'mother', 'colleague', 'boss', 'friend'];
+  entities.person = personRefs.find(person => lowerInput.includes(person));
+  
+  // Location references
+  const locationRefs = ['airport', 'office', 'home', 'work', 'hospital', 'clinic', 'school'];
+  entities.location = locationRefs.find(loc => lowerInput.includes(loc));
+  
+  // Urgency indicators
+  if (lowerInput.includes('urgent') || lowerInput.includes('asap') || lowerInput.includes('critical')) {
+    entities.urgency = 'high';
+  } else if (lowerInput.includes('important') || lowerInput.includes('priority')) {
+    entities.urgency = 'medium';
+  } else {
+    entities.urgency = 'low';
+  }
+
+  // Determine type
+  let type: UserIntent['type'] = 'general';
+  if (questionPatterns.some(pattern => pattern.test(lowerInput))) {
+    type = 'question';
+  } else if (commandPatterns.some(pattern => pattern.test(lowerInput))) {
+    type = 'command';
+  } else if (lowerInput.includes('please') || lowerInput.includes('could you') || lowerInput.includes('can you')) {
+    type = 'request';
+  } else if (lowerInput.includes('find') || lowerInput.includes('search') || lowerInput.includes('show me')) {
+    type = 'search';
+  }
+
+  // Determine category
+  let category: UserIntent['category'] = 'general';
+  if (lowerInput.includes('calendar') || lowerInput.includes('schedule') || lowerInput.includes('meeting') || lowerInput.includes('event') || entities.timeRef) {
+    category = 'calendar';
+  } else if (lowerInput.includes('task') || lowerInput.includes('todo') || lowerInput.includes('complete') || lowerInput.includes('done')) {
+    category = 'tasks';
+  } else if (lowerInput.includes('habit') || lowerInput.includes('routine') || lowerInput.includes('streak')) {
+    category = 'habits';
+  } else if (lowerInput.includes('note') || lowerInput.includes('remember') || lowerInput.includes('write down')) {
+    category = 'notes';
+  }
+
+  // Determine action
+  let action: UserIntent['action'] | undefined;
+  if (lowerInput.includes('add') || lowerInput.includes('create') || lowerInput.includes('make') || lowerInput.includes('new')) {
+    action = 'create';
+  } else if (lowerInput.includes('show') || lowerInput.includes('list') || lowerInput.includes('view') || lowerInput.includes('get')) {
+    action = 'read';
+  } else if (lowerInput.includes('update') || lowerInput.includes('edit') || lowerInput.includes('change') || lowerInput.includes('modify')) {
+    action = 'update';
+  } else if (lowerInput.includes('delete') || lowerInput.includes('remove') || lowerInput.includes('cancel')) {
+    action = 'delete';
+  } else if (lowerInput.includes('find') || lowerInput.includes('search')) {
+    action = 'search';
+  }
+
+  // Calculate confidence based on pattern matches and entity extraction
+  let confidence = 0.5; // Base confidence
+  if (type !== 'general') confidence += 0.2;
+  if (category !== 'general') confidence += 0.2;
+  if (action) confidence += 0.1;
+  if (Object.keys(entities).length > 0) confidence += 0.1;
+
+  return {
+    type,
+    category,
+    action,
+    entities,
+    confidence
+  };
+}
+
+// Enhanced calendar event processing with better contextual search
+async function processCalendarQuery(userInput: string, userTimezone: string, contextData: any): Promise<string> {
+  try {
+    // Use enhanced NLP processor for better intent recognition
+    const nlpProcessor = getEnhancedNLPProcessor();
+    const enhancedIntent = await nlpProcessor.processQuery(userInput, userTimezone);
+    
+    console.log(`[DEBUG] Enhanced intent analysis:`, enhancedIntent);
+    
+    const events = contextData?.events || contextData?.allEvents || [];
+    
+    // Use enhanced calendar processor
+    const calendarProcessor = new EnhancedCalendarProcessor(userTimezone);
+    
+    if (enhancedIntent.calendar_context?.is_calendar_query) {
+      return calendarProcessor.processCalendarQuery(enhancedIntent, events);
+    }
+    
+    // Fallback to old intent system if enhanced NLP doesn't detect calendar query
+    const basicIntent = analyzeUserIntent(userInput);
+    console.log(`[DEBUG] Fallback to basic intent:`, basicIntent);
+    
+    // Handle specific contextual queries (like "when do I take mum to the airport")
+    if (basicIntent.type === 'question' && (basicIntent.entities.person || basicIntent.entities.location)) {
+      return await handleContextualCalendarQuery(userInput, events, userTimezone, basicIntent);
+    }
+    
+    // Handle time-specific queries
+    if (basicIntent.entities.timeRef) {
+      return await handleTimeSpecificQuery(basicIntent.entities.timeRef, events, userTimezone);
+    }
+    
+    // Default to showing upcoming events with intelligent formatting
+    return await formatCalendarResponse(events, userTimezone, 'upcoming');
+    
+  } catch (error) {
+    console.error('Error in enhanced calendar processing:', error);
+    
+    // Fallback to basic processing
+    const intent = analyzeUserIntent(userInput);
+    const events = contextData?.events || contextData?.allEvents || [];
+    
+    if (intent.type === 'question' && (intent.entities.person || intent.entities.location)) {
+      return await handleContextualCalendarQuery(userInput, events, userTimezone, intent);
+    }
+    
+    if (intent.entities.timeRef) {
+      return await handleTimeSpecificQuery(intent.entities.timeRef, events, userTimezone);
+    }
+    
+    return await formatCalendarResponse(events, userTimezone, 'upcoming');
+  }
+}
+
+// Enhanced contextual calendar query handler
+async function handleContextualCalendarQuery(query: string, events: any[], userTimezone: string, intent: UserIntent): Promise<string> {
+  const { now, today } = getTimezoneAwareDates(userTimezone);
+  
+  // Build search keywords from intent entities and query
+  const searchKeywords: string[] = [];
+  if (intent.entities.person) searchKeywords.push(intent.entities.person);
+  if (intent.entities.location) searchKeywords.push(intent.entities.location);
+  
+  // Extract additional keywords from the query
+  const additionalKeywords = extractCalendarKeywords(query);
+  searchKeywords.push(...additionalKeywords);
+  
+  console.log(`[DEBUG] Searching for events with keywords: ${searchKeywords.join(', ')}`);
+  
+  // Search for matching events
+  const matchingEvents = events.filter((event: any) => {
+    const eventText = `${event.summary || ''} ${event.description || ''} ${event.location || ''}`.toLowerCase();
+    return searchKeywords.some(keyword => eventText.includes(keyword.toLowerCase()));
+  });
+  
+  if (matchingEvents.length === 0) {
+    return `📅 I couldn't find any events matching "${searchKeywords.join(', ')}" in your calendar. Could you check if the event is scheduled or provide more details?`;
+  }
+  
+  // Sort by date and get the most relevant match
+  const upcomingMatches = matchingEvents
+    .filter((event: any) => {
+      const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+      return eventDate >= today;
+    })
+    .sort((a: any, b: any) => {
+      const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+      const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+      return dateA.getTime() - dateB.getTime();
+    });
+  
+  if (upcomingMatches.length > 0) {
+    const nextEvent = upcomingMatches[0];
+    return formatSingleEventResponse(nextEvent, userTimezone, now, intent);
+  } else {
+    // Check for past events
+    const pastMatches = matchingEvents
+      .filter((event: any) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+        return eventDate < today;
+      })
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+        const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+        return dateB.getTime() - dateA.getTime(); // Most recent first
+      });
+    
+    if (pastMatches.length > 0) {
+      const lastEvent = pastMatches[0];
+      const eventDate = new Date(lastEvent.start?.dateTime || lastEvent.start?.date || lastEvent.start);
+      const timeAgo = formatTimeAgo(eventDate);
+      
+      return `📅 I found "${lastEvent.summary}" but it was ${timeAgo}. There are no upcoming events matching your search.`;
+    } else {
+      return `📅 I couldn't find any events matching "${searchKeywords.join(', ')}" in your calendar.`;
+    }
+  }
+}
+
+// Helper function to format single event responses intelligently
+function formatSingleEventResponse(event: any, userTimezone: string, now: Date, intent: UserIntent): string {
+  const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+  const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
+  const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
+  const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+  
+  // Calculate time difference for more natural response
+  const timeDiff = eventDate.getTime() - now.getTime();
+  const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+  
+  let whenText = "";
+  if (daysUntil === 0) {
+    whenText = "today";
+  } else if (daysUntil === 1) {
+    whenText = "tomorrow";
+  } else if (daysUntil <= 7) {
+    whenText = `this ${dayName}`;
+  } else {
+    whenText = `on ${dayName}, ${dateStr}`;
+  }
+  
+  // Personalize response based on intent
+  let responsePrefix = "";
+  if (intent.entities.person && intent.entities.location) {
+    responsePrefix = `You're taking ${intent.entities.person} to ${intent.entities.location} `;
+  } else if (intent.entities.location) {
+    responsePrefix = `Your ${intent.entities.location} appointment is `;
+  } else {
+    responsePrefix = `**${event.summary}** is scheduled for `;
+  }
+  
+  let response = `📅 ${responsePrefix}**${whenText}** at **${timeStr}**`;
+  
+  if (event.location) {
+    response += `\n📍 Location: ${event.location}`;
+  }
+  
+  if (event.description) {
+    response += `\n📝 ${event.description.substring(0, 150)}${event.description.length > 150 ? '...' : ''}`;
+  }
+  
+  // Add helpful context about time remaining
+  if (daysUntil === 0) {
+    const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+    if (hoursUntil > 0) {
+      response += `\n\n⏰ That's in about ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}!`;
+    } else {
+      const minutesUntil = Math.floor(timeDiff / (1000 * 60));
+      if (minutesUntil > 0) {
+        response += `\n\n⏰ That's in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}!`;
+      }
+    }
+  } else if (daysUntil === 1) {
+    response += `\n\n⏰ That's tomorrow!`;
+  } else if (daysUntil <= 7) {
+    response += `\n\n⏰ That's in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}.`;
+  }
+  
+  return response;
+}
+
+// Enhanced time-specific query handler
+async function handleTimeSpecificQuery(timeRef: string, events: any[], userTimezone: string): Promise<string> {
+  const { now, today, tomorrow } = getTimezoneAwareDates(userTimezone);
+  
+  let filteredEvents = [];
+  let titleSuffix = "";
+  
+  switch (timeRef.toLowerCase()) {
+    case 'today':
+      filteredEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= today && eventInUserTz < tomorrow;
+      });
+      titleSuffix = "Today";
+      break;
+      
+    case 'tomorrow':
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+      filteredEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= tomorrow && eventInUserTz < dayAfterTomorrow;
+      });
+      titleSuffix = "Tomorrow";
+      break;
+      
+    default:
+      // Handle specific days (monday, tuesday, etc.)
+      return await handleSpecificDayQuery(timeRef, events, userTimezone);
+  }
+  
+  return await formatCalendarResponse(filteredEvents, userTimezone, titleSuffix.toLowerCase());
+}
+
+// Helper function to get timezone-aware dates
+function getTimezoneAwareDates(userTimezone: string) {
+  const now = new Date();
+  const nowInUserTz = toZonedTime(now, userTimezone);
+  const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return { now: nowInUserTz, today, tomorrow, userTimezone };
+}
+
+// Enhanced calendar keyword extraction
+function extractCalendarKeywords(query: string): string[] {
+  const lowerQuery = query.toLowerCase();
+  
+  // Remove question words and common phrases
+  const stopWords = ['when', 'do', 'i', 'am', 'is', 'are', 'the', 'a', 'an', 'and', 'or', 'but', 'to', 'for', 'with', 'at', 'on', 'in', 'take', 'have', 'get', 'go', 'my', 'me'];
+  
+  // Extract meaningful keywords
+  const words = lowerQuery
+    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word));
+  
+  // Add common synonyms and variations
+  const expandedKeywords = [...words];
+  words.forEach(word => {
+    switch(word) {
+      case 'mum':
+      case 'mom':
+      case 'mother':
+        expandedKeywords.push('mum', 'mom', 'mother', 'family');
+        break;
+      case 'dad':
+      case 'father':
+        expandedKeywords.push('dad', 'father', 'family');
+        break;
+      case 'airport':
+        expandedKeywords.push('flight', 'plane', 'travel', 'departure', 'terminal');
+        break;
+      case 'flight':
+        expandedKeywords.push('airport', 'plane', 'travel', 'departure');
+        break;
+      case 'doctor':
+        expandedKeywords.push('appointment', 'medical', 'clinic', 'physician', 'health');
+        break;
+      case 'meeting':
+        expandedKeywords.push('call', 'conference', 'discussion', 'sync');
+        break;
+    }
+  });
+  
+  return Array.from(new Set(expandedKeywords)); // Remove duplicates
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -134,14 +525,44 @@ export default async function handler(
     return res.status(400).json({ error: "Invalid request body - missing message/prompt or invalid history" });
   }
 
+  // Get user settings including timezone
+  const userSettingsData = await db.query.userSettings.findFirst({
+    where: eq(userSettings.user_email, email),
+    columns: {
+      timezone: true,
+      floCatStyle: true,
+      floCatPersonality: true,
+      preferredName: true,
+    },
+  });
+  
+  const userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const floCatStyle = bodyFloCatStyle || userSettingsData?.floCatStyle || "default";
+  const floCatPersonality = userSettingsData?.floCatPersonality || [];
+  const preferredName = bodyPreferredName || userSettingsData?.preferredName || "";
+
+  // Store timezone globally for calendar operations
+  (global as any).currentUserTimezone = userTimezone;
+
+  // Analyze user intent for better processing
+  const intent = analyzeUserIntent(userInput);
+  console.log(`[DEBUG] User intent analysis:`, intent);
+
   const lowerPrompt = userInput.toLowerCase();
 
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
+  
+  // Load user context early for better processing
+  try {
+    await smartAssistant.loadUserContext();
+  } catch (error) {
+    console.error("Error loading smart assistant context:", error);
+  }
+  
   // Check for proactive suggestion requests
   if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
     try {
-      await smartAssistant.loadUserContext();
       const suggestions = await smartAssistant.generateProactiveSuggestions();
       
       if (suggestions.length > 0) {
@@ -169,8 +590,9 @@ export default async function handler(
     }
   }
 
-  // ── Check for schedule/calendar queries first ───────────────────
-  if (lowerPrompt.includes("schedule") || lowerPrompt.includes("my schedule") || 
+  // Enhanced calendar/schedule query processing with timezone awareness
+  if (intent.category === 'calendar' || 
+      lowerPrompt.includes("schedule") || lowerPrompt.includes("my schedule") || 
       lowerPrompt.includes("meetings") || lowerPrompt.includes("my meetings") ||
       lowerPrompt.includes("calendar") || lowerPrompt.includes("my calendar") ||
       lowerPrompt.includes("agenda") || lowerPrompt.includes("today's events") ||
@@ -186,18 +608,8 @@ export default async function handler(
       (lowerPrompt.includes("what") && (lowerPrompt.includes("today") || lowerPrompt.includes("tomorrow")) && 
        (lowerPrompt.includes("meeting") || lowerPrompt.includes("event") || lowerPrompt.includes("schedule")))) {
     
-    // Fetch user timezone for calendar operations
-    const userSettingsForTimezone = await db.query.userSettings.findFirst({
-      where: eq(userSettings.user_email, email),
-      columns: { timezone: true },
-    });
-    const calendarTimezone = userSettingsForTimezone?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Store timezone globally for calendar capabilities
-    (global as any).currentUserTimezone = calendarTimezone;
-    
     try {
-      // Fetch calendar events for the next 7 days
+      // Fetch calendar events for enhanced processing
       const now = new Date();
       const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       
@@ -212,121 +624,30 @@ export default async function handler(
         const calendarData = await calendarResponse.json();
         const events = calendarData.events || [];
         
-        // Filter today's and upcoming events using user timezone
-        const now = new Date();
-        const nowInUserTz = toZonedTime(now, calendarTimezone);
-        const today = new Date(nowInUserTz.getFullYear(), nowInUserTz.getMonth(), nowInUserTz.getDate());
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        console.log(`[DEBUG] Fetched ${events.length} calendar events for processing`);
+        console.log(`[DEBUG] Sample events:`, events.slice(0, 2).map((e: any) => ({
+          summary: e.summary,
+          start: e.start,
+          location: e.location
+        })));
         
-        const todayEvents = events.filter((event: any) => {
-          const eventDate = new Date(event.start?.dateTime || event.start?.date);
-          const eventInUserTz = toZonedTime(eventDate, calendarTimezone);
-          return eventInUserTz >= today && eventInUserTz < tomorrow;
-        });
-
-        const upcomingEvents = events.filter((event: any) => {
-          const eventDate = new Date(event.start?.dateTime || event.start?.date);
-          return eventDate >= tomorrow;
-        }).slice(0, 5);
-
-        // Generate schedule response
-        let scheduleResponse = "";
+        // Enhanced context data for better processing
+        const enhancedContextData = {
+          ...contextData,
+          events,
+          allEvents: events
+        };
         
-        // Handle specific day queries
-        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const matchedDay = dayNames.find(day => lowerPrompt.includes(day));
+        // Update global context
+        (global as any).currentContextData = enhancedContextData;
         
-        if (matchedDay) {
-          // Filter events for the specific day
-          const dayIndex = dayNames.indexOf(matchedDay);
-          const targetDate = new Date();
-          const currentDay = targetDate.getDay();
-          let daysToAdd = (dayIndex - currentDay + 7) % 7;
-          if (daysToAdd === 0 && !lowerPrompt.includes("today")) daysToAdd = 7; // Next week if same day
-          targetDate.setDate(targetDate.getDate() + daysToAdd);
-          
-          const nextDay = new Date(targetDate);
-          nextDay.setDate(nextDay.getDate() + 1);
-          
-          const dayEvents = events.filter((event: any) => {
-            const eventDate = new Date(event.start?.dateTime || event.start?.date);
-            return eventDate >= targetDate && eventDate < nextDay;
-          });
-          
-          const dayName = matchedDay.charAt(0).toUpperCase() + matchedDay.slice(1);
-          
-          if (dayEvents.length === 0) {
-            scheduleResponse = `📅 No events scheduled for ${dayName}! ✨`;
-          } else {
-            if (lowerPrompt.includes("first meeting") || lowerPrompt.includes("next meeting")) {
-              // Show only the first meeting
-              const firstEvent = dayEvents[0];
-              const time = formatInTimeZone(new Date(firstEvent.start?.dateTime || firstEvent.start?.date), calendarTimezone, 'h:mm a');
-              scheduleResponse = `📅 **Your first meeting on ${dayName}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
-              if (firstEvent.location) {
-                scheduleResponse += `  📍 ${firstEvent.location}\n`;
-              }
-              if (firstEvent.description) {
-                scheduleResponse += `  📝 ${firstEvent.description.substring(0, 100)}${firstEvent.description.length > 100 ? '...' : ''}\n`;
-              }
-            } else {
-              // Show all events for the day
-              scheduleResponse = `📅 **${dayName}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
-              dayEvents.forEach((event: any) => {
-                const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
-                scheduleResponse += `• ${time} - **${event.summary}**\n`;
-                if (event.location) {
-                  scheduleResponse += `  📍 ${event.location}\n`;
-                }
-              });
-            }
-          }
-        } else if (lowerPrompt.includes("today") || lowerPrompt.includes("today's")) {
-          scheduleResponse = `📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n\n`;
-          
-          if (todayEvents.length > 0) {
-            todayEvents.forEach((event: any) => {
-              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
-              scheduleResponse += `• ${time} - **${event.summary}**\n`;
-              if (event.location) {
-                scheduleResponse += `  📍 ${event.location}\n`;
-              }
-            });
-          } else {
-            scheduleResponse += "No events scheduled for today! ✨\n";
-          }
-        } else {
-          scheduleResponse = `📅 **Your Schedule Overview**:\n\n`;
-          
-          // Today's events
-          scheduleResponse += `**Today** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n`;
-          if (todayEvents.length > 0) {
-            todayEvents.slice(0, 3).forEach((event: any) => {
-              const time = formatInTimeZone(new Date(event.start?.dateTime || event.start?.date), calendarTimezone, 'h:mm a');
-              scheduleResponse += `• ${time} - ${event.summary}\n`;
-            });
-            if (todayEvents.length > 3) {
-              scheduleResponse += `• ... and ${todayEvents.length - 3} more\n`;
-            }
-          } else {
-            scheduleResponse += "• No events today\n";
-          }
-          
-          // Upcoming events
-          scheduleResponse += `\n**Upcoming Events**:\n`;
-          if (upcomingEvents.length > 0) {
-            upcomingEvents.forEach((event: any) => {
-              const eventDate = new Date(event.start?.dateTime || event.start?.date);
-              const dateStr = formatInTimeZone(eventDate, calendarTimezone, 'eee MMM d');
-              const timeStr = formatInTimeZone(eventDate, calendarTimezone, 'h:mm a');
-              scheduleResponse += `• ${dateStr} at ${timeStr} - **${event.summary}**\n`;
-            });
-          } else {
-            scheduleResponse += "• No upcoming events this week\n";
-          }
-        }
+        // Update SmartAIAssistant with fresh calendar data
+        smartAssistant.updateCalendarEvents(events);
         
+        console.log(`[DEBUG] Processing calendar query: "${userInput}" with ${events.length} events`);
+        
+        // Process calendar query with enhanced intelligence
+        const scheduleResponse = await processCalendarQuery(userInput, userTimezone, enhancedContextData);
         return res.status(200).json({ reply: scheduleResponse });
       }
     } catch (error) {
@@ -335,10 +656,8 @@ export default async function handler(
     }
   }
 
-  // Check for natural language queries first
-  if (lowerPrompt.includes("when did") || lowerPrompt.includes("when do") || lowerPrompt.includes("when am") ||
-      lowerPrompt.includes("show me") || lowerPrompt.includes("what") || lowerPrompt.includes("how") ||
-      lowerPrompt.includes("find") || lowerPrompt.includes("search")) {
+  // Enhanced natural language processing for complex queries
+  if (intent.type === 'question' && intent.confidence > 0.7) {
     try {
       const queryResponse = await smartAssistant.processNaturalLanguageQuery(userInput);
       if (queryResponse && !queryResponse.includes("I can help you with:")) {
@@ -367,27 +686,49 @@ export default async function handler(
     }
   }
 
-  const callInternalApi = async (path: string, method: string, body: any, originalReq: NextApiRequest) => {
-    const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        // Forward the cookie from the original request for authentication in internal API calls
-        "Cookie": originalReq.headers.cookie || "",
-      },
-      body: JSON.stringify(body),
-    });
+  // Enhanced task creation with better intent understanding
+  if (intent.category === 'tasks' && intent.action === 'create') {
+    try {
+      const taskText = extractTaskFromIntent(userInput, intent);
+      const dueDate = intent.entities.timeRef ? parseDueDate(intent.entities.timeRef, userTimezone) : undefined;
+      
+      const taskPayload: any = { 
+        text: taskText,
+        source: 'personal'
+      };
+      
+      if (dueDate) taskPayload.dueDate = dueDate;
+      if (intent.entities.urgency === 'high') taskPayload.priority = 'high';
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error calling ${path}: ${response.status} - ${errorText}`);
+      const taskResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tasks`, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": req.headers.cookie || "",
+        },
+        body: JSON.stringify(taskPayload),
+      });
+
+      if (taskResponse.ok) {
+        const createdTask = await taskResponse.json();
+        const actions = [{
+          type: 'create_task' as const,
+          data: createdTask,
+          message: `Task "${taskText}" created successfully`
+        }];
+        
+        return res.status(200).json({
+          reply: `✅ Task "${taskText}" added successfully${dueDate ? ` (due ${intent.entities.timeRef})` : ""}! 🎯`,
+          actions
+        });
+      }
+    } catch (error) {
+      console.error("Error creating task from intent:", error);
+      // Fall through to normal processing
     }
+  }
 
-    return response.ok;
-  };
-
-  // ── Enhanced Add Task Detection ─────────────────────────────
+  // ── Enhanced Add Event Detection ─────────────────────────────
   // More flexible task detection patterns
   const taskPatterns = [
     // "add a task for tomorrow called [task name]"
@@ -439,7 +780,7 @@ export default async function handler(
       }
       
       if (finalTaskText) {
-        const dueDate = duePhrase ? parseDueDate(duePhrase) : undefined;
+        const dueDate = duePhrase ? parseDueDate(duePhrase, userTimezone) : undefined;
         
         // Check for source specification
         const hasSourceSpecified = lowerPrompt.includes("work") || lowerPrompt.includes("personal") || 
@@ -593,24 +934,6 @@ export default async function handler(
     // Fetch conversations (notes and meetings will be handled in settings section)
     const conversations = await fetchUserConversations(email).catch(() => []);
     
-    // Fetch user settings to get FloCat style preference and timezone
-    const userSettingsData = await db.query.userSettings.findFirst({
-      where: eq(userSettings.user_email, email),
-      columns: {
-        floCatStyle: true,
-        floCatPersonality: true,
-        preferredName: true,
-        timezone: true,
-      },
-    });
-    const floCatStyle = bodyFloCatStyle || userSettingsData?.floCatStyle || "default";
-    const floCatPersonality = userSettingsData?.floCatPersonality || [];
-    const preferredName = bodyPreferredName || userSettingsData?.preferredName || "";
-    const userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Store timezone globally for calendar operations
-    (global as any).currentUserTimezone = userTimezone;
-    
     // Use notes and meetings from request body if provided, otherwise fetch from database
     const notes = bodyNotes.length > 0 ? bodyNotes : await fetchUserNotes(email).catch(() => []);
     const meetings = bodyMeetings.length > 0 ? bodyMeetings : await fetchUserMeetingNotes(email).catch(() => []);
@@ -618,9 +941,13 @@ export default async function handler(
     // If no OpenAI API key, use local AI with smart assistance
     if (!openai) {
       console.log("Using local AI (no OpenAI API key found)");
+      const localResponse = await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant, intent, userTimezone);
+      console.log("[DEBUG] Local AI response:", localResponse);
       return res.status(200).json({ 
-        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
+        reply: localResponse
       });
+    } else {
+      console.log("Using OpenAI API for processing");
     }
     
     // Start context processing
@@ -639,18 +966,21 @@ export default async function handler(
       ? `Address the user as "${preferredName}".`
       : "";
     
+    // Enhanced style instructions with timezone awareness
+    const timezoneInstruction = `The user is in the ${userTimezone} timezone. Always provide times in their local timezone.`;
+    
     switch(floCatStyle) {
       case "more_catty":
-        styleInstruction = `You are FloCat, an extremely playful and cat-like AI assistant. Use LOTS of cat puns, cat emojis (😺 😻 🐱), and cat-like expressions (like "purr-fect", "meow", "paw-some"). Occasionally mention cat behaviors like purring, pawing at things, or chasing laser pointers. Be enthusiastic and playful in all your responses. ${personalityTraits} ${nameInstruction}`;
+        styleInstruction = `You are FloCat, an extremely playful and cat-like AI assistant. Use LOTS of cat puns, cat emojis (😺 😻 🐱), and cat-like expressions (like "purr-fect", "meow", "paw-some"). Occasionally mention cat behaviors like purring, pawing at things, or chasing laser pointers. Be enthusiastic and playful in all your responses. ${personalityTraits} ${nameInstruction} ${timezoneInstruction}`;
         break;
       case "less_catty":
-        styleInstruction = `You are FloCat, a helpful and friendly AI assistant. While you have a cat mascot, you should minimize cat puns and references. Focus on being helpful and friendly while only occasionally using a cat emoji (😺) or making a subtle reference to your cat nature. ${personalityTraits} ${nameInstruction}`;
+        styleInstruction = `You are FloCat, a helpful and friendly AI assistant. While you have a cat mascot, you should minimize cat puns and references. Focus on being helpful and friendly while only occasionally using a cat emoji (😺) or making a subtle reference to your cat nature. ${personalityTraits} ${nameInstruction} ${timezoneInstruction}`;
         break;
       case "professional":
-        styleInstruction = `You are FloCat, a professional and efficient AI assistant. Provide concise, business-like responses with no cat puns, emojis, or playful language. Focus on delivering information clearly and efficiently. Use formal language and avoid any cat-related personality traits. ${personalityTraits} ${nameInstruction}`;
+        styleInstruction = `You are FloCat, a professional and efficient AI assistant. Provide concise, business-like responses with no cat puns, emojis, or playful language. Focus on delivering information clearly and efficiently. Use formal language and avoid any cat-related personality traits. ${personalityTraits} ${nameInstruction} ${timezoneInstruction}`;
         break;
       default: // default style
-        styleInstruction = `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺, so occasionally use cat puns and references. ${personalityTraits} ${nameInstruction}`;
+        styleInstruction = `You are FloCat, a friendly, slightly quirky AI assistant. You provide summaries, add tasks, schedule events, and cheerfully help users stay on track. You are also a cat 😺, so occasionally use cat puns and references. Always be contextually aware and provide intelligent responses based on the user's specific needs. ${personalityTraits} ${nameInstruction} ${timezoneInstruction}`;
     }
     
     const baseMessages: ChatCompletionMessageParam[] = [
@@ -663,12 +993,26 @@ export default async function handler(
     // Wait for context to complete
     const relevantContext = await relevantContextPromise;
     
+    // Enhanced context with intent analysis
+    const enhancedContext = `
+Relevant context: ${relevantContext}
+
+User Intent Analysis:
+- Type: ${intent.type}
+- Category: ${intent.category}
+- Action: ${intent.action || 'none'}
+- Entities: ${JSON.stringify(intent.entities)}
+- Confidence: ${intent.confidence}
+
+Please provide a contextually aware response that addresses the user's specific intent and uses their timezone (${userTimezone}) for any time-related information.
+    `;
+    
     // Combine all messages
     const messages: ChatCompletionMessageParam[] = [
       ...baseMessages,
       {
         role: "system",
-        content: `Relevant context:\n${relevantContext}`,
+        content: enhancedContext,
       },
       ...history.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
@@ -676,7 +1020,7 @@ export default async function handler(
       })),
       {
         role: "user",
-        content: userInput, // Use userInput instead of prompt
+        content: userInput,
       },
     ];
 
@@ -690,7 +1034,7 @@ export default async function handler(
       if (!aiReply) {
         console.log("OpenAI returned empty response, using local AI");
         return res.status(200).json({ 
-          reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
+          reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant, intent, userTimezone) 
         });
       }
 
@@ -698,7 +1042,7 @@ export default async function handler(
     } catch (err: any) {
       console.error("OpenAI API error, falling back to local AI:", err.message);
       return res.status(200).json({ 
-        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant) 
+        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant, intent, userTimezone) 
       });
     }
   } catch (err: any) {
@@ -707,16 +1051,89 @@ export default async function handler(
   }
 }
 
-// Enhanced local AI response generator with smart assistance
+// Helper function to extract task text from intent
+function extractTaskFromIntent(userInput: string, intent: UserIntent): string {
+  // Remove command words and extract the core task
+  let taskText = userInput;
+  const commandWords = ['add', 'create', 'new', 'make', 'task', 'todo', 'a', 'an', 'the'];
+  
+  // Remove command words from the beginning
+  let words = taskText.split(' ');
+  let startIndex = 0;
+  
+  for (let i = 0; i < words.length; i++) {
+    if (!commandWords.includes(words[i].toLowerCase())) {
+      startIndex = i;
+      break;
+    }
+  }
+  
+  const cleanedText = words.slice(startIndex).join(' ').trim();
+  
+  // Remove time references if they exist
+  if (intent.entities.timeRef) {
+    const timeRefRegex = new RegExp(`\\b${intent.entities.timeRef}\\b`, 'gi');
+    return cleanedText.replace(timeRefRegex, '').trim();
+  }
+  
+  return cleanedText;
+}
+
+// Enhanced local AI response generator with intent awareness
 async function generateEnhancedLocalResponse(
   input: string, 
   floCatStyle: string, 
   preferredName: string, 
   notes: any[], 
   meetings: any[],
-  smartAssistant: SmartAIAssistant
+  smartAssistant: SmartAIAssistant,
+  intent: UserIntent,
+  userTimezone: string
 ): Promise<string> {
-  // First try the smart assistant for natural language queries
+    // Force enhanced NLP to trigger for debugging
+  const lowerInput = input.toLowerCase();
+  const isCalendarQuery = lowerInput.includes('mum') || lowerInput.includes('airport') || 
+                          lowerInput.includes('first meeting') || lowerInput.includes('meeting tomorrow') ||
+                          lowerInput.includes('schedule') || lowerInput.includes('calendar');
+  
+  console.log(`[DEBUG] Input: "${input}" - Calendar query detected: ${isCalendarQuery}`);
+  
+  // First try enhanced NLP processing for calendar queries
+  try {
+    const nlpProcessor = getEnhancedNLPProcessor();
+    const enhancedIntent = await nlpProcessor.processQuery(input, userTimezone);
+    
+    console.log('[DEBUG] Enhanced intent result:', enhancedIntent);
+    
+    if (enhancedIntent.calendar_context?.is_calendar_query || isCalendarQuery) {
+      console.log('[DEBUG] Local AI detected calendar query, using enhanced processing');
+      console.log('[DEBUG] Enhanced intent:', enhancedIntent);
+      
+      // Get calendar events from global context
+      const contextData = (global as any).currentContextData || {};
+      const events = contextData.events || contextData.allEvents || [];
+      
+      console.log(`[DEBUG] Local AI found ${events.length} events for processing`);
+      console.log('[DEBUG] Global context data keys:', Object.keys(contextData));
+      
+      if (events.length > 0) {
+        const calendarProcessor = new EnhancedCalendarProcessor(userTimezone);
+        const response = calendarProcessor.processCalendarQuery(enhancedIntent, events);
+        console.log('[DEBUG] Enhanced calendar response:', response);
+        return response;
+      } else {
+        console.log('[DEBUG] No events found in global context');
+        // Return a fallback message
+        return "📅 I don't have access to your calendar events right now. Please check if your calendar is connected.";
+      }
+    } else {
+      console.log('[DEBUG] Enhanced NLP did not detect calendar query:', enhancedIntent.intent);
+    }
+  } catch (error) {
+    console.error("Error in enhanced NLP processing:", error);
+  }
+  
+  // Try the smart assistant for natural language queries
   try {
     const smartResponse = await smartAssistant.processNaturalLanguageQuery(input);
     if (smartResponse && !smartResponse.includes("I can help you with:")) {
@@ -727,16 +1144,18 @@ async function generateEnhancedLocalResponse(
     // Continue with local response
   }
 
-  return generateLocalResponse(input, floCatStyle, preferredName, notes, meetings);
+  return generateLocalResponse(input, floCatStyle, preferredName, notes, meetings, intent, userTimezone);
 }
 
-// Local AI response generator (no external API required)
+// Enhanced local AI response generator with timezone and intent awareness
 function generateLocalResponse(
   input: string, 
   floCatStyle: string, 
   preferredName: string, 
   notes: any[], 
-  meetings: any[]
+  meetings: any[],
+  intent: UserIntent,
+  userTimezone: string
 ): string {
   const lowerInput = input.toLowerCase();
   
@@ -778,11 +1197,46 @@ function generateLocalResponse(
   const randomGreeting = personality.greeting[Math.floor(Math.random() * personality.greeting.length)];
   const userName = preferredName || "User";
   
-  // Current time context
-  const now = new Date();
+  // Current time context with timezone awareness
+  const now = toZonedTime(new Date(), userTimezone);
   const hour = now.getHours();
   const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   
+  // Intent-based responses
+  if (intent.category === 'calendar' && intent.type === 'question') {
+    return `${randomGreeting} I understand you're asking about your calendar. Let me help you find that information! However, I need access to your calendar data to give you a specific answer. Please try asking again, or check your calendar directly.
+
+${personality.sign}`;
+  }
+  
+  if (intent.category === 'tasks' && intent.action === 'read') {
+    // Use actual data from contextData if available
+    const contextData = (global as any).currentContextData || {};
+    const tasks = contextData.tasks || contextData.allTasks || [];
+    const pendingTasks = tasks.filter((task: any) => !task.done);
+    
+    if (pendingTasks.length > 0) {
+      let response = `📋 **Your Pending Tasks** (${pendingTasks.length} total):\n\n`;
+      pendingTasks.slice(0, 10).forEach((task: any, index: number) => {
+        response += `${index + 1}. ${task.text}`;
+        if (task.dueDate) {
+          const dueDate = new Date(task.dueDate);
+          const dueDateInTz = toZonedTime(dueDate, userTimezone);
+          response += ` (Due: ${formatInTimeZone(dueDateInTz, userTimezone, 'MMM d')})`;
+        }
+        response += '\n';
+      });
+      
+      if (pendingTasks.length > 10) {
+        response += `\n... and ${pendingTasks.length - 10} more tasks.`;
+      }
+      
+      return response + `\n\n${personality.sign}`;
+    } else {
+      return `${personality.positive[0]} You're all caught up! No pending tasks at the moment. ${personality.emoji}\n\n${personality.sign}`;
+    }
+  }
+
   // Summary/At-a-glance requests
   if (lowerInput.includes("summary") || lowerInput.includes("at a glance") || lowerInput.includes("overview")) {
     // Use actual data from contextData if available
@@ -798,31 +1252,47 @@ function generateLocalResponse(
       contextData.events || contextData.allEvents || [], 
       contextData.habits || [], 
       contextData.habitCompletions || [], 
-      []
+      [],
+      userTimezone
     );
   }
   
   // Help requests
   if (lowerInput.includes("help") || lowerInput.includes("what can you do")) {
-    return `${randomGreeting} I'm FloCat, your productivity assistant! Here's what I can help you with:
+    return `${randomGreeting} I'm FloCat, your intelligent productivity assistant! Here's what I can help you with:
 
 ## 🎯 Core Features:
-- **📋 Task Management**: Create, view, and organize your tasks
-- **📅 Calendar Integration**: Schedule events and view your agenda  
-- **📝 Notes & Knowledge**: Organize your thoughts and information
-- **🎯 Habit Tracking**: Build and maintain positive routines
-- **📊 Daily Summaries**: Get overviews of your progress
+- **📋 Task Management**: "Add task: Review presentation" or "Show my tasks"
+- **📅 Calendar Integration**: "When do I take mum to the airport?" or "What's my schedule today?"
+- **📝 Notes & Knowledge**: Access and search your saved information
+- **🎯 Habit Tracking**: Track your daily routines and streaks
+- **📊 Smart Insights**: Get personalized productivity suggestions
 
-## 🗣️ How to Talk to Me:
-- Ask for a "summary" or "overview" to see your day
-- Say "my tasks" or "show tasks" for your todo items
-- Ask about "calendar" or "today's events" for your schedule
-- Say "my notes" to browse your saved information
-- Request "motivation" when you need encouragement
+## 🗣️ Natural Language Understanding:
+- Ask questions like "When is my next meeting with John?"
+- Give commands like "Create a task for tomorrow"
+- Request information like "Show me my overdue tasks"
+- Get suggestions with "Give me some productivity advice"
 
-I'm constantly learning to provide you with more personalized and helpful insights!
+## 🌍 Timezone Aware:
+I always show times in your local timezone (${userTimezone}) and understand your schedule context.
 
-${floCatStyle === "more_catty" ? "Purr-fect! What would you like to explore? 🐾" : "What would you like to explore today?"}
+${floCatStyle === "more_catty" ? 
+  "Purr-fect! What would you like to explore? 🐾" : 
+  "What would you like to explore today?"}
+
+${personality.sign}`;
+  }
+  
+  // Intent-specific default responses
+  if (intent.type === 'question') {
+    return `${randomGreeting} I understand you're asking a question. I'm designed to help with your calendar, tasks, habits, and productivity. Could you be more specific about what you'd like to know?
+
+${personality.sign}`;
+  }
+  
+  if (intent.type === 'command') {
+    return `${randomGreeting} I heard your command! I can help with tasks, calendar events, and more. Try being more specific, like "add task: call dentist" or "show today's schedule".
 
 ${personality.sign}`;
   }
@@ -857,19 +1327,19 @@ Remember: Progress, not perfection! You're building something amazing one step a
 ${personality.sign}`;
   }
   
-  // Default helpful response
+  // Default helpful response with intent awareness
   const defaultResponses: Record<string, string[]> = {
     more_catty: [
-      "Meow! I'm here to help you stay paw-ductively organized! 😺 Ask me for a summary, or about your tasks and schedule!",
-      "Purr-fect! I can help you with summaries, tasks, calendar events, and more! What would you like to know? 🐾"
+      "Meow! I'm here to help you stay paw-ductively organized! 😺 Ask me about your schedule, tasks, or request a summary!",
+      "Purr-fect! I can help you with your calendar, tasks, habits, and more! What would you like to know? 🐾"
     ],
     professional: [
-      "I am here to assist with your productivity management. I can provide summaries, task updates, and schedule information.",
-      "Please let me know how I can help with your tasks, calendar, or organizational needs."
+      "I am here to assist with your productivity management. I provide intelligent responses about your calendar, tasks, and productivity patterns.",
+      "Please specify your request. I can help with scheduling, task management, or productivity insights."
     ],
     default: [
-      "I'm here to help you stay organized! 😺 Ask me for a summary, or about your tasks, calendar, notes, and more!",
-      "How can I help you today? I can show you summaries, tasks, events, and provide productivity insights!"
+      "I'm here to help you stay organized and productive! 😺 Ask me about your calendar, tasks, habits, or request a summary!",
+      "How can I help you today? I can show you your schedule, manage tasks, and provide intelligent insights about your productivity!"
     ]
   };
   
@@ -878,10 +1348,12 @@ ${personality.sign}`;
   
   return `${randomResponse}
 
+💡 **Quick tip**: Try asking "When do I take mom to the airport?" or "Show my tasks" for more specific help!
+
 ${personality.sign}`;
 }
 
-// Enhanced intelligent summary with prioritization insights
+// Enhanced intelligent summary with timezone awareness
 function generateIntelligentSummary(
   timeGreeting: string,
   userName: string, 
@@ -893,9 +1365,10 @@ function generateIntelligentSummary(
   events: any[],
   habits: any[],
   habitCompletions: any[],
-  conversationHistory: any[]
+  conversationHistory: any[],
+  userTimezone: string
 ): string {
-  const now = new Date();
+  const now = toZonedTime(new Date(), userTimezone);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -911,20 +1384,24 @@ function generateIntelligentSummary(
     (task.dueDate && new Date(task.dueDate) <= tomorrow)
   );
 
-  // Analyze calendar events
+  // Analyze calendar events with timezone awareness
   const todayEvents = events.filter(event => {
     const eventDate = new Date(event.start?.dateTime || event.start?.date);
-    return eventDate >= today && eventDate < tomorrow;
+    const eventInUserTz = toZonedTime(eventDate, userTimezone);
+    return eventInUserTz >= today && eventInUserTz < tomorrow;
   });
 
   const tomorrowEvents = events.filter(event => {
     const eventDate = new Date(event.start?.dateTime || event.start?.date);
-    return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+    const eventInUserTz = toZonedTime(eventDate, userTimezone);
+    const tomorrowEnd = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+    return eventInUserTz >= tomorrow && eventInUserTz < tomorrowEnd;
   });
 
   const upcomingEvents = events.filter(event => {
     const eventDate = new Date(event.start?.dateTime || event.start?.date);
-    return eventDate >= today && eventDate <= endOfWeek;
+    const eventInUserTz = toZonedTime(eventDate, userTimezone);
+    return eventInUserTz >= today && eventInUserTz <= endOfWeek;
   });
 
   // Identify work vs personal events
@@ -1015,19 +1492,14 @@ function generateIntelligentSummary(
   let summary = `# ${timeGreeting}, ${userName}! ${personality.emoji}
 
 ## Your Intelligent Dashboard
-
-${priorityInsights.length > 0 ? priorityInsights.join('\n\n') + '\n\n' : ''}
+*All times shown in ${userTimezone}*
 
 ### 📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''})
 ${todayEvents.length > 0 ? 
   todayEvents.slice(0, 5).map(event => {
-    const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
-    const isWork = workEvents.includes(event);
-    return `- ${time} **${event.summary}** ${isWork ? '💼' : '👤'}`;
+    const eventDate = new Date(event.start?.dateTime || event.start?.date);
+    const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+    return `- ${time} **${event.summary}**`;
   }).join('\n') 
   : '- No events scheduled for today'
 }
@@ -1041,28 +1513,11 @@ ${incompleteTasks.length > 0 ?
   : '- No pending tasks'
 }
 
-${recommendations.length > 0 ? `### 💡 **Smart Recommendations**
-${recommendations.join('\n\n')}
-
-` : ''}
-
-### 🎯 **Habit Progress** (${completedTodayHabits.length}/${todayHabits.length} completed)
-${todayHabits.length > 0 ? 
-  todayHabits.slice(0, 3).map(habit => {
-    const isCompleted = completedTodayHabits.some(completion => completion.habitId === habit.id);
-    return `- ${habit.name} ${isCompleted ? '✅' : '⭕'}`;
-  }).join('\n')
-  : '- No habits tracked for today'
-}
-
 ### 📈 **Tomorrow's Preview** (${tomorrowEvents.length} event${tomorrowEvents.length !== 1 ? 's' : ''})
 ${tomorrowEvents.length > 0 ? 
   tomorrowEvents.slice(0, 3).map(event => {
-    const time = new Date(event.start?.dateTime || event.start?.date).toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
+    const eventDate = new Date(event.start?.dateTime || event.start?.date);
+    const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
     return `- ${time} **${event.summary}**`;
   }).join('\n')
   : '- Free day tomorrow'
@@ -1080,4 +1535,102 @@ ${floCatStyle === "more_catty" ?
 ${personality.sign}`;
 
   return summary;
+}
+
+// Helper functions for time formatting
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
+
+// Helper function to call internal API for calendar operations
+async function callInternalApi(path: string, method: string, body: any, originalReq: NextApiRequest) {
+  const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${path}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      // Forward the cookie from the original request for authentication in internal API calls
+      "Cookie": originalReq.headers.cookie || "",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Error calling ${path}: ${response.status} - ${errorText}`);
+  }
+
+  return response.ok;
+}
+
+// Enhanced calendar response formatting
+async function formatCalendarResponse(events: any[], userTimezone: string, period: string): Promise<string> {
+  if (events.length === 0) {
+    return `📅 No events found for ${period}! ✨`;
+  }
+
+  // Sort events by date
+  const sortedEvents = events.sort((a: any, b: any) => {
+    const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+    const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  let response = `📅 **${period.charAt(0).toUpperCase() + period.slice(1)}'s Schedule** (${events.length} event${events.length !== 1 ? 's' : ''}):\n\n`;
+  
+  sortedEvents.slice(0, 10).forEach((event: any) => {
+    const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+    const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+    const date = formatInTimeZone(eventDate, userTimezone, 'MMM d');
+    
+    response += `• ${period === 'today' || period === 'tomorrow' ? time : `${date} ${time}`} - **${event.summary}**\n`;
+    if (event.location) {
+      response += `  📍 ${event.location}\n`;
+    }
+  });
+
+  if (events.length > 10) {
+    response += `\n... and ${events.length - 10} more events.`;
+  }
+
+  return response;
+}
+
+// Enhanced specific day query handler
+async function handleSpecificDayQuery(dayName: string, events: any[], userTimezone: string): Promise<string> {
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayIndex = dayNames.indexOf(dayName.toLowerCase());
+  
+  if (dayIndex === -1) {
+    return "I didn't understand which day you're asking about. Please specify a day of the week.";
+  }
+  
+  const now = toZonedTime(new Date(), userTimezone);
+  const currentDay = now.getDay();
+  let daysToAdd = (dayIndex - currentDay + 7) % 7;
+  if (daysToAdd === 0) daysToAdd = 7; // Next week if same day
+  
+  const targetDate = new Date(now);
+  targetDate.setDate(targetDate.getDate() + daysToAdd);
+  targetDate.setHours(0, 0, 0, 0);
+  
+  const nextDay = new Date(targetDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const dayEvents = events.filter((event: any) => {
+    const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+    const eventInUserTz = toZonedTime(eventDate, userTimezone);
+    return eventInUserTz >= targetDate && eventInUserTz < nextDay;
+  });
+
+  const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  return await formatCalendarResponse(dayEvents, userTimezone, capitalizedDay.toLowerCase());
 }

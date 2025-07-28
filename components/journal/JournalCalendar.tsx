@@ -123,7 +123,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
         const endIdx = startIdx + lastDay.getDate();
         
         // Create a batch of dates to fetch at once
-        const currentMonthDates = [];
+        const currentMonthDates: string[] = [];
         for (let i = startIdx; i < endIdx; i++) {
           currentMonthDates.push(updatedDays[i].date);
         }
@@ -257,7 +257,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             console.error('Error fetching batch activities:', error);
             
             // Fallback to individual API calls if batch fails
-            const promises = [];
+            const promises: Promise<any>[] = [];
             
             for (let i = startIdx; i < endIdx; i++) {
               const dateStr = updatedDays[i].date;

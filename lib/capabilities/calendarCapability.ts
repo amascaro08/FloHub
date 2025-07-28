@@ -19,16 +19,96 @@ function getTimezoneAwareDates() {
   return { now: nowInUserTz, today, tomorrow, userTimezone };
 }
 
+// Enhanced intent analysis for calendar queries
+interface CalendarIntent {
+  type: 'specific_query' | 'time_based' | 'general_list';
+  timeframe: 'today' | 'tomorrow' | 'week' | 'specific_day' | 'general';
+  entities: {
+    person?: string;
+    location?: string;
+    event_type?: string;
+    day?: string;
+  };
+  question_type: 'when' | 'what' | 'who' | 'where' | 'list';
+}
+
+function analyzeCalendarQuery(query: string): CalendarIntent {
+  const lowerQuery = query.toLowerCase().trim();
+  
+  // Extract entities
+  const entities: CalendarIntent['entities'] = {};
+  
+  // Person references
+  const personRefs = ['mom', 'mum', 'dad', 'father', 'mother', 'colleague', 'boss', 'friend', 'doctor', 'dentist'];
+  entities.person = personRefs.find(person => lowerQuery.includes(person));
+  
+  // Location references
+  const locationRefs = ['airport', 'office', 'home', 'work', 'hospital', 'clinic', 'school', 'gym'];
+  entities.location = locationRefs.find(loc => lowerQuery.includes(loc));
+  
+  // Event type references
+  const eventTypes = ['meeting', 'appointment', 'call', 'interview', 'presentation', 'lunch', 'dinner'];
+  entities.event_type = eventTypes.find(type => lowerQuery.includes(type));
+  
+  // Day references
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  entities.day = dayNames.find(day => lowerQuery.includes(day));
+  
+  // Determine question type
+  let question_type: CalendarIntent['question_type'] = 'list';
+  if (lowerQuery.startsWith('when') || lowerQuery.includes('when do') || lowerQuery.includes('when am')) {
+    question_type = 'when';
+  } else if (lowerQuery.startsWith('what') || lowerQuery.includes('what do')) {
+    question_type = 'what';
+  } else if (lowerQuery.includes('who')) {
+    question_type = 'who';
+  } else if (lowerQuery.includes('where')) {
+    question_type = 'where';
+  }
+  
+  // Determine timeframe
+  let timeframe: CalendarIntent['timeframe'] = 'general';
+  if (lowerQuery.includes('today')) {
+    timeframe = 'today';
+  } else if (lowerQuery.includes('tomorrow')) {
+    timeframe = 'tomorrow';
+  } else if (lowerQuery.includes('week') || lowerQuery.includes('this week')) {
+    timeframe = 'week';
+  } else if (entities.day) {
+    timeframe = 'specific_day';
+  }
+  
+  // Determine query type
+  let type: CalendarIntent['type'] = 'general_list';
+  if ((question_type === 'when' && (entities.person || entities.location || entities.event_type)) ||
+      (entities.person && entities.location)) {
+    type = 'specific_query';
+  } else if (timeframe !== 'general') {
+    type = 'time_based';
+  }
+  
+  return {
+    type,
+    timeframe,
+    entities,
+    question_type
+  };
+}
+
 async function handleCalendarCommand(command: string, args: string, userId: string): Promise<string> {
   console.log(`[DEBUG] handleCalendarCommand called with command: "${command}", args: "${args}", userId: "${userId}"`);
   
   try {
+    // Analyze the query for better understanding
+    const intent = analyzeCalendarQuery(args);
+    console.log(`[DEBUG] Calendar intent analysis:`, intent);
+    
     switch (command.toLowerCase()) {
       case "show":
       case "list":
       case "view":
       case "get":
-        return await showCalendarEvents(args, userId);
+        return await showCalendarEvents(args, userId, intent);
       
       case "today":
       case "today's":
@@ -51,33 +131,36 @@ async function handleCalendarCommand(command: string, args: string, userId: stri
   }
 }
 
-async function showCalendarEvents(args: string, userId: string): Promise<string> {
-  const lowerArgs = args.toLowerCase();
-  
-  // ENHANCED: Handle contextual queries like "when do I take mum to the airport"
-  if ((lowerArgs.includes("when") && (lowerArgs.includes("do") || lowerArgs.includes("am"))) ||
-      lowerArgs.includes("airport") || lowerArgs.includes("flight") || 
-      lowerArgs.includes("mum") || lowerArgs.includes("mom") || lowerArgs.includes("dad")) {
-    console.log(`[DEBUG] Calendar capability handling contextual query: "${args}"`);
-    return await handleContextualQuery(args, userId);
+async function showCalendarEvents(args: string, userId: string, intent?: CalendarIntent): Promise<string> {
+  if (!intent) {
+    intent = analyzeCalendarQuery(args);
   }
   
-  // Check for specific day queries
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const matchedDay = dayNames.find(day => lowerArgs.includes(day));
+  console.log(`[DEBUG] Processing calendar query with intent:`, intent);
   
-  if (matchedDay) {
-    return await showSpecificDayEvents(matchedDay, args, userId);
-  } else if (lowerArgs.includes("today")) {
-    return await showTodayEvents(userId);
-  } else if (lowerArgs.includes("tomorrow")) {
-    return await showTomorrowEvents(userId);
-  } else if (lowerArgs.includes("week")) {
-    return await showWeeklyEvents(userId);
-  } else {
-    // Default to upcoming events
-    return await showUpcomingEvents(userId);
+  // Handle specific contextual queries (like "when do I take mum to the airport")
+  if (intent.type === 'specific_query') {
+    return await handleContextualQuery(args, userId, intent);
   }
+  
+  // Handle time-based queries
+  if (intent.type === 'time_based') {
+    switch (intent.timeframe) {
+      case 'today':
+        return await showTodayEvents(userId);
+      case 'tomorrow':
+        return await showTomorrowEvents(userId);
+      case 'week':
+        return await showWeeklyEvents(userId);
+      case 'specific_day':
+        return await showSpecificDayEvents(intent.entities.day!, args, userId);
+      default:
+        return await showUpcomingEvents(userId);
+    }
+  }
+  
+  // Default to upcoming events
+  return await showUpcomingEvents(userId);
 }
 
 async function showSpecificDayEvents(dayName: string, args: string, userId: string): Promise<string> {
@@ -86,7 +169,7 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayIndex = dayNames.indexOf(dayName.toLowerCase());
     
-    const now = new Date();
+    const { now, userTimezone } = getTimezoneAwareDates();
     const currentDay = now.getDay();
     let daysToAdd = (dayIndex - currentDay + 7) % 7;
     if (daysToAdd === 0 && !lowerArgs.includes("today")) daysToAdd = 7; // Next week if same day
@@ -103,7 +186,8 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
     
     const dayEvents = events.filter((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      return eventDate >= targetDate && eventDate < nextDay;
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      return eventInUserTz >= targetDate && eventInUserTz < nextDay;
     });
 
     const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
@@ -115,11 +199,8 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
     if (lowerArgs.includes("first meeting") || lowerArgs.includes("next meeting")) {
       // Show only the first meeting
       const firstEvent = dayEvents[0];
-      const time = new Date(firstEvent.start?.dateTime || firstEvent.start?.date || firstEvent.start).toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const eventDate = new Date(firstEvent.start?.dateTime || firstEvent.start?.date || firstEvent.start);
+      const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       let response = `📅 **Your first meeting on ${capitalizedDay}**:\n\n• ${time} - **${firstEvent.summary}**\n`;
       if (firstEvent.location) {
         response += `  📍 ${firstEvent.location}\n`;
@@ -133,11 +214,8 @@ async function showSpecificDayEvents(dayName: string, args: string, userId: stri
       let response = `📅 **${capitalizedDay}'s Schedule** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n\n`;
       
       dayEvents.forEach((event: any) => {
-        const time = new Date(event.start?.dateTime || event.start?.date || event.start).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
+        const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+        const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
         response += `• ${time} - **${event.summary}**\n`;
         if (event.location) {
           response += `  📍 ${event.location}\n`;
@@ -172,7 +250,14 @@ async function showTodayEvents(userId: string): Promise<string> {
 
     let response = `📅 **Today's Schedule** (${todayEvents.length} event${todayEvents.length !== 1 ? 's' : ''}):\n\n`;
     
-    todayEvents.forEach((event: any) => {
+    // Sort events by time
+    const sortedEvents = todayEvents.sort((a: any, b: any) => {
+      const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+      const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    sortedEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
       const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       response += `• ${time} - **${event.summary}**\n`;
@@ -180,6 +265,25 @@ async function showTodayEvents(userId: string): Promise<string> {
         response += `  📍 ${event.location}\n`;
       }
     });
+
+    // Add contextual information about upcoming events
+    const nextEvent = sortedEvents.find((event: any) => {
+      const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+      return eventDate > now;
+    });
+
+    if (nextEvent) {
+      const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.start);
+      const timeDiff = eventDate.getTime() - now.getTime();
+      const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutesUntil = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hoursUntil === 0 && minutesUntil <= 15) {
+        response += `\n⏰ **Heads up**: "${nextEvent.summary}" starts in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}!`;
+      } else if (hoursUntil <= 2) {
+        response += `\n⏰ **Coming up**: "${nextEvent.summary}" in ${hoursUntil > 0 ? `${hoursUntil}h ` : ''}${minutesUntil}m`;
+      }
+    }
 
     return response;
   } catch (error) {
@@ -190,6 +294,7 @@ async function showTodayEvents(userId: string): Promise<string> {
 
 async function showTomorrowEvents(userId: string): Promise<string> {
   try {
+    const { userTimezone } = getTimezoneAwareDates();
     const now = new Date();
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const dayAfterTomorrow = new Date(tomorrow);
@@ -200,7 +305,8 @@ async function showTomorrowEvents(userId: string): Promise<string> {
     
     const tomorrowEvents = events.filter((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      return eventDate >= tomorrow && eventDate < dayAfterTomorrow;
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      return eventInUserTz >= tomorrow && eventInUserTz < dayAfterTomorrow;
     });
 
     if (tomorrowEvents.length === 0) {
@@ -209,13 +315,16 @@ async function showTomorrowEvents(userId: string): Promise<string> {
 
     let response = `📅 **Tomorrow's Schedule** (${tomorrowEvents.length} event${tomorrowEvents.length !== 1 ? 's' : ''}):\n\n`;
     
-    tomorrowEvents.forEach((event: any) => {
+    // Sort events by time
+    const sortedEvents = tomorrowEvents.sort((a: any, b: any) => {
+      const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+      const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    sortedEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      const time = eventDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       response += `• ${time} - **${event.summary}**\n`;
       if (event.location) {
         response += `  📍 ${event.location}\n`;
@@ -231,6 +340,7 @@ async function showTomorrowEvents(userId: string): Promise<string> {
 
 async function showWeeklyEvents(userId: string): Promise<string> {
   try {
+    const { userTimezone } = getTimezoneAwareDates();
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -240,7 +350,8 @@ async function showWeeklyEvents(userId: string): Promise<string> {
     
     const weekEvents = events.filter((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      return eventDate >= today && eventDate <= nextWeek;
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      return eventInUserTz >= today && eventInUserTz <= nextWeek;
     });
 
     if (weekEvents.length === 0) {
@@ -251,7 +362,8 @@ async function showWeeklyEvents(userId: string): Promise<string> {
     const eventsByDay = new Map<string, any[]>();
     weekEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      const dayKey = eventDate.toDateString();
+      const eventInUserTz = toZonedTime(eventDate, userTimezone);
+      const dayKey = eventInUserTz.toDateString();
       if (!eventsByDay.has(dayKey)) {
         eventsByDay.set(dayKey, []);
       }
@@ -262,21 +374,20 @@ async function showWeeklyEvents(userId: string): Promise<string> {
     
     for (const [dayKey, dayEvents] of Array.from(eventsByDay.entries())) {
       const dayDate = new Date(dayKey);
-      const dayName = dayDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'short', 
-        day: 'numeric' 
-      });
+      const dayName = formatInTimeZone(dayDate, userTimezone, 'eeee, MMM d');
       
       response += `**${dayName}** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n`;
       
-      dayEvents.forEach((event: any) => {
+      // Sort events by time
+      const sortedDayEvents = dayEvents.sort((a: any, b: any) => {
+        const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+        const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      sortedDayEvents.forEach((event: any) => {
         const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-        const time = eventDate.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
+        const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
         response += `• ${time} - ${event.summary}${event.location ? ` (${event.location})` : ''}\n`;
       });
       
@@ -292,6 +403,7 @@ async function showWeeklyEvents(userId: string): Promise<string> {
 
 async function showUpcomingEvents(userId: string): Promise<string> {
   try {
+    const { userTimezone } = getTimezoneAwareDates();
     const now = new Date();
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -309,18 +421,17 @@ async function showUpcomingEvents(userId: string): Promise<string> {
 
     let response = `📅 **Upcoming Events** (${upcomingEvents.length} shown):\n\n`;
     
-    upcomingEvents.forEach((event: any) => {
+    // Sort events by date
+    const sortedEvents = upcomingEvents.sort((a: any, b: any) => {
+      const dateA = new Date(a.start?.dateTime || a.start?.date || a.start);
+      const dateB = new Date(b.start?.dateTime || b.start?.date || b.start);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    sortedEvents.forEach((event: any) => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
-      const dateStr = eventDate.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-      const timeStr = eventDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      const dateStr = formatInTimeZone(eventDate, userTimezone, 'eee MMM d');
+      const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
       response += `• ${dateStr} at ${timeStr} - **${event.summary}**\n`;
       if (event.location) {
         response += `  📍 ${event.location}\n`;
@@ -334,32 +445,38 @@ async function showUpcomingEvents(userId: string): Promise<string> {
   }
 }
 
-async function handleContextualQuery(query: string, userId: string): Promise<string> {
+async function handleContextualQuery(query: string, userId: string, intent: CalendarIntent): Promise<string> {
   try {
     const { now, today, userTimezone } = getTimezoneAwareDates();
     
     const contextData = (global as any).currentContextData;
     const events = contextData?.events || contextData?.allEvents || [];
     console.log(`[DEBUG] Available events: ${events.length}`);
-    if (events.length > 0) {
-      console.log(`[DEBUG] Sample event: ${JSON.stringify(events[0])}`);
-    }
     
-    // Extract keywords for contextual search
-    const contextKeywords = extractCalendarKeywords(query);
+    // Build search keywords from intent entities and query
+    const searchKeywords: string[] = [];
+    if (intent.entities.person) searchKeywords.push(intent.entities.person);
+    if (intent.entities.location) searchKeywords.push(intent.entities.location);
+    if (intent.entities.event_type) searchKeywords.push(intent.entities.event_type);
     
-    if (contextKeywords.length === 0) {
+    // Extract additional keywords from the query
+    const additionalKeywords = extractCalendarKeywords(query);
+    searchKeywords.push(...additionalKeywords);
+    
+    console.log(`[DEBUG] Searching for events with keywords: ${searchKeywords.join(', ')}`);
+    
+    if (searchKeywords.length === 0) {
       return "Could you be more specific about what event you're looking for?";
     }
     
     // Search for events that match the context keywords
     const matchingEvents = events.filter((event: any) => {
       const eventText = `${event.summary || ''} ${event.description || ''} ${event.location || ''}`.toLowerCase();
-      return contextKeywords.some(keyword => eventText.includes(keyword));
+      return searchKeywords.some(keyword => eventText.includes(keyword.toLowerCase()));
     });
     
     if (matchingEvents.length === 0) {
-      return `📅 I couldn't find any events matching "${contextKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
+      return `📅 I couldn't find any events matching "${searchKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
     }
     
     // Sort by date and get the next occurrence
@@ -377,51 +494,9 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
     
     if (upcomingMatches.length > 0) {
       const nextEvent = upcomingMatches[0];
-      const eventDate = new Date(nextEvent.start?.dateTime || nextEvent.start?.date || nextEvent.start);
-      const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
-      const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
-      const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
-      
-      // Calculate time difference for more natural response
-      const timeDiff = eventDate.getTime() - now.getTime();
-      const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-      
-      let whenText = "";
-      if (daysUntil === 0) {
-        whenText = "today";
-      } else if (daysUntil === 1) {
-        whenText = "tomorrow";
-      } else if (daysUntil <= 7) {
-        whenText = `this ${dayName}`;
-      } else {
-        whenText = `on ${dayName}, ${dateStr}`;
-      }
-      
-      let response = `📅 **${nextEvent.summary}** is scheduled for **${whenText}** at **${timeStr}**`;
-      
-      if (nextEvent.location) {
-        response += `\n📍 Location: ${nextEvent.location}`;
-      }
-      
-      if (nextEvent.description) {
-        response += `\n📝 ${nextEvent.description.substring(0, 150)}${nextEvent.description.length > 150 ? '...' : ''}`;
-      }
-      
-      // Add helpful context about time remaining
-      if (daysUntil === 0) {
-        const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
-        if (hoursUntil > 0) {
-          response += `\n\n⏰ That's in about ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}!`;
-        }
-      } else if (daysUntil === 1) {
-        response += `\n\n⏰ That's tomorrow!`;
-      } else if (daysUntil <= 7) {
-        response += `\n\n⏰ That's in ${daysUntil} days.`;
-      }
-      
-      return response;
+      return formatSingleEventResponse(nextEvent, userTimezone, now, intent);
     } else {
-      // No upcoming matches, check for past events
+      // Check for past events
       const pastMatches = matchingEvents
         .filter((event: any) => {
           const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
@@ -440,7 +515,7 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
         
         return `📅 I found "${lastEvent.summary}" but it was ${timeAgo}. I don't see any upcoming events matching your query.`;
       } else {
-        return `📅 I couldn't find any events matching "${contextKeywords.join(', ')}" in your calendar. Could you be more specific or check if the event is scheduled?`;
+        return `📅 I couldn't find any events matching "${searchKeywords.join(', ')}" in your calendar.`;
       }
     }
   } catch (error) {
@@ -449,6 +524,71 @@ async function handleContextualQuery(query: string, userId: string): Promise<str
   }
 }
 
+// Enhanced single event response formatting
+function formatSingleEventResponse(event: any, userTimezone: string, now: Date, intent: CalendarIntent): string {
+  const eventDate = new Date(event.start?.dateTime || event.start?.date || event.start);
+  const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
+  const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
+  const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+  
+  // Calculate time difference for more natural response
+  const timeDiff = eventDate.getTime() - now.getTime();
+  const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+  
+  let whenText = "";
+  if (daysUntil === 0) {
+    whenText = "today";
+  } else if (daysUntil === 1) {
+    whenText = "tomorrow";
+  } else if (daysUntil <= 7) {
+    whenText = `this ${dayName}`;
+  } else {
+    whenText = `on ${dayName}, ${dateStr}`;
+  }
+  
+  // Personalize response based on intent
+  let responsePrefix = "";
+  if (intent.entities.person && intent.entities.location) {
+    responsePrefix = `You're taking ${intent.entities.person} to ${intent.entities.location} `;
+  } else if (intent.entities.location) {
+    responsePrefix = `Your ${intent.entities.location} appointment is `;
+  } else if (intent.entities.person) {
+    responsePrefix = `Your appointment with ${intent.entities.person} is `;
+  } else {
+    responsePrefix = `**${event.summary}** is scheduled for `;
+  }
+  
+  let response = `📅 ${responsePrefix}**${whenText}** at **${timeStr}**`;
+  
+  if (event.location) {
+    response += `\n📍 Location: ${event.location}`;
+  }
+  
+  if (event.description) {
+    response += `\n📝 ${event.description.substring(0, 150)}${event.description.length > 150 ? '...' : ''}`;
+  }
+  
+  // Add helpful context about time remaining
+  if (daysUntil === 0) {
+    const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+    if (hoursUntil > 0) {
+      response += `\n\n⏰ That's in about ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}!`;
+    } else {
+      const minutesUntil = Math.floor(timeDiff / (1000 * 60));
+      if (minutesUntil > 0) {
+        response += `\n\n⏰ That's in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}!`;
+      }
+    }
+  } else if (daysUntil === 1) {
+    response += `\n\n⏰ That's tomorrow!`;
+  } else if (daysUntil <= 7) {
+    response += `\n\n⏰ That's in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}.`;
+  }
+  
+  return response;
+}
+
+// Enhanced calendar keyword extraction
 function extractCalendarKeywords(query: string): string[] {
   const lowerQuery = query.toLowerCase();
   
@@ -468,23 +608,23 @@ function extractCalendarKeywords(query: string): string[] {
       case 'mum':
       case 'mom':
       case 'mother':
-        expandedKeywords.push('mum', 'mom', 'mother');
+        expandedKeywords.push('mum', 'mom', 'mother', 'family');
         break;
       case 'dad':
       case 'father':
-        expandedKeywords.push('dad', 'father');
+        expandedKeywords.push('dad', 'father', 'family');
         break;
       case 'airport':
-        expandedKeywords.push('flight', 'plane', 'travel');
+        expandedKeywords.push('flight', 'plane', 'travel', 'departure', 'terminal');
         break;
       case 'flight':
-        expandedKeywords.push('airport', 'plane', 'travel');
+        expandedKeywords.push('airport', 'plane', 'travel', 'departure');
         break;
       case 'doctor':
-        expandedKeywords.push('appointment', 'medical', 'clinic');
+        expandedKeywords.push('appointment', 'medical', 'clinic', 'physician', 'health');
         break;
       case 'meeting':
-        expandedKeywords.push('call', 'conference', 'discussion');
+        expandedKeywords.push('call', 'conference', 'discussion', 'sync');
         break;
     }
   });
