@@ -139,16 +139,36 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
     });
 
     // Store feedback in database with GitHub issue info using correct column names
-    await db.insert(feedback).values({
-      userId: user.email, // Store email in user_id field to match system pattern
-      title: title,
-      description: feedbackText,
-      status: "open",
-      githubIssueNumber: issue.data.number,
-      githubIssueUrl: issue.data.html_url,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+    try {
+      await db.insert(feedback).values({
+        userId: user.email, // Store email in user_id field to match system pattern
+        title: title,
+        description: feedbackText,
+        status: "open",
+        githubIssueNumber: issue.data.number,
+        githubIssueUrl: issue.data.html_url,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    } catch (dbError: any) {
+      console.error("Database insertion error:", {
+        message: dbError.message,
+        code: dbError.code,
+        detail: dbError.detail,
+        hint: dbError.hint,
+        table: dbError.table,
+        column: dbError.column
+      });
+      
+      return res.status(500).json({
+        error: "Failed to save feedback to database",
+        details: dbError.message,
+        githubIssue: {
+          number: issue.data.number,
+          url: issue.data.html_url
+        }
+      });
+    }
 
     return res.status(201).json({
       success: true,
