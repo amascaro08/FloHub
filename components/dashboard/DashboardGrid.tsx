@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, memo, useMemo, lazy, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, memo, lazy, Suspense, useCallback } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
@@ -106,6 +106,9 @@ const DashboardGrid = () => {
   // Use Stack Auth
   const { user, isLoading } = useUser();
 
+  // Component mount state to prevent updates after unmount
+  const isMountedRef = useRef(true);
+
   // Progressive loading state
   const [visibleWidgets, setVisibleWidgets] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -201,41 +204,47 @@ const DashboardGrid = () => {
 
   // Fetch user settings to get active widgets (client-side only) with caching
   const fetchUserSettings = useCallback(async () => {
-    if (isClient && user?.email) {
-      try {
-        // Check cache first
-        const cacheKey = `userSettings_${user.email}`;
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          try {
-            const cachedData = JSON.parse(cached);
-            if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
+    if (!isMountedRef.current || !isClient || !user?.email) return;
+    
+    try {
+      // Check cache first
+      const cacheKey = `userSettings_${user.email}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const cachedData = JSON.parse(cached);
+          if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
+            if (isMountedRef.current) {
               setActiveWidgets(cachedData.activeWidgets || []);
               setLoadedSettings(true);
-              return;
             }
-          } catch (e) {
-            // Invalid cache, continue to fetch
+            return;
           }
+        } catch (e) {
+          // Invalid cache, continue to fetch
         }
+      }
 
-        const response = await fetch(`/api/userSettings?userId=${user.email}`);
-        if (response.ok) {
-          const userSettings = await response.json() as UserSettings;
-          const activeWidgets = userSettings.activeWidgets || [];
-          setActiveWidgets(activeWidgets);
-          
-          // Cache the result
-          sessionStorage.setItem(cacheKey, JSON.stringify({
-            activeWidgets,
-            timestamp: Date.now()
-          }));
-        } else {
-          setActiveWidgets([]);
-        }
-      } catch (e) {
+      const response = await fetch(`/api/userSettings?userId=${user.email}`);
+      if (response.ok && isMountedRef.current) {
+        const userSettings = await response.json() as UserSettings;
+        const activeWidgets = userSettings.activeWidgets || [];
+        setActiveWidgets(activeWidgets);
+        
+        // Cache the result
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          activeWidgets,
+          timestamp: Date.now()
+        }));
+      } else if (isMountedRef.current) {
         setActiveWidgets([]);
-      } finally {
+      }
+    } catch (e) {
+      if (isMountedRef.current) {
+        setActiveWidgets([]);
+      }
+    } finally {
+      if (isMountedRef.current) {
         setLoadedSettings(true);
       }
     }
@@ -270,15 +279,20 @@ const DashboardGrid = () => {
           const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
           if (response.ok) {
             const { layouts: savedLayouts } = await response.json();
-            if (savedLayouts) {
+            if (savedLayouts && Object.keys(savedLayouts).length > 0) {
               setLayouts(savedLayouts);
             } else {
               setLayouts(defaultLayouts);
-              await fetch('/api/userSettings/layouts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ layouts: defaultLayouts }),
-              });
+              // Only save default layouts if none exist
+              try {
+                await fetch('/api/userSettings/layouts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ layouts: defaultLayouts }),
+                });
+              } catch (saveError) {
+                // Ignore save errors, not critical
+              }
             }
           } else {
             setLayouts(defaultLayouts);
@@ -286,19 +300,28 @@ const DashboardGrid = () => {
         } catch (e) {
           setLayouts(defaultLayouts);
         }
+      } else if (isClient) {
+        // Set default layouts when no user
+        setLayouts(defaultLayouts);
       }
     };
 
-    if (isClient) {
+    // Only fetch if we have user email and client is ready
+    if (isClient && user?.email) {
       fetchLayout();
+    } else if (isClient) {
+      setLayouts(defaultLayouts);
     }
-  }, [user, isClient]);
+  }, [user?.email, isClient]); // Only depend on email and isClient
 
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const layoutChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Effect to update layouts when activeWidgets changes
+  // Effect to update layouts when activeWidgets changes (DISABLED - causing layout resets)
+  // This effect was causing layout resets when navigating back to dashboard
+  // Layout filtering should be handled at render time instead
+  /*
   useEffect(() => {
     if (activeWidgets.length > 0 && Object.keys(layouts).length > 0) {
       const newLayouts: any = {};
@@ -310,14 +333,19 @@ const DashboardGrid = () => {
       setLayouts(newLayouts);
     }
   }, [activeWidgets]);
+  */
 
   // Progressive loading effect - prioritize important widgets
   useEffect(() => {
-    if (!loadedSettings || activeWidgets.length === 0) return;
+    if (!loadedSettings || activeWidgets.length === 0) {
+      setVisibleWidgets([]);
+      setLoadingProgress(0);
+      return;
+    }
 
     // Priority order for widget loading
     const priority = ["ataglance", "calendar", "tasks", "quicknote", "habit-tracker"];
-    const sortedWidgets = activeWidgets.sort((a, b) => {
+    const sortedWidgets = [...activeWidgets].sort((a, b) => {
       const aIndex = priority.indexOf(a);
       const bIndex = priority.indexOf(b);
       return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
@@ -326,21 +354,24 @@ const DashboardGrid = () => {
     // Set all widgets as visible immediately to fix visibility issue
     setVisibleWidgets(sortedWidgets);
     setLoadingProgress(100);
-
-    // If we want progressive loading, we can enable it with faster loading:
-    // setVisibleWidgets([]);
-    // setLoadingProgress(0);
-    // sortedWidgets.forEach((widget, index) => {
-    //   setTimeout(() => {
-    //     setVisibleWidgets(prev => [...prev, widget]);
-    //     setLoadingProgress(((index + 1) / sortedWidgets.length) * 100);
-    //   }, index * 100); // Reduced delay to 100ms
-    // });
   }, [activeWidgets, loadedSettings]);
 
   const onLayoutChange = (layout: any, allLayouts: any) => {
     try {
       const cleanedLayouts = removeUndefined(allLayouts);
+
+      // Only update if we have valid layouts with proper dimensions
+      const hasValidLayouts = Object.keys(cleanedLayouts).some(breakpoint => {
+        const bpLayouts = cleanedLayouts[breakpoint];
+        return Array.isArray(bpLayouts) && bpLayouts.some(item => 
+          item && item.w >= 2 && item.h >= 8 // Ensure minimum sizes
+        );
+      });
+
+      if (!hasValidLayouts) {
+        console.warn('Invalid layout change detected, ignoring');
+        return;
+      }
 
       if (layoutChangeTimeoutRef.current) {
         clearTimeout(layoutChangeTimeoutRef.current);
@@ -349,9 +380,9 @@ const DashboardGrid = () => {
         try {
           setLayouts(cleanedLayouts);
         } catch (err) {
-          // noop
+          console.error('Error setting layouts:', err);
         }
-      }, 50);
+      }, 100); // Increased debounce
 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -366,11 +397,11 @@ const DashboardGrid = () => {
             });
           }
         } catch (e) {
-          // noop
+          console.error('Error saving layouts:', e);
         }
-      }, 500);
+      }, 1000); // Increased save delay
     } catch (err) {
-      // noop
+      console.error('Error in onLayoutChange:', err);
     }
   };
 
@@ -380,6 +411,19 @@ const DashboardGrid = () => {
   const oneWeekFromNow = new Date(startOfToday);
   oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
   oneWeekFromNow.setHours(23, 59, 59, 999);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      if (layoutChangeTimeoutRef.current) {
+        clearTimeout(layoutChangeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!loadedSettings) {
     return (
@@ -449,7 +493,18 @@ const DashboardGrid = () => {
           {/* Dashboard Grid */}
           <ResponsiveGridLayout
             className="layout"
-            layouts={layouts}
+            layouts={(() => {
+              // Filter layouts to only include active widgets at render time
+              if (activeWidgets.length === 0 || Object.keys(layouts).length === 0) return {};
+              
+              const filteredLayouts: any = {};
+              Object.keys(layouts).forEach(breakpoint => {
+                filteredLayouts[breakpoint] = layouts[breakpoint as keyof typeof layouts].filter(
+                  (item: any) => activeWidgets.includes(item.i)
+                );
+              });
+              return filteredLayouts;
+            })()}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={40}
