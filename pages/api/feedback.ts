@@ -85,10 +85,10 @@ export default async function handler(
             data: rawQuery.rows.map(item => ({
               id: String(item.id),
               feedbackType: 'general',
-              feedbackText: item.description,
-              title: item.title,
-              status: item.status,
-              createdAt: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+              feedbackText: item.description || '',
+              title: item.title || '',
+              status: item.status || 'open',
+              createdAt: item.created_at ? new Date(item.created_at as string | number | Date).getTime() : Date.now(),
               completedAt: null
             }))
           });
