@@ -102,7 +102,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     return () => {
       mountedRef.current = false;
       if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
   }, [enabled]);
@@ -260,7 +260,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     return;
     
     if (backgroundRefreshRef.current) {
-      clearInterval(backgroundRefreshRef.current);
+      clearInterval(backgroundRefreshRef.current as NodeJS.Timeout);
     }
 
     backgroundRefreshRef.current = setInterval(async () => {
@@ -281,7 +281,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   // Stop background refresh
   const stopBackgroundRefresh = useCallback(() => {
     if (backgroundRefreshRef.current) {
-      clearInterval(backgroundRefreshRef.current);
+      clearInterval(backgroundRefreshRef.current as NodeJS.Timeout);
       backgroundRefreshRef.current = null;
     }
   }, []);
@@ -412,7 +412,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         
         // Clear any existing timeout
         if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
+          clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
         }
         
         loadingTimeoutRef.current = setTimeout(() => {
@@ -429,7 +429,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     
     return () => {
       if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
   }, [calendarSourcesHash, isInitializing]); // Only these dependencies
@@ -439,7 +439,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     if (!isInitializing) {
       // Clear any existing timeout
       if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
       
       loadingTimeoutRef.current = setTimeout(() => {
@@ -449,7 +449,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     
     return () => {
       if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
   }, [startDate.getTime(), endDate.getTime(), isInitializing]); // Only date and init state
