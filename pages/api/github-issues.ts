@@ -141,10 +141,34 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
 
     // Store feedback in database with GitHub issue info using correct column names
     try {
+      console.log("Attempting to insert feedback into database:", {
+        userEmail: user.email,
+        title: title,
+        description: feedbackText,
+        status: "open",
+        githubIssueNumber: issue.data.number,
+        githubIssueUrl: issue.data.html_url
+      });
+
+      // Try a simpler insertion first
       await db.execute(sql`
-        INSERT INTO feedback (user_email, title, description, status, github_issue_number, github_issue_url)
-        VALUES (${user.email}, ${title}, ${feedbackText}, 'open', ${issue.data.number}, ${issue.data.html_url})
+        INSERT INTO feedback (user_email, title, description, status)
+        VALUES (${user.email}, ${title}, ${feedbackText}, 'open')
       `);
+
+      console.log("Basic insertion successful, now updating with GitHub info...");
+
+      // Get the ID of the just-inserted record and update it with GitHub info
+      await db.execute(sql`
+        UPDATE feedback 
+        SET github_issue_number = ${issue.data.number}, github_issue_url = ${issue.data.html_url}
+        WHERE user_email = ${user.email} AND title = ${title} AND status = 'open'
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `);
+
+      console.log("GitHub info update successful");
+
     } catch (dbError: any) {
       console.error("Database insertion error:", {
         message: dbError.message,
@@ -152,12 +176,16 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
         detail: dbError.detail,
         hint: dbError.hint,
         table: dbError.table,
-        column: dbError.column
+        column: dbError.column,
+        constraint: dbError.constraint,
+        stack: dbError.stack
       });
       
       return res.status(500).json({
         error: "Failed to save feedback to database",
         details: dbError.message,
+        errorCode: dbError.code,
+        constraint: dbError.constraint,
         githubIssue: {
           number: issue.data.number,
           url: issue.data.html_url
