@@ -50,6 +50,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
     collapsed: false
   });
 
+  // Add refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   // -- AUTH --
   const { user } = useUser();
   
@@ -67,9 +70,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
     const loadSidebarPrefs = async () => {
       if (user?.email) {
         try {
-          const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}`);
+          console.log('Loading sidebar preferences for user:', user.email);
+          const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}&t=${Date.now()}`);
           if (response.ok) {
             const prefs = await response.json();
+            console.log('Loaded sidebar preferences:', prefs);
             setSidebarPrefs(prefs);
             // Also set collapsed state from preferences
             if (prefs.collapsed !== undefined) {
@@ -84,7 +89,33 @@ const Layout = ({ children }: { children: ReactNode }) => {
     };
 
     loadSidebarPrefs();
-  }, [user?.email]);
+  }, [user?.email, refreshTrigger]);
+
+  // Listen for sidebar preference changes from other components
+  useEffect(() => {
+    const handleSidebarPreferencesChanged = () => {
+      console.log('Sidebar preferences changed event received, refreshing...');
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    // Listen for custom events
+    window.addEventListener('sidebarPreferencesChanged', handleSidebarPreferencesChanged);
+    
+    // Also listen for storage changes (in case of multiple tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sidebarPreferencesUpdated') {
+        console.log('Storage change detected for sidebar preferences');
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('sidebarPreferencesChanged', handleSidebarPreferencesChanged);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Save sidebar collapsed state to preferences
   const saveSidebarState = async (collapsed: boolean) => {
@@ -144,6 +175,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
       navMap.set("User Management", adminNavItem);
     }
 
+    console.log('Building navigation with preferences:', sidebarPrefs);
+    console.log('Available nav items:', Array.from(navMap.keys()));
+    console.log('Visible pages:', sidebarPrefs.visiblePages);
+    console.log('Order:', sidebarPrefs.order);
+
     // Order items according to user preferences
     const orderedNav = sidebarPrefs.order
       .map(name => navMap.get(name))
@@ -156,6 +192,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       }
     });
 
+    console.log('Final navigation items:', orderedNav.map(item => item.name));
     return orderedNav;
   };
 

@@ -61,7 +61,6 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
       collapsed: false
     };
     
-    // You'll need to fetch this from user profile/database
     return defaultPrefs;
   });
 
@@ -70,9 +69,10 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
     const fetchSidebarPrefs = async () => {
       if (user?.email) {
         try {
-          const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}`);
+          const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}&t=${Date.now()}`);
           if (response.ok) {
             const prefs = await response.json();
+            console.log('SidebarSettings: Loaded preferences', prefs);
             setSidebarPrefs(prefs);
           }
         } catch (error) {
@@ -84,13 +84,14 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
     fetchSidebarPrefs();
   }, [user?.email]);
 
-  // Save sidebar preferences
+  // Save sidebar preferences and notify other components
   const saveSidebarPrefs = async (newPrefs: typeof sidebarPrefs) => {
     setSidebarPrefs(newPrefs);
     
     if (user?.email) {
       try {
-        await fetch(`/api/user/sidebar-preferences`, {
+        console.log('SidebarSettings: Saving preferences', newPrefs);
+        const response = await fetch(`/api/user/sidebar-preferences`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -98,6 +99,25 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
             preferences: newPrefs
           })
         });
+
+        if (response.ok) {
+          console.log('SidebarSettings: Preferences saved successfully');
+          
+          // Notify the Layout component and other parts of the app
+          window.dispatchEvent(new CustomEvent('sidebarPreferencesChanged', { 
+            detail: newPrefs 
+          }));
+          
+          // Also trigger storage event for cross-tab communication
+          localStorage.setItem('sidebarPreferencesUpdated', Date.now().toString());
+          
+          // Remove the storage item after a brief moment to keep it clean
+          setTimeout(() => {
+            localStorage.removeItem('sidebarPreferencesUpdated');
+          }, 100);
+        } else {
+          console.error('Failed to save sidebar preferences:', response.status);
+        }
       } catch (error) {
         console.error('Failed to save sidebar preferences:', error);
       }
@@ -106,6 +126,7 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
 
   // Toggle visibility of a navigation item
   const toggleVisibility = (itemId: string) => {
+    console.log('SidebarSettings: Toggling visibility for', itemId);
     const newPrefs = {
       ...sidebarPrefs,
       visiblePages: sidebarPrefs.visiblePages.includes(itemId)
@@ -117,6 +138,7 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
 
   // Move item up in order
   const moveUp = (itemId: string) => {
+    console.log('SidebarSettings: Moving up', itemId);
     const currentIndex = sidebarPrefs.order.indexOf(itemId);
     if (currentIndex > 0) {
       const newOrder = [...sidebarPrefs.order];
@@ -128,6 +150,7 @@ const SidebarSettings: React.FC<SidebarSettingsProps> = ({
 
   // Move item down in order
   const moveDown = (itemId: string) => {
+    console.log('SidebarSettings: Moving down', itemId);
     const currentIndex = sidebarPrefs.order.indexOf(itemId);
     if (currentIndex < sidebarPrefs.order.length - 1) {
       const newOrder = [...sidebarPrefs.order];
