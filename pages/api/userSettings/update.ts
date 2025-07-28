@@ -30,7 +30,17 @@ export default async function handler(
       }
       user_email = user.email;
     }
+    
     const newSettings: UserSettings = req.body;
+    console.log('📝 Updating user settings for:', user_email);
+    console.log('📝 Calendar sources being saved:', newSettings.calendarSources?.length || 0);
+    
+    if (newSettings.calendarSources && newSettings.calendarSources.length > 0) {
+      console.log('📝 Calendar source details:');
+      newSettings.calendarSources.forEach((source, index) => {
+        console.log(`   ${index + 1}. ${source.name} (${source.type}) - enabled: ${source.isEnabled}`);
+      });
+    }
 
     const settingsData = {
       selectedCals: newSettings.selectedCals || [],
@@ -52,7 +62,9 @@ export default async function handler(
       floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
     };
 
-    await db
+    console.log('📝 Prepared calendar sources for database:', settingsData.calendarSources.length);
+
+    const result = await db
       .insert(userSettings)
       .values({
         user_email: user_email as string,
@@ -63,9 +75,35 @@ export default async function handler(
         set: settingsData,
       });
 
+    console.log('✅ Settings update completed for:', user_email);
+    console.log('✅ Database operation result:', result);
+
+    // Verify the save by reading back the data
+    const savedData = await db.query.userSettings.findFirst({
+      where: eq(userSettings.user_email, user_email as string),
+    });
+    
+    if (savedData) {
+      const savedCalendarSources = savedData.calendarSources as any[];
+      console.log('✅ Verification: Calendar sources in database:', savedCalendarSources?.length || 0);
+      
+      if (settingsData.calendarSources.length !== (savedCalendarSources?.length || 0)) {
+        console.error('❌ Calendar sources count mismatch!', {
+          expected: settingsData.calendarSources.length,
+          actual: savedCalendarSources?.length || 0
+        });
+      }
+    } else {
+      console.error('❌ Could not verify settings save - data not found');
+    }
+
     return res.status(204).end();
   } catch (error) {
     console.error("Error updating user settings:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
   }
 }
