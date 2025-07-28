@@ -167,7 +167,7 @@ export default async function handler(
             isEnabled: true,
           }));
           
-          console.log('Created calendar sources for authenticated user:', newGoogleSources.map(s => `${s.name} (${s.sourceId})`));
+          console.log('Created calendar sources for authenticated user:', newGoogleSources.map((s: CalendarSource) => `${s.name} (${s.sourceId})`));
         }
       } else {
         console.warn('Failed to fetch calendar list, creating primary calendar source only');
@@ -222,7 +222,7 @@ export default async function handler(
           console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources for authenticated user');
           
           // Enhanced verification logging
-          console.log('🔍 Sources that should be saved:', newGoogleSources.map(s => ({
+          console.log('🔍 Sources that should be saved:', newGoogleSources.map((s: CalendarSource) => ({
             id: s.id,
             name: s.name,
             type: s.type,
@@ -246,7 +246,7 @@ export default async function handler(
             const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
             console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
             
-            console.log('🔍 Actual sources in database:', googleSourcesInDb.map(s => ({
+            console.log('🔍 Actual sources in database:', googleSourcesInDb.map((s: CalendarSource) => ({
               id: s.id,
               name: s.name,
               type: s.type,
@@ -259,8 +259,8 @@ export default async function handler(
                 expected: newGoogleSources.length,
                 actual: googleSourcesInDb.length,
                 user: userEmail,
-                expectedSources: newGoogleSources.map(s => s.name),
-                actualSources: googleSourcesInDb.map(s => s.name)
+                expectedSources: newGoogleSources.map((s: CalendarSource) => s.name),
+                actualSources: googleSourcesInDb.map((s: CalendarSource) => s.name)
               });
             }
           } else {
