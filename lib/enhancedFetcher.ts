@@ -6,11 +6,11 @@
  * 3. Falling back to network requests when cache is unavailable
  */
 
-export interface EnhancedFetchOptions extends RequestInit {
+export interface EnhancedFetchOptions extends Omit<RequestInit, 'cache'> {
   timeout?: number;
   retries?: number;
   retryDelay?: number;
-  cache?: boolean;
+  enableCache?: boolean; // Renamed to avoid conflict with RequestInit.cache
   cacheTTL?: number;
   userEmail?: string; // ADD USER SCOPING
 }
@@ -174,14 +174,14 @@ export async function enhancedFetch(url: string, options: EnhancedFetchOptions =
     timeout = 10000,
     retries = 3,
     retryDelay = 1000,
-    cache = true,
+    enableCache = true,
     cacheTTL = 300000, // 5 minutes default
     userEmail,
     ...fetchOptions
   } = options;
 
   // Check cache first (if enabled)
-  if (cache) {
+  if (enableCache) {
     const cached = getCachedData(url, userEmail);
     if (cached) {
       console.log(`Cache hit for ${userEmail ? `user ${userEmail}` : 'public'}: ${url}`);
@@ -210,7 +210,7 @@ export async function enhancedFetch(url: string, options: EnhancedFetchOptions =
       const data = await response.json();
 
       // Cache the result (if enabled)
-      if (cache) {
+      if (enableCache) {
         setCachedData(url, data, cacheTTL, userEmail);
         console.log(`Cached response for ${userEmail ? `user ${userEmail}` : 'public'}: ${url}`);
       }

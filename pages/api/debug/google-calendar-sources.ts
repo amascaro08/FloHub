@@ -95,13 +95,18 @@ export default async function handler(
       // Try to fetch Google calendars if we have a valid token
       if (googleAccount.access_token && !debugInfo.googleAccount.tokenExpired) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
           const calendarListRes = await fetch(
             "https://www.googleapis.com/calendar/v3/users/me/calendarList",
             { 
               headers: { Authorization: `Bearer ${googleAccount.access_token}` },
-              timeout: 10000 // 10 second timeout
+              signal: controller.signal
             }
           );
+          
+          clearTimeout(timeoutId);
           
           if (calendarListRes.ok) {
             const calendarList = await calendarListRes.json();
@@ -112,9 +117,13 @@ export default async function handler(
             const errorText = await calendarListRes.text();
             debugInfo.googleCalendars.error += ` - ${errorText}`;
           }
-        } catch (error) {
-          debugInfo.googleCalendars.error = error instanceof Error ? error.message : 'Unknown error';
-        }
+                  } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+              debugInfo.googleCalendars.error = 'Request timeout (10 seconds)';
+            } else {
+              debugInfo.googleCalendars.error = error instanceof Error ? error.message : 'Unknown error';
+            }
+          }
       } else {
         debugInfo.googleCalendars.error = debugInfo.googleAccount.tokenExpired ? 'Access token expired' : 'No access token';
       }
