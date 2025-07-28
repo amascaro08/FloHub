@@ -16,7 +16,12 @@ import {
   Settings,
   Trash2,
   Eye,
-  History
+  History,
+  RefreshCw,
+  Shield,
+  AlertTriangle,
+  Database,
+  LogOut
 } from 'lucide-react';
 
 interface User {
@@ -44,6 +49,13 @@ interface CommunicationModal {
   selectedUsers: User[];
 }
 
+interface AccountActionModal {
+  isOpen: boolean;
+  action: 'google-cleanup' | 'clear-settings' | 'clear-sessions' | 'delete-account' | null;
+  user: User | null;
+  loading: boolean;
+}
+
 const UserManagement: React.FC = () => {
   const { user, isLoading } = useUser();
   const router = useRouter();
@@ -59,6 +71,12 @@ const UserManagement: React.FC = () => {
     isOpen: false,
     type: 'individual',
     selectedUsers: []
+  });
+  const [accountActionModal, setAccountActionModal] = useState<AccountActionModal>({
+    isOpen: false,
+    action: null,
+    user: null,
+    loading: false
   });
   const [emailForm, setEmailForm] = useState({
     subject: '',
@@ -177,6 +195,80 @@ const UserManagement: React.FC = () => {
     });
   };
 
+  const openAccountActionModal = (action: AccountActionModal['action'], user: User) => {
+    setAccountActionModal({
+      isOpen: true,
+      action,
+      user,
+      loading: false
+    });
+  };
+
+  const closeAccountActionModal = () => {
+    setAccountActionModal({
+      isOpen: false,
+      action: null,
+      user: null,
+      loading: false
+    });
+  };
+
+  const executeAccountAction = async () => {
+    if (!accountActionModal.user || !accountActionModal.action) return;
+
+    setAccountActionModal(prev => ({ ...prev, loading: true }));
+
+    try {
+      if (accountActionModal.action === 'delete-account') {
+        // Delete entire user account
+        const response = await fetch('/api/admin/delete-user', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userEmail: accountActionModal.user.email })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert(`User account deleted successfully: ${result.message}`);
+          // Refresh users list
+          const updatedUsers = users.filter(u => u.email !== accountActionModal.user!.email);
+          setUsers(updatedUsers);
+          setFilteredUsers(updatedUsers);
+        } else {
+          alert(`Error deleting user: ${result.error}`);
+        }
+      } else {
+        // Use the account cleanup API for other actions
+        const actionMap = {
+          'google-cleanup': { deleteAllAccounts: false, clearUserSettings: false, clearSessions: false },
+          'clear-settings': { deleteAllAccounts: false, clearUserSettings: true, clearSessions: false },
+          'clear-sessions': { deleteAllAccounts: false, clearUserSettings: false, clearSessions: true }
+        };
+
+        const response = await fetch('/api/admin/delete-user-accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: accountActionModal.user.email,
+            ...actionMap[accountActionModal.action]
+          })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert(`Action completed successfully: ${result.message}`);
+        } else {
+          alert(`Error: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error executing account action:', error);
+      alert('Failed to execute action');
+    } finally {
+      closeAccountActionModal();
+    }
+  };
+
   const sendEmail = async () => {
     setSendingEmail(true);
     try {
@@ -233,6 +325,88 @@ const UserManagement: React.FC = () => {
     } else {
       return date.toLocaleDateString();
     }
+  };
+
+  const getActionModalContent = () => {
+    if (!accountActionModal.action || !accountActionModal.user) return null;
+
+    const actionDetails = {
+      'google-cleanup': {
+        title: 'Clean Google Accounts',
+        description: 'This will delete all Google OAuth tokens and accounts for this user. They will need to reconnect their Google Calendar.',
+        icon: <RefreshCw className="w-6 h-6 text-blue-600" />,
+        buttonText: 'Clean Google Accounts',
+        buttonClass: 'bg-blue-600 hover:bg-blue-700'
+      },
+      'clear-settings': {
+        title: 'Clear User Settings',
+        description: 'This will remove all Google calendar sources from the user settings. Other settings will remain intact.',
+        icon: <Settings className="w-6 h-6 text-yellow-600" />,
+        buttonText: 'Clear Settings',
+        buttonClass: 'bg-yellow-600 hover:bg-yellow-700'
+      },
+      'clear-sessions': {
+        title: 'Clear User Sessions',
+        description: 'This will force the user to log in again by clearing all active sessions.',
+        icon: <LogOut className="w-6 h-6 text-orange-600" />,
+        buttonText: 'Clear Sessions',
+        buttonClass: 'bg-orange-600 hover:bg-orange-700'
+      },
+      'delete-account': {
+        title: 'Delete Entire Account',
+        description: 'This will permanently delete the user account and ALL associated data. This action cannot be undone!',
+        icon: <Trash2 className="w-6 h-6 text-red-600" />,
+        buttonText: 'Delete Account',
+        buttonClass: 'bg-red-600 hover:bg-red-700'
+      }
+    };
+
+    const details = actionDetails[accountActionModal.action];
+
+    return (
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          {details.icon}
+          <h3 className="text-lg font-bold">{details.title}</h3>
+        </div>
+        
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            User: <strong>{accountActionModal.user.name} ({accountActionModal.user.email})</strong>
+          </p>
+          <p className="text-sm">{details.description}</p>
+        </div>
+
+        {accountActionModal.action === 'delete-account' && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium">Warning: This action is irreversible!</span>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+              All user data including tasks, notes, settings, calendar events, and authentication will be permanently deleted.
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={closeAccountActionModal}
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500"
+            disabled={accountActionModal.loading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={executeAccountAction}
+            disabled={accountActionModal.loading}
+            className={`px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${details.buttonClass}`}
+          >
+            {accountActionModal.loading ? 'Processing...' : details.buttonText}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (loading || typeof window === 'undefined') {
@@ -460,7 +634,7 @@ const UserManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 flex-wrap">
                       <button
                         onClick={() => openCommunicationModal('individual', [user])}
                         className="p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded"
@@ -469,10 +643,32 @@ const UserManagement: React.FC = () => {
                         <Mail className="w-4 h-4" />
                       </button>
                       <button
-                        className="p-1 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="View Details"
+                        onClick={() => openAccountActionModal('google-cleanup', user)}
+                        className="p-1 text-green-600 hover:bg-green-100 dark:hover:bg-green-900 rounded"
+                        title="Clean Google Accounts"
                       >
-                        <Eye className="w-4 h-4" />
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openAccountActionModal('clear-settings', user)}
+                        className="p-1 text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900 rounded"
+                        title="Clear Settings"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openAccountActionModal('clear-sessions', user)}
+                        className="p-1 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900 rounded"
+                        title="Clear Sessions"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openAccountActionModal('delete-account', user)}
+                        className="p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded"
+                        title="Delete Account"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -593,6 +789,15 @@ const UserManagement: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Action Modal */}
+      {accountActionModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            {getActionModalContent()}
           </div>
         </div>
       )}

@@ -42,9 +42,8 @@ export default async function handler(
     }
 
     // Security check: users can only delete their own accounts unless they're admin
-    // For now, we'll allow self-deletion only
-    if (requestingUser.email !== userEmail) {
-      // In production, add admin role check here
+    const isAdmin = requestingUser.email === 'amascaro08@gmail.com';
+    if (requestingUser.email !== userEmail && !isAdmin) {
       return res.status(403).json({ 
         error: 'You can only delete your own accounts. Admin access required for other users.' 
       });
