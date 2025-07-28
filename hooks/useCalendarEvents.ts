@@ -14,8 +14,8 @@ interface UseCalendarEventsOptions {
 const eventCache = new Map<string, CachedEvent>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (increased for better performance)
 
-// Background refresh interval - significantly increased to reduce load
-const BACKGROUND_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+// Background refresh interval - DISABLED to prevent loops
+const BACKGROUND_REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour (much longer)
 
 interface CachedEvent {
   id: string;
@@ -78,6 +78,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   const mountedRef = useRef(true);
   const retryCountRef = useRef(0);
   const maxRetries = 2;
+  const lastCalendarSourcesHashRef = useRef<string>(''); // Track last known hash
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const cacheKey = getCacheKey(startDate, endDate);
 
@@ -99,6 +101,9 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
 
     return () => {
       mountedRef.current = false;
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
     };
   }, [enabled]);
 
@@ -249,8 +254,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     return loadEventsStable(startDate, endDate, isBackgroundRefresh, forceReload);
   }, [loadEventsStable, startDate, endDate]);
 
-  // Background refresh function - simplified and less frequent
+  // DISABLED - Background refresh function to prevent loops
   const startBackgroundRefresh = useCallback(() => {
+    // Completely disable background refresh for now
+    return;
+    
     if (backgroundRefreshRef.current) {
       clearInterval(backgroundRefreshRef.current);
     }
@@ -392,33 +400,65 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     }
   }, [cacheKey]);
 
-  // Clear cache and reload when calendar sources change - prevent dependency loops
+  // HEAVILY DEBOUNCED - Clear cache and reload when calendar sources change
   useEffect(() => {
-    if (!isInitializing && calendarSourcesHash) {
-      const timeoutId = setTimeout(() => {
-        console.log('Calendar sources changed, clearing cache and reloading events');
-        invalidateCache().then(() => {
-          loadEventsStable(startDate, endDate, false, true); // Force reload
+    if (!isInitializing && calendarSourcesHash && calendarSourcesHash !== 'empty') {
+      // Only react to real changes, not initialization
+      if (lastCalendarSourcesHashRef.current && lastCalendarSourcesHashRef.current !== calendarSourcesHash) {
+        console.log('Calendar sources actually changed:', {
+          from: lastCalendarSourcesHashRef.current,
+          to: calendarSourcesHash
         });
-      }, 5000); // Increased debounce to 5 seconds to prevent loops
-
-      return () => clearTimeout(timeoutId);
+        
+        // Clear any existing timeout
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+        
+        loadingTimeoutRef.current = setTimeout(() => {
+          console.log('Executing calendar sources change reload');
+          invalidateCache().then(() => {
+            loadEventsStable(startDate, endDate, false, true); // Force reload
+          });
+        }, 8000); // 8 second debounce to prevent loops
+      }
+      
+      // Update the ref after processing
+      lastCalendarSourcesHashRef.current = calendarSourcesHash;
     }
-  }, [calendarSourcesHash, isInitializing]); // Removed all date and function dependencies
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [calendarSourcesHash, isInitializing]); // Only these dependencies
 
   // Load events on mount and when date range changes - minimal dependencies
   useEffect(() => {
     if (!isInitializing) {
-      const timeoutId = setTimeout(() => {
+      // Clear any existing timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      
+      loadingTimeoutRef.current = setTimeout(() => {
         loadEventsStable(startDate, endDate);
-      }, 1500); // Increased debounce to prevent rapid calls
-
-      return () => clearTimeout(timeoutId);
+      }, 2000); // 2 second debounce to prevent rapid calls
     }
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
   }, [startDate.getTime(), endDate.getTime(), isInitializing]); // Only date and init state
 
-  // Start background refresh when component mounts
+  // DISABLED - Start background refresh when component mounts
   useEffect(() => {
+    // Disable background refresh completely
+    return;
+    
     if (enabled && !isInitializing) {
       startBackgroundRefresh();
     }

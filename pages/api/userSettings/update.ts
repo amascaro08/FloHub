@@ -32,21 +32,41 @@ export default async function handler(
     }
     
     const newSettings: UserSettings = req.body;
-    console.log('📝 Updating user settings for:', user_email);
-    console.log('📝 Calendar sources being saved:', newSettings.calendarSources?.length || 0);
-    
-    if (newSettings.calendarSources && newSettings.calendarSources.length > 0) {
-      console.log('📝 Calendar source details:');
-      newSettings.calendarSources.forEach((source, index) => {
-        console.log(`   ${index + 1}. ${source.name} (${source.type}) - enabled: ${source.isEnabled}`);
+    console.log('📥 Settings data received:', {
+      hasCalendarSources: !!newSettings.calendarSources,
+      calendarSourcesCount: newSettings.calendarSources?.length || 0,
+      calendarSourceTypes: newSettings.calendarSources?.map(s => s.type) || []
+    });
+
+    // Get existing settings to preserve calendar sources if needed
+    let existingCalendarSources: any[] = [];
+    try {
+      const existingData = await db.query.userSettings.findFirst({
+        where: eq(userSettings.user_email, user_email as string),
       });
+      existingCalendarSources = (existingData?.calendarSources as any[]) || [];
+      console.log('📋 Existing calendar sources count:', existingCalendarSources.length);
+    } catch (error) {
+      console.log('📋 No existing settings found, starting fresh');
     }
 
-    const settingsData = {
-      selectedCals: newSettings.selectedCals || [],
+    // Safeguard: Don't accidentally clear calendar sources
+    let finalCalendarSources = newSettings.calendarSources || [];
+    if (finalCalendarSources.length === 0 && existingCalendarSources.length > 0) {
+      // If we're trying to set empty sources but had existing ones, preserve the existing ones
+      // unless this is an explicit deletion (check if calendarSources was explicitly set to [])
+      if (newSettings.calendarSources === undefined) {
+        console.log('🛡️ Preserving existing calendar sources (update did not include calendarSources)');
+        finalCalendarSources = existingCalendarSources;
+      } else {
+        console.log('⚠️ Explicitly clearing calendar sources');
+      }
+    }
+
+    const settingsData: Partial<UserSettings> = {
       defaultView: newSettings.defaultView || 'month',
-      customRange: newSettings.customRange || { start: '', end: '' },
-      powerAutomateUrl: newSettings.powerAutomateUrl || '',
+      powerAutomateUrl: newSettings.powerAutomateUrl || null,
+      selectedCals: newSettings.selectedCals || [],
       globalTags: newSettings.globalTags || [],
       activeWidgets: newSettings.activeWidgets || [],
       floCatStyle: newSettings.floCatStyle || 'default',
@@ -57,7 +77,7 @@ export default async function handler(
       calendarSettings: newSettings.calendarSettings || { calendars: [] },
       notificationSettings: newSettings.notificationSettings || { subscribed: false },
       layouts: newSettings.layouts || {},
-      calendarSources: newSettings.calendarSources || [],
+      calendarSources: finalCalendarSources,
       timezone: newSettings.timezone || 'UTC',
       floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
     };

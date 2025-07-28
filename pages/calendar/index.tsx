@@ -141,10 +141,25 @@ const CalendarPage = () => {
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  // Generate hash of calendar sources to detect changes - memoized to prevent loops
+  // Generate hash of calendar sources to detect changes - extra stable to prevent loops
   const calendarSourcesHash = useMemo(() => {
-    return generateCalendarSourcesHash(settings?.calendarSources);
-  }, [settings?.calendarSources]);
+    if (!settings?.calendarSources) {
+      return 'empty';
+    }
+    
+    // Only include essential properties that actually matter for calendar loading
+    const stableSourcesData = settings.calendarSources
+      .filter(source => source.isEnabled) // Only enabled sources
+      .map(source => ({
+        type: source.type,
+        sourceId: source.sourceId,
+        connectionData: source.connectionData,
+        isEnabled: source.isEnabled
+      }))
+      .sort((a, b) => `${a.type}:${a.sourceId}`.localeCompare(`${b.type}:${b.sourceId}`)); // Stable sort
+    
+    return generateCalendarSourcesHash(stableSourcesData as any);
+  }, [settings?.calendarSources?.length, settings?.calendarSources?.map(s => `${s.type}:${s.sourceId}:${s.isEnabled}`).join('|')]);
 
   // Use cached calendar events hook with stable parameters
   const {
