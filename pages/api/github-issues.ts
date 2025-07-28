@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { feedback } from "@/db/schema";
+import { sql } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -140,16 +141,10 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
 
     // Store feedback in database with GitHub issue info using correct column names
     try {
-      await db.insert(feedback).values({
-        userEmail: user.email, // Use the new user_email field for consistency with other tables
-        title: title,
-        description: feedbackText,
-        status: "open",
-        githubIssueNumber: issue.data.number,
-        githubIssueUrl: issue.data.html_url,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+      await db.execute(sql`
+        INSERT INTO feedback (user_email, title, description, status, github_issue_number, github_issue_url)
+        VALUES (${user.email}, ${title}, ${feedbackText}, 'open', ${issue.data.number}, ${issue.data.html_url})
+      `);
     } catch (dbError: any) {
       console.error("Database insertion error:", {
         message: dbError.message,
