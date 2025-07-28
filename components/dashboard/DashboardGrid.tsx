@@ -4,6 +4,7 @@ import { Responsive, WidthProvider } from "react-grid-layout";
 import "/node_modules/react-grid-layout/css/styles.css";
 import "/node_modules/react-resizable/css/styles.css";
 import ErrorBoundary from '../ui/ErrorBoundary';
+import LayoutTemplateSelector, { LayoutTemplate } from '../ui/LayoutTemplateSelector';
 import {
   CheckSquare,
   Calendar,
@@ -127,79 +128,219 @@ const DashboardGrid = () => {
     );
   }
 
-  // Locking: Read lock state from localStorage
-  const [isLocked, setIsLocked] = useState(false);
-
-  useEffect(() => {
-    // Load lock state from localStorage on component mount
-    const saved = localStorage.getItem("dashboardLocked");
-    setIsLocked(saved === "true");
-
-    // Listen for storage changes to sync lock state across components
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "dashboardLocked") {
-        setIsLocked(e.newValue === "true");
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also listen for custom events for same-tab updates
-    const handleLockChange = () => {
-      const saved = localStorage.getItem("dashboardLocked");
-      setIsLocked(saved === "true");
-    };
-
-    window.addEventListener('lockStateChanged', handleLockChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('lockStateChanged', handleLockChange);
-    };
-  }, []);
+  // Template-based layouts (no manual lock/unlock needed)
 
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
+  const [currentTemplate, setCurrentTemplate] = useState<LayoutTemplate>('auto');
 
-  // Default layouts with improved responsive design and larger default sizes
-  const defaultLayouts = {
-    lg: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
-      { i: "ataglance", x: 8, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
-      { i: "quicknote", x: 0, y: 12, w: 6, h: 10, minW: 4, minH: 8, maxW: 12, maxH: 16 },
-      { i: "habit-tracker", x: 6, y: 12, w: 6, h: 10, minW: 4, minH: 8, maxW: 12, maxH: 16 },
-    ],
-    md: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
-      { i: "ataglance", x: 0, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
-      { i: "quicknote", x: 4, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
-      { i: "habit-tracker", x: 0, y: 24, w: 8, h: 10, minW: 6, minH: 8, maxW: 8, maxH: 16 },
-    ],
-    sm: [
-      { i: "tasks", x: 0, y: 0, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
-      { i: "calendar", x: 0, y: 12, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
-      { i: "ataglance", x: 0, y: 24, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
-      { i: "quicknote", x: 0, y: 36, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 16 },
-      { i: "habit-tracker", x: 0, y: 46, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 16 },
-    ],
-    xs: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
-      { i: "calendar", x: 0, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
-      { i: "ataglance", x: 0, y: 24, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
-      { i: "quicknote", x: 0, y: 36, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 16 },
-      { i: "habit-tracker", x: 0, y: 46, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 16 },
-    ],
-    xxs: [
-      { i: "tasks", x: 0, y: 0, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
-      { i: "calendar", x: 0, y: 12, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
-      { i: "ataglance", x: 0, y: 24, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
-      { i: "quicknote", x: 0, y: 36, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 16 },
-      { i: "habit-tracker", x: 0, y: 46, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 16 },
-    ],
-  };
+  // Smart layout templates based on number of active widgets and template type
+  const generateSmartLayout = useCallback((widgets: string[], template: LayoutTemplate = 'auto') => {
+    const widgetCount = widgets.length;
+    
+    // Choose template based on type and widget count
+    let selectedTemplateKey = template;
+    if (template === 'auto') {
+      // Auto-select best template based on widget count
+      selectedTemplateKey = widgetCount <= 2 ? 'grid' : widgetCount === 3 ? 'focus' : 'balanced';
+    }
+    
+    // Template configurations for different widget counts and types
+    const templates = {
+      1: { // Single widget - full width focus
+        lg: (w: string) => ({ i: w, x: 2, y: 0, w: 8, h: 15, minW: 6, minH: 12, maxW: 12, maxH: 20 }),
+        md: (w: string) => ({ i: w, x: 1, y: 0, w: 6, h: 15, minW: 4, minH: 12, maxW: 8, maxH: 20 }),
+        sm: (w: string) => ({ i: w, x: 0, y: 0, w: 6, h: 15, minW: 6, minH: 12, maxW: 6, maxH: 20 }),
+        xs: (w: string) => ({ i: w, x: 0, y: 0, w: 4, h: 15, minW: 4, minH: 12, maxW: 4, maxH: 20 }),
+        xxs: (w: string) => ({ i: w, x: 0, y: 0, w: 2, h: 15, minW: 2, minH: 12, maxW: 2, maxH: 20 }),
+      },
+      2: { // Two widgets - side by side
+        lg: (w: string, i: number) => ({ 
+          i: w, x: i * 6, y: 0, w: 6, h: 15, minW: 4, minH: 12, maxW: 8, maxH: 20 
+        }),
+        md: (w: string, i: number) => ({ 
+          i: w, x: i * 4, y: 0, w: 4, h: 15, minW: 4, minH: 12, maxW: 6, maxH: 20 
+        }),
+        sm: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 15, w: 6, h: 15, minW: 6, minH: 12, maxW: 6, maxH: 20 
+        }),
+        xs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 15, w: 4, h: 15, minW: 4, minH: 12, maxW: 4, maxH: 20 
+        }),
+        xxs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 15, w: 2, h: 15, minW: 2, minH: 12, maxW: 2, maxH: 20 
+        }),
+      },
+      3: { // Three widgets - one large, two smaller
+        lg: (w: string, i: number) => {
+          if (i === 0) return { i: w, x: 0, y: 0, w: 6, h: 15, minW: 4, minH: 12, maxW: 8, maxH: 20 };
+          return { i: w, x: 6, y: (i-1) * 7, w: 6, h: 7, minW: 4, minH: 6, maxW: 8, maxH: 12 };
+        },
+        md: (w: string, i: number) => {
+          if (i === 0) return { i: w, x: 0, y: 0, w: 4, h: 15, minW: 4, minH: 12, maxW: 6, maxH: 20 };
+          return { i: w, x: 4, y: (i-1) * 7, w: 4, h: 7, minW: 4, minH: 6, maxW: 6, maxH: 12 };
+        },
+        sm: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 12, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 18 
+        }),
+        xs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 18 
+        }),
+        xxs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 12, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 18 
+        }),
+      },
+      4: { // Four widgets - 2x2 grid
+        lg: (w: string, i: number) => ({ 
+          i: w, x: (i % 2) * 6, y: Math.floor(i / 2) * 12, w: 6, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 16 
+        }),
+        md: (w: string, i: number) => ({ 
+          i: w, x: (i % 2) * 4, y: Math.floor(i / 2) * 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 6, maxH: 16 
+        }),
+        sm: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 10, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 14 
+        }),
+        xs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 10, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 14 
+        }),
+        xxs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 10, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 14 
+        }),
+      },
+      5: { // Five widgets - optimized layout
+        lg: (w: string, i: number) => {
+          if (i < 3) return { i: w, x: i * 4, y: 0, w: 4, h: 12, minW: 3, minH: 10, maxW: 6, maxH: 16 };
+          return { i: w, x: (i - 3) * 6, y: 12, w: 6, h: 10, minW: 4, minH: 8, maxW: 8, maxH: 14 };
+        },
+        md: (w: string, i: number) => {
+          if (i < 2) return { i: w, x: i * 4, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 6, maxH: 16 };
+          return { i: w, x: ((i - 2) % 2) * 4, y: 12 + Math.floor((i - 2) / 2) * 10, w: 4, h: 10, minW: 4, minH: 8, maxW: 6, maxH: 14 };
+        },
+        sm: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 9, w: 6, h: 9, minW: 6, minH: 7, maxW: 6, maxH: 12 
+        }),
+        xs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 9, w: 4, h: 9, minW: 4, minH: 7, maxW: 4, maxH: 12 
+        }),
+        xxs: (w: string, i: number) => ({ 
+          i: w, x: 0, y: i * 9, w: 2, h: 9, minW: 2, minH: 7, maxW: 2, maxH: 12 
+        }),
+             },
+       
+       // Additional template types
+       grid: { // Equal sized grid
+         lg: (w: string, i: number) => ({ 
+           i: w, x: (i % 3) * 4, y: Math.floor(i / 3) * 12, w: 4, h: 12, minW: 3, minH: 10, maxW: 6, maxH: 16 
+         }),
+         md: (w: string, i: number) => ({ 
+           i: w, x: (i % 2) * 4, y: Math.floor(i / 2) * 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 6, maxH: 16 
+         }),
+         sm: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 10, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 14 
+         }),
+         xs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 10, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 14 
+         }),
+         xxs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 10, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 14 
+         }),
+       },
+       
+       focus: { // One large widget, others smaller
+         lg: (w: string, i: number) => {
+           if (i === 0) return { i: w, x: 0, y: 0, w: 8, h: 16, minW: 6, minH: 14, maxW: 10, maxH: 20 };
+           return { i: w, x: 8, y: (i-1) * 8, w: 4, h: 8, minW: 3, minH: 6, maxW: 6, maxH: 12 };
+         }),
+         md: (w: string, i: number) => {
+           if (i === 0) return { i: w, x: 0, y: 0, w: 5, h: 16, minW: 4, minH: 14, maxW: 7, maxH: 20 };
+           return { i: w, x: 5, y: (i-1) * 8, w: 3, h: 8, minW: 3, minH: 6, maxW: 5, maxH: 12 };
+         }),
+         sm: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 12, w: 6, h: i === 0 ? 16 : 10, minW: 6, minH: i === 0 ? 14 : 8, maxW: 6, maxH: i === 0 ? 20 : 14 
+         }),
+         xs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 12, w: 4, h: i === 0 ? 16 : 10, minW: 4, minH: i === 0 ? 14 : 8, maxW: 4, maxH: i === 0 ? 20 : 14 
+         }),
+         xxs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 12, w: 2, h: i === 0 ? 16 : 10, minW: 2, minH: i === 0 ? 14 : 8, maxW: 2, maxH: i === 0 ? 20 : 14 
+         }),
+       },
+       
+       stack: { // Vertical stack
+         lg: (w: string, i: number) => ({ 
+           i: w, x: 3, y: i * 8, w: 6, h: 8, minW: 4, minH: 6, maxW: 8, maxH: 12 
+         }),
+         md: (w: string, i: number) => ({ 
+           i: w, x: 2, y: i * 8, w: 4, h: 8, minW: 4, minH: 6, maxW: 6, maxH: 12 
+         }),
+         sm: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 8, w: 6, h: 8, minW: 6, minH: 6, maxW: 6, maxH: 12 
+         }),
+         xs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 8, w: 4, h: 8, minW: 4, minH: 6, maxW: 4, maxH: 12 
+         }),
+         xxs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 8, w: 2, h: 8, minW: 2, minH: 6, maxW: 2, maxH: 12 
+         }),
+       },
+       
+       balanced: { // Mixed balanced layout
+         lg: (w: string, i: number) => {
+           const positions = [
+             { x: 0, y: 0, w: 6, h: 12 }, // Top left
+             { x: 6, y: 0, w: 6, h: 8 },  // Top right
+             { x: 6, y: 8, w: 6, h: 8 },  // Mid right
+             { x: 0, y: 12, w: 4, h: 8 }, // Bottom left
+             { x: 4, y: 12, w: 4, h: 8 }  // Bottom mid
+           ];
+           const pos = positions[i] || positions[positions.length - 1];
+           return { i: w, ...pos, minW: 3, minH: 6, maxW: 8, maxH: 16 };
+         }),
+         md: (w: string, i: number) => {
+           const positions = [
+             { x: 0, y: 0, w: 4, h: 12 }, 
+             { x: 4, y: 0, w: 4, h: 8 },  
+             { x: 4, y: 8, w: 4, h: 8 },  
+             { x: 0, y: 12, w: 4, h: 8 }, 
+             { x: 4, y: 16, w: 4, h: 8 }  
+           ];
+           const pos = positions[i] || positions[positions.length - 1];
+           return { i: w, ...pos, minW: 4, minH: 6, maxW: 6, maxH: 16 };
+         }),
+         sm: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 9, w: 6, h: 9, minW: 6, minH: 7, maxW: 6, maxH: 12 
+         }),
+         xs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 9, w: 4, h: 9, minW: 4, minH: 7, maxW: 4, maxH: 12 
+         }),
+         xxs: (w: string, i: number) => ({ 
+           i: w, x: 0, y: i * 9, w: 2, h: 9, minW: 2, minH: 7, maxW: 2, maxH: 12 
+         }),
+       }
+     };
 
-  const [layouts, setLayouts] = useState(defaultLayouts);
+     // Get the appropriate template configuration
+     const getTemplateConfig = () => {
+       if (widgetCount === 1) return templates[1];
+       if (templates[selectedTemplateKey as keyof typeof templates]) {
+         return templates[selectedTemplateKey as keyof typeof templates];
+       }
+       // Fallback to count-based template
+       return templates[Math.min(widgetCount, 5) as keyof typeof templates];
+     };
+
+     const templateConfig = getTemplateConfig();
+     
+     const layouts: any = {};
+     (['lg', 'md', 'sm', 'xs', 'xxs'] as const).forEach(breakpoint => {
+       layouts[breakpoint] = widgets.map((widget, index) => 
+         templateConfig[breakpoint](widget, index)
+       );
+     });
+
+     return layouts;
+  }, []);
+
+  const [layouts, setLayouts] = useState({});
   const [loadedSettings, setLoadedSettings] = useState(false);
 
   // Fetch user settings to get active widgets (client-side only) with caching
@@ -271,48 +412,15 @@ const DashboardGrid = () => {
     };
   }, []);
 
-  // Load layout from database on component mount (client-side only)
+  // Generate layouts when active widgets or template changes
   useEffect(() => {
-    const fetchLayout = async () => {
-      if (isClient && user?.email) {
-        try {
-          const response = await fetch(`/api/userSettings/layouts?userId=${user.email}`);
-          if (response.ok) {
-            const { layouts: savedLayouts } = await response.json();
-            if (savedLayouts && Object.keys(savedLayouts).length > 0) {
-              setLayouts(savedLayouts);
-            } else {
-              setLayouts(defaultLayouts);
-              // Only save default layouts if none exist
-              try {
-                await fetch('/api/userSettings/layouts', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ layouts: defaultLayouts }),
-                });
-              } catch (saveError) {
-                // Ignore save errors, not critical
-              }
-            }
-          } else {
-            setLayouts(defaultLayouts);
-          }
-        } catch (e) {
-          setLayouts(defaultLayouts);
-        }
-      } else if (isClient) {
-        // Set default layouts when no user
-        setLayouts(defaultLayouts);
-      }
-    };
-
-    // Only fetch if we have user email and client is ready
-    if (isClient && user?.email) {
-      fetchLayout();
-    } else if (isClient) {
-      setLayouts(defaultLayouts);
+    if (activeWidgets.length > 0) {
+      const smartLayouts = generateSmartLayout(activeWidgets, currentTemplate);
+      setLayouts(smartLayouts);
+    } else {
+      setLayouts({});
     }
-  }, [user?.email, isClient]); // Only depend on email and isClient
+  }, [activeWidgets, currentTemplate, generateSmartLayout]);
 
   // Ref to store the timeout ID for debouncing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -464,31 +572,22 @@ const DashboardGrid = () => {
             {/* Dashboard Controls */}
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => {
-                  const newLockState = !isLocked;
-                  setIsLocked(newLockState);
-                  localStorage.setItem("dashboardLocked", newLockState.toString());
-                  window.dispatchEvent(new Event('lockStateChanged'));
-                }}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  isLocked 
-                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300' 
-                    : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                }`}
-              >
-                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                <span className="hidden sm:inline">{isLocked ? 'Unlock' : 'Lock'} Layout</span>
-              </button>
-              
-              <button
                 onClick={() => window.location.href = '/dashboard/settings'}
                 className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
               >
                 <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
+                <span className="hidden sm:inline">Widget Settings</span>
               </button>
             </div>
           </div>
+
+          {/* Layout Template Selector */}
+          <LayoutTemplateSelector
+            currentTemplate={currentTemplate}
+            widgetCount={activeWidgets.length}
+            onTemplateChange={setCurrentTemplate}
+            isVisible={activeWidgets.length > 1}
+          />
 
           {/* Dashboard Grid */}
           <ResponsiveGridLayout
@@ -509,8 +608,8 @@ const DashboardGrid = () => {
             cols={{ lg: 12, md: 8, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={40}
             onLayoutChange={onLayoutChange}
-            isDraggable={!isLocked}
-            isResizable={!isLocked}
+            isDraggable={false}
+            isResizable={false}
             margin={[20, 20]}
             containerPadding={[20, 20]}
             compactType="vertical"
@@ -531,12 +630,10 @@ const DashboardGrid = () => {
                     </h2>
                   </div>
                   
-                  {!isLocked && (
-                    <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
-                      <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                      <span className="text-xs text-grey-tint hidden sm:inline">Resizable</span>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                    <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                    <span className="text-xs text-grey-tint hidden sm:inline">Template</span>
+                  </div>
                 </div>
                 
                 <div className="widget-content flex-1 overflow-hidden">
