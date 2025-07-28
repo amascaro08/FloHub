@@ -1,6 +1,8 @@
-# 🌊 FloHub
+# FloHub - Personal Productivity Platform
 
-**FloHub** is your all-in-one, AI-powered productivity hub — built for busy humans who want more flow and less chaos. Seamlessly track tasks, manage calendars, capture ideas, and chat with your AI assistant **FloCat** — all from one sleek, responsive dashboard.
+**Latest Update:** Critical privacy and security fixes implemented (User cache isolation, Google OAuth security enhancements, comprehensive debugging tools)
+
+FloHub is a comprehensive personal productivity platform that helps you manage your calendar, tasks, habits, and more in one unified interface.
 
 ---
 
@@ -71,3 +73,4 @@ FloHub uses [Neon](https://neon.tech) as the **PostgreSQL database** for all cor
    ```bash
    git clone https://github.com/yourusername/FloHub.git
    cd FloHub
+```
