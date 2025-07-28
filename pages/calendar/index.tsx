@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useUser } from "@/lib/hooks/useUser";
 import Head from 'next/head';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth, startOfDay, endOfDay, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, getDay, startOfWeek, endOfWeek, addDays, isToday, isSameMonth, startOfDay, endOfDay, addWeeks, subWeeks, isWithinInterval, setHours, setMinutes, setSeconds, startOfHour, addHours, isSameHour } from 'date-fns';
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
@@ -81,20 +81,18 @@ const CalendarPage = () => {
     };
   }, []);
 
-  // Calculate date range for current view
+  // Calculate date range for current view - fixed to prevent excessive re-renders
   const getDateRange = useCallback(() => {
     if (currentView === 'day') {
-      const start = new Date(currentDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(currentDate);
-      end.setHours(23, 59, 59, 999);
+      const start = startOfDay(currentDate);
+      const end = endOfDay(currentDate);
       return { start, end };
     } else if (currentView === 'week') {
       const start = startOfWeek(currentDate);
       const end = endOfWeek(currentDate);
       return { start, end };
     } else if (currentView === 'agenda' || currentView === 'timeline') {
-      // Show 30 days for agenda/timeline
+      // For agenda view, focus on current day
       const start = startOfDay(currentDate);
       const end = addDays(start, 30);
       return { start, end };
@@ -111,7 +109,7 @@ const CalendarPage = () => {
     { revalidateOnFocus: false, dedupingInterval: 300000 } // 5 minutes
   );
 
-  // Set initial view based on settings
+  // Set initial view based on settings - only run once
   useEffect(() => {
     if (settings?.defaultView) {
       const viewMapping: Record<string, 'day' | 'week' | 'month' | 'agenda' | 'timeline'> = {
@@ -143,12 +141,12 @@ const CalendarPage = () => {
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  // Generate hash of calendar sources to detect changes
+  // Generate hash of calendar sources to detect changes - memoized to prevent loops
   const calendarSourcesHash = useMemo(() => {
     return generateCalendarSourcesHash(settings?.calendarSources);
   }, [settings?.calendarSources]);
 
-  // Use cached calendar events hook
+  // Use cached calendar events hook with stable parameters
   const {
     events,
     isLoading,
@@ -258,6 +256,32 @@ const CalendarPage = () => {
       return aDate.getTime() - bDate.getTime();
     });
   };
+
+  // Helper function to get events for a specific hour
+  const getEventsForHour = useCallback((hour: Date) => {
+    return events.filter(event => {
+      const eventStart = getEventDate(event);
+      return isSameHour(eventStart, hour);
+    }).sort((a, b) => {
+      const aDate = getEventDate(a);
+      const bDate = getEventDate(b);
+      return aDate.getTime() - bDate.getTime();
+    });
+  }, [events]);
+
+  // Generate hours for agenda view
+  const agendaHours = useMemo(() => {
+    const hours = [];
+    const baseDate = isToday(currentDate) ? new Date() : currentDate;
+    const startHour = startOfDay(baseDate);
+    
+    for (let i = 0; i < 24; i++) {
+      const hour = addHours(startHour, i);
+      hours.push(hour);
+    }
+    
+    return hours;
+  }, [currentDate]);
 
   const getEventsForCurrentView = () => {
     if (currentView === 'day') {
@@ -922,106 +946,103 @@ const CalendarPage = () => {
             <div className="p-6">
               <div className="mb-6">
                 <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">
-                  Upcoming Events
+                  {isToday(currentDate) ? "Today's Schedule" : `Schedule for ${format(currentDate, 'EEEE, MMM d, yyyy')}`}
                 </h3>
-                <p className="text-grey-tint mt-1">Next 30 days</p>
+                <p className="text-grey-tint mt-1">Hourly breakdown with events</p>
               </div>
               
-              <div className="space-y-4">
-                {(() => {
-                  const filteredEvents = events
-                    .filter(event => {
-                      const eventDate = getEventDate(event);
-                      const rangeStart = startOfDay(currentDate);
-                      const rangeEnd = addDays(rangeStart, 30);
-                      return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
-                    })
-                    .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime());
-
-                  const groupedEvents = filteredEvents.reduce((acc, event) => {
-                    const eventDate = format(getEventDate(event), 'yyyy-MM-dd');
-                    if (!acc[eventDate]) acc[eventDate] = [];
-                    acc[eventDate].push(event);
-                    return acc;
-                  }, {} as Record<string, CalendarEvent[]>);
-
-                  if (Object.keys(groupedEvents).length === 0) {
-                    return (
-                      <div className="text-center py-16">
-                        <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                          <ListBulletIcon className="w-8 h-8 text-grey-tint" />
-                        </div>
-                        <p className="text-grey-tint">No upcoming events</p>
-                      </div>
-                    );
-                  }
-
-                  return Object.entries(groupedEvents).map(([dateStr, dayEvents]) => {
-                    const date = parseISO(dateStr);
-                    const isTodayDate = isToday(date);
-                    
-                    return (
-                      <div key={dateStr} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
-                        <div className="flex items-center mb-3">
-                          <span className={`text-lg font-heading font-semibold mr-4 ${
-                            isTodayDate
-                              ? 'text-primary-600 dark:text-primary-400'
-                              : 'text-dark-base dark:text-soft-white'
-                          }`}>
-                            {format(date, 'EEEE, MMM d, yyyy')}
-                            {isTodayDate && <span className="ml-2 text-sm font-normal">(Today)</span>}
-                          </span>
-                          <span className="text-sm text-grey-tint bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                            {dayEvents.length} events
-                          </span>
+              <div className="space-y-2">
+                {agendaHours.map((hour, index) => {
+                  const hourEvents = getEventsForHour(hour);
+                  const isPastHour = isToday(currentDate) && hour < new Date();
+                  const isCurrentHour = isToday(currentDate) && isSameHour(hour, new Date());
+                  
+                  return (
+                    <div 
+                      key={hour.toISOString()} 
+                      className={`border-l-4 rounded-lg transition-all duration-200 ${
+                        isCurrentHour 
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-lg' 
+                          : isPastHour
+                          ? 'border-gray-300 bg-gray-50 dark:bg-gray-800/50 opacity-75'
+                          : 'border-gray-200 dark:border-gray-700 bg-soft-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-3">
+                            <span className={`text-lg font-mono font-bold ${
+                              isCurrentHour 
+                                ? 'text-primary-600 dark:text-primary-400' 
+                                : isPastHour
+                                ? 'text-gray-400 dark:text-gray-500'
+                                : 'text-dark-base dark:text-soft-white'
+                            }`}>
+                              {format(hour, 'h:mm a')}
+                            </span>
+                            {isCurrentHour && (
+                              <span className="px-2 py-1 bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 text-xs font-medium rounded-full">
+                                Current Hour
+                              </span>
+                            )}
+                          </div>
+                          {hourEvents.length > 0 && (
+                            <span className="text-sm text-grey-tint bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                              {hourEvents.length} event{hourEvents.length === 1 ? '' : 's'}
+                            </span>
+                          )}
                         </div>
                         
-                        <div className="space-y-2">
-                          {dayEvents.map(event => {
-                            const colorClass = event.source === 'work'
-                              ? 'border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                              : 'border-l-4 border-accent-500 bg-accent-50 dark:bg-accent-900/20';
-                            
-                            return (
-                              <div
-                                key={event.id}
-                                onClick={() => setSelectedEvent(event)}
-                                className={`p-4 rounded-xl cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <div className="flex-1">
-                                    <div className="font-medium text-dark-base dark:text-soft-white">
-                                      {event.summary || event.title || "No Title"}
+                        {hourEvents.length === 0 ? (
+                          <p className="text-grey-tint text-sm italic pl-6">No events scheduled</p>
+                        ) : (
+                          <div className="space-y-2 pl-6">
+                            {hourEvents.map(event => {
+                              const colorClass = event.source === 'work'
+                                ? 'border-l-2 border-primary-500 bg-primary-50/50 dark:bg-primary-900/10'
+                                : 'border-l-2 border-accent-500 bg-accent-50/50 dark:bg-accent-900/10';
+                              
+                              return (
+                                <div
+                                  key={event.id}
+                                  onClick={() => setSelectedEvent(event)}
+                                  className={`p-3 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-dark-base dark:text-soft-white">
+                                        {event.summary || event.title || "No Title"}
+                                      </div>
+                                      <div className="text-sm text-grey-tint mt-1 flex items-center">
+                                        <ClockIcon className="w-3 h-3 mr-1" />
+                                        {formatTime(event.start)}
+                                        {event.end && <span> - {formatTime(event.end)}</span>}
+                                        {event.location && (
+                                          <>
+                                            <span className="mx-2">•</span>
+                                            <MapPinIcon className="w-3 h-3 mr-1" />
+                                            <span className="truncate max-w-[150px]">{event.location}</span>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="text-sm text-grey-tint mt-1 flex items-center">
-                                      <ClockIcon className="w-4 h-4 mr-1" />
-                                      {formatTime(event.start)}
-                                      {event.end && <span> - {formatTime(event.end)}</span>}
-                                      {event.location && (
-                                        <>
-                                          <span className="mx-2">•</span>
-                                          <MapPinIcon className="w-4 h-4 mr-1" />
-                                          {event.location}
-                                        </>
-                                      )}
-                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      event.source === 'work'
+                                        ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
+                                        : 'bg-accent-100 text-accent-800 dark:bg-accent-900 dark:text-accent-200'
+                                    }`}>
+                                      {event.source === 'work' ? 'Work' : 'Personal'}
+                                    </span>
                                   </div>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    event.source === 'work'
-                                      ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
-                                      : 'bg-accent-100 text-accent-800 dark:bg-accent-900 dark:text-accent-200'
-                                  }`}>
-                                    {event.source === 'work' ? 'Work' : 'Personal'}
-                                  </span>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    );
-                  });
-                })()}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -15,10 +15,11 @@ export const GOOGLE_OAUTH_CONFIG = {
   get clientSecret() {
     return process.env.GOOGLE_OAUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET || '';
   },
-  get redirectUri() {
-    const baseUrl = process.env.NEXTAUTH_URL;
-    if (baseUrl) {
-      return `${baseUrl}/api/auth/callback/google-additional`;
+  getRedirectUri(baseUrl?: string) {
+    // Use provided baseUrl (detected from request) or fall back to NEXTAUTH_URL
+    const targetUrl = baseUrl || process.env.NEXTAUTH_URL;
+    if (targetUrl) {
+      return `${targetUrl}/api/auth/callback/google-additional`;
     }
     // Fallback for development
     return 'http://localhost:3000/api/auth/callback/google-additional';
@@ -26,19 +27,27 @@ export const GOOGLE_OAUTH_CONFIG = {
 };
 
 /**
- * Generate Google OAuth URL for authentication
+ * Generate Google OAuth URL for authentication with dynamic domain detection
  */
-export function getGoogleOAuthUrl(state: string): string {
+export function getGoogleOAuthUrl(state: string, requestOrigin?: string): string {
   // Access environment variables directly to ensure we get the latest values
   const clientId = process.env.GOOGLE_OAUTH_ID || process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_OAUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-  const baseUrl = process.env.NEXTAUTH_URL;
-  const redirectUri = baseUrl ? `${baseUrl}/api/auth/callback/google-additional` : '';
+  
+  // Determine the base URL from request origin or fallback to NEXTAUTH_URL
+  let baseUrl = requestOrigin;
+  if (!baseUrl) {
+    baseUrl = process.env.NEXTAUTH_URL;
+  }
+  
+  const redirectUri = GOOGLE_OAUTH_CONFIG.getRedirectUri(baseUrl);
   
   console.log("Google OAuth Config:", {
     clientId: clientId ? "Set" : "Not set",
     clientSecret: clientSecret ? "Set" : "Not set",
-    redirectUri
+    redirectUri,
+    requestOrigin: requestOrigin || "Not provided",
+    usingDynamicDomain: !!requestOrigin
   });
   
   if (!clientId || !clientSecret || !redirectUri) {
@@ -60,17 +69,19 @@ export function getGoogleOAuthUrl(state: string): string {
 }
 
 /**
- * Exchange authorization code for tokens
+ * Exchange authorization code for tokens with dynamic redirect URI
  */
-export async function getGoogleTokens(code: string): Promise<any> {
+export async function getGoogleTokens(code: string, requestOrigin?: string): Promise<any> {
   console.log('🔄 getGoogleTokens called with code:', code.substring(0, 10) + '...');
   
-  const { clientId, clientSecret, redirectUri } = GOOGLE_OAUTH_CONFIG;
+  const { clientId, clientSecret } = GOOGLE_OAUTH_CONFIG;
+  const redirectUri = GOOGLE_OAUTH_CONFIG.getRedirectUri(requestOrigin);
   
   console.log('OAuth Config:', {
     clientId: clientId ? clientId.substring(0, 10) + '...' : 'Not set',
     clientSecret: clientSecret ? 'Set' : 'Not set',
-    redirectUri
+    redirectUri,
+    requestOrigin: requestOrigin || "Not provided"
   });
   
   if (!clientId || !clientSecret || !redirectUri) {

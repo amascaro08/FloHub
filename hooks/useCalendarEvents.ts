@@ -129,8 +129,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     return null;
   }, [cacheKey, startDate, endDate]);
 
-  // Load events with enhanced error handling and retries
-  const loadEvents = useCallback(async (isBackgroundRefresh = false, forceReload = false) => {
+  // Load events with enhanced error handling and retries - stable version to prevent loops
+  const loadEventsStable = useCallback(async (currentStartDate: Date, currentEndDate: Date, isBackgroundRefresh = false, forceReload = false) => {
     if (!enabled || isInitializing || (isLoadingRef.current && !forceReload)) return;
 
     // Prevent duplicate loading
@@ -162,7 +162,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          events = await fetchEvents(startDate, endDate);
+          events = await fetchEvents(currentStartDate, currentEndDate);
           break; // Success, exit retry loop
         } catch (err) {
           lastError = err instanceof Error ? err : new Error('Unknown error');
@@ -213,8 +213,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
           const [source, calendarId] = key.split('_', 2);
           await calendarCache.cacheEvents(
             sourceEvents,
-            startDate,
-            endDate,
+            currentStartDate,
+            currentEndDate,
             source as 'google' | 'o365' | 'ical',
             calendarId
           );
@@ -242,7 +242,12 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       }
       isLoadingRef.current = false;
     }
-  }, [startDate, endDate, enabled, cacheKey, getCachedEvents, isInitializing]);
+  }, [enabled, isInitializing, cacheKey, getCachedEvents]);
+
+  // Wrapper function for compatibility
+  const loadEvents = useCallback((isBackgroundRefresh = false, forceReload = false) => {
+    return loadEventsStable(startDate, endDate, isBackgroundRefresh, forceReload);
+  }, [loadEventsStable, startDate, endDate]);
 
   // Background refresh function - simplified and less frequent
   const startBackgroundRefresh = useCallback(() => {
@@ -387,30 +392,30 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     }
   }, [startDate, endDate]);
 
-  // Clear cache and reload when calendar sources change - heavily debounced
+  // Clear cache and reload when calendar sources change - heavily debounced and stabilized
   useEffect(() => {
     if (!isInitializing && calendarSourcesHash) {
       const timeoutId = setTimeout(() => {
         console.log('Calendar sources changed, clearing cache and reloading events');
         invalidateCache().then(() => {
-          loadEvents(false, true); // Force reload
+          loadEventsStable(startDate, endDate, false, true); // Force reload
         });
-      }, 2000); // Increased debounce to 2 seconds
+      }, 3000); // Increased debounce to 3 seconds to prevent loops
 
       return () => clearTimeout(timeoutId);
     }
-  }, [calendarSourcesHash, isInitializing, invalidateCache, loadEvents]);
+  }, [calendarSourcesHash, isInitializing, loadEventsStable, startDate, endDate]); // Use stable function
 
-  // Load events on mount and when dependencies change - heavily debounced
+  // Load events on mount and when date range changes - stabilized dependencies
   useEffect(() => {
     if (!isInitializing) {
       const timeoutId = setTimeout(() => {
-        loadEvents();
-      }, 500); // Increased debounce to prevent rapid calls
+        loadEventsStable(startDate, endDate);
+      }, 1000); // Increased debounce to prevent rapid calls
 
       return () => clearTimeout(timeoutId);
     }
-  }, [loadEvents, isInitializing]);
+  }, [startDate.getTime(), endDate.getTime(), isInitializing, loadEventsStable]); // Use stable function and getTime()
 
   // Start background refresh when component mounts
   useEffect(() => {
