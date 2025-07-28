@@ -428,8 +428,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </main>
       </div>
 
-      {/* Widget Toggle - appears when layout is unlocked */}
-      <WidgetToggle isLocked={isLocked} />
+      {/* Widget Toggle - appears on dashboard pages only */}
+      {router.pathname === '/dashboard' && <WidgetToggle isLocked={false} />}
 
       {/* Chat Side Modal */}
       <ChatSideModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
