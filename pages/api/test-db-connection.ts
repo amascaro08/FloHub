@@ -2,11 +2,13 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { Pool } from 'pg';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!databaseUrl) {
     return res.status(500).json({
-      error: 'DATABASE_URL not configured',
+      error: 'NEON_DATABASE_URL or DATABASE_URL not configured',
+      neonDatabaseUrlSet: !!process.env.NEON_DATABASE_URL,
+      databaseUrlSet: !!process.env.DATABASE_URL,
       env: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV
     });
@@ -33,6 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({
       success: true,
       databaseUrl: maskedUrl,
+      usingNeonUrl: !!process.env.NEON_DATABASE_URL,
       currentTime: result.rows[0].current_time,
       postgresVersion: result.rows[0].pg_version,
       env: process.env.NODE_ENV,
@@ -47,6 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: error.message,
       code: error.code,
       databaseUrl: maskedUrl,
+      usingNeonUrl: !!process.env.NEON_DATABASE_URL,
+      neonDatabaseUrlSet: !!process.env.NEON_DATABASE_URL,
+      databaseUrlSet: !!process.env.DATABASE_URL,
       env: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV
     });

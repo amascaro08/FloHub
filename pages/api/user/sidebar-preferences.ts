@@ -3,11 +3,11 @@ import { Pool } from 'pg';
 
 // Create pool with better error handling and logging
 const createPool = () => {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    console.error('DATABASE_URL environment variable is not set');
-    throw new Error('DATABASE_URL environment variable is not set');
+    console.error('NEON_DATABASE_URL or DATABASE_URL environment variable is not set');
+    throw new Error('NEON_DATABASE_URL or DATABASE_URL environment variable is not set');
   }
 
   console.log('Creating database pool with URL:', databaseUrl.replace(/(\/\/)([^:]+):([^@]+)@/, '//$2:****@'));
@@ -60,6 +60,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       return res.status(500).json({ 
         error: 'Database connection failed',
         details: connectionError?.message || 'Unknown connection error',
+        neonDatabaseUrlSet: !!process.env.NEON_DATABASE_URL,
         databaseUrlSet: !!process.env.DATABASE_URL,
         isProduction: process.env.NODE_ENV === 'production'
       });
