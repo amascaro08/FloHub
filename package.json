@@ -19,7 +19,8 @@
     "notifications:create-table": "node scripts/create-push-table.js",
     "notifications:diagnose": "node scripts/test-push-notification.js",
     "notifications:clean-subscriptions": "node scripts/clean-subscriptions.js",
-    "delete-user-accounts": "tsx scripts/delete-user-accounts.ts"
+    "delete-user-accounts": "tsx scripts/delete-user-accounts.ts",
+    "fix-google-calendar": "tsx scripts/fix-google-calendar-integration.ts"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",
