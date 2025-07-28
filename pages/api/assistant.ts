@@ -624,6 +624,13 @@ export default async function handler(
         const calendarData = await calendarResponse.json();
         const events = calendarData.events || [];
         
+        console.log(`[DEBUG] Fetched ${events.length} calendar events for processing`);
+        console.log(`[DEBUG] Sample events:`, events.slice(0, 2).map((e: any) => ({
+          summary: e.summary,
+          start: e.start,
+          location: e.location
+        })));
+        
         // Enhanced context data for better processing
         const enhancedContextData = {
           ...contextData,
@@ -636,6 +643,8 @@ export default async function handler(
         
         // Update SmartAIAssistant with fresh calendar data
         smartAssistant.updateCalendarEvents(events);
+        
+        console.log(`[DEBUG] Processing calendar query: "${userInput}" with ${events.length} events`);
         
         // Process calendar query with enhanced intelligence
         const scheduleResponse = await processCalendarQuery(userInput, userTimezone, enhancedContextData);
@@ -932,9 +941,13 @@ export default async function handler(
     // If no OpenAI API key, use local AI with smart assistance
     if (!openai) {
       console.log("Using local AI (no OpenAI API key found)");
+      const localResponse = await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant, intent, userTimezone);
+      console.log("[DEBUG] Local AI response:", localResponse);
       return res.status(200).json({ 
-        reply: await generateEnhancedLocalResponse(userInput, floCatStyle, preferredName, notes, meetings, smartAssistant, intent, userTimezone) 
+        reply: localResponse
       });
+    } else {
+      console.log("Using OpenAI API for processing");
     }
     
     // Start context processing
@@ -1077,22 +1090,44 @@ async function generateEnhancedLocalResponse(
   intent: UserIntent,
   userTimezone: string
 ): Promise<string> {
+    // Force enhanced NLP to trigger for debugging
+  const lowerInput = input.toLowerCase();
+  const isCalendarQuery = lowerInput.includes('mum') || lowerInput.includes('airport') || 
+                          lowerInput.includes('first meeting') || lowerInput.includes('meeting tomorrow') ||
+                          lowerInput.includes('schedule') || lowerInput.includes('calendar');
+  
+  console.log(`[DEBUG] Input: "${input}" - Calendar query detected: ${isCalendarQuery}`);
+  
   // First try enhanced NLP processing for calendar queries
   try {
     const nlpProcessor = getEnhancedNLPProcessor();
     const enhancedIntent = await nlpProcessor.processQuery(input, userTimezone);
     
-    if (enhancedIntent.calendar_context?.is_calendar_query) {
+    console.log('[DEBUG] Enhanced intent result:', enhancedIntent);
+    
+    if (enhancedIntent.calendar_context?.is_calendar_query || isCalendarQuery) {
       console.log('[DEBUG] Local AI detected calendar query, using enhanced processing');
+      console.log('[DEBUG] Enhanced intent:', enhancedIntent);
       
       // Get calendar events from global context
       const contextData = (global as any).currentContextData || {};
       const events = contextData.events || contextData.allEvents || [];
       
+      console.log(`[DEBUG] Local AI found ${events.length} events for processing`);
+      console.log('[DEBUG] Global context data keys:', Object.keys(contextData));
+      
       if (events.length > 0) {
         const calendarProcessor = new EnhancedCalendarProcessor(userTimezone);
-        return calendarProcessor.processCalendarQuery(enhancedIntent, events);
+        const response = calendarProcessor.processCalendarQuery(enhancedIntent, events);
+        console.log('[DEBUG] Enhanced calendar response:', response);
+        return response;
+      } else {
+        console.log('[DEBUG] No events found in global context');
+        // Return a fallback message
+        return "📅 I don't have access to your calendar events right now. Please check if your calendar is connected.";
       }
+    } else {
+      console.log('[DEBUG] Enhanced NLP did not detect calendar query:', enhancedIntent.intent);
     }
   } catch (error) {
     console.error("Error in enhanced NLP processing:", error);
