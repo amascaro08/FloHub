@@ -63,34 +63,22 @@ export default async function handler(
           const countCheck = await db.execute(sql`SELECT COUNT(*) as count FROM feedback;`);
           console.log("Row count:", countCheck.rows[0]);
           
-          // Test 4: Try the problematic query with raw SQL
-          const rawQuery = await db.execute(sql`
-            SELECT id, user_id, title, description, status, created_at 
-            FROM feedback 
-            WHERE user_id = ${userEmail} 
-            ORDER BY created_at DESC 
-            LIMIT 10;
-          `);
-          console.log("Raw query result:", rawQuery.rows);
+          // Test 4: Get a sample row to see the actual data structure
+          const sampleData = await db.execute(sql`SELECT * FROM feedback LIMIT 1;`);
+          console.log("Sample data:", sampleData.rows[0]);
           
-          // If raw query works, return the data
+          // Return structure info for now instead of trying the user query
           return res.status(200).json({
             success: true,
             debug: {
               tableExists: tableCheck.rows[0],
               columns: columnsCheck.rows,
               count: countCheck.rows[0],
-              userEmail: userEmail
+              sampleData: sampleData.rows[0],
+              userEmail: userEmail,
+              message: "Showing table structure - not attempting user query yet"
             },
-            data: rawQuery.rows.map(item => ({
-              id: String(item.id),
-              feedbackType: 'general',
-              feedbackText: item.description || '',
-              title: item.title || '',
-              status: item.status || 'open',
-              createdAt: item.created_at ? new Date(item.created_at as string | number | Date).getTime() : Date.now(),
-              completedAt: null
-            }))
+            data: []
           });
           
         } catch (dbError: any) {
