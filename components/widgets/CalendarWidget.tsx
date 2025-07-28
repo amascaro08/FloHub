@@ -41,6 +41,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     isBackgroundRefreshing,
   } = useCalendarContext() || { events: [], isLoading: true, error: null, isBackgroundRefreshing: false };
 
+  // Determine if we're in a very small layout
+  const isVerySmall = colSpan <= 2 || rowSpan <= 2 || isCompact;
+  const isSmall = colSpan <= 3 || rowSpan <= 3;
+
   // Filter events based on selected time period
   const filteredEvents = useMemo(() => {
     if (!events || !Array.isArray(events)) {
@@ -184,39 +188,45 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   const getTimePeriodLabel = useCallback(() => {
     switch (selectedTime) {
       case 'today':
-        return format(new Date(), 'EEEE, MMM d');
+        return isVerySmall ? format(new Date(), 'MMM d') : format(new Date(), 'EEEE, MMM d');
       case 'tomorrow':
-        return format(addDays(new Date(), 1), 'EEEE, MMM d');
+        return isVerySmall ? format(addDays(new Date(), 1), 'MMM d') : format(addDays(new Date(), 1), 'EEEE, MMM d');
       case 'thisWeek':
         const start = startOfWeek(new Date(), { weekStartsOn: 0 });
         const end = endOfWeek(new Date(), { weekStartsOn: 0 });
-        return `Week of ${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+        return isVerySmall ? `${format(start, 'MMM d')}-${format(end, 'd')}` : `Week of ${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
       default:
         return '';
     }
-  }, [selectedTime]);
+  }, [selectedTime, isVerySmall]);
+
+  // Responsive spacing and sizing classes
+  const spacingClass = isVerySmall ? 'space-y-2' : isSmall ? 'space-y-3' : 'space-y-4';
+  const paddingClass = isVerySmall ? 'p-2' : 'p-3';
+  const textSizeClass = isVerySmall ? 'text-xs' : isSmall ? 'text-sm' : 'text-sm';
+  const headerTextSize = isVerySmall ? 'text-sm' : isSmall ? 'text-base' : 'text-lg';
 
   // Loading state with graceful fallback
   if (isLoading && (!events || events.length === 0)) {
     return (
-      <div className="space-y-4 h-full flex flex-col">
+      <div className={`${spacingClass} h-full flex flex-col`}>
         {/* Loading Header */}
         <div className="flex items-center justify-between flex-shrink-0">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 animate-pulse"></div>
         </div>
         
         {/* Loading Time Selection */}
-        <div className="flex space-x-2 flex-shrink-0">
+        <div className={`flex ${isVerySmall ? 'space-x-1' : 'space-x-2'} flex-shrink-0`}>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded flex-1 animate-pulse"></div>
+            <div key={i} className={`${isVerySmall ? 'h-6' : 'h-8'} bg-gray-200 dark:bg-gray-700 rounded flex-1 animate-pulse`}></div>
           ))}
         </div>
         
         {/* Loading Events */}
         <div className="space-y-2 flex-1">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          {Array.from({ length: isVerySmall ? 2 : 3 }).map((_, i) => (
+            <div key={i} className={`${isVerySmall ? 'h-12' : 'h-16'} bg-gray-200 dark:bg-gray-700 rounded animate-pulse`}></div>
           ))}
         </div>
       </div>
@@ -226,56 +236,58 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="text-center py-8 h-full flex flex-col justify-center">
-        <div className="w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Calendar className="w-6 h-6 text-accent-500" />
+      <div className={`text-center ${isVerySmall ? 'py-4' : 'py-8'} h-full flex flex-col justify-center`}>
+        <div className={`${isVerySmall ? 'w-8 h-8' : 'w-12 h-12'} bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mx-auto mb-3`}>
+          <Calendar className={`${isVerySmall ? 'w-4 h-4' : 'w-6 h-6'} text-accent-500`} />
         </div>
-        <p className="text-grey-tint font-body text-sm mb-2">
-          Unable to load calendar events
+        <p className={`text-grey-tint font-body ${textSizeClass} mb-2`}>
+          {isVerySmall ? 'Can\'t load events' : 'Unable to load calendar events'}
         </p>
-        <p className="text-xs text-grey-tint">
-          {error.message}
-        </p>
+        {!isVerySmall && (
+          <p className="text-xs text-grey-tint">
+            {error.message}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className={`${spacingClass} h-full flex flex-col`}>
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-5 h-5 text-primary-500" />
-          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-heading font-semibold text-dark-base dark:text-soft-white`}>
-            Calendar
+        <div className="flex items-center space-x-2 min-w-0 flex-1">
+          {!isVerySmall && <Calendar className="w-4 h-4 text-primary-500 flex-shrink-0" />}
+          <h3 className={`${headerTextSize} font-heading font-semibold text-dark-base dark:text-soft-white truncate`}>
+            {isVerySmall ? 'Events' : 'Calendar'}
           </h3>
-          {isBackgroundRefreshing && (
-            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+          {isBackgroundRefreshing && !isVerySmall && (
+            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse flex-shrink-0"></div>
           )}
         </div>
-        <span className={`${isCompact ? 'text-xs' : 'text-sm'} text-grey-tint`}>
-          {filteredEvents.length} events
+        <span className={`${isVerySmall ? 'text-xs' : textSizeClass} text-grey-tint flex-shrink-0`}>
+          {isVerySmall ? filteredEvents.length : `${filteredEvents.length} events`}
         </span>
       </div>
 
       {/* Time Period Selection */}
-      <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
+      <div className={`flex ${isVerySmall ? 'space-x-0.5' : 'space-x-1'} bg-gray-100 dark:bg-gray-800 rounded-lg ${isVerySmall ? 'p-0.5' : 'p-1'} flex-shrink-0`}>
         {[
-          { key: 'today' as TimeSelection, label: 'Today', count: eventCounts.today },
-          { key: 'tomorrow' as TimeSelection, label: 'Tomorrow', count: eventCounts.tomorrow },
-          { key: 'thisWeek' as TimeSelection, label: 'This Week', count: eventCounts.thisWeek }
+          { key: 'today' as TimeSelection, label: isVerySmall ? 'Today' : 'Today', count: eventCounts.today },
+          { key: 'tomorrow' as TimeSelection, label: isVerySmall ? 'Tom' : 'Tomorrow', count: eventCounts.tomorrow },
+          { key: 'thisWeek' as TimeSelection, label: isVerySmall ? 'Week' : 'This Week', count: eventCounts.thisWeek }
         ].map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => handleTimeSelection(key)}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-200 ${
+            className={`flex-1 ${isVerySmall ? 'px-1 py-1' : 'px-3 py-2'} ${isVerySmall ? 'text-xs' : 'text-xs'} font-medium rounded-md transition-all duration-200 ${
               selectedTime === key
                 ? 'bg-primary-500 text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
             }`}
           >
-            <div className="flex flex-col items-center space-y-1">
-              <span>{label}</span>
+            <div className={`flex ${isVerySmall ? 'flex-row items-center justify-center space-x-1' : 'flex-col items-center space-y-1'}`}>
+              <span className="truncate">{label}</span>
               <span className={`text-xs ${
                 selectedTime === key ? 'text-white' : 'text-gray-500 dark:text-gray-500'
               }`}>
@@ -286,61 +298,76 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         ))}
       </div>
 
-      {/* Current Selection Label */}
-      <div className="flex-shrink-0">
-        <p className="text-sm font-medium text-dark-base dark:text-soft-white">
-          {getTimePeriodLabel()}
-        </p>
-      </div>
+      {/* Current Selection Label - Hide in very small mode */}
+      {!isVerySmall && (
+        <div className="flex-shrink-0">
+          <p className={`${textSizeClass} font-medium text-dark-base dark:text-soft-white truncate`}>
+            {getTimePeriodLabel()}
+          </p>
+        </div>
+      )}
 
       {/* Events List */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div className={`flex-1 overflow-y-auto ${isVerySmall ? 'space-y-1' : 'space-y-2'}`}>
         {filteredEvents.length > 0 ? (
-          filteredEvents.map((event) => (
+          filteredEvents.slice(0, isVerySmall ? 8 : 10).map((event) => (
             <button
               key={event.id}
               onClick={() => handleEventClick(event)}
-              className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 hover:shadow-sm transition-all duration-200"
+              className={`w-full text-left ${paddingClass} bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 hover:shadow-sm transition-all duration-200`}
             >
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className={`flex items-start ${isVerySmall ? 'space-x-2' : 'space-x-3'}`}>
+                <div className={`${isVerySmall ? 'w-1.5 h-1.5' : 'w-2 h-2'} bg-primary-500 rounded-full ${isVerySmall ? 'mt-1.5' : 'mt-2'} flex-shrink-0`}></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
-                    {event.summary || 'No title'}
+                  <p className={`${textSizeClass} font-medium text-dark-base dark:text-soft-white break-words leading-relaxed`}>
+                    {isVerySmall && event.summary && event.summary.length > 20 
+                      ? event.summary.slice(0, 20) + '...' 
+                      : event.summary || 'No title'}
                   </p>
-                  <div className="flex items-center space-x-3 mt-1">
-                    <span className="text-xs text-grey-tint flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatEventTime(event)}</span>
+                  <div className={`flex items-center ${isVerySmall ? 'space-x-2' : 'space-x-3'} mt-1`}>
+                    <span className={`text-xs text-grey-tint flex items-center ${isVerySmall ? 'space-x-0.5' : 'space-x-1'}`}>
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{formatEventTime(event)}</span>
                     </span>
-                    {event.location && (
+                    {event.location && !isVerySmall && (
                       <span className="text-xs text-grey-tint flex items-center space-x-1">
-                        <MapPin className="w-3 h-3" />
-                        <span className="truncate max-w-24">{event.location}</span>
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-20">{event.location}</span>
                       </span>
                     )}
                     {event.description && event.description.includes('teams.microsoft.com') && (
                       <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-                        <Users className="w-3 h-3" />
-                        <span>Teams</span>
+                        <Users className="w-3 h-3 flex-shrink-0" />
+                        {!isVerySmall && <span>Teams</span>}
                       </span>
                     )}
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                {!isVerySmall && <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
               </div>
             </button>
           ))
         ) : (
-          <div className="text-center py-8">
-            <Calendar className="w-8 h-8 text-grey-tint mx-auto mb-3" />
-            <p className="text-sm text-grey-tint mb-1">
-              No events {selectedTime === 'today' ? 'today' : selectedTime === 'tomorrow' ? 'tomorrow' : 'this week'}
+          <div className={`text-center ${isVerySmall ? 'py-4' : 'py-8'}`}>
+            <Calendar className={`${isVerySmall ? 'w-6 h-6' : 'w-8 h-8'} text-grey-tint mx-auto mb-3`} />
+            <p className={`${textSizeClass} text-grey-tint mb-1`}>
+              {isVerySmall 
+                ? 'No events' 
+                : `No events ${selectedTime === 'today' ? 'today' : selectedTime === 'tomorrow' ? 'tomorrow' : 'this week'}`}
             </p>
-            <p className="text-xs text-grey-tint">
-              {selectedTime === 'today' ? 'Enjoy your free day!' : 'Your schedule is clear'}
-            </p>
+            {!isVerySmall && (
+              <p className="text-xs text-grey-tint">
+                {selectedTime === 'today' ? 'Enjoy your free day!' : 'Your schedule is clear'}
+              </p>
+            )}
           </div>
+        )}
+        
+        {/* Show truncation indicator for very small widgets */}
+        {isVerySmall && filteredEvents.length > 8 && (
+          <p className="text-xs text-grey-tint text-center py-1">
+            +{filteredEvents.length - 8} more
+          </p>
         )}
       </div>
 
