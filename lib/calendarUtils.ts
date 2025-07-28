@@ -32,35 +32,16 @@ export const generateCalendarSourcesHash = (calendarSources?: CalendarSource[]):
 /**
  * Clear all calendar-related caches
  */
-export const clearAllCalendarCaches = async (): Promise<void> => {
-  try {
-    // Clear in-memory cache
-    if (typeof window !== 'undefined') {
-      // Clear sessionStorage calendar cache
-      const keys = Object.keys(sessionStorage);
-      keys.forEach(key => {
-        if (key.includes('calendar') || key.includes('events')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-      
-      // Clear localStorage calendar cache
-      const localKeys = Object.keys(localStorage);
-      localKeys.forEach(key => {
-        if (key.includes('calendar') || key.includes('events')) {
-          localStorage.removeItem(key);
-        }
-      });
-    }
-
-    // Clear IndexedDB cache
-    const { calendarCache } = await import('./calendarCache');
-    await calendarCache.clearAllCache();
-    
-    console.log('All calendar caches cleared');
-  } catch (error) {
-    console.error('Error clearing calendar caches:', error);
+// DEPRECATED: Use clearCalendarCaches with userEmail parameter instead
+export const clearAllCalendarCaches = async (userEmail?: string): Promise<void> => {
+  console.warn('clearAllCalendarCaches is deprecated. Use clearCalendarCaches with userEmail parameter.');
+  
+  if (!userEmail) {
+    console.error('userEmail is required for cache clearing to maintain user privacy');
+    return;
   }
+  
+  return clearCalendarCaches(userEmail);
 };
 
 /**
