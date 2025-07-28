@@ -60,18 +60,29 @@ export default async function handler(
     const sanitizedName = preferredName ? sanitizeText(preferredName, 50) : undefined;
 
     // PERFORMANCE FIX: Get user context efficiently
-    const context = await getUserContext(decoded.userId, user.email);
+    const context = await getUserContext(decoded.userId, user.email, req);
     
     // PERFORMANCE FIX: Analyze intent first to route efficiently
     const intent = analyzeUserIntent(sanitizedInput);
+    
+    // Add debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analyzed intent:', intent);
+    }
     
     // PERFORMANCE FIX: Route to specific handlers based on intent
     let response: string;
     let actions: ChatResponse['actions'] = [];
 
     if (intent.category === 'calendar' && intent.confidence > 0.6) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Routing to calendar intent handler');
+      }
       response = await handleCalendarIntent(sanitizedInput, context, contextData);
     } else if (intent.category === 'tasks' && intent.confidence > 0.6) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Routing to task intent handler');
+      }
       const result = await handleTaskIntent(sanitizedInput, intent, context);
       response = result.response;
       actions = result.actions;
@@ -79,11 +90,17 @@ export default async function handler(
       // PERFORMANCE FIX: Use capability matching for other intents
       const capabilityMatch = findMatchingCapability(sanitizedInput);
       if (capabilityMatch) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Routing to capability match:', capabilityMatch.capability.featureName);
+        }
         response = await capabilityMatch.capability.handler(
           capabilityMatch.command,
           capabilityMatch.args
         );
       } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Routing to general query handler');
+        }
         // PERFORMANCE FIX: Use optimized AI assistant
         response = await handleGeneralQuery(sanitizedInput, context, sanitizedStyle, sanitizedName);
       }
@@ -113,7 +130,7 @@ export default async function handler(
 }
 
 // PERFORMANCE FIX: Optimized user context retrieval
-async function getUserContext(userId: number, email: string): Promise<AssistantContext> {
+async function getUserContext(userId: number, email: string, req: NextApiRequest): Promise<AssistantContext> {
   try {
     const userSettingsData = await db.query.userSettings.findFirst({
       where: eq(userSettings.user_email, email),
@@ -128,7 +145,8 @@ async function getUserContext(userId: number, email: string): Promise<AssistantC
       userId,
       email,
       userTimezone: userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      userSettings: userSettingsData
+      userSettings: userSettingsData,
+      cookies: req.headers.cookie || ''
     };
   } catch (error) {
     console.error('Error fetching user context:', error);
@@ -136,7 +154,8 @@ async function getUserContext(userId: number, email: string): Promise<AssistantC
       userId,
       email,
       userTimezone: 'UTC',
-      userSettings: null
+      userSettings: null,
+      cookies: req.headers.cookie || ''
     };
   }
 }
@@ -147,12 +166,12 @@ async function handleCalendarIntent(userInput: string, context: AssistantContext
     // PERFORMANCE FIX: Check if we have calendar data before processing
     if (!contextData?.allEvents && !contextData?.events) {
       // PERFORMANCE FIX: Fetch minimal calendar data
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?minimal=true`, {
+      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar`, {
         headers: { 
-          'Cookie': `auth-token=${context.userId}` // Simplified auth
-        },
-        timeout: 10000 // 10 second timeout
-      } as any);
+          'Cookie': context.cookies,
+          'Content-Type': 'application/json'
+        }
+      });
 
       if (response.ok) {
         const calendarData = await response.json();
@@ -181,16 +200,15 @@ async function handleTaskIntent(userInput: string, intent: any, context: Assista
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': `auth-token=${context.userId}`
+          'Cookie': context.cookies
         },
         body: JSON.stringify({
           text: taskText,
           done: false,
           dueDate,
           source: 'ai_assistant'
-        }),
-        timeout: 10000
-      } as any);
+        })
+      });
 
       if (response.ok) {
         const createdTask = await response.json();
@@ -232,7 +250,18 @@ async function handleGeneralQuery(userInput: string, context: AssistantContext, 
 
     // PERFORMANCE FIX: Use lightweight AI assistant
     const smartAssistant = new SmartAIAssistant(context.email);
+    
+    // Add debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Processing general query:', userInput);
+      console.log('Context email:', context.email);
+    }
+    
     const response = await smartAssistant.processNaturalLanguageQuery(userInput);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Smart assistant response:', response);
+    }
     
     return response || "I'm not sure how to help with that. Try asking about your calendar, tasks, or habits.";
   } catch (error) {

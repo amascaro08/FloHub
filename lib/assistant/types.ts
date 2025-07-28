@@ -59,4 +59,5 @@ export interface AssistantContext {
   email: string;
   userTimezone: string;
   userSettings: any;
+  cookies: string;
 }
