@@ -79,9 +79,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 120 },
+        md: { cols: 8, rowHeight: 100 },
+        sm: { cols: 6, rowHeight: 80 }
       }
     }
   },
@@ -109,9 +109,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 120 },
+        md: { cols: 8, rowHeight: 100 },
+        sm: { cols: 6, rowHeight: 80 }
       }
     }
   },
@@ -141,9 +141,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 3,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 70 },
-        md: { cols: 8, rowHeight: 60 },
-        sm: { cols: 6, rowHeight: 50 }
+        lg: { cols: 12, rowHeight: 120 },
+        md: { cols: 8, rowHeight: 100 },
+        sm: { cols: 6, rowHeight: 80 }
       }
     }
   },
@@ -180,9 +180,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 120 },
+        md: { cols: 8, rowHeight: 100 },
+        sm: { cols: 6, rowHeight: 80 }
       }
     }
   },
@@ -226,9 +226,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 50 },
-        md: { cols: 8, rowHeight: 45 },
-        sm: { cols: 6, rowHeight: 40 }
+        lg: { cols: 12, rowHeight: 100 },
+        md: { cols: 8, rowHeight: 80 },
+        sm: { cols: 6, rowHeight: 60 }
       }
     }
   },
@@ -243,34 +243,38 @@ const layoutTemplates: LayoutTemplateConfig[] = [
         id: 'top-left',
         size: 'medium',
         position: { row: 0, col: 0, rowSpan: 2, colSpan: 6 },
-        label: 'Top Left'
+        label: 'Top Left',
+        suggestedWidgets: ['tasks']
       },
       {
         id: 'top-right',
         size: 'medium',
         position: { row: 0, col: 6, rowSpan: 2, colSpan: 6 },
-        label: 'Top Right'
+        label: 'Top Right',
+        suggestedWidgets: ['calendar']
       },
       {
         id: 'bottom-left',
         size: 'medium',
         position: { row: 2, col: 0, rowSpan: 2, colSpan: 6 },
-        label: 'Bottom Left'
+        label: 'Bottom Left',
+        suggestedWidgets: ['ataglance']
       },
       {
         id: 'bottom-right',
         size: 'medium',
         position: { row: 2, col: 6, rowSpan: 2, colSpan: 6 },
-        label: 'Bottom Right'
+        label: 'Bottom Right',
+        suggestedWidgets: ['habit-tracker']
       }
     ],
     gridConfig: {
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 55 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 100 },
+        md: { cols: 8, rowHeight: 80 },
+        sm: { cols: 6, rowHeight: 60 }
       }
     }
   },
@@ -321,9 +325,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 45 },
-        md: { cols: 8, rowHeight: 40 },
-        sm: { cols: 6, rowHeight: 35 }
+        lg: { cols: 12, rowHeight: 80 },
+        md: { cols: 8, rowHeight: 60 },
+        sm: { cols: 6, rowHeight: 50 }
       }
     }
   }
