@@ -1,10 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Pool } from 'pg';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// Create pool with better error handling and logging
+const createPool = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    console.error('DATABASE_URL environment variable is not set');
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+
+  console.log('Creating database pool with URL:', databaseUrl.replace(/(\/\/)([^:]+):([^@]+)@/, '//$2:****@'));
+
+  return new Pool({
+    connectionString: databaseUrl,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  });
+};
 
 // Default sidebar preferences
 const DEFAULT_PREFERENCES = {
@@ -25,6 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+  let pool: Pool | null = null;
+  let client = null;
+
   try {
     const { userId } = req.query;
 
@@ -32,7 +50,20 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const client = await pool.connect();
+    // Create pool and test connection
+    try {
+      pool = createPool();
+      client = await pool.connect();
+      console.log('Database connection successful');
+    } catch (connectionError: any) {
+      console.error('Database connection failed:', connectionError);
+      return res.status(500).json({ 
+        error: 'Database connection failed',
+        details: connectionError?.message || 'Unknown connection error',
+        databaseUrlSet: !!process.env.DATABASE_URL,
+        isProduction: process.env.NODE_ENV === 'production'
+      });
+    }
     
     try {
       // First check if the column exists, if not return defaults
@@ -42,6 +73,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           'SELECT sidebar_preferences FROM user_settings WHERE user_email = $1',
           [userId]
         );
+        console.log('Query executed successfully, rows found:', userResult.rows.length);
       } catch (error: any) {
         // If column doesn't exist, return defaults
         if (error?.message?.includes('column "sidebar_preferences" does not exist')) {
@@ -62,15 +94,28 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
       res.status(200).json(preferences);
     } finally {
-      client.release();
+      if (client) {
+        client.release();
+      }
     }
   } catch (error: any) {
     console.error('Error fetching sidebar preferences:', error);
-    res.status(500).json({ error: 'Internal server error', details: error?.message || 'Unknown error' });
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error?.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    });
+  } finally {
+    if (pool) {
+      await pool.end();
+    }
   }
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+  let pool: Pool | null = null;
+  let client = null;
+
   try {
     const { userId, preferences } = req.body;
 
@@ -85,7 +130,18 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Invalid preferences format' });
     }
 
-    const client = await pool.connect();
+    // Create pool and test connection
+    try {
+      pool = createPool();
+      client = await pool.connect();
+      console.log('Database connection successful for POST');
+    } catch (connectionError: any) {
+      console.error('Database connection failed:', connectionError);
+      return res.status(500).json({ 
+        error: 'Database connection failed',
+        details: connectionError?.message || 'Unknown connection error'
+      });
+    }
     
     try {
       // Check if column exists first
@@ -115,10 +171,20 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
         throw error;
       }
     } finally {
-      client.release();
+      if (client) {
+        client.release();
+      }
     }
   } catch (error: any) {
     console.error('Error saving sidebar preferences:', error);
-    res.status(500).json({ error: 'Internal server error', details: error?.message || 'Unknown error' });
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error?.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    });
+  } finally {
+    if (pool) {
+      await pool.end();
+    }
   }
 }
