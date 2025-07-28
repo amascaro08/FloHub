@@ -36,50 +36,80 @@ export default async function handler(
           createdAt: new Date(item.createdAt!).getTime()
         })));
       } else {
-        // Debug: First try to get all feedback without filtering
-        console.log("Attempting to query feedback table...");
+        // TESTING: Use raw SQL to bypass ORM and test the actual database
+        console.log("Testing feedback table access...");
         
         try {
-          // Test 1: Try to get count first
-          const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM feedback`);
-          console.log("Feedback table count:", countResult.rows[0]);
+          // Test 1: Check if feedback table exists
+          const tableCheck = await db.execute(sql`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'feedback'
+            );
+          `);
+          console.log("Table exists:", tableCheck.rows[0]);
           
-          // Test 2: Try to get all records without filtering
-          const allFeedback = await db.execute(sql`SELECT id, user_id, title, description, status FROM feedback LIMIT 5`);
-          console.log("Sample feedback records:", allFeedback.rows);
+          // Test 2: Get table columns
+          const columnsCheck = await db.execute(sql`
+            SELECT column_name, data_type, is_nullable 
+            FROM information_schema.columns 
+            WHERE table_name = 'feedback' 
+            ORDER BY ordinal_position;
+          `);
+          console.log("Table columns:", columnsCheck.rows);
           
-          // Test 3: Now try the ORM query with user filter
-          const feedbackItems = await db
-            .select()
-            .from(feedback)
-            .where(eq(feedback.userId, userEmail))
-            .orderBy(desc(feedback.createdAt));
+          // Test 3: Try simple count
+          const countCheck = await db.execute(sql`SELECT COUNT(*) as count FROM feedback;`);
+          console.log("Row count:", countCheck.rows[0]);
           
-          return res.status(200).json(feedbackItems.map(item => ({
-            ...item,
-            id: String(item.id),
-            feedbackType: 'general',
-            feedbackText: item.description,
-            createdAt: new Date(item.createdAt!).getTime(),
-            completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
-          })));
+          // Test 4: Try the problematic query with raw SQL
+          const rawQuery = await db.execute(sql`
+            SELECT id, user_id, title, description, status, created_at 
+            FROM feedback 
+            WHERE user_id = ${userEmail} 
+            ORDER BY created_at DESC 
+            LIMIT 10;
+          `);
+          console.log("Raw query result:", rawQuery.rows);
+          
+          // If raw query works, return the data
+          return res.status(200).json({
+            success: true,
+            debug: {
+              tableExists: tableCheck.rows[0],
+              columns: columnsCheck.rows,
+              count: countCheck.rows[0],
+              userEmail: userEmail
+            },
+            data: rawQuery.rows.map(item => ({
+              id: String(item.id),
+              feedbackType: 'general',
+              feedbackText: item.description,
+              title: item.title,
+              status: item.status,
+              createdAt: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+              completedAt: null
+            }))
+          });
           
         } catch (dbError: any) {
-          console.error("Database error details:", {
+          console.error("Database test error:", {
             message: dbError.message,
             code: dbError.code,
             detail: dbError.detail,
             hint: dbError.hint,
             position: dbError.position,
             table: dbError.table,
-            column: dbError.column
+            column: dbError.column,
+            stack: dbError.stack
           });
           
           return res.status(500).json({ 
-            error: "Database query failed", 
+            error: "Database test failed", 
             details: dbError.message,
             userEmail: userEmail,
-            query: "Feedback table query failed"
+            errorCode: dbError.code
           });
         }
       }
