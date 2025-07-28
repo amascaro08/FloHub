@@ -33,6 +33,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
 }) => {
   const [connectionStatus, setConnectionStatus] = useState<{ [key: string]: 'connected' | 'error' | 'checking' }>({});
   const [testingUrl, setTestingUrl] = useState<string | null>(null);
+  const [refreshingGoogle, setRefreshingGoogle] = useState(false);
 
   // Test Google Calendar connection
   const testGoogleConnection = async () => {
@@ -168,7 +169,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                   <button
                     onClick={async () => {
                       try {
-                        setConnectionStatus(prev => ({ ...prev, google: 'checking' }));
+                        setRefreshingGoogle(true);
                         const response = await fetch('/api/calendar/refresh-sources', {
                           method: 'POST',
                         });
@@ -190,12 +191,14 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                       } catch (error) {
                         alert('❌ Error refreshing calendars. Please try again.');
                         setConnectionStatus(prev => ({ ...prev, google: 'error' }));
+                      } finally {
+                        setRefreshingGoogle(false);
                       }
                     }}
                     className="text-xs text-blue-600 hover:text-blue-800 underline"
-                    disabled={connectionStatus.google === 'checking'}
+                    disabled={refreshingGoogle}
                   >
-                    {connectionStatus.google === 'checking' ? 'Refreshing...' : 'Refresh Sources'}
+                    {refreshingGoogle ? 'Refreshing...' : 'Refresh Sources'}
                   </button>
                   <button
                     onClick={() => {
