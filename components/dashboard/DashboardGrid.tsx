@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, useMemo } from 'react';
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -253,7 +253,7 @@ const DashboardGrid: React.FC = () => {
   }, []);
 
   // Widget component creator
-  const createWidgetComponent = (type: WidgetType) => {
+  const createWidgetComponent = (type: WidgetType, slot?: any) => {
     switch (type) {
       case "tasks":
         return <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>;
@@ -367,78 +367,72 @@ const DashboardGrid: React.FC = () => {
   const currentConfig = layoutTemplates.find(t => t.id === currentTemplate);
 
   // Generate layouts for react-grid-layout
-  const generateLayouts = () => {
+  const layouts = useMemo(() => {
     if (!currentConfig) return {};
     
-    const layouts: any = {};
+    const layoutsResult: any = {};
     
-         // Use only filled slots to avoid empty layout items
-     const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
-     
-     // Simple layout generation - use original template positions
-     layouts.lg = filledSlots.map((slot, index) => {
-       const layoutItem = {
-         i: slot.id,
-         x: slot.position.col,
-         y: slot.position.row,
-         w: slot.position.colSpan,
-         h: slot.position.rowSpan,
-         static: false // Try without static first to see if it positions correctly
-       };
-       console.log(`Layout for ${slot.id}:`, layoutItem);
-       return layoutItem;
-     });
+    // Use only filled slots to avoid empty layout items
+    const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
     
-    // For smaller breakpoints, stack vertically
-    layouts.md = filledSlots.map((slot, index) => ({
+    // Use template positions for large screens
+    layoutsResult.lg = filledSlots.map((slot) => ({
       i: slot.id,
-      x: 0,
-      y: index * 8,
-      w: 8,
-      h: 8,
+      x: slot.position.col,
+      y: slot.position.row,
+      w: slot.position.colSpan,
+      h: slot.position.rowSpan,
       static: true
     }));
     
-    layouts.sm = filledSlots.map((slot, index) => ({
+    // For medium screens - adapt to 8 columns
+    layoutsResult.md = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: Math.floor((slot.position.col * 8) / 12), // Scale from 12 to 8 columns
+      y: slot.position.row,
+      w: Math.max(1, Math.floor((slot.position.colSpan * 8) / 12)), // Scale width
+      h: slot.position.rowSpan,
+      static: true
+    }));
+    
+    // For smaller screens - stack vertically
+    layoutsResult.sm = filledSlots.map((slot, index) => ({
       i: slot.id,
       x: 0,
-      y: index * 8,
+      y: index * slot.position.rowSpan,
       w: 6,
-      h: 8,
+      h: slot.position.rowSpan,
       static: true
     }));
     
-    layouts.xs = filledSlots.map((slot, index) => ({
+    layoutsResult.xs = filledSlots.map((slot, index) => ({
       i: slot.id,
       x: 0,
-      y: index * 8,
+      y: index * slot.position.rowSpan,
       w: 4,
-      h: 8,
+      h: slot.position.rowSpan,
       static: true
     }));
     
-    layouts.xxs = filledSlots.map((slot, index) => ({
+    layoutsResult.xxs = filledSlots.map((slot, index) => ({
       i: slot.id,
       x: 0,
-      y: index * 8,
+      y: index * slot.position.rowSpan,
       w: 2,
-      h: 8,
+      h: slot.position.rowSpan,
       static: true
     }));
     
-    console.log('Generated layouts:', layouts);
-    console.log('Filled slots:', filledSlots);
-    console.log('Current template:', currentTemplate);
-    console.log('Slot assignments:', slotAssignments);
+    // Debug logging removed for production
     
-    return layouts;
-  };
+    return layoutsResult;
+  }, [currentConfig, slotAssignments, currentTemplate]);
 
   // Get filled slots (slots that have widgets assigned)
-  const getFilledSlots = () => {
+  const filledSlots = useMemo(() => {
     if (!currentConfig) return [];
     return currentConfig.slots.filter(slot => slotAssignments[slot.id]);
-  };
+  }, [currentConfig, slotAssignments]);
 
   // Calculate calendar date range for shared context
   const now = new Date();
@@ -476,8 +470,7 @@ const DashboardGrid: React.FC = () => {
     );
   }
 
-  const filledSlots = getFilledSlots();
-  const layouts = generateLayouts();
+  // filledSlots and layouts are now calculated via useMemo above
 
   return (
     <CalendarProvider
@@ -571,7 +564,7 @@ const DashboardGrid: React.FC = () => {
                     <div className="widget-content flex-1 overflow-hidden">
                       <ErrorBoundary>
                         <div className="h-full overflow-y-auto overflow-x-hidden">
-                          {createWidgetComponent(widgetType)}
+                          {createWidgetComponent(widgetType, slot)}
                         </div>
                       </ErrorBoundary>
                     </div>
