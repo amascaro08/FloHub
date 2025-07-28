@@ -62,10 +62,24 @@ export default async function handler(
 
     // Test SmartAIAssistant
     try {
+      console.log('Testing SmartAIAssistant with email:', user.email);
       const smartAssistant = new SmartAIAssistant(user.email);
+      
+      // Test context loading first
+      console.log('Loading user context...');
+      await smartAssistant.loadUserContext();
+      console.log('User context loaded successfully');
+      
+      // Then test query processing
+      console.log('Processing test query...');
       tests.smart_assistant_test = await smartAssistant.processNaturalLanguageQuery("Hello");
+      console.log('Query processed successfully');
     } catch (error) {
-      tests.smart_assistant_test = { error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error('SmartAIAssistant test failed:', error);
+      tests.smart_assistant_test = { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      };
     }
 
     return res.status(200).json({
