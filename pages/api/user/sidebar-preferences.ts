@@ -42,9 +42,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           'SELECT sidebar_preferences FROM user_settings WHERE user_email = $1',
           [userId]
         );
-      } catch (error) {
+      } catch (error: any) {
         // If column doesn't exist, return defaults
-        if (error.message.includes('column "sidebar_preferences" does not exist')) {
+        if (error?.message?.includes('column "sidebar_preferences" does not exist')) {
           console.log('sidebar_preferences column does not exist yet, returning defaults');
           return res.status(200).json(DEFAULT_PREFERENCES);
         }
@@ -64,9 +64,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     } finally {
       client.release();
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching sidebar preferences:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    res.status(500).json({ error: 'Internal server error', details: error?.message || 'Unknown error' });
   }
 }
 
@@ -105,8 +105,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
         }
 
         res.status(200).json({ success: true, preferences });
-      } catch (error) {
-        if (error.message.includes('column "sidebar_preferences" does not exist')) {
+      } catch (error: any) {
+        if (error?.message?.includes('column "sidebar_preferences" does not exist')) {
           return res.status(400).json({ 
             error: 'Sidebar preferences column does not exist. Please run the database migration first.',
             migration: 'ALTER TABLE user_settings ADD COLUMN sidebar_preferences JSONB DEFAULT \'{}\';'
@@ -117,8 +117,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     } finally {
       client.release();
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving sidebar preferences:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    res.status(500).json({ error: 'Internal server error', details: error?.message || 'Unknown error' });
   }
 }
