@@ -140,19 +140,8 @@ export class SmartAIAssistant {
     console.log('Loading user context for:', this.userEmail);
 
     try {
-      // Fetch all user data in parallel for better performance
-      const [
-        userTasks,
-        userNotes,
-        userHabits,
-        userHabitCompletions,
-        userJournalEntries,
-        userJournalMoods,
-        userCalendarEvents,
-        userMeetings,
-        userConversations,
-        settings
-      ] = await Promise.all([
+      // Fetch all user data in parallel for better performance, with individual error handling
+      const results = await Promise.allSettled([
         // Tasks (last 30 days)
         db.select().from(tasks)
           .where(and(
@@ -223,6 +212,40 @@ export class SmartAIAssistant {
           .where(eq(userSettings.user_email, this.userEmail))
           .limit(1)
       ]);
+
+      // Extract results and handle failures gracefully
+      const [
+        userTasksResult,
+        userNotesResult,
+        userHabitsResult,
+        userHabitCompletionsResult,
+        userJournalEntriesResult,
+        userJournalMoodsResult,
+        userCalendarEventsResult,
+        userMeetingsResult,
+        userConversationsResult,
+        settingsResult
+      ] = results;
+
+      // Extract successful results or use empty arrays for failures
+      const userTasks = userTasksResult.status === 'fulfilled' ? userTasksResult.value : [];
+      const userNotes = userNotesResult.status === 'fulfilled' ? userNotesResult.value : [];
+      const userHabits = userHabitsResult.status === 'fulfilled' ? userHabitsResult.value : [];
+      const userHabitCompletions = userHabitCompletionsResult.status === 'fulfilled' ? userHabitCompletionsResult.value : [];
+      const userJournalEntries = userJournalEntriesResult.status === 'fulfilled' ? userJournalEntriesResult.value : [];
+      const userJournalMoods = userJournalMoodsResult.status === 'fulfilled' ? userJournalMoodsResult.value : [];
+      const userCalendarEvents = userCalendarEventsResult.status === 'fulfilled' ? userCalendarEventsResult.value : [];
+      const userMeetings = userMeetingsResult.status === 'fulfilled' ? userMeetingsResult.value : [];
+      const userConversations = userConversationsResult.status === 'fulfilled' ? userConversationsResult.value : [];
+      const settings = settingsResult.status === 'fulfilled' ? settingsResult.value : [];
+
+      // Log any failures for debugging
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const queryNames = ['tasks', 'notes', 'habits', 'habitCompletions', 'journalEntries', 'journalMoods', 'calendarEvents', 'meetings', 'conversations', 'settings'];
+          console.warn(`Query failed for ${queryNames[index]}:`, result.reason);
+        }
+      });
 
       this.context = {
         userId: this.userEmail,
