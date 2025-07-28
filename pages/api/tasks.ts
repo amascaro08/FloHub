@@ -115,8 +115,8 @@ export default async function handler(
       if (typeof source !== "undefined") {
         updateData.source = source;
       }
-      const updateFields = [];
-      const updateValues = [];
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
       let paramIndex = 1;
 
       if (typeof done !== "undefined") {

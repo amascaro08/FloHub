@@ -85,7 +85,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         // Calculate activity statistics
         const calculateActivityStats = async () => {
           const stats: {[key: string]: number} = {};
-          const last30Days = [];
+          const last30Days: string[] = [];
           
           // Get dates for the last 30 days
           const today = new Date();
@@ -146,7 +146,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       const calculateActivityStats = () => {
         if (user?.primaryEmail) {
           const stats: {[key: string]: number} = {};
-          const last30Days = [];
+          const last30Days: string[] = [];
           
           // Get dates for the last 30 days
           const today = new Date();

@@ -454,7 +454,7 @@ async function handleContextualQuery(query: string, userId: string, intent: Cale
     console.log(`[DEBUG] Available events: ${events.length}`);
     
     // Build search keywords from intent entities and query
-    const searchKeywords = [];
+    const searchKeywords: string[] = [];
     if (intent.entities.person) searchKeywords.push(intent.entities.person);
     if (intent.entities.location) searchKeywords.push(intent.entities.location);
     if (intent.entities.event_type) searchKeywords.push(intent.entities.event_type);

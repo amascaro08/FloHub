@@ -50,7 +50,7 @@ type ChatResponse = {
 
 // Enhanced Natural Language Processing for better intent recognition
 interface UserIntent {
-  type: 'question' | 'command' | 'request' | 'search';
+  type: 'question' | 'command' | 'request' | 'search' | 'general';
   category: 'calendar' | 'tasks' | 'habits' | 'notes' | 'general';
   action?: 'create' | 'read' | 'update' | 'delete' | 'search';
   entities: {
@@ -236,7 +236,7 @@ async function handleContextualCalendarQuery(query: string, events: any[], userT
   const { now, today } = getTimezoneAwareDates(userTimezone);
   
   // Build search keywords from intent entities and query
-  const searchKeywords = [];
+  const searchKeywords: string[] = [];
   if (intent.entities.person) searchKeywords.push(intent.entities.person);
   if (intent.entities.location) searchKeywords.push(intent.entities.location);
   

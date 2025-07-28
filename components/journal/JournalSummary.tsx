@@ -130,7 +130,7 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
         // Calculate mood variability
         let variabilityAdvice = "";
         if (recentMoods.length >= 5) {
-          const moodVariations = [];
+          const moodVariations: number[] = [];
           for (let i = 1; i < recentMoods.length; i++) {
             moodVariations.push(Math.abs(recentMoods[i] - recentMoods[i-1]));
           }

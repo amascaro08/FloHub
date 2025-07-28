@@ -52,7 +52,7 @@ const HabitCalendarView: React.FC<HabitCalendarViewProps> = ({
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Create calendar days
-  const calendarDays = [];
+      const calendarDays: any[] = [];
   
   // Add empty cells for days before month starts
   for (let i = 0; i < firstDayOfMonth; i++) {
@@ -90,7 +90,7 @@ const HabitCalendarView: React.FC<HabitCalendarViewProps> = ({
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
     
-    const weekDates = [];
+          const weekDates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
