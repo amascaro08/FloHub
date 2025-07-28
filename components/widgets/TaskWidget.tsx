@@ -16,7 +16,9 @@ import {
   Tag,
   Clock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  X,
+  MoreHorizontal
 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r) => {
@@ -77,6 +79,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showIncomplete, setShowIncomplete] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   // Combine unique tags from tasks and global tags from settings
   const allAvailableTags = useMemo(() => {
@@ -141,6 +145,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
           setEditing(null);
           setInput("");
           setSelectedTags([]);
+          setShowAddForm(false);
+          setShowAdvancedOptions(false);
           mutate();
         }
       } else {
@@ -153,6 +159,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
         if (response.ok) {
           setInput("");
           setSelectedTags([]);
+          setShowAddForm(false);
+          setShowAdvancedOptions(false);
           mutate();
         }
       }
@@ -197,6 +205,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
     setEditing(t);
     setInput(t.text);
     setSelectedTags(t.tags || []);
+    setShowAddForm(true);
+    setShowAdvancedOptions(true);
     if (t.dueDate) {
       const dueDate = new Date(t.dueDate);
       const today = new Date();
@@ -222,329 +232,397 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
     setInput("");
     setSelectedTags([]);
     setDue("today");
+    setShowAddForm(false);
+    setShowAdvancedOptions(false);
+  };
+
+  // Quick add task (for compact mode)
+  const quickAddTask = () => {
+    const task = prompt("Quick add task:");
+    if (task && task.trim()) {
+      setInput(task.trim());
+      // Create task immediately with default settings
+      const payload = {
+        text: task.trim(),
+        dueDate: new Date().toISOString(),
+        source: "personal",
+        tags: []
+      };
+      
+      fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(response => {
+        if (response.ok) {
+          mutate();
+        }
+      }).catch(error => {
+        console.error("Error adding task:", error);
+      });
+    }
   };
 
   // Filter tasks for display
   const incompleteTasks = tasks?.filter(t => !t.done) || [];
   const completedTasks = tasks?.filter(t => t.done) || [];
 
+  // Responsive task display limit
+  const getTaskDisplayLimit = () => {
+    if (isCompact) return 4;
+    if (size === 'small') return 5;
+    return 8;
+  };
+
   return (
     <div className={`${isCompact ? 'space-y-2' : 'space-y-4'} h-full flex flex-col`}>
-      {/* Add Task Form - Hide in compact mode */}
-      {!isCompact && (
-        <form onSubmit={addOrUpdate} className="space-y-3 flex-shrink-0">
+      {/* Add Task Form - Responsive design */}
+      {(!isCompact || showAddForm) && (
+        <form onSubmit={addOrUpdate} className={`${isCompact ? 'space-y-2' : 'space-y-3'} flex-shrink-0`}>
+          {/* Task Input with improved mobile layout */}
           <div className="flex space-x-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Add a new task..."
-              className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                isCompact ? 'min-h-[44px]' : ''
+              }`}
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
+              className={`px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1 shrink-0 ${
+                isCompact ? 'min-h-[44px] min-w-[44px]' : ''
+              }`}
             >
               <Plus className="w-4 h-4" />
-              <span className={`${isHero ? 'inline' : 'hidden sm:inline'}`}>Add</span>
+              <span className={`${isCompact ? 'hidden' : 'hidden sm:inline'}`}>Add</span>
             </button>
-          </div>
-
-          {/* Task Details - Show simplified version in compact mode */}
-          <div className={`grid ${isCompact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-3`}>
-          {/* Due Date */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
-              <Calendar className="w-3 h-3" />
-              <span>Due Date</span>
-            </label>
-            <div className="flex space-x-2">
+            {isCompact && (
               <button
                 type="button"
-                onClick={() => setDue("today")}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  due === "today"
-                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                }`}
+                onClick={() => setShowAddForm(false)}
+                className="px-2 py-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                Today
+                <X className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setDue("tomorrow")}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  due === "tomorrow"
-                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                }`}
-              >
-                Tomorrow
-              </button>
-              <button
-                type="button"
-                onClick={() => setDue("custom")}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  due === "custom"
-                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                }`}
-              >
-                Custom
-              </button>
-            </div>
-            {due === "custom" && (
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
             )}
           </div>
 
-          {/* Task Source */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-grey-tint">Source</label>
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={() => setTaskSource("personal")}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  taskSource === "personal"
-                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                }`}
-              >
-                Personal
-              </button>
-              <button
-                type="button"
-                onClick={() => setTaskSource("work")}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  taskSource === "work"
-                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                }`}
-              >
-                Work
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
-            <Tag className="w-3 h-3" />
-            <span>Tags</span>
-          </label>
-          <CreatableSelect
-            isMulti
-            value={selectedTags.map(tag => ({ value: tag, label: tag }))}
-            onChange={handleTagChange}
-            options={tagOptions}
-            placeholder="Add tags..."
-            className="text-sm"
-            classNamePrefix="react-select"
-            styles={{
-              control: (base) => ({
-                ...base,
-                backgroundColor: 'transparent',
-                borderColor: '#e5e7eb',
-                borderRadius: '0.75rem',
-                '&:hover': {
-                  borderColor: '#00C9A7'
-                }
-              }),
-              menu: (base) => ({
-                ...base,
-                backgroundColor: '#ffffff',
-                borderRadius: '0.75rem',
-                border: '1px solid #e5e7eb'
-              }),
-              option: (base, state) => ({
-                ...base,
-                backgroundColor: state.isSelected ? '#00C9A7' : state.isFocused ? '#f0fdfa' : 'transparent',
-                color: state.isSelected ? 'white' : '#374151'
-              })
-            }}
-          />
-        </div>
-
-        {editing && (
-          <div className="flex space-x-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200"
-            >
-              Update Task
-            </button>
+          {/* Advanced Options Toggle for mobile */}
+          {!isCompact && (
             <button
               type="button"
-              onClick={cancelEdit}
-              className="px-4 py-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              className="flex items-center space-x-2 text-xs text-grey-tint hover:text-primary-500 transition-colors"
             >
-              Cancel
+              <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`} />
+              <span>Advanced Options</span>
             </button>
-          </div>
-        )}
+          )}
+
+          {/* Task Details - Collapsible on mobile */}
+          {(!isCompact && showAdvancedOptions) && (
+            <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+              {/* Due Date - Horizontal layout for mobile */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
+                  <Calendar className="w-3 h-3" />
+                  <span>Due Date</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDue("today")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      due === "today"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDue("tomorrow")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      due === "tomorrow"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Tomorrow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDue("custom")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      due === "custom"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {due === "custom" && (
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                )}
+              </div>
+
+              {/* Task Source - Horizontal layout */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-grey-tint">Source</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTaskSource("personal")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      taskSource === "personal"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Personal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTaskSource("work")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      taskSource === "work"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Work
+                  </button>
+                </div>
+              </div>
+
+              {/* Tags - Simplified for mobile */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
+                  <Tag className="w-3 h-3" />
+                  <span>Tags</span>
+                </label>
+                <CreatableSelect
+                  isMulti
+                  value={selectedTags.map(tag => ({ value: tag, label: tag }))}
+                  onChange={handleTagChange}
+                  options={tagOptions}
+                  placeholder="Add tags..."
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: 'transparent',
+                      borderColor: '#e5e7eb',
+                      borderRadius: '0.75rem',
+                      minHeight: '38px',
+                      '&:hover': {
+                        borderColor: '#00C9A7'
+                      }
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: '#ffffff',
+                      borderRadius: '0.75rem',
+                      border: '1px solid #e5e7eb'
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected ? '#00C9A7' : state.isFocused ? '#f0fdfa' : 'transparent',
+                      color: state.isSelected ? 'white' : '#374151'
+                    })
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {editing && (
+            <div className="flex space-x-2">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200"
+              >
+                Update Task
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="px-4 py-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </form>
       )}
 
       {/* Compact mode: Quick add button */}
-      {isCompact && (
-        <div className="flex-shrink-0">
+      {isCompact && !showAddForm && (
+        <div className="flex-shrink-0 flex space-x-2">
           <button
-            onClick={() => {
-              const task = prompt("Quick add task:");
-              if (task) {
-                setInput(task);
-                addOrUpdate(new Event('submit') as any);
-              }
-            }}
-            className="w-full px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center justify-center space-x-1 text-sm"
+            onClick={() => setShowAddForm(true)}
+            className="flex-1 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center justify-center space-x-1 text-sm"
           >
             <Plus className="w-3 h-3" />
-            <span>Quick Add</span>
+            <span>Add Task</span>
+          </button>
+          <button
+            onClick={quickAddTask}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
+          >
+            Quick
           </button>
         </div>
       )}
 
-      {/* Tasks List */}
+      {/* Tasks List - Optimized for mobile */}
       <div className={`${isCompact ? 'space-y-1' : 'space-y-3'} flex-1 overflow-y-auto min-h-0`}>
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
           <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-            {!isCompact && (
-              <button
-                onClick={() => setShowIncomplete(!showIncomplete)}
-                className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
-              >
-                {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {/* Header - More compact on mobile */}
+            <button
+              onClick={() => setShowIncomplete(!showIncomplete)}
+              className="w-full text-left flex items-center justify-between text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-primary-500" />
-                <span>Incomplete ({incompleteTasks.length})</span>
-              </button>
-            )}
-            {isCompact && (
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-medium text-dark-base dark:text-soft-white">
-                  Tasks ({incompleteTasks.length})
-                </h4>
-                <button
-                  onClick={() => setShowIncomplete(!showIncomplete)}
-                  className="p-1 text-gray-400 hover:text-primary-500"
-                >
-                  {showIncomplete ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                </button>
+                <span>{isCompact ? `Tasks (${incompleteTasks.length})` : `Incomplete (${incompleteTasks.length})`}</span>
               </div>
-            )}
-            {(showIncomplete || isCompact) && (
-              <div className={`${isCompact ? 'space-y-1 ml-0' : 'space-y-2 ml-4'}`}>
-            {incompleteTasks.slice(0, isCompact ? 8 : undefined).map((task) => (
-              <div
-                key={task.id}
-                className={`flex items-start space-x-2 ${isCompact ? 'p-1.5' : 'p-2'} bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700`}
-              >
-                <button
-                  onClick={() => toggleComplete(task)}
-                  className="flex-shrink-0 mt-0.5"
-                >
-                  <Circle className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} text-gray-400 hover:text-primary-500 transition-colors`} />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white break-words leading-relaxed`}>
-                    {isCompact ? (task.text.length > 30 ? task.text.slice(0, 30) + '...' : task.text) : task.text}
-                  </p>
-                  {!isCompact && (
-                    <div className="flex items-center space-x-2 mt-1">
-                    {task.dueDate && (
-                      <span className="text-xs text-grey-tint">
-                        Due {fmt(task.dueDate)}
-                      </span>
-                    )}
-                    {task.source && (
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        task.source === 'work' 
-                          ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
-                          : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                      }`}>
-                        {task.source}
-                      </span>
-                    )}
-                  </div>
-                  )}
-                  {task.tags && task.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {task.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+              {showIncomplete ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+            
+            {showIncomplete && (
+              <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
+                {incompleteTasks.slice(0, getTaskDisplayLimit()).map((task) => (
+                  <div
+                    key={task.id}
+                    className={`flex items-start space-x-2 ${isCompact ? 'p-2' : 'p-3'} bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 group`}
+                  >
+                    <button
+                      onClick={() => toggleComplete(task)}
+                      className="flex-shrink-0 mt-0.5 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                    >
+                      <Circle className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} text-gray-400 hover:text-primary-500 transition-colors`} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white break-words leading-relaxed`}>
+                        {isCompact && task.text.length > 35 ? task.text.slice(0, 35) + '...' : task.text}
+                      </p>
+                      {/* Metadata - More compact on mobile */}
+                      {!isCompact && (
+                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                          {task.dueDate && (
+                            <span className="text-xs text-grey-tint">
+                              Due {fmt(task.dueDate)}
+                            </span>
+                          )}
+                          {task.source && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              task.source === 'work' 
+                                ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
+                                : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                            }`}>
+                              {task.source}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {/* Tags - Show only on larger screens or when not compact */}
+                      {task.tags && task.tags.length > 0 && !isCompact && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {task.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {task.tags.length > 3 && (
+                            <span className="text-xs text-grey-tint">+{task.tags.length - 3}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="flex items-start space-x-1 flex-shrink-0 mt-0.5">
-                  <button
-                    onClick={() => startEdit(task)}
-                    className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => remove(task.id)}
-                    className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+                    {/* Actions - Cleaner mobile layout */}
+                    <div className="flex items-start space-x-1 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => startEdit(task)}
+                        className="p-1 text-gray-400 hover:text-primary-500 transition-colors rounded"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => remove(task.id)}
+                        className="p-1 text-gray-400 hover:text-accent-500 transition-colors rounded"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {/* Show "view more" link for truncated lists */}
+                {incompleteTasks.length > getTaskDisplayLimit() && (
+                  <p className="text-xs text-grey-tint text-center">
+                    +{incompleteTasks.length - getTaskDisplayLimit()} more tasks
+                  </p>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* Completed Tasks */}
-        {completedTasks.length > 0 && (
+        {/* Completed Tasks - Simplified for mobile */}
+        {completedTasks.length > 0 && !isCompact && (
           <div className="space-y-2">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="w-full text-left flex items-center space-x-2 text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
+              className="w-full text-left flex items-center justify-between text-sm font-medium text-dark-base dark:text-soft-white hover:text-primary-500 transition-colors"
             >
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Completed ({completedTasks.length})</span>
+              </div>
               {showCompleted ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>Completed ({completedTasks.length})</span>
             </button>
             {showCompleted && (
-              <div className="space-y-2 ml-4">
-            {completedTasks.slice(0, 3).map((task) => (
-              <div
-                key={task.id}
-                className="flex items-start space-x-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
-              >
-                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 line-through break-words leading-relaxed">
-                    {task.text}
+              <div className="space-y-2">
+                {completedTasks.slice(0, 3).map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-start space-x-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg group"
+                  >
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 line-through break-words leading-relaxed">
+                        {task.text}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => remove(task.id)}
+                      className="p-1 text-gray-400 hover:text-accent-500 transition-colors flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {completedTasks.length > 3 && (
+                  <p className="text-xs text-grey-tint text-center">
+                    +{completedTasks.length - 3} more completed tasks
                   </p>
-                </div>
-                <button
-                  onClick={() => remove(task.id)}
-                  className="p-1 text-gray-400 hover:text-accent-500 transition-colors flex-shrink-0 mt-0.5"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            {completedTasks.length > 3 && (
-              <p className="text-xs text-grey-tint text-center">
-                +{completedTasks.length - 3} more completed tasks
-              </p>
-            )}
+                )}
               </div>
             )}
           </div>
