@@ -95,7 +95,7 @@ export default async function handler(
 
     console.log("Found feedback entry:", {
       id: feedbackEntry.id,
-      userId: feedbackEntry.userId,
+      userEmail: feedbackEntry.userEmail || feedbackEntry.userId, // Support both old and new format
       status: feedbackEntry.status,
       notificationSent: feedbackEntry.notificationSent
     });
@@ -113,10 +113,10 @@ export default async function handler(
 
     // Send notification email if not already sent
     if (!feedbackEntry.notificationSent) {
-      console.log(`Sending completion notification to ${feedbackEntry.userId}`);
+      console.log(`Sending completion notification to ${feedbackEntry.userEmail || feedbackEntry.userId}`);
       
       const success = await sendFeedbackCompletionEmail(
-        feedbackEntry.userId,
+        feedbackEntry.userEmail || feedbackEntry.userId, // Use userEmail if available, fallback to userId
         issue.title,
         feedbackEntry.githubIssueUrl || issue.html_url
       );

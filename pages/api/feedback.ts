@@ -63,23 +63,41 @@ export default async function handler(
           const countCheck = await db.execute(sql`SELECT COUNT(*) as count FROM feedback;`);
           console.log("Row count:", countCheck.rows[0]);
           
-          // Test 4: Get a sample row to see the actual data structure
-          const sampleData = await db.execute(sql`SELECT * FROM feedback LIMIT 1;`);
-          console.log("Sample data:", sampleData.rows[0]);
+          // Test 4: Check if user_email column exists, if not fall back to user_id
+          const hasUserEmail = columnsCheck.rows.some(col => col.column_name === 'user_email');
+          console.log("Has user_email column:", hasUserEmail);
           
-          // Return structure info for now instead of trying the user query
-          return res.status(200).json({
-            success: true,
-            debug: {
-              tableExists: tableCheck.rows[0],
-              columns: columnsCheck.rows,
-              count: countCheck.rows[0],
-              sampleData: sampleData.rows[0],
-              userEmail: userEmail,
-              message: "Showing table structure - not attempting user query yet"
-            },
-            data: []
-          });
+          if (hasUserEmail) {
+            // Use the new user_email column (consistent with other tables)
+            const userFeedback = await db
+              .select()
+              .from(feedback)
+              .where(eq(feedback.userEmail, userEmail))
+              .orderBy(desc(feedback.createdAt));
+            
+            return res.status(200).json(userFeedback.map(item => ({
+              ...item,
+              id: String(item.id),
+              feedbackType: 'general',
+              feedbackText: item.description,
+              createdAt: new Date(item.createdAt!).getTime(),
+              completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
+            })));
+          } else {
+            // Return structure info if user_email column doesn't exist yet
+            return res.status(200).json({
+              success: false,
+              debug: {
+                tableExists: tableCheck.rows[0],
+                columns: columnsCheck.rows,
+                count: countCheck.rows[0],
+                userEmail: userEmail,
+                message: "user_email column not found - migration needed"
+              },
+              data: [],
+              migrationNeeded: true
+            });
+          }
           
         } catch (dbError: any) {
           console.error("Database test error:", {
@@ -146,7 +164,7 @@ export default async function handler(
       const title = `${titlePrefix}: ${feedbackText.slice(0, 50)}${feedbackText.length > 50 ? '...' : ''}`;
 
       const [newFeedbackItem] = await db.insert(feedback).values({ 
-        userId: userEmail, // Use email as user identifier
+        userEmail: userEmail, // Use the new user_email field for consistency
         title: title,
         description: feedbackText,
         status: "open", 

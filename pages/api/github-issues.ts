@@ -141,7 +141,7 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
     // Store feedback in database with GitHub issue info using correct column names
     try {
       await db.insert(feedback).values({
-        userId: user.email, // Store email in user_id field to match system pattern
+        userEmail: user.email, // Use the new user_email field for consistency with other tables
         title: title,
         description: feedbackText,
         status: "open",

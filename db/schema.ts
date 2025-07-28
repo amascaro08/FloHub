@@ -257,7 +257,8 @@ export const analytics = pgTable("analytics", {
 // FEEDBACK TABLE
 export const feedback = pgTable("feedback", {
   id: serial("id").notNull().primaryKey(),
-  userId: varchar("user_id", { length: 255 }).notNull(), // Maps to user_id in database
+  userId: varchar("user_id", { length: 255 }), // Legacy field - kept for backward compatibility
+  userEmail: varchar("user_email", { length: 255 }), // New field - consistent with other tables
   title: text("title").notNull(),
   description: text("description"),
   status: text("status").notNull().default("open"),
