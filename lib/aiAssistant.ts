@@ -829,7 +829,7 @@ export class SmartAIAssistant {
       }
     }
 
-    // Standard calendar query handling (existing logic)
+    // Standard calendar query handling (existing logic) with timezone awareness
     if (lowerQuery.includes("today") || lowerQuery.includes("today's")) {
       relevantEvents = relevantEvents.filter(event => {
         const eventDate = new Date(event.start || event.date);
@@ -872,10 +872,11 @@ export class SmartAIAssistant {
       return `📅 **Tomorrow's Schedule** (${relevantEvents.length} event${relevantEvents.length !== 1 ? 's' : ''}):\n\n${eventList}`;
       
     } else {
-      // General schedule/calendar query - show upcoming events
+      // General schedule/calendar query - show upcoming events with timezone awareness
       relevantEvents = relevantEvents.filter(event => {
         const eventDate = new Date(event.start || event.date);
-        return eventDate >= today && eventDate <= nextWeek;
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        return eventInUserTz >= today && eventInUserTz <= nextWeek;
       }).slice(0, 10);
       
       if (relevantEvents.length === 0) {
@@ -886,7 +887,8 @@ export class SmartAIAssistant {
       const eventsByDay = new Map<string, any[]>();
       relevantEvents.forEach(event => {
         const eventDate = new Date(event.start || event.date);
-        const dayKey = eventDate.toDateString();
+        const eventInUserTz = toZonedTime(eventDate, userTimezone);
+        const dayKey = eventInUserTz.toDateString();
         if (!eventsByDay.has(dayKey)) {
           eventsByDay.set(dayKey, []);
         }
@@ -895,27 +897,20 @@ export class SmartAIAssistant {
       
       let scheduleText = "📅 **Your Upcoming Schedule**:\n\n";
       
-             for (const [dayKey, dayEvents] of Array.from(eventsByDay.entries())) {
-         const dayDate = new Date(dayKey);
-         const dayName = dayDate.toLocaleDateString('en-US', { 
-           weekday: 'long', 
-           month: 'short', 
-           day: 'numeric' 
-         });
-         
-         scheduleText += `**${dayName}** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n`;
-         
-         dayEvents.forEach((event: any) => {
-           const time = new Date(event.start || event.date).toLocaleTimeString('en-US', { 
-             hour: 'numeric', 
-             minute: '2-digit', 
-             hour12: true 
-           });
-           scheduleText += `• ${time} - ${event.summary}${event.location ? ` (${event.location})` : ''}\n`;
-         });
-         
-         scheduleText += '\n';
-       }
+      for (const [dayKey, dayEvents] of Array.from(eventsByDay.entries())) {
+        const dayDate = new Date(dayKey);
+        const dayName = formatInTimeZone(dayDate, userTimezone, 'eeee, MMM d');
+        
+        scheduleText += `**${dayName}** (${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}):\n`;
+        
+        dayEvents.forEach((event: any) => {
+          const eventDate = new Date(event.start || event.date);
+          const time = formatInTimeZone(eventDate, userTimezone, 'h:mm a');
+          scheduleText += `• ${time} - ${event.summary}${event.location ? ` (${event.location})` : ''}\n`;
+        });
+        
+        scheduleText += '\n';
+      }
       
       return scheduleText.trim();
     }
