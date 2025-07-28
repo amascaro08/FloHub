@@ -3,7 +3,7 @@
  * With proper type definitions for better type safety
  */
 
-import { enhancedFetcher } from './enhancedFetcher';
+import { enhancedFetch } from './enhancedFetcher';
 import { monitorAPICall, monitorCacheOperation } from './performanceMonitor';
 
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
