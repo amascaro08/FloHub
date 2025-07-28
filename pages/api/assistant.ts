@@ -17,12 +17,31 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('Legacy assistant endpoint called:', req.method, req.url);
+  
   // PERFORMANCE FIX: Redirect to new modular endpoint
   if (req.method === 'POST') {
+    console.log('Redirecting POST request to new chat endpoint');
     // Forward the request to the new chat endpoint
     const chatEndpoint = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/assistant/chat`;
     
     try {
+      // Transform the legacy request format to the new format
+      const legacyBody = req.body;
+      const transformedBody = {
+        userInput: legacyBody.message || legacyBody.userInput,
+        style: legacyBody.style,
+        preferredName: legacyBody.preferredName,
+        contextData: legacyBody.contextData,
+        // Include history for context if available
+        history: legacyBody.history
+      };
+      
+      console.log('Transforming request body:', { 
+        original: legacyBody, 
+        transformed: transformedBody 
+      });
+      
       const response = await fetch(chatEndpoint, {
         method: 'POST',
         headers: {
@@ -30,7 +49,7 @@ export default async function handler(
           'Cookie': req.headers.cookie || '',
           'Authorization': req.headers.authorization || ''
         },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(transformedBody)
       });
 
       const data = await response.json();
@@ -43,5 +62,12 @@ export default async function handler(
     }
   }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+  // Handle other methods with more informative responses
+  console.log('Unsupported method:', req.method);
+  return res.status(405).json({ 
+    error: 'Method not allowed',
+    method: req.method,
+    supportedMethods: ['POST'],
+    endpoint: '/api/assistant'
+  });
 }
