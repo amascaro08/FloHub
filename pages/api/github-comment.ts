@@ -38,7 +38,7 @@ export default async function handler(
     .where(
       and(
         eq(feedback.githubIssueNumber, issueNumber),
-        eq(feedback.userId, user.email)
+        eq(feedback.userEmail, user.email) // Use userEmail instead of userId
       )
     );
 
