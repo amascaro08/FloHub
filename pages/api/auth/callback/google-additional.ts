@@ -176,6 +176,8 @@ export default async function handler(
         const nonGoogleSources = userSettings.calendarSources?.filter((source: any) => source.type !== 'google') || [];
         const updatedSources = [...nonGoogleSources, ...newGoogleSources];
         
+        console.log('Updating to', updatedSources.length, 'total calendar sources (', newGoogleSources.length, 'Google +', nonGoogleSources.length, 'others)');
+        
         const updateRes = await fetch(`${baseUrl}/api/userSettings/update`, {
           method: "POST",
           headers: { 
@@ -190,11 +192,38 @@ export default async function handler(
         
         if (updateRes.ok) {
           console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources');
+          
+          // Verify the save by fetching settings again
+          const verifyRes = await fetch(`${baseUrl}/api/userSettings`, {
+            headers: {
+              Cookie: req.headers.cookie || "",
+            },
+          });
+          
+          if (verifyRes.ok) {
+            const verifiedSettings = await verifyRes.json();
+            console.log('✅ Verified calendar sources saved:', verifiedSettings.calendarSources?.length || 0);
+            
+            // Double-check that Google sources are present
+            const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
+            console.log('✅ Google sources in database:', googleSourcesInDb.length);
+            
+            if (googleSourcesInDb.length !== newGoogleSources.length) {
+              console.error('❌ Mismatch in saved Google calendar sources!', {
+                expected: newGoogleSources.length,
+                actual: googleSourcesInDb.length
+              });
+            }
+          } else {
+            console.error('❌ Failed to verify settings save');
+          }
         } else {
-          console.error('❌ Failed to update user settings:', updateRes.status);
+          const errorText = await updateRes.text();
+          console.error('❌ Failed to update user settings:', updateRes.status, errorText);
         }
       } else {
-        console.error('❌ Failed to fetch user settings:', userSettingsRes.status);
+        const errorText = await userSettingsRes.text();
+        console.error('❌ Failed to fetch user settings:', userSettingsRes.status, errorText);
       }
     } catch (settingsError) {
       console.error("❌ Error updating calendar settings:", settingsError);

@@ -222,7 +222,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
               Add Google Calendar
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const powerAutomateUrl = prompt(
                   "Please enter your Power Automate URL:\n\n" +
                   "This should be a HTTP endpoint that returns calendar events in JSON format.\n" +
@@ -232,6 +232,21 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                   if (!powerAutomateUrl.startsWith('http')) {
                     alert('Please enter a valid HTTP URL');
                     return;
+                  }
+                  
+                  // Test the URL first to make sure it works
+                  const isWorking = await testPowerAutomateUrl(powerAutomateUrl.trim());
+                  if (!isWorking) {
+                    const proceed = confirm(
+                      "The Power Automate URL test failed. This could be due to:\n" +
+                      "- Network issues\n" +
+                      "- CORS configuration\n" +
+                      "- The URL being temporarily unavailable\n\n" +
+                      "Do you want to add it anyway? You can test it again later."
+                    );
+                    if (!proceed) {
+                      return;
+                    }
                   }
                   
                   // Create a new calendar source for the Power Automate URL
@@ -245,13 +260,20 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     isEnabled: true,
                   };
                   
+                  console.log('Adding Power Automate source:', newSource);
                   const updatedSources = settings.calendarSources ? [...settings.calendarSources, newSource] : [newSource];
+                  console.log('Updated calendar sources count:', updatedSources.length);
                   
-                  onSettingsChange({
+                  const newSettings = {
                     ...settings,
                     calendarSources: updatedSources,
                     powerAutomateUrl: powerAutomateUrl.trim(), // Keep legacy field for backward compatibility
-                  });
+                  };
+                  
+                  console.log('Saving settings with Power Automate source...');
+                  await onSettingsChange(newSettings);
+                  
+                  alert('✅ Power Automate URL added successfully!\n\nYour calendar events will now sync from this source.');
                 }
               }}
               className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"

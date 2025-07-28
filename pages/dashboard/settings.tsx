@@ -34,6 +34,7 @@ const SettingsPage = () => {
   });
   const [activeTab, setActiveTab] = useState("general");
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Handle URL parameters for tab navigation
   useEffect(() => {
@@ -50,8 +51,19 @@ const SettingsPage = () => {
     if (router.query.success) {
       // Show success message or notification here
       console.log('OAuth success:', router.query.success);
-      // Clear the query parameters
+      // Clear the query parameters and refresh settings
       router.replace(router.pathname, undefined, { shallow: true });
+      // Reload settings after OAuth success to get updated calendar sources
+      if (user?.email) {
+        setTimeout(() => {
+          fetch(`/api/userSettings?userId=${user.email}`)
+            .then((res) => res.json())
+            .then((data) => {
+              console.log('Refreshed settings after OAuth:', data);
+              setSettings(data);
+            });
+        }, 1000); // Wait 1 second for backend to process
+      }
     }
     if (router.query.error) {
       // Show error message or notification here
@@ -59,7 +71,7 @@ const SettingsPage = () => {
       // Clear the query parameters
       router.replace(router.pathname, undefined, { shallow: true });
     }
-  }, [router.query.success, router.query.error, router]);
+  }, [router.query.success, router.query.error, router, user?.email]);
 
   useEffect(() => {
     if (user?.email) {
@@ -69,14 +81,50 @@ const SettingsPage = () => {
     }
   }, [user]);
 
-  const handleSettingsChange = (newSettings: UserSettings) => {
+  const handleSettingsChange = async (newSettings: UserSettings) => {
+    // Prevent concurrent saves
+    if (isSaving) {
+      console.log('Save already in progress, skipping...');
+      return;
+    }
+
+    setIsSaving(true);
     setSettings(newSettings);
+    
     if (user?.email) {
-      fetch(`/api/userSettings/update?userId=${user.email}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
-      });
+      try {
+        console.log('Saving settings with calendar sources:', newSettings.calendarSources?.length || 0);
+        const response = await fetch(`/api/userSettings/update?userId=${user.email}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSettings),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to save settings:', response.status, errorText);
+          // Optionally show user notification here
+          alert('Failed to save settings. Please try again.');
+          return;
+        }
+        
+        console.log('Settings saved successfully');
+        
+        // Verify the save by fetching settings again
+        const verifyResponse = await fetch(`/api/userSettings?userId=${user.email}`);
+        if (verifyResponse.ok) {
+          const savedSettings = await verifyResponse.json();
+          console.log('Verified saved calendar sources:', savedSettings.calendarSources?.length || 0);
+          setSettings(savedSettings); // Update with server state
+        }
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('Error saving settings. Please try again.');
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      setIsSaving(false);
     }
   };
 
