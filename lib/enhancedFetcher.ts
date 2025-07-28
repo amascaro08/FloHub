@@ -6,159 +6,227 @@
  * 3. Falling back to network requests when cache is unavailable
  */
 
-// Cache expiration time in milliseconds (5 minutes)
-const CACHE_EXPIRATION = 5 * 60 * 1000;
+export interface EnhancedFetchOptions extends RequestInit {
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+  cache?: boolean;
+  cacheTTL?: number;
+  userEmail?: string; // ADD USER SCOPING
+}
 
-// Cache prefix to avoid collisions
-const CACHE_PREFIX = 'flohub:cache:';
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
+  userEmail: string; // ADD USER SCOPING
+}
 
-/**
- * Enhanced fetcher function with SWR pattern
- * @param url The URL to fetch
- * @param options Optional fetch options
- * @param cacheKey Optional custom cache key (defaults to URL)
- * @param cacheDuration Optional custom cache duration in milliseconds
- */
-export const enhancedFetcher = async <T>(
-  url: string,
-  options?: RequestInit,
-  cacheKey?: string,
-  cacheDuration: number = CACHE_EXPIRATION
-): Promise<T> => {
-  // Use provided cache key or generate one from the URL
-  const key = cacheKey || `${CACHE_PREFIX}${url}`;
+// In-memory cache - now user-scoped
+const memoryCache = new Map<string, CacheEntry>();
+
+// Helper to generate user-scoped cache keys
+function getCacheKey(url: string, userEmail?: string): string {
+  if (!userEmail) {
+    // For non-user-specific requests, use a generic key
+    return `public:${url}`;
+  }
+  return `${userEmail}:${url}`;
+}
+
+// Enhanced localStorage operations with user scoping
+function getCachedData(url: string, userEmail?: string): any {
+  const key = getCacheKey(url, userEmail);
   const timeKey = `${key}:time`;
   
   try {
-    // Try to get from cache first
     const cachedData = localStorage.getItem(key);
     const cachedTime = localStorage.getItem(timeKey);
     
-    // If we have cached data, use it immediately
     if (cachedData && cachedTime) {
-      const data = JSON.parse(cachedData) as T;
-      const time = parseInt(cachedTime, 10);
+      const age = Date.now() - parseInt(cachedTime);
       
-      // If cache is fresh, return it
-      if (Date.now() - time < cacheDuration) {
-        return data;
+      // Check in-memory cache for TTL
+      const memEntry = memoryCache.get(key);
+      const ttl = memEntry?.ttl || 300000; // Default 5 minutes
+      
+      if (age < ttl) {
+        return JSON.parse(cachedData);
+      } else {
+        // Expired, remove from cache
+        localStorage.removeItem(key);
+        localStorage.removeItem(timeKey);
+        memoryCache.delete(key);
       }
-      
-      // If cache is stale but exists, return it but revalidate in background
-      setTimeout(async () => {
-        try {
-          await refreshCache<T>(url, options, key, timeKey);
-        } catch (error) {
-          console.error('Background revalidation failed:', error);
-        }
-      }, 0);
-      
-      return data;
     }
   } catch (error) {
-    console.warn('Error accessing cache:', error);
-    // Continue with network request if cache access fails
+    console.warn('Error reading from cache:', error);
   }
   
-  // If no cache or cache access failed, fetch fresh data
-  return refreshCache<T>(url, options, key, timeKey);
-};
-
-/**
- * Helper function to fetch fresh data and update cache
- */
-async function refreshCache<T>(
-  url: string,
-  options?: RequestInit,
-  key?: string,
-  timeKey?: string
-): Promise<T> {
-  const res = await fetch(url, { ...options, credentials: 'include' });
-  if (!res.ok) {
-    throw new Error(`HTTP error! Status: ${res.status}`);
-  }
-  
-  if (!res.ok) {
-    throw new Error(`HTTP error! Status: ${res.status}`);
-  }
-  
-  const data = await res.json() as T;
-  
-  // Cache the response if we have a key
-  if (key && timeKey) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem(timeKey, Date.now().toString());
-    } catch (error) {
-      console.warn('Error updating cache:', error);
-    }
-  }
-  
-  return data;
+  return null;
 }
 
-/**
- * Clear all cached data
- */
-export const clearCache = (): void => {
+function setCachedData(url: string, data: any, ttl: number, userEmail?: string): void {
+  const key = getCacheKey(url, userEmail);
+  const timeKey = `${key}:time`;
+  
   try {
-    const keysToRemove: string[] = [];
+    // Store in localStorage
+    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(timeKey, Date.now().toString());
     
-    // Find all cache keys
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(CACHE_PREFIX)) {
-        keysToRemove.push(key);
-      }
-    }
-    
-    // Remove all cache keys
-    keysToRemove.forEach(key => {
+    // Store in memory cache with TTL and user info
+    memoryCache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl,
+      userEmail: userEmail || 'public'
+    });
+  } catch (error) {
+    console.warn('Error writing to cache:', error);
+  }
+}
+
+// Clear cache for specific user
+export function clearUserSpecificCache(userEmail: string): void {
+  // Clear localStorage entries for this user
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith(`${userEmail}:`) || key.startsWith(`${userEmail}:`))) {
       localStorage.removeItem(key);
       localStorage.removeItem(`${key}:time`);
-    });
-    
-    console.log(`Cleared ${keysToRemove.length} cached items`);
-  } catch (error) {
-    console.error('Error clearing cache:', error);
+    }
   }
-};
-
-/**
- * Clear specific cached data
- */
-export const clearCacheItem = (url: string, cacheKey?: string): void => {
-  try {
-    const key = cacheKey || `${CACHE_PREFIX}${url}`;
-    localStorage.removeItem(key);
-    localStorage.removeItem(`${key}:time`);
-  } catch (error) {
-    console.error('Error clearing cache item:', error);
+  
+  // Clear memory cache entries for this user
+  for (const [key, entry] of memoryCache.entries()) {
+    if (entry.userEmail === userEmail || key.startsWith(`${userEmail}:`)) {
+      memoryCache.delete(key);
+    }
   }
-};
+  
+  console.log(`Cleared cache for user: ${userEmail}`);
+}
 
-/**
- * Get cache statistics
- */
-export const getCacheStats = (): { count: number, size: number } => {
-  try {
-    let count = 0;
-    let size = 0;
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(CACHE_PREFIX)) {
-        count++;
-        const item = localStorage.getItem(key);
-        if (item) {
-          size += item.length * 2; // Approximate size in bytes (UTF-16 encoding)
+// Clear expired cache entries (cleanup function)
+export function clearExpiredCache(): void {
+  const now = Date.now();
+  
+  // Clear expired localStorage entries
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && !key.endsWith(':time')) {
+      const timeKey = `${key}:time`;
+      const cachedTime = localStorage.getItem(timeKey);
+      
+      if (cachedTime) {
+        const memEntry = memoryCache.get(key);
+        const ttl = memEntry?.ttl || 300000; // Default 5 minutes
+        const age = now - parseInt(cachedTime);
+        
+        if (age > ttl) {
+          localStorage.removeItem(key);
+          localStorage.removeItem(timeKey);
+          memoryCache.delete(key);
         }
       }
     }
-    
-    return { count, size };
-  } catch (error) {
-    console.error('Error getting cache stats:', error);
-    return { count: 0, size: 0 };
   }
-};
+  
+  // Clear expired memory cache entries
+  for (const [key, entry] of memoryCache.entries()) {
+    if (now - entry.timestamp > entry.ttl) {
+      memoryCache.delete(key);
+    }
+  }
+}
+
+// Get cache statistics by user
+export function getCacheStats(userEmail?: string): { totalEntries: number; userEntries: number; totalSize: number } {
+  let totalEntries = 0;
+  let userEntries = 0;
+  let totalSize = 0;
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && !key.endsWith(':time')) {
+      const item = localStorage.getItem(key);
+      if (item) {
+        totalEntries++;
+        totalSize += item.length;
+        
+        if (userEmail && key.startsWith(`${userEmail}:`)) {
+          userEntries++;
+        }
+      }
+    }
+  }
+  
+  return { totalEntries, userEntries, totalSize };
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function enhancedFetch(url: string, options: EnhancedFetchOptions = {}): Promise<any> {
+  const {
+    timeout = 10000,
+    retries = 3,
+    retryDelay = 1000,
+    cache = true,
+    cacheTTL = 300000, // 5 minutes default
+    userEmail,
+    ...fetchOptions
+  } = options;
+
+  // Check cache first (if enabled)
+  if (cache) {
+    const cached = getCachedData(url, userEmail);
+    if (cached) {
+      console.log(`Cache hit for ${userEmail ? `user ${userEmail}` : 'public'}: ${url}`);
+      return cached;
+    }
+  }
+
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Cache the result (if enabled)
+      if (cache) {
+        setCachedData(url, data, cacheTTL, userEmail);
+        console.log(`Cached response for ${userEmail ? `user ${userEmail}` : 'public'}: ${url}`);
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`Fetch attempt ${attempt} failed for ${url}:`, lastError.message);
+
+      if (attempt < retries) {
+        const delay = retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`Retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+
+  throw new Error(`Failed to fetch ${url} after ${retries} attempts. Last error: ${lastError!.message}`);
+}

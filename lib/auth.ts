@@ -115,3 +115,85 @@ export function clearCookie(res: any, name: string, req?: NextApiRequest) {
   
   console.log(`Cookie cleared (secure: ${isSecure}):`, cookieString);
 }
+
+// Comprehensive user cache and data cleanup function
+export async function clearUserData(userEmail: string): Promise<void> {
+  try {
+    console.log(`🧹 Starting comprehensive data cleanup for user: ${userEmail}`);
+    
+    // Only perform client-side cleanup if we're in the browser
+    if (typeof window !== 'undefined') {
+      // 1. Clear all localStorage entries for this user
+      const localStorageKeysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.includes(userEmail) || 
+          key.startsWith(`quickNotes_${userEmail}`) ||
+          key.startsWith(`journal_${userEmail}`) ||
+          key.startsWith(`prefetch:${userEmail}`) ||
+          key.startsWith(`${userEmail}:`)
+        )) {
+          localStorageKeysToRemove.push(key);
+        }
+      }
+      localStorageKeysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Removed localStorage: ${key}`);
+      });
+      
+      // 2. Clear sessionStorage entries for this user
+      const sessionStorageKeysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.includes(userEmail)) {
+          sessionStorageKeysToRemove.push(key);
+        }
+      }
+      sessionStorageKeysToRemove.forEach(key => {
+        sessionStorage.removeItem(key);
+        console.log(`🗑️ Removed sessionStorage: ${key}`);
+      });
+      
+      // 3. Clear user-specific IndexedDB databases
+      try {
+        const { calendarCache } = await import('./calendarCache');
+        await calendarCache.clearUserCache(userEmail);
+        console.log(`🗑️ Cleared calendar IndexedDB for user: ${userEmail}`);
+      } catch (error) {
+        console.warn('Error clearing calendar cache:', error);
+      }
+      
+      // 4. Clear enhanced fetcher cache for this user
+      try {
+        const { clearUserSpecificCache } = await import('./enhancedFetcher');
+        clearUserSpecificCache(userEmail);
+        console.log(`🗑️ Cleared enhanced fetcher cache for user: ${userEmail}`);
+      } catch (error) {
+        console.warn('Error clearing enhanced fetcher cache:', error);
+      }
+      
+      // 5. Clear performance cache for this user
+      try {
+        const { clearUserCache } = await import('./performance');
+        await clearUserCache(userEmail);
+        console.log(`🗑️ Cleared performance cache for user: ${userEmail}`);
+      } catch (error) {
+        console.warn('Error clearing performance cache:', error);
+      }
+      
+      // 6. Clear calendar utilities cache
+      try {
+        const { clearCalendarCaches } = await import('./calendarUtils');
+        await clearCalendarCaches(userEmail);
+        console.log(`🗑️ Cleared calendar utilities cache for user: ${userEmail}`);
+      } catch (error) {
+        console.warn('Error clearing calendar utilities cache:', error);
+      }
+    }
+    
+    console.log(`✅ Completed comprehensive data cleanup for user: ${userEmail}`);
+  } catch (error) {
+    console.error(`❌ Error during data cleanup for user ${userEmail}:`, error);
+  }
+}

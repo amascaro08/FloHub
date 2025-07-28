@@ -44,38 +44,50 @@ export default async function handler(
       requestOrigin
     });
     
-    // Decode the state parameter to get user email and refresh flag
-    let userEmail = '';
+    // CRITICAL: Get current authenticated user FIRST to prevent account mixing
+    const decoded = auth(req);
+    if (!decoded) {
+      console.error('❌ No authenticated user found in callback - potential security issue');
+      return res.status(401).json({ error: "No authenticated user session found" });
+    }
+    
+    const currentUser = await getUserById(decoded.userId);
+    if (!currentUser?.email) {
+      console.error('❌ Authenticated user not found in database');
+      return res.status(401).json({ error: "Authenticated user not found" });
+    }
+    
+    console.log('✅ Current authenticated user:', currentUser.email);
+    
+    // Decode the state parameter to get user email and validate it matches current user
+    let stateUserEmail = '';
     let isRefresh = false;
     if (state && typeof state === 'string') {
       try {
         const decodedState = JSON.parse(Buffer.from(state, 'base64').toString());
-        userEmail = decodedState.email;
+        stateUserEmail = decodedState.email;
         isRefresh = decodedState.refresh || false;
-        console.log('✅ State decoded, user email:', userEmail, 'refresh:', isRefresh);
+        console.log('✅ State decoded, state email:', stateUserEmail, 'refresh:', isRefresh);
+        
+        // CRITICAL SECURITY CHECK: Ensure state email matches current authenticated user
+        if (stateUserEmail && stateUserEmail !== currentUser.email) {
+          console.error('❌ SECURITY VIOLATION: State email does not match authenticated user', {
+            stateEmail: stateUserEmail,
+            authenticatedEmail: currentUser.email
+          });
+          return res.status(403).json({ error: "State validation failed - account mismatch" });
+        }
       } catch (e) {
         console.error('❌ Error decoding state:', e);
+        // Continue with current user if state is invalid
       }
     } else {
-      console.log('⚠️ No state parameter provided');
+      console.log('⚠️ No state parameter provided, using authenticated user');
     }
 
-    // Get user from the request if state decoding failed
-    if (!userEmail) {
-      console.log('⚠️ No user email from state, trying auth token');
-      const decoded = auth(req);
-      if (!decoded) {
-        console.error('❌ Not signed in');
-        return res.status(401).json({ error: "Not signed in" });
-      }
-      const user = await getUserById(decoded.userId);
-      if (!user?.email) {
-        console.error('❌ User not found');
-        return res.status(401).json({ error: "User not found" });
-      }
-      userEmail = user.email;
-      console.log('✅ Got user email from auth token:', userEmail);
-    }
+    // Use the authenticated user's email (most secure approach)
+    const userEmail = currentUser.email;
+    console.log('✅ Using authenticated user email for OAuth:', userEmail);
 
     console.log('🔄 Exchanging authorization code for tokens...');
     // Exchange authorization code for tokens with matching redirect URI
@@ -87,27 +99,23 @@ export default async function handler(
       return res.status(400).json({ error: "Failed to get access token" });
     }
 
-    console.log('🔍 Looking up user by email:', userEmail);
-    // Get user by email
-    const user = await getUserByEmail(userEmail);
-    if (!user) {
-      console.error('❌ User not found by email:', userEmail);
-      return res.status(404).json({ error: "User not found" });
-    }
-    console.log('✅ User found:', user.id);
+    console.log('🔍 Using authenticated user for OAuth completion:', userEmail);
+    // SECURITY: Use the authenticated user directly (no lookup by email from state)
+    const user = currentUser;
+    console.log('✅ Using authenticated user:', user.id);
 
-    console.log('🔍 Checking for existing Google account...');
-    // Store or update the Google account in the database
+    console.log('🔍 Checking for existing Google account for authenticated user...');
+    // Store or update the Google account in the database - SCOPED TO AUTHENTICATED USER
     const existingAccount = await db.query.accounts.findFirst({
       where: and(
-        eq(accounts.userId, user.id),
+        eq(accounts.userId, user.id), // Use authenticated user's ID
         eq(accounts.provider, 'google')
       ),
     });
-    console.log('Existing account:', existingAccount ? 'Found' : 'Not found');
+    console.log('Existing account for authenticated user:', existingAccount ? 'Found' : 'Not found');
 
     if (existingAccount) {
-      console.log('🔄 Updating existing Google account...');
+      console.log('🔄 Updating existing Google account for authenticated user...');
       // Update existing account
       await db.update(accounts)
         .set({
@@ -115,13 +123,16 @@ export default async function handler(
           refresh_token: tokens.refresh_token || existingAccount.refresh_token,
           expires_at: tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : null,
         })
-        .where(eq(accounts.id, existingAccount.id));
-      console.log('✅ Updated existing Google account');
+        .where(and(
+          eq(accounts.id, existingAccount.id),
+          eq(accounts.userId, user.id) // Double-check user ID for security
+        ));
+      console.log('✅ Updated existing Google account for authenticated user');
     } else {
-      console.log('🔄 Creating new Google account...');
-      // Create new account
+      console.log('🔄 Creating new Google account for authenticated user...');
+      // Create new account - SCOPED TO AUTHENTICATED USER
       await db.insert(accounts).values({
-        userId: user.id,
+        userId: user.id, // Use authenticated user's ID
         type: 'oauth',
         provider: 'google',
         providerAccountId: 'google',
@@ -129,10 +140,10 @@ export default async function handler(
         refresh_token: tokens.refresh_token,
         expires_at: tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : null,
       });
-      console.log('✅ Created new Google account');
+      console.log('✅ Created new Google account for authenticated user');
     }
 
-    console.log('🔄 Fetching all available Google calendars...');
+    console.log('🔄 Fetching all available Google calendars for authenticated user...');
     // Fetch all available calendars and create sources for each
     try {
       const calendarListRes = await fetch(
@@ -144,7 +155,7 @@ export default async function handler(
       
       if (calendarListRes.ok) {
         const calendarList = await calendarListRes.json();
-        console.log('✅ Found', calendarList.items?.length || 0, 'Google calendars');
+        console.log('✅ Found', calendarList.items?.length || 0, 'Google calendars for authenticated user');
         
         if (calendarList.items && Array.isArray(calendarList.items)) {
           newGoogleSources = calendarList.items.map((calendar: any, index: number) => ({
@@ -156,7 +167,7 @@ export default async function handler(
             isEnabled: true,
           }));
           
-          console.log('Created calendar sources:', newGoogleSources.map(s => `${s.name} (${s.sourceId})`));
+          console.log('Created calendar sources for authenticated user:', newGoogleSources.map(s => `${s.name} (${s.sourceId})`));
         }
       } else {
         console.warn('Failed to fetch calendar list, creating primary calendar source only');
@@ -171,32 +182,35 @@ export default async function handler(
         }];
       }
     
-      console.log('🔄 Updating user settings with Google Calendar sources...');
-      // Update user settings with the new calendar sources - use the detected origin
+      console.log('🔄 Updating user settings with Google Calendar sources for authenticated user...');
+      // Update user settings with the new calendar sources - SCOPED TO AUTHENTICATED USER
       const baseUrl = requestOrigin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       console.log('Making request to:', `${baseUrl}/api/userSettings`);
       
+      // Use authenticated session to update settings (more secure than passing cookies)
       const userSettingsRes = await fetch(`${baseUrl}/api/userSettings`, {
         headers: {
           Cookie: req.headers.cookie || "",
+          'X-User-Email': userEmail, // Additional verification header
         },
       });
       
       if (userSettingsRes.ok) {
         const userSettings = await userSettingsRes.json();
-        console.log('Current calendar sources:', userSettings.calendarSources?.length || 0);
+        console.log('Current calendar sources for authenticated user:', userSettings.calendarSources?.length || 0);
         
-        // Remove existing Google sources and add new ones
+        // Remove existing Google sources and add new ones - USER SCOPED
         const nonGoogleSources = userSettings.calendarSources?.filter((source: any) => source.type !== 'google') || [];
         const updatedSources = [...nonGoogleSources, ...newGoogleSources];
         
-        console.log('Updating to', updatedSources.length, 'total calendar sources (', newGoogleSources.length, 'Google +', nonGoogleSources.length, 'others)');
+        console.log('Updating to', updatedSources.length, 'total calendar sources for authenticated user (', newGoogleSources.length, 'Google +', nonGoogleSources.length, 'others)');
         
         const updateRes = await fetch(`${baseUrl}/api/userSettings/update`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
             Cookie: req.headers.cookie || "",
+            'X-User-Email': userEmail, // Additional verification header
           },
           body: JSON.stringify({
             ...userSettings,
@@ -205,46 +219,48 @@ export default async function handler(
         });
         
         if (updateRes.ok) {
-          console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources');
+          console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources for authenticated user');
           
           // Verify the save by fetching settings again
           const verifyRes = await fetch(`${baseUrl}/api/userSettings`, {
             headers: {
               Cookie: req.headers.cookie || "",
+              'X-User-Email': userEmail, // Additional verification header
             },
           });
           
           if (verifyRes.ok) {
             const verifiedSettings = await verifyRes.json();
-            console.log('✅ Verified calendar sources saved:', verifiedSettings.calendarSources?.length || 0);
+            console.log('✅ Verified calendar sources saved for authenticated user:', verifiedSettings.calendarSources?.length || 0);
             
             // Double-check that Google sources are present
             const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
-            console.log('✅ Google sources in database:', googleSourcesInDb.length);
+            console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
             
             if (googleSourcesInDb.length !== newGoogleSources.length) {
-              console.error('❌ Mismatch in saved Google calendar sources!', {
+              console.error('❌ Mismatch in saved Google calendar sources for authenticated user!', {
                 expected: newGoogleSources.length,
-                actual: googleSourcesInDb.length
+                actual: googleSourcesInDb.length,
+                user: userEmail
               });
             }
           } else {
-            console.error('❌ Failed to verify settings save');
+            console.error('❌ Failed to verify settings save for authenticated user');
           }
         } else {
           const errorText = await updateRes.text();
-          console.error('❌ Failed to update user settings:', updateRes.status, errorText);
+          console.error('❌ Failed to update user settings for authenticated user:', updateRes.status, errorText);
         }
       } else {
         const errorText = await userSettingsRes.text();
-        console.error('❌ Failed to fetch user settings:', userSettingsRes.status, errorText);
+        console.error('❌ Failed to fetch user settings for authenticated user:', userSettingsRes.status, errorText);
       }
     } catch (settingsError) {
-      console.error("❌ Error updating calendar settings:", settingsError);
+      console.error("❌ Error updating calendar settings for authenticated user:", settingsError);
       // Don't fail the whole flow if settings update fails
     }
 
-    console.log('🎉 Google OAuth flow completed successfully');
+    console.log('🎉 Google OAuth flow completed successfully for authenticated user:', userEmail);
     const successMessage = isRefresh ? 'calendars_refreshed' : 'google_connected';
     return res.redirect(`/dashboard/settings?tab=calendar&success=${successMessage}`);
   } catch (error) {

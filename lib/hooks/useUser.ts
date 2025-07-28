@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { useRef, useCallback } from 'react';
+import { clearUserData } from '@/lib/auth';
 
 const fetcher = async (url: string) => {
   const response = await fetch(url, { 
@@ -79,10 +80,66 @@ export function useUser() {
     }
   }, [mutate]);
 
+  // Comprehensive logout function with cache cleanup
+  const logout = useCallback(async () => {
+    try {
+      console.log('🚪 Starting logout process...');
+      
+      // Get current user email before logout
+      const currentUserEmail = data?.primaryEmail || data?.email;
+      
+      // Call logout API
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const userEmailFromLogout = result.userEmail || currentUserEmail;
+        
+        // Clear user-specific data if we have the email
+        if (userEmailFromLogout && result.clearCache) {
+          console.log('🧹 Clearing user data for:', userEmailFromLogout);
+          await clearUserData(userEmailFromLogout);
+        }
+        
+        // Clear SWR cache
+        await mutate(null, false);
+        
+        console.log('✅ Logout completed successfully');
+        
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      } else {
+        throw new Error('Logout failed');
+      }
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      
+      // Even if logout API fails, clear local data and redirect
+      const userEmail = data?.primaryEmail || data?.email;
+      if (userEmail) {
+        await clearUserData(userEmail);
+      }
+      
+      // Clear SWR cache
+      await mutate(null, false);
+      
+      // Force redirect
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+  }, [data, mutate]);
+
   return {
     user: data,
     isLoading: !error && !data,
     isError: error,
     mutate: revalidate, // Use our wrapped revalidation function
+    logout, // Add logout function
   };
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
 import { CalendarEvent } from '@/types/calendar';
 import { calendarCache } from '@/lib/calendarCache';
+import { useUser } from '@/lib/hooks/useUser';
 
 interface UseCalendarEventsOptions {
   startDate: Date;
@@ -10,7 +11,7 @@ interface UseCalendarEventsOptions {
   calendarSourcesHash?: string; // Hash of calendar sources to detect changes
 }
 
-// Enhanced cache for calendar events with IndexedDB integration
+// Enhanced cache for calendar events with IndexedDB integration - USER SCOPED
 const eventCache = new Map<string, CachedEvent>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (increased for better performance)
 
@@ -21,11 +22,12 @@ interface CachedEvent {
   id: string;
   events: CalendarEvent[];
   lastUpdated: number;
+  userEmail: string; // ADD USER SCOPING
 }
 
-// Helper to generate cache key
-const getCacheKey = (startDate: Date, endDate: Date) => {
-  return `${startDate.toISOString()}_${endDate.toISOString()}`;
+// Helper to generate cache key - USER SCOPED
+const getCacheKey = (startDate: Date, endDate: Date, userEmail: string) => {
+  return `${userEmail}_${startDate.toISOString()}_${endDate.toISOString()}`;
 };
 
 // Helper to check if cache is valid
@@ -67,6 +69,7 @@ const fetchEvents = async (startDate: Date, endDate: Date): Promise<CalendarEven
 };
 
 export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendarSourcesHash }: UseCalendarEventsOptions) => {
+  const { user } = useUser(); // GET CURRENT USER
   const [localEvents, setLocalEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -81,13 +84,21 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   const lastCalendarSourcesHashRef = useRef<string>(''); // Track last known hash
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const cacheKey = getCacheKey(startDate, endDate);
+  // USER EMAIL REQUIRED FOR CACHE OPERATIONS
+  const userEmail = user?.primaryEmail || user?.email;
+  const cacheKey = userEmail ? getCacheKey(startDate, endDate, userEmail) : null;
 
-  // Initialize IndexedDB cache
+  // Don't proceed without user email to prevent data leakage
+  const canProceed = enabled && userEmail && !isInitializing;
+
+  // Initialize IndexedDB cache with user email
   useEffect(() => {
     const initCache = async () => {
       try {
-        await calendarCache.init();
+        if (userEmail) {
+          await calendarCache.init(userEmail);
+          console.log(`Calendar cache initialized for user: ${userEmail}`);
+        }
         setIsInitializing(false);
       } catch (error) {
         console.error('Failed to initialize calendar cache:', error);
@@ -95,8 +106,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       }
     };
 
-    if (enabled) {
+    if (enabled && userEmail) {
       initCache();
+    } else if (enabled && !userEmail) {
+      // Wait for user to be loaded
+      setIsInitializing(true);
     }
 
     return () => {
@@ -105,25 +119,28 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
-  }, [enabled]);
+  }, [enabled, userEmail]);
 
-  // Check cache first (both in-memory and IndexedDB)
+  // Check cache first (both in-memory and IndexedDB) - USER SCOPED
   const getCachedEvents = useCallback(async () => {
+    if (!userEmail || !cacheKey) return null;
+    
     try {
       // Check in-memory cache first
       const cached = eventCache.get(cacheKey);
-      if (cached && isCacheValid(cached)) {
+      if (cached && cached.userEmail === userEmail && isCacheValid(cached)) {
         return cached.events;
       }
 
       // Check IndexedDB cache
-      const cachedEvents = await calendarCache.getCachedEvents(startDate, endDate);
+      const cachedEvents = await calendarCache.getCachedEvents(startDate, endDate, userEmail);
       if (cachedEvents.length > 0) {
         // Update in-memory cache
         eventCache.set(cacheKey, {
           id: cacheKey,
           events: cachedEvents,
           lastUpdated: Date.now(),
+          userEmail,
         });
         return cachedEvents;
       }
@@ -132,11 +149,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     }
 
     return null;
-  }, [cacheKey, startDate, endDate]);
+  }, [cacheKey, startDate, endDate, userEmail]);
 
   // Load events with enhanced error handling and retries - stable version to prevent loops
   const loadEventsStable = useCallback(async (currentStartDate: Date, currentEndDate: Date, isBackgroundRefresh = false, forceReload = false) => {
-    if (!enabled || isInitializing || (isLoadingRef.current && !forceReload)) return;
+    if (!canProceed || !userEmail || !cacheKey || (isLoadingRef.current && !forceReload)) return;
 
     // Prevent duplicate loading
     isLoadingRef.current = true;
@@ -191,14 +208,15 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         new Map(events.map(event => [event.id, event])).values()
       );
       
-      // Cache the result in both in-memory and IndexedDB
+      // Cache the result in both in-memory and IndexedDB - USER SCOPED
       eventCache.set(cacheKey, {
         id: cacheKey,
         events: deduplicatedEvents,
         lastUpdated: Date.now(),
+        userEmail,
       });
 
-      // Cache in IndexedDB by source type (batched and error-safe)
+      // Cache in IndexedDB by source type (batched and error-safe) - USER SCOPED
       try {
         const eventsBySource = new Map<string, CalendarEvent[]>();
         deduplicatedEvents.forEach(event => {
@@ -213,7 +231,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
           eventsBySource.get(key)!.push(event);
         });
 
-        // Cache each source separately in IndexedDB (batched)
+        // Cache each source separately in IndexedDB (batched) - USER SCOPED
         for (const [key, sourceEvents] of Array.from(eventsBySource.entries())) {
           const [source, calendarId] = key.split('_', 2);
           await calendarCache.cacheEvents(
@@ -221,6 +239,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
             currentStartDate,
             currentEndDate,
             source as 'google' | 'o365' | 'ical',
+            userEmail, // PASS USER EMAIL
             calendarId
           );
         }
@@ -247,7 +266,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       }
       isLoadingRef.current = false;
     }
-  }, [enabled, isInitializing, cacheKey, getCachedEvents]);
+  }, [canProceed, userEmail, cacheKey, getCachedEvents]);
 
   // Wrapper function for compatibility
   const loadEvents = useCallback((isBackgroundRefresh = false, forceReload = false) => {
@@ -258,25 +277,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   const startBackgroundRefresh = useCallback(() => {
     // Completely disable background refresh for now
     return;
-    
-    if (backgroundRefreshRef.current) {
-      clearInterval(backgroundRefreshRef.current as NodeJS.Timeout);
-    }
-
-    backgroundRefreshRef.current = setInterval(async () => {
-      if (!mountedRef.current) return;
-      
-      try {
-        // Only do background refresh if we have cached data to avoid interrupting user
-        const cached = await getCachedEvents();
-        if (cached && cached.length > 0) {
-          await loadEvents(true);
-        }
-      } catch (error) {
-        console.warn('Background refresh error:', error);
-      }
-    }, BACKGROUND_REFRESH_INTERVAL);
-  }, [loadEvents, getCachedEvents]);
+  }, []);
 
   // Stop background refresh
   const stopBackgroundRefresh = useCallback(() => {
@@ -286,27 +287,28 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     }
   }, []);
 
-  // Add event to cache and local state
+  // Add event to cache and local state - USER SCOPED
   const addEvent = useCallback(async (newEvent: CalendarEvent) => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !userEmail || !cacheKey) return;
     
     setLocalEvents(prev => {
       const updated = [...prev, newEvent];
       
-      // Update in-memory cache
+      // Update in-memory cache - USER SCOPED
       const cached = eventCache.get(cacheKey);
-      if (cached) {
+      if (cached && cached.userEmail === userEmail) {
         eventCache.set(cacheKey, {
           ...cached,
           events: updated,
           lastUpdated: Date.now(),
+          userEmail,
         });
       }
       
       return updated;
     });
 
-    // Update IndexedDB cache
+    // Update IndexedDB cache - USER SCOPED
     try {
       const source = newEvent.calendarId?.startsWith('o365_') ? 'o365' : 
                    newEvent.calendarId?.startsWith('ical_') ? 'ical' : 'google';
@@ -317,36 +319,38 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         startDate,
         endDate,
         source as 'google' | 'o365' | 'ical',
+        userEmail, // PASS USER EMAIL
         calendarId
       );
     } catch (error) {
       console.error('Error caching new event:', error);
     }
-  }, [cacheKey, startDate, endDate]);
+  }, [cacheKey, startDate, endDate, userEmail]);
 
-  // Update event in cache and local state
+  // Update event in cache and local state - USER SCOPED
   const updateEvent = useCallback(async (eventId: string, updatedEvent: CalendarEvent) => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !userEmail || !cacheKey) return;
     
     setLocalEvents(prev => {
       const updated = prev.map(event => 
         event.id === eventId ? updatedEvent : event
       );
       
-      // Update in-memory cache
+      // Update in-memory cache - USER SCOPED
       const cached = eventCache.get(cacheKey);
-      if (cached) {
+      if (cached && cached.userEmail === userEmail) {
         eventCache.set(cacheKey, {
           ...cached,
           events: updated,
           lastUpdated: Date.now(),
+          userEmail,
         });
       }
       
       return updated;
     });
 
-    // Update IndexedDB cache
+    // Update IndexedDB cache - USER SCOPED
     try {
       const source = updatedEvent.calendarId?.startsWith('o365_') ? 'o365' : 
                    updatedEvent.calendarId?.startsWith('ical_') ? 'ical' : 'google';
@@ -357,27 +361,29 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         startDate,
         endDate,
         source as 'google' | 'o365' | 'ical',
+        userEmail, // PASS USER EMAIL
         calendarId
       );
     } catch (error) {
       console.error('Error caching updated event:', error);
     }
-  }, [cacheKey, startDate, endDate]);
+  }, [cacheKey, startDate, endDate, userEmail]);
 
-  // Remove event from cache and local state
+  // Remove event from cache and local state - USER SCOPED
   const removeEvent = useCallback(async (eventId: string) => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !userEmail || !cacheKey) return;
     
     setLocalEvents(prev => {
       const updated = prev.filter(event => event.id !== eventId);
       
-      // Update in-memory cache
+      // Update in-memory cache - USER SCOPED
       const cached = eventCache.get(cacheKey);
-      if (cached) {
+      if (cached && cached.userEmail === userEmail) {
         eventCache.set(cacheKey, {
           ...cached,
           events: updated,
           lastUpdated: Date.now(),
+          userEmail,
         });
       }
       
@@ -385,29 +391,34 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     });
 
     // Note: IndexedDB cache will be updated on next background refresh
-  }, [cacheKey]);
+  }, [cacheKey, userEmail]);
 
-  // Invalidate cache for a specific date range - stable version
+  // Invalidate cache for a specific date range - stable version - USER SCOPED
   const invalidateCache = useCallback(async (start?: Date, end?: Date) => {
-    const key = start && end ? getCacheKey(start, end) : cacheKey;
-    eventCache.delete(key);
+    if (!userEmail) return;
     
-    // Clear IndexedDB cache for the range
+    const key = start && end ? getCacheKey(start, end, userEmail) : cacheKey;
+    if (key) {
+      eventCache.delete(key);
+    }
+    
+    // Clear IndexedDB cache for the range - USER SCOPED
     try {
-      await calendarCache.clearExpiredCache();
+      await calendarCache.clearExpiredCache(userEmail);
     } catch (error) {
       console.error('Error clearing IndexedDB cache:', error);
     }
-  }, [cacheKey]);
+  }, [cacheKey, userEmail]);
 
   // HEAVILY DEBOUNCED - Clear cache and reload when calendar sources change
   useEffect(() => {
-    if (!isInitializing && calendarSourcesHash && calendarSourcesHash !== 'empty') {
+    if (!isInitializing && canProceed && calendarSourcesHash && calendarSourcesHash !== 'empty') {
       // Only react to real changes, not initialization
       if (lastCalendarSourcesHashRef.current && lastCalendarSourcesHashRef.current !== calendarSourcesHash) {
         console.log('Calendar sources actually changed:', {
           from: lastCalendarSourcesHashRef.current,
-          to: calendarSourcesHash
+          to: calendarSourcesHash,
+          user: userEmail
         });
         
         // Clear any existing timeout
@@ -416,7 +427,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         }
         
         loadingTimeoutRef.current = setTimeout(() => {
-          console.log('Executing calendar sources change reload');
+          console.log('Executing calendar sources change reload for user:', userEmail);
           invalidateCache().then(() => {
             loadEventsStable(startDate, endDate, false, true); // Force reload
           });
@@ -432,11 +443,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
-  }, [calendarSourcesHash, isInitializing]); // Only these dependencies
+  }, [calendarSourcesHash, isInitializing, canProceed, userEmail]); // Add userEmail dependency
 
   // Load events on mount and when date range changes - minimal dependencies
   useEffect(() => {
-    if (!isInitializing) {
+    if (canProceed) {
       // Clear any existing timeout
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
@@ -452,31 +463,18 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
       }
     };
-  }, [startDate.getTime(), endDate.getTime(), isInitializing]); // Only date and init state
-
-  // DISABLED - Start background refresh when component mounts
-  useEffect(() => {
-    // Disable background refresh completely
-    return;
-    
-    if (enabled && !isInitializing) {
-      startBackgroundRefresh();
-    }
-
-    return () => {
-      stopBackgroundRefresh();
-    };
-  }, [enabled, startBackgroundRefresh, stopBackgroundRefresh, isInitializing]);
+  }, [startDate.getTime(), endDate.getTime(), canProceed]); // Use canProceed instead of isInitializing
 
   // Manual refetch with force reload
   const refetch = useCallback(() => {
+    if (!canProceed) return Promise.resolve();
     retryCountRef.current = 0; // Reset retry count
     return loadEvents(false, true);
-  }, [loadEvents]);
+  }, [loadEvents, canProceed]);
 
   return {
     events: localEvents,
-    isLoading: isLoading || isInitializing,
+    isLoading: isLoading || isInitializing || !userEmail,
     error,
     isBackgroundRefreshing,
     addEvent,
