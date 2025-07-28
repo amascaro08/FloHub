@@ -5,14 +5,16 @@ import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
 import { useCalendarContext } from '@/contexts/CalendarContext';
 import { CalendarEvent } from '@/types/calendar';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
+import { format, isToday, isTomorrow, isThisWeek, startOfWeek, endOfWeek, startOfDay, endOfDay, addDays } from 'date-fns';
+import { Calendar, Clock, MapPin, ChevronRight, Users } from 'lucide-react';
 import EventDetailModal from '@/components/ui/EventDetailModal';
 import type { WidgetProps } from '@/types/app';
 
 interface CalendarWidgetProps extends WidgetProps {
   className?: string;
 }
+
+type TimeSelection = 'today' | 'tomorrow' | 'thisWeek';
 
 const CalendarWidget: React.FC<CalendarWidgetProps> = ({ 
   className = '', 
@@ -23,10 +25,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   isHero = false 
 }) => {
   const { user } = useUser();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<TimeSelection>('today');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -34,98 +33,122 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   const isClient = typeof window !== 'undefined';
   const trackingHook = isClient ? useWidgetTracking('CalendarWidget') : { trackInteraction: () => {} };
 
-  // Use shared calendar context instead of individual hook
+  // Use shared calendar context with proper error handling
   const {
-    events,
-    isLoading: eventsLoading,
-    error: eventsError,
+    events = [],
+    isLoading,
+    error,
     isBackgroundRefreshing,
-  } = useCalendarContext();
+  } = useCalendarContext() || { events: [], isLoading: true, error: null, isBackgroundRefreshing: false };
 
-  // Generate calendar days
-  const calendarDays = useMemo(() => {
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
-    const days = eachDayOfInterval({ start, end });
-    
-    // Add padding days for proper grid layout
-    const firstDayOfWeek = start.getDay();
-    const lastDayOfWeek = end.getDay();
-    
-    const paddingStart = Array.from({ length: firstDayOfWeek }, (_, i) => {
-      const date = new Date(start);
-      date.setDate(date.getDate() - (firstDayOfWeek - i));
-      return date;
-    });
-    
-    const paddingEnd = Array.from({ length: 6 - lastDayOfWeek }, (_, i) => {
-      const date = new Date(end);
-      date.setDate(date.getDate() + i + 1);
-      return date;
-    });
-    
-    return [...paddingStart, ...days, ...paddingEnd];
-  }, [currentDate]);
-
-  // Group events by date for efficient lookup
-  const eventsByDate = useMemo(() => {
-    const grouped = new Map<string, CalendarEvent[]>();
-    
-    // Safety check to prevent errors when events is undefined
+  // Filter events based on selected time period
+  const filteredEvents = useMemo(() => {
     if (!events || !Array.isArray(events)) {
-      return grouped;
+      return [];
     }
     
-    events.forEach(event => {
+    const now = new Date();
+    const tomorrow = addDays(now, 1);
+    
+    return events.filter(event => {
       let eventDate: Date;
       
-      if (event.start instanceof Date) {
-        eventDate = event.start;
-      } else if (event.start?.dateTime) {
-        eventDate = new Date(event.start.dateTime);
-      } else if (event.start?.date) {
-        eventDate = new Date(event.start.date);
-      } else {
-        // Skip events without valid start date
-        return;
+      try {
+        if (event.start instanceof Date) {
+          eventDate = event.start;
+        } else if (event.start?.dateTime) {
+          eventDate = new Date(event.start.dateTime);
+        } else if (event.start?.date) {
+          eventDate = new Date(event.start.date);
+        } else {
+          return false;
+        }
+        
+        // Skip invalid dates
+        if (isNaN(eventDate.getTime())) {
+          return false;
+        }
+        
+        switch (selectedTime) {
+          case 'today':
+            return isToday(eventDate);
+          case 'tomorrow':
+            return isTomorrow(eventDate);
+          case 'thisWeek':
+            return isThisWeek(eventDate, { weekStartsOn: 0 }); // Week starts on Sunday
+          default:
+            return false;
+        }
+      } catch (error) {
+        console.warn('Error filtering event:', error);
+        return false;
       }
-      
-      // Skip invalid dates
-      if (isNaN(eventDate.getTime())) {
-        return;
+    }).sort((a, b) => {
+      // Sort by start time
+      try {
+        const aTime = a.start instanceof Date ? a.start : 
+                     a.start?.dateTime ? new Date(a.start.dateTime) : 
+                     a.start?.date ? new Date(a.start.date) : new Date(0);
+        const bTime = b.start instanceof Date ? b.start : 
+                     b.start?.dateTime ? new Date(b.start.dateTime) : 
+                     b.start?.date ? new Date(b.start.date) : new Date(0);
+        return aTime.getTime() - bTime.getTime();
+      } catch (error) {
+        return 0;
       }
-      
-      const dateKey = format(eventDate, 'yyyy-MM-dd');
-      if (!grouped.has(dateKey)) {
-        grouped.set(dateKey, []);
+    });
+  }, [events, selectedTime]);
+
+  // Get count for each time period
+  const eventCounts = useMemo(() => {
+    if (!events || !Array.isArray(events)) {
+      return { today: 0, tomorrow: 0, thisWeek: 0 };
+    }
+    
+    const now = new Date();
+    const tomorrow = addDays(now, 1);
+    
+    const counts = { today: 0, tomorrow: 0, thisWeek: 0 };
+    
+    events.forEach(event => {
+      try {
+        let eventDate: Date;
+        
+        if (event.start instanceof Date) {
+          eventDate = event.start;
+        } else if (event.start?.dateTime) {
+          eventDate = new Date(event.start.dateTime);
+        } else if (event.start?.date) {
+          eventDate = new Date(event.start.date);
+        } else {
+          return;
+        }
+        
+        if (isNaN(eventDate.getTime())) {
+          return;
+        }
+        
+        if (isToday(eventDate)) {
+          counts.today++;
+        }
+        if (isTomorrow(eventDate)) {
+          counts.tomorrow++;
+        }
+        if (isThisWeek(eventDate, { weekStartsOn: 0 })) {
+          counts.thisWeek++;
+        }
+      } catch (error) {
+        console.warn('Error counting event:', error);
       }
-      grouped.get(dateKey)!.push(event);
     });
     
-    return grouped;
+    return counts;
   }, [events]);
 
-  // Navigation handlers
-  const goToPreviousMonth = useCallback(() => {
-    setCurrentDate(prev => subMonths(prev, 1));
-    trackingHook.trackInteraction('navigate_previous_month');
-  }, [trackingHook]);
-
-  const goToNextMonth = useCallback(() => {
-    setCurrentDate(prev => addMonths(prev, 1));
-    trackingHook.trackInteraction('navigate_next_month');
-  }, [trackingHook]);
-
-  const goToToday = useCallback(() => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
-    trackingHook.trackInteraction('navigate_today');
-  }, [trackingHook]);
-
-  // Handle date selection
-  const handleDateClick = useCallback((date: Date) => {
-    setSelectedDate(date);
-    trackingHook.trackInteraction('select_date');
+  // Handle time selection
+  const handleTimeSelection = useCallback((time: TimeSelection) => {
+    setSelectedTime(time);
+    trackingHook.trackInteraction(`select_${time}`);
   }, [trackingHook]);
 
   // Handle event click
@@ -141,20 +164,59 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     setSelectedEvent(null);
   }, []);
 
-  // Loading state
-  if (eventsLoading && events.length === 0) {
+  // Format event time
+  const formatEventTime = useCallback((event: CalendarEvent) => {
+    try {
+      if (event.start instanceof Date) {
+        return format(event.start, 'h:mm a');
+      } else if (event.start?.dateTime) {
+        return format(new Date(event.start.dateTime), 'h:mm a');
+      } else if (event.start?.date) {
+        return 'All day';
+      }
+      return '';
+    } catch (error) {
+      return '';
+    }
+  }, []);
+
+  // Get the current time period label
+  const getTimePeriodLabel = useCallback(() => {
+    switch (selectedTime) {
+      case 'today':
+        return format(new Date(), 'EEEE, MMM d');
+      case 'tomorrow':
+        return format(addDays(new Date(), 1), 'EEEE, MMM d');
+      case 'thisWeek':
+        const start = startOfWeek(new Date(), { weekStartsOn: 0 });
+        const end = endOfWeek(new Date(), { weekStartsOn: 0 });
+        return `Week of ${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+      default:
+        return '';
+    }
+  }, [selectedTime]);
+
+  // Loading state with graceful fallback
+  if (isLoading && (!events || events.length === 0)) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 h-full flex flex-col">
+        {/* Loading Header */}
+        <div className="flex items-center justify-between flex-shrink-0">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
-          <div className="flex space-x-2">
-            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: 42 }).map((_, i) => (
-            <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        
+        {/* Loading Time Selection */}
+        <div className="flex space-x-2 flex-shrink-0">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded flex-1 animate-pulse"></div>
+          ))}
+        </div>
+        
+        {/* Loading Events */}
+        <div className="space-y-2 flex-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           ))}
         </div>
       </div>
@@ -162,255 +224,125 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   }
 
   // Error state
-  if (error || eventsError) {
+  if (error) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 h-full flex flex-col justify-center">
         <div className="w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-6 h-6 text-accent-500" />
         </div>
-        <p className="text-grey-tint font-body text-sm">
+        <p className="text-grey-tint font-body text-sm mb-2">
           Unable to load calendar events
+        </p>
+        <p className="text-xs text-grey-tint">
+          {error.message}
         </p>
       </div>
     );
   }
 
-  // Get today's events for preview
-  const todayEvents = useMemo(() => {
-    const today = new Date();
-    const todayKey = format(today, 'yyyy-MM-dd');
-    return eventsByDate.get(todayKey) || [];
-  }, [eventsByDate]);
-
-  // Get events to display (selected date or today)
-  const { displayEvents, displayTitle } = useMemo(() => {
-    const isSelectedDateToday = selectedDate && isSameDay(selectedDate, new Date());
-    const events = selectedDate && !isSelectedDateToday
-      ? eventsByDate.get(format(selectedDate, 'yyyy-MM-dd')) || []
-      : todayEvents;
-    const title = selectedDate && !isSelectedDateToday
-      ? `Events for ${format(selectedDate, 'MMM d')}`
-      : "Today's Events";
-    
-    return { displayEvents: events, displayTitle: title };
-  }, [selectedDate, eventsByDate, todayEvents]);
-
-  // Render different layouts based on size
-  if (isCompact) {
-    // Compact view: Focus on today's events
-    return (
-      <div className="space-y-2 h-full flex flex-col">
-        {/* Compact Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <h3 className="text-sm font-heading font-semibold text-dark-base dark:text-soft-white">
-            {format(new Date(), 'MMM d, yyyy')}
+  return (
+    <div className="space-y-4 h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-2">
+          <Calendar className="w-5 h-5 text-primary-500" />
+          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-heading font-semibold text-dark-base dark:text-soft-white`}>
+            Calendar
           </h3>
-          <button
-            onClick={goToToday}
-            className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
-          >
-            Today
-          </button>
-        </div>
-        
-        {/* Today's Events List */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {todayEvents.length > 0 ? (
-            <div className="space-y-1">
-              {todayEvents.slice(0, 6).map((event) => (
-                <button
-                  key={event.id}
-                  onClick={() => handleEventClick(event)}
-                  className="w-full text-left p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
-                >
-                  <div className="flex items-start space-x-2">
-                    <div className="w-1 h-1 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-dark-base dark:text-soft-white break-words">
-                        {event.summary && event.summary.length > 25 ? event.summary.slice(0, 25) + '...' : event.summary || 'No title'}
-                      </p>
-                      {event.start && 'dateTime' in event.start && event.start.dateTime && (
-                        <p className="text-xs text-grey-tint mt-0.5">
-                          {format(new Date(event.start.dateTime), 'h:mm a')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-              {todayEvents.length > 6 && (
-                <p className="text-xs text-grey-tint text-center py-1">
-                  +{todayEvents.length - 6} more events
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <Calendar className="w-6 h-6 text-grey-tint mx-auto mb-2" />
-              <p className="text-xs text-grey-tint">No events today</p>
-            </div>
+          {isBackgroundRefreshing && (
+            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
           )}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} h-full flex flex-col`}>
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center space-x-1 min-w-0">
-          <button
-            onClick={goToPreviousMonth}
-            className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <ChevronLeft className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-          </button>
-          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-heading font-semibold text-dark-base dark:text-soft-white truncate`}>
-            {format(currentDate, isCompact ? 'MMM' : 'MMM yyyy')}
-          </h3>
-          <button
-            onClick={goToNextMonth}
-            className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <ChevronRight className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
-          </button>
-        </div>
-        <button
-          onClick={goToToday}
-          className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors flex-shrink-0"
-        >
-          Today
-        </button>
+        <span className={`${isCompact ? 'text-xs' : 'text-sm'} text-grey-tint`}>
+          {filteredEvents.length} events
+        </span>
       </div>
 
-      {/* Calendar Grid */}
-      <div className={`${isCompact ? 'space-y-0.5' : 'space-y-1'} flex-shrink-0`}>
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 gap-0.5">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-            <div key={index} className="text-center">
-              <span className={`${isCompact ? 'text-xs' : 'text-xs'} font-medium text-grey-tint`}>{day}</span>
+      {/* Time Period Selection */}
+      <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
+        {[
+          { key: 'today' as TimeSelection, label: 'Today', count: eventCounts.today },
+          { key: 'tomorrow' as TimeSelection, label: 'Tomorrow', count: eventCounts.tomorrow },
+          { key: 'thisWeek' as TimeSelection, label: 'This Week', count: eventCounts.thisWeek }
+        ].map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => handleTimeSelection(key)}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-200 ${
+              selectedTime === key
+                ? 'bg-primary-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            <div className="flex flex-col items-center space-y-1">
+              <span>{label}</span>
+              <span className={`text-xs ${
+                selectedTime === key ? 'text-white' : 'text-gray-500 dark:text-gray-500'
+              }`}>
+                {count}
+              </span>
             </div>
-          ))}
-        </div>
+          </button>
+        ))}
+      </div>
 
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-0.5">
-          {calendarDays.map((day, index) => {
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isTodayDate = isToday(day);
-            const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const dayKey = format(day, 'yyyy-MM-dd');
-            const dayEvents = eventsByDate.get(dayKey) || [];
+      {/* Current Selection Label */}
+      <div className="flex-shrink-0">
+        <p className="text-sm font-medium text-dark-base dark:text-soft-white">
+          {getTimePeriodLabel()}
+        </p>
+      </div>
 
-            return (
-              <button
-                key={index}
-                onClick={() => handleDateClick(day)}
-                className={`relative p-1 text-xs rounded transition-all duration-200 ${isCompact ? 'min-h-[20px]' : 'min-h-[28px]'} ${
-                  isSelected
-                    ? 'bg-primary-500 text-white'
-                    : isTodayDate
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                    : isCurrentMonth
-                    ? 'text-dark-base dark:text-soft-white hover:bg-gray-100 dark:hover:bg-gray-800'
-                    : 'text-gray-400 dark:text-gray-600'
-                }`}
-              >
-                <span className="font-medium">{format(day, 'd')}</span>
-                
-                {/* Event Indicators */}
-                {dayEvents.length > 0 && (
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-0.5">
-                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                      <div
-                        key={eventIndex}
-                        className={`w-1 h-1 rounded-full ${
-                          isSelected ? 'bg-white' : 'bg-primary-500'
-                        }`}
-                      />
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <span className={`text-xs ${
-                        isSelected ? 'text-white' : 'text-primary-500'
-                      }`}>
-                        +{dayEvents.length - 3}
+      {/* Events List */}
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {filteredEvents.length > 0 ? (
+          filteredEvents.map((event) => (
+            <button
+              key={event.id}
+              onClick={() => handleEventClick(event)}
+              className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 hover:shadow-sm transition-all duration-200"
+            >
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
+                    {event.summary || 'No title'}
+                  </p>
+                  <div className="flex items-center space-x-3 mt-1">
+                    <span className="text-xs text-grey-tint flex items-center space-x-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatEventTime(event)}</span>
+                    </span>
+                    {event.location && (
+                      <span className="text-xs text-grey-tint flex items-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span className="truncate max-w-24">{event.location}</span>
+                      </span>
+                    )}
+                    {event.description && event.description.includes('teams.microsoft.com') && (
+                      <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+                        <Users className="w-3 h-3" />
+                        <span>Teams</span>
                       </span>
                     )}
                   </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Date Events or Today's Events Preview */}
-      {displayEvents.length > 0 && (
-        <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-          <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2 flex-shrink-0">
-            <Clock className="w-3 h-3 text-primary-500" />
-            <span>{displayTitle} ({displayEvents.length})</span>
-          </h4>
-          <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
-             {displayEvents.slice(0, 5).map((event) => (
-              <button
-                key={event.id}
-                onClick={() => handleEventClick(event)}
-                className="w-full text-left p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
-              >
-                <div className="flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-dark-base dark:text-soft-white break-words leading-relaxed">
-                      {event.summary}
-                    </p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      {event.start && (
-                        <span className="text-xs text-grey-tint flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>
-                            {event.start instanceof Date 
-                              ? format(event.start, 'h:mm a')
-                              : event.start.dateTime 
-                                ? format(new Date(event.start.dateTime), 'h:mm a')
-                                : 'All day'
-                            }
-                          </span>
-                        </span>
-                      )}
-                      {event.location && (
-                        <span className="text-xs text-grey-tint flex items-center space-x-1">
-                          <MapPin className="w-3 h-3" />
-                          <span className="truncate">{event.location}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 </div>
-              </button>
-            ))}
-            {displayEvents.length > 5 && (
-              <p className="text-xs text-grey-tint text-center">
-                +{displayEvents.length - 5} more events
-              </p>
-            )}
+                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              </div>
+            </button>
+          ))
+        ) : (
+          <div className="text-center py-8">
+            <Calendar className="w-8 h-8 text-grey-tint mx-auto mb-3" />
+            <p className="text-sm text-grey-tint mb-1">
+              No events {selectedTime === 'today' ? 'today' : selectedTime === 'tomorrow' ? 'tomorrow' : 'this week'}
+            </p>
+            <p className="text-xs text-grey-tint">
+              {selectedTime === 'today' ? 'Enjoy your free day!' : 'Your schedule is clear'}
+            </p>
           </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {events.length === 0 && (
-        <div className="text-center py-8">
-          <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="w-6 h-6 text-primary-500" />
-          </div>
-          <p className="text-grey-tint font-body text-sm">
-            No events scheduled
-          </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Event Detail Modal */}
       {selectedEvent && (
