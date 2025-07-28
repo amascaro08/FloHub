@@ -248,8 +248,11 @@ async function handleGeneralQuery(userInput: string, context: AssistantContext, 
       return "I'm not able to process complex queries right now. Please try asking about your calendar or tasks.";
     }
 
-    // PERFORMANCE FIX: Use lightweight AI assistant
+    // PERFORMANCE FIX: Use lightweight AI assistant  
     const smartAssistant = new SmartAIAssistant(context.email);
+    
+    // Load user context before processing query
+    await smartAssistant.loadUserContext();
     
     // Add debugging in development
     if (process.env.NODE_ENV === 'development') {

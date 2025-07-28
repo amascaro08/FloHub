@@ -99,12 +99,12 @@ interface ProactiveSuggestion {
 }
 
 export class SmartAIAssistant {
-  private userId: string;
+  private userEmail: string;
   private context: UserContext | null = null;
   private patterns: PatternAnalysis | null = null;
 
-  constructor(userId: string) {
-    this.userId = userId;
+  constructor(userEmail: string) {
+    this.userEmail = userEmail;
   }
 
   // Public method to update calendar events with external data
@@ -154,7 +154,7 @@ export class SmartAIAssistant {
         // Tasks (last 30 days)
         db.select().from(tasks)
           .where(and(
-            eq(tasks.user_email, this.userId),
+            eq(tasks.user_email, this.userEmail),
             gte(tasks.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(tasks.createdAt)),
@@ -162,20 +162,20 @@ export class SmartAIAssistant {
         // Notes (last 30 days)
         db.select().from(notes)
           .where(and(
-            eq(notes.user_email, this.userId),
+            eq(notes.user_email, this.userEmail),
             gte(notes.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(notes.createdAt)),
 
         // Habits
         db.select().from(habits)
-          .where(eq(habits.userId, this.userId))
+          .where(eq(habits.userId, this.userEmail))
           .orderBy(desc(habits.createdAt)),
 
         // Habit completions (last 30 days)
         db.select().from(habitCompletions)
           .where(and(
-            eq(habitCompletions.userId, this.userId),
+            eq(habitCompletions.userId, this.userEmail),
             gte(habitCompletions.timestamp, thirtyDaysAgo)
           ))
           .orderBy(desc(habitCompletions.timestamp)),
@@ -183,7 +183,7 @@ export class SmartAIAssistant {
         // Journal entries (last 30 days)
         db.select().from(journalEntries)
           .where(and(
-            eq(journalEntries.user_email, this.userId),
+            eq(journalEntries.user_email, this.userEmail),
             gte(journalEntries.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(journalEntries.createdAt)),
@@ -191,19 +191,19 @@ export class SmartAIAssistant {
         // Journal moods (last 30 days)
         db.select().from(journalMoods)
           .where(and(
-            eq(journalMoods.user_email, this.userId),
+            eq(journalMoods.user_email, this.userEmail),
             gte(journalMoods.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(journalMoods.createdAt)),
 
         // Calendar events (last 7 days + next 7 days)
         db.select().from(calendarEvents)
-          .where(eq(calendarEvents.user_email, this.userId)),
+          .where(eq(calendarEvents.user_email, this.userEmail)),
 
         // Meetings (last 30 days)
         db.select().from(meetings)
           .where(and(
-            eq(meetings.userId, this.userId),
+            eq(meetings.userId, this.userEmail),
             gte(meetings.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(meetings.createdAt)),
@@ -211,19 +211,19 @@ export class SmartAIAssistant {
         // Conversations (last 30 days)
         db.select().from(conversations)
           .where(and(
-            eq(conversations.userId, this.userId),
+            eq(conversations.userId, this.userEmail),
             gte(conversations.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(conversations.createdAt)),
 
         // User settings
         db.select().from(userSettings)
-          .where(eq(userSettings.user_email, this.userId))
+          .where(eq(userSettings.user_email, this.userEmail))
           .limit(1)
       ]);
 
       this.context = {
-        userId: this.userId,
+        userId: this.userEmail,
         tasks: userTasks,
         completedTasks: userTasks.filter(task => task.done),
         notes: userNotes,
