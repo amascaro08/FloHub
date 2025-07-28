@@ -19,20 +19,20 @@ export default async function handler(
     return res.status(200).end();
   }
 
+  console.log("=== GITHUB WEBHOOK RECEIVED ===");
+  console.log("Method:", req.method);
+  console.log("Headers:", {
+    'x-github-event': req.headers['x-github-event'],
+    'x-github-delivery': req.headers['x-github-delivery'],
+    'x-hub-signature-256': req.headers['x-hub-signature-256'] ? 'present' : 'missing',
+    'user-agent': req.headers['user-agent']
+  });
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+
   if (req.method !== "POST") {
     console.log(`Webhook received ${req.method} request, expected POST`);
     return res.status(405).json({ error: "Method Not Allowed" });
   }
-
-  console.log("GitHub webhook received:", {
-    method: req.method,
-    headers: {
-      'x-github-event': req.headers['x-github-event'],
-      'x-github-delivery': req.headers['x-github-delivery'],
-      'x-hub-signature-256': req.headers['x-hub-signature-256'] ? 'present' : 'missing'
-    },
-    body: req.body
-  });
 
   // Verify GitHub webhook signature if secret is provided
   const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
