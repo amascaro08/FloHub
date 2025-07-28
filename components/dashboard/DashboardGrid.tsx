@@ -241,6 +241,7 @@ const DashboardGrid: React.FC = () => {
   const [slotAssignments, setSlotAssignments] = useState<WidgetSlotAssignment>({});
   const [loadedSettings, setLoadedSettings] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showLayoutSelector, setShowLayoutSelector] = useState(false);
   const isMountedRef = useRef(true);
 
   // Client-side only
@@ -370,22 +371,58 @@ const DashboardGrid: React.FC = () => {
     if (!currentConfig) return {};
     
     const layouts: any = {};
-    const breakpoints = ['lg', 'md', 'sm', 'xs', 'xxs'] as const;
     
-    breakpoints.forEach(breakpoint => {
-      layouts[breakpoint] = currentConfig.slots.map(slot => ({
-        i: slot.id,
-        x: slot.position.col,
-        y: slot.position.row,
-        w: slot.position.colSpan,
-        h: slot.position.rowSpan,
-        minW: slot.size === 'hero' ? 6 : slot.size === 'large' ? 4 : slot.size === 'medium' ? 3 : 2,
-        minH: slot.size === 'hero' ? 12 : slot.size === 'large' ? 10 : slot.size === 'medium' ? 8 : 6,
-        maxW: slot.size === 'hero' ? 12 : slot.size === 'large' ? 8 : slot.size === 'medium' ? 6 : 4,
-        maxH: slot.size === 'hero' ? 20 : slot.size === 'large' ? 16 : slot.size === 'medium' ? 12 : 10,
-        static: true // Make tiles non-draggable since they're templated
-      }));
-    });
+    // Use only filled slots to avoid empty layout items
+    const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
+    
+    // Simple layout generation - use original positions but only for lg breakpoint first
+    layouts.lg = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: slot.position.col,
+      y: slot.position.row,
+      w: slot.position.colSpan,
+      h: slot.position.rowSpan,
+      static: true
+    }));
+    
+    // For smaller breakpoints, stack vertically
+    layouts.md = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: 0,
+      y: index * 8,
+      w: 8,
+      h: 8,
+      static: true
+    }));
+    
+    layouts.sm = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: 0,
+      y: index * 8,
+      w: 6,
+      h: 8,
+      static: true
+    }));
+    
+    layouts.xs = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: 0,
+      y: index * 8,
+      w: 4,
+      h: 8,
+      static: true
+    }));
+    
+    layouts.xxs = filledSlots.map((slot, index) => ({
+      i: slot.id,
+      x: 0,
+      y: index * 8,
+      w: 2,
+      h: 8,
+      static: true
+    }));
+    
+    
     
     return layouts;
   };
@@ -457,22 +494,28 @@ const DashboardGrid: React.FC = () => {
             {/* Dashboard Controls */}
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => window.location.href = '/dashboard/settings'}
-                className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                onClick={() => setShowLayoutSelector(!showLayoutSelector)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                  showLayoutSelector 
+                    ? 'bg-primary-500 text-white hover:bg-primary-600' 
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
               >
                 <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Widget Settings</span>
+                <span className="hidden sm:inline">Dashboard Layout</span>
               </button>
             </div>
           </div>
 
           {/* Layout Template Selector */}
-          <LayoutTemplateSelector
-            currentTemplate={currentTemplate}
-            slotAssignments={slotAssignments}
-            onTemplateChange={handleTemplateChange}
-            onSlotAssignmentChange={handleSlotAssignmentChange}
-          />
+          {showLayoutSelector && (
+            <LayoutTemplateSelector
+              currentTemplate={currentTemplate}
+              slotAssignments={slotAssignments}
+              onTemplateChange={handleTemplateChange}
+              onSlotAssignmentChange={handleSlotAssignmentChange}
+            />
+          )}
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
