@@ -29,6 +29,22 @@ export default async function handler(
     try {
       console.log('🔄 Generating Google OAuth URL...');
       
+      // Detect the request origin for proper redirect URI
+      const protocol = req.headers['x-forwarded-proto'] || (req.connection as any)?.encrypted ? 'https' : 'http';
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const requestOrigin = host ? `${protocol}://${host}` : undefined;
+      
+      console.log('Request origin detected:', {
+        protocol,
+        host,
+        requestOrigin,
+        headers: {
+          'x-forwarded-proto': req.headers['x-forwarded-proto'],
+          'x-forwarded-host': req.headers['x-forwarded-host'],
+          'host': req.headers.host
+        }
+      });
+      
       // Encode user information in state parameter (include refresh flag)
       const state = Buffer.from(JSON.stringify({ 
         email: user.email, 
@@ -36,8 +52,8 @@ export default async function handler(
       })).toString('base64');
       console.log('✅ State parameter created for user:', user.email);
 
-      // Use the robust OAuth URL generator from googleMultiAuth
-      const url = getGoogleOAuthUrl(state);
+      // Use the robust OAuth URL generator with dynamic domain detection
+      const url = getGoogleOAuthUrl(state, requestOrigin);
       console.log('✅ Google OAuth URL generated:', url.substring(0, 100) + '...');
 
       console.log('🚀 Redirecting to Google OAuth...');

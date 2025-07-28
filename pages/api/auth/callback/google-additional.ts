@@ -17,7 +17,10 @@ export default async function handler(
   console.log('Query params:', req.query);
   console.log('Headers:', {
     'user-agent': req.headers['user-agent'],
-    'referer': req.headers['referer']
+    'referer': req.headers['referer'],
+    'x-forwarded-proto': req.headers['x-forwarded-proto'],
+    'x-forwarded-host': req.headers['x-forwarded-host'],
+    'host': req.headers.host
   });
   
   const { code, state } = req.query;
@@ -29,6 +32,17 @@ export default async function handler(
 
   try {
     console.log('✅ Authorization code received');
+    
+    // Detect the request origin for proper redirect URI matching
+    const protocol = req.headers['x-forwarded-proto'] || (req.connection as any)?.encrypted ? 'https' : 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const requestOrigin = host ? `${protocol}://${host}` : undefined;
+    
+    console.log('Request origin detected for callback:', {
+      protocol,
+      host,
+      requestOrigin
+    });
     
     // Decode the state parameter to get user email and refresh flag
     let userEmail = '';
@@ -64,8 +78,8 @@ export default async function handler(
     }
 
     console.log('🔄 Exchanging authorization code for tokens...');
-    // Exchange authorization code for tokens
-    const tokens = await getGoogleTokens(code);
+    // Exchange authorization code for tokens with matching redirect URI
+    const tokens = await getGoogleTokens(code, requestOrigin);
     console.log('✅ Tokens received:', { hasAccessToken: !!tokens.access_token, hasRefreshToken: !!tokens.refresh_token });
     
     if (!tokens.access_token) {
@@ -158,8 +172,8 @@ export default async function handler(
       }
     
       console.log('🔄 Updating user settings with Google Calendar sources...');
-      // Update user settings with the new calendar sources
-      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      // Update user settings with the new calendar sources - use the detected origin
+      const baseUrl = requestOrigin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       console.log('Making request to:', `${baseUrl}/api/userSettings`);
       
       const userSettingsRes = await fetch(`${baseUrl}/api/userSettings`, {

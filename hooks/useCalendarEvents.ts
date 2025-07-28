@@ -14,8 +14,8 @@ interface UseCalendarEventsOptions {
 const eventCache = new Map<string, CachedEvent>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (increased for better performance)
 
-// Background refresh interval - significantly increased to reduce load
-const BACKGROUND_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+// Background refresh interval - DISABLED to prevent loops
+const BACKGROUND_REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour (much longer)
 
 interface CachedEvent {
   id: string;
@@ -78,6 +78,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   const mountedRef = useRef(true);
   const retryCountRef = useRef(0);
   const maxRetries = 2;
+  const lastCalendarSourcesHashRef = useRef<string>(''); // Track last known hash
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const cacheKey = getCacheKey(startDate, endDate);
 
@@ -99,6 +101,9 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
 
     return () => {
       mountedRef.current = false;
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
+      }
     };
   }, [enabled]);
 
@@ -129,8 +134,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     return null;
   }, [cacheKey, startDate, endDate]);
 
-  // Load events with enhanced error handling and retries
-  const loadEvents = useCallback(async (isBackgroundRefresh = false, forceReload = false) => {
+  // Load events with enhanced error handling and retries - stable version to prevent loops
+  const loadEventsStable = useCallback(async (currentStartDate: Date, currentEndDate: Date, isBackgroundRefresh = false, forceReload = false) => {
     if (!enabled || isInitializing || (isLoadingRef.current && !forceReload)) return;
 
     // Prevent duplicate loading
@@ -162,7 +167,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          events = await fetchEvents(startDate, endDate);
+          events = await fetchEvents(currentStartDate, currentEndDate);
           break; // Success, exit retry loop
         } catch (err) {
           lastError = err instanceof Error ? err : new Error('Unknown error');
@@ -213,8 +218,8 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
           const [source, calendarId] = key.split('_', 2);
           await calendarCache.cacheEvents(
             sourceEvents,
-            startDate,
-            endDate,
+            currentStartDate,
+            currentEndDate,
             source as 'google' | 'o365' | 'ical',
             calendarId
           );
@@ -242,12 +247,20 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       }
       isLoadingRef.current = false;
     }
-  }, [startDate, endDate, enabled, cacheKey, getCachedEvents, isInitializing]);
+  }, [enabled, isInitializing, cacheKey, getCachedEvents]);
 
-  // Background refresh function - simplified and less frequent
+  // Wrapper function for compatibility
+  const loadEvents = useCallback((isBackgroundRefresh = false, forceReload = false) => {
+    return loadEventsStable(startDate, endDate, isBackgroundRefresh, forceReload);
+  }, [loadEventsStable, startDate, endDate]);
+
+  // DISABLED - Background refresh function to prevent loops
   const startBackgroundRefresh = useCallback(() => {
+    // Completely disable background refresh for now
+    return;
+    
     if (backgroundRefreshRef.current) {
-      clearInterval(backgroundRefreshRef.current);
+      clearInterval(backgroundRefreshRef.current as NodeJS.Timeout);
     }
 
     backgroundRefreshRef.current = setInterval(async () => {
@@ -268,7 +281,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
   // Stop background refresh
   const stopBackgroundRefresh = useCallback(() => {
     if (backgroundRefreshRef.current) {
-      clearInterval(backgroundRefreshRef.current);
+      clearInterval(backgroundRefreshRef.current as NodeJS.Timeout);
       backgroundRefreshRef.current = null;
     }
   }, []);
@@ -374,9 +387,9 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     // Note: IndexedDB cache will be updated on next background refresh
   }, [cacheKey]);
 
-  // Invalidate cache for a specific date range
+  // Invalidate cache for a specific date range - stable version
   const invalidateCache = useCallback(async (start?: Date, end?: Date) => {
-    const key = getCacheKey(start || startDate, end || endDate);
+    const key = start && end ? getCacheKey(start, end) : cacheKey;
     eventCache.delete(key);
     
     // Clear IndexedDB cache for the range
@@ -385,35 +398,67 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     } catch (error) {
       console.error('Error clearing IndexedDB cache:', error);
     }
-  }, [startDate, endDate]);
+  }, [cacheKey]);
 
-  // Clear cache and reload when calendar sources change - heavily debounced
+  // HEAVILY DEBOUNCED - Clear cache and reload when calendar sources change
   useEffect(() => {
-    if (!isInitializing && calendarSourcesHash) {
-      const timeoutId = setTimeout(() => {
-        console.log('Calendar sources changed, clearing cache and reloading events');
-        invalidateCache().then(() => {
-          loadEvents(false, true); // Force reload
+    if (!isInitializing && calendarSourcesHash && calendarSourcesHash !== 'empty') {
+      // Only react to real changes, not initialization
+      if (lastCalendarSourcesHashRef.current && lastCalendarSourcesHashRef.current !== calendarSourcesHash) {
+        console.log('Calendar sources actually changed:', {
+          from: lastCalendarSourcesHashRef.current,
+          to: calendarSourcesHash
         });
-      }, 2000); // Increased debounce to 2 seconds
-
-      return () => clearTimeout(timeoutId);
+        
+        // Clear any existing timeout
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
+        }
+        
+        loadingTimeoutRef.current = setTimeout(() => {
+          console.log('Executing calendar sources change reload');
+          invalidateCache().then(() => {
+            loadEventsStable(startDate, endDate, false, true); // Force reload
+          });
+        }, 8000); // 8 second debounce to prevent loops
+      }
+      
+      // Update the ref after processing
+      lastCalendarSourcesHashRef.current = calendarSourcesHash;
     }
-  }, [calendarSourcesHash, isInitializing, invalidateCache, loadEvents]);
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
+      }
+    };
+  }, [calendarSourcesHash, isInitializing]); // Only these dependencies
 
-  // Load events on mount and when dependencies change - heavily debounced
+  // Load events on mount and when date range changes - minimal dependencies
   useEffect(() => {
     if (!isInitializing) {
-      const timeoutId = setTimeout(() => {
-        loadEvents();
-      }, 500); // Increased debounce to prevent rapid calls
-
-      return () => clearTimeout(timeoutId);
+      // Clear any existing timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
+      }
+      
+      loadingTimeoutRef.current = setTimeout(() => {
+        loadEventsStable(startDate, endDate);
+      }, 2000); // 2 second debounce to prevent rapid calls
     }
-  }, [loadEvents, isInitializing]);
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current as NodeJS.Timeout);
+      }
+    };
+  }, [startDate.getTime(), endDate.getTime(), isInitializing]); // Only date and init state
 
-  // Start background refresh when component mounts
+  // DISABLED - Start background refresh when component mounts
   useEffect(() => {
+    // Disable background refresh completely
+    return;
+    
     if (enabled && !isInitializing) {
       startBackgroundRefresh();
     }
