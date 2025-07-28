@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, useMemo } from 'react';
-import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+// Removed react-grid-layout in favor of custom CSS positioning
 import { Settings, Plus, CheckSquare, Calendar, Clock, FileText, Sparkles, Grid3X3 } from 'lucide-react';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import LayoutTemplateSelector, { LayoutTemplate } from '../ui/LayoutTemplateSelector';
@@ -366,67 +364,7 @@ const DashboardGrid: React.FC = () => {
   // Get current template config
   const currentConfig = layoutTemplates.find(t => t.id === currentTemplate);
 
-  // Generate layouts for react-grid-layout
-  const layouts = useMemo(() => {
-    if (!currentConfig) return {};
-    
-    const layoutsResult: any = {};
-    
-    // Use only filled slots to avoid empty layout items
-    const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
-    
-    // Use template positions for large screens
-    layoutsResult.lg = filledSlots.map((slot) => ({
-      i: slot.id,
-      x: slot.position.col,
-      y: slot.position.row,
-      w: slot.position.colSpan,
-      h: slot.position.rowSpan,
-      static: true
-    }));
-    
-    // For medium screens - adapt to 8 columns
-    layoutsResult.md = filledSlots.map((slot, index) => ({
-      i: slot.id,
-      x: Math.floor((slot.position.col * 8) / 12), // Scale from 12 to 8 columns
-      y: slot.position.row,
-      w: Math.max(1, Math.floor((slot.position.colSpan * 8) / 12)), // Scale width
-      h: slot.position.rowSpan,
-      static: true
-    }));
-    
-    // For smaller screens - stack vertically
-    layoutsResult.sm = filledSlots.map((slot, index) => ({
-      i: slot.id,
-      x: 0,
-      y: index * slot.position.rowSpan,
-      w: 6,
-      h: slot.position.rowSpan,
-      static: true
-    }));
-    
-    layoutsResult.xs = filledSlots.map((slot, index) => ({
-      i: slot.id,
-      x: 0,
-      y: index * slot.position.rowSpan,
-      w: 4,
-      h: slot.position.rowSpan,
-      static: true
-    }));
-    
-    layoutsResult.xxs = filledSlots.map((slot, index) => ({
-      i: slot.id,
-      x: 0,
-      y: index * slot.position.rowSpan,
-      w: 2,
-      h: slot.position.rowSpan,
-      static: true
-    }));
-    
-    // Debug logging removed for production
-    
-    return layoutsResult;
-  }, [currentConfig, slotAssignments, currentTemplate]);
+  // Direct CSS positioning - no need for react-grid-layout calculations
 
   // Get filled slots (slots that have widgets assigned)
   const filledSlots = useMemo(() => {
@@ -519,30 +457,43 @@ const DashboardGrid: React.FC = () => {
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
-                         <ResponsiveGridLayout
-               className="layout"
-               layouts={layouts}
-               breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-               cols={{ 
-                 lg: currentConfig?.gridConfig.responsive.lg.cols || 12, 
-                 md: currentConfig?.gridConfig.responsive.md.cols || 8, 
-                 sm: currentConfig?.gridConfig.responsive.sm.cols || 6, 
-                 xs: 4, 
-                 xxs: 2 
-               }}
-               rowHeight={currentConfig?.gridConfig.responsive.lg.rowHeight || 60}
-              isDraggable={false}
-              isResizable={false}
-              margin={[16, 16]}
-              containerPadding={[16, 16]}
-              compactType={null}
-              preventCollision={false}
-              useCSSTransforms={false}
-            >
+            <div className="relative w-full min-h-[600px] lg:h-[600px]">
               {filledSlots.map((slot) => {
                 const widgetType = slotAssignments[slot.id] as WidgetType;
+                
+                // Calculate positions based on 12-column grid with responsive behavior
+                const containerWidth = 100; // Use percentage
+                const colWidth = containerWidth / 12; // Each column is ~8.33%
+                
+                // Responsive positioning
+                const isSmallScreen = false; // Will be handled by CSS classes
+                
+                const left = `${slot.position.col * colWidth}%`;
+                const width = `${slot.position.colSpan * colWidth}%`;
+                
+                // Dynamic height calculation based on row span
+                const baseRowHeight = 150; // 150px per row
+                const height = `${slot.position.rowSpan * baseRowHeight}px`;
+                const top = `${slot.position.row * baseRowHeight}px`;
+                
+                // Debug logging
+                console.log(`Slot ${slot.id}:`, {
+                  position: slot.position,
+                  calculated: { left, top, width, height }
+                });
+                
                 return (
-                  <div key={slot.id} className="glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col h-full overflow-hidden">
+                  <div 
+                    key={slot.id} 
+                    className="lg:absolute relative glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col overflow-hidden mb-4 lg:mb-0 w-full lg:w-auto h-auto lg:h-auto min-h-[300px]"
+                    style={{
+                      // Desktop positioning (only applies on lg+ screens due to lg:absolute)
+                      left: left,
+                      top: top,
+                      width: `calc(${width} - 16px)`,
+                      height: `calc(${height} - 16px)`,
+                    }}
+                  >
                     <div className="flex items-center justify-between mb-3 flex-shrink-0">
                       <div className="flex items-center space-x-2 min-w-0 flex-1">
                         <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
@@ -571,7 +522,7 @@ const DashboardGrid: React.FC = () => {
                   </div>
                 );
               })}
-            </ResponsiveGridLayout>
+            </div>
           ) : (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
