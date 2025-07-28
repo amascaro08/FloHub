@@ -113,24 +113,30 @@ export default async function handler(
 
     // Send notification email if not already sent
     if (!feedbackEntry.notificationSent) {
-      console.log(`Sending completion notification to ${feedbackEntry.userEmail || feedbackEntry.userId}`);
+      const userIdentifier = feedbackEntry.userEmail || feedbackEntry.userId;
       
-      const success = await sendFeedbackCompletionEmail(
-        feedbackEntry.userEmail || feedbackEntry.userId, // Use userEmail if available, fallback to userId
-        issue.title,
-        feedbackEntry.githubIssueUrl || issue.html_url
-      );
-
-      if (success) {
-        // Mark notification as sent
-        await db
-          .update(feedback)
-          .set({ notificationSent: true })
-          .where(eq(feedback.id, feedbackEntry.id));
+      if (userIdentifier) {
+        console.log(`Sending completion notification to ${userIdentifier}`);
         
-        console.log("Notification sent and marked as sent");
+        const success = await sendFeedbackCompletionEmail(
+          userIdentifier,
+          issue.title,
+          feedbackEntry.githubIssueUrl || issue.html_url
+        );
+
+        if (success) {
+          // Mark notification as sent
+          await db
+            .update(feedback)
+            .set({ notificationSent: true })
+            .where(eq(feedback.id, feedbackEntry.id));
+          
+          console.log("Notification sent and marked as sent");
+        } else {
+          console.error("Failed to send notification email");
+        }
       } else {
-        console.error("Failed to send notification email");
+        console.warn("No user identifier found for feedback entry - cannot send notification");
       }
     } else {
       console.log("Notification already sent for this feedback");
