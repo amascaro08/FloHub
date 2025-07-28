@@ -99,11 +99,11 @@ export function clearUserSpecificCache(userEmail: string): void {
   }
   
   // Clear memory cache entries for this user
-  for (const [key, entry] of memoryCache.entries()) {
+  memoryCache.forEach((entry, key) => {
     if (entry.userEmail === userEmail || key.startsWith(`${userEmail}:`)) {
       memoryCache.delete(key);
     }
-  }
+  });
   
   console.log(`Cleared cache for user: ${userEmail}`);
 }
@@ -134,11 +134,11 @@ export function clearExpiredCache(): void {
   }
   
   // Clear expired memory cache entries
-  for (const [key, entry] of memoryCache.entries()) {
+  memoryCache.forEach((entry, key) => {
     if (now - entry.timestamp > entry.ttl) {
       memoryCache.delete(key);
     }
-  }
+  });
 }
 
 // Get cache statistics by user
