@@ -107,6 +107,13 @@ export class SmartAIAssistant {
     this.userId = userId;
   }
 
+  // Public method to update calendar events with external data
+  updateCalendarEvents(events: any[]): void {
+    if (this.context) {
+      this.context.calendarEvents = events;
+    }
+  }
+
   // Helper to get user timezone
   private getUserTimezone(): string {
     return (global as any).currentUserTimezone || 'UTC';
@@ -760,6 +767,7 @@ export class SmartAIAssistant {
           if (upcomingMatches.length > 0) {
             const nextEvent = upcomingMatches[0];
             const eventDate = new Date(nextEvent.start || nextEvent.date);
+            
             const dayName = formatInTimeZone(eventDate, userTimezone, 'eeee');
             const dateStr = formatInTimeZone(eventDate, userTimezone, 'MMMM d' + (eventDate.getFullYear() !== now.getFullYear() ? ', yyyy' : ''));
             const timeStr = formatInTimeZone(eventDate, userTimezone, 'h:mm a');

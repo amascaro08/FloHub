@@ -518,10 +518,16 @@ export default async function handler(
   // Initialize Smart AI Assistant for pattern analysis and suggestions
   const smartAssistant = new SmartAIAssistant(email);
   
+  // Load user context early for better processing
+  try {
+    await smartAssistant.loadUserContext();
+  } catch (error) {
+    console.error("Error loading smart assistant context:", error);
+  }
+  
   // Check for proactive suggestion requests
   if (lowerPrompt.includes("suggestion") || lowerPrompt.includes("recommend") || lowerPrompt.includes("advice")) {
     try {
-      await smartAssistant.loadUserContext();
       const suggestions = await smartAssistant.generateProactiveSuggestions();
       
       if (suggestions.length > 0) {
@@ -592,6 +598,9 @@ export default async function handler(
         
         // Update global context
         (global as any).currentContextData = enhancedContextData;
+        
+        // Update SmartAIAssistant with fresh calendar data
+        smartAssistant.updateCalendarEvents(events);
         
         // Process calendar query with enhanced intelligence
         const scheduleResponse = await processCalendarQuery(userInput, userTimezone, enhancedContextData);
