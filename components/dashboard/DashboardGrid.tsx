@@ -250,19 +250,27 @@ const DashboardGrid: React.FC = () => {
     };
   }, []);
 
-  // Widget component creator
+  // Widget component creator with size-aware rendering
   const createWidgetComponent = (type: WidgetType, slot?: any) => {
+    const widgetProps = {
+      size: slot?.size || 'medium',
+      colSpan: slot?.position?.colSpan || 4,
+      rowSpan: slot?.position?.rowSpan || 3,
+      isCompact: slot?.size === 'small',
+      isHero: slot?.size === 'hero' || slot?.size === 'large'
+    };
+    
     switch (type) {
       case "tasks":
-        return <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>;
+        return <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget {...widgetProps} /></Suspense>;
       case "calendar":
-        return <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget /></Suspense>;
+        return <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget {...widgetProps} /></Suspense>;
       case "ataglance":
-        return <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>;
+        return <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget {...widgetProps} /></Suspense>;
       case "quicknote":
-        return <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>;
+        return <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget {...widgetProps} /></Suspense>;
       case "habit-tracker":
-        return <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>;
+        return <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget {...widgetProps} /></Suspense>;
       default:
         return <div>Unknown widget</div>;
     }
@@ -418,8 +426,8 @@ const DashboardGrid: React.FC = () => {
     >
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
         {/* Dashboard Header */}
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-8">
+        <div className="container mx-auto px-2 py-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-4xl font-heading font-bold text-dark-base dark:text-soft-white mb-2">
                 Dashboard
@@ -457,7 +465,7 @@ const DashboardGrid: React.FC = () => {
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
-            <div className="relative w-full min-h-[600px] lg:h-[600px]">
+            <div className="relative w-full min-h-[700px] lg:h-[700px]">
               {filledSlots.map((slot) => {
                 const widgetType = slotAssignments[slot.id] as WidgetType;
                 
@@ -472,26 +480,23 @@ const DashboardGrid: React.FC = () => {
                 const width = `${slot.position.colSpan * colWidth}%`;
                 
                 // Dynamic height calculation based on row span
-                const baseRowHeight = 150; // 150px per row
+                const baseRowHeight = 175; // 175px per row (increased from 150px)
+                const containerHeight = 700; // Updated container height
                 const height = `${slot.position.rowSpan * baseRowHeight}px`;
                 const top = `${slot.position.row * baseRowHeight}px`;
                 
-                // Debug logging
-                console.log(`Slot ${slot.id}:`, {
-                  position: slot.position,
-                  calculated: { left, top, width, height }
-                });
+                // Debug logging removed for production
                 
                 return (
                   <div 
                     key={slot.id} 
-                    className="lg:absolute relative glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col overflow-hidden mb-4 lg:mb-0 w-full lg:w-auto h-auto lg:h-auto min-h-[300px]"
+                    className="lg:absolute relative glass p-3 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col overflow-hidden mb-3 lg:mb-0 w-full lg:w-auto h-auto lg:h-auto min-h-[300px]"
                     style={{
                       // Desktop positioning (only applies on lg+ screens due to lg:absolute)
                       left: left,
                       top: top,
-                      width: `calc(${width} - 16px)`,
-                      height: `calc(${height} - 16px)`,
+                      width: `calc(${width} - 8px)`,
+                      height: `calc(${height} - 8px)`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-3 flex-shrink-0">

@@ -8,12 +8,20 @@ import { CalendarEvent } from '@/types/calendar';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import EventDetailModal from '@/components/ui/EventDetailModal';
+import type { WidgetProps } from '@/types/app';
 
-interface CalendarWidgetProps {
+interface CalendarWidgetProps extends WidgetProps {
   className?: string;
 }
 
-const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ 
+  className = '', 
+  size = 'medium', 
+  colSpan = 4, 
+  rowSpan = 3, 
+  isCompact = false, 
+  isHero = false 
+}) => {
   const { user } = useUser();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -188,7 +196,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
   }, [selectedDate, eventsByDate, todayEvents]);
 
   return (
-    <div className="space-y-3 h-full flex flex-col">
+    <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} h-full flex flex-col`}>
       {/* Calendar Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-1 min-w-0">
@@ -196,33 +204,35 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
             onClick={goToPreviousMonth}
             className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronLeft className="w-3 h-3" />
+            <ChevronLeft className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
           </button>
-          <h3 className="text-base font-heading font-semibold text-dark-base dark:text-soft-white truncate">
-            {format(currentDate, 'MMM yyyy')}
+          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-heading font-semibold text-dark-base dark:text-soft-white truncate`}>
+            {format(currentDate, isCompact ? 'MMM' : 'MMM yyyy')}
           </h3>
           <button
             onClick={goToNextMonth}
             className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
           </button>
         </div>
-        <button
-          onClick={goToToday}
-          className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors flex-shrink-0"
-        >
-          Today
-        </button>
+        {!isCompact && (
+          <button
+            onClick={goToToday}
+            className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors flex-shrink-0"
+          >
+            Today
+          </button>
+        )}
       </div>
 
       {/* Calendar Grid */}
-      <div className="space-y-1 flex-shrink-0">
+      <div className={`${isCompact ? 'space-y-0.5' : 'space-y-1'} flex-shrink-0`}>
         {/* Day Headers */}
         <div className="grid grid-cols-7 gap-0.5">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <div key={index} className="text-center">
-              <span className="text-xs font-medium text-grey-tint">{day}</span>
+              <span className={`${isCompact ? 'text-xs' : 'text-xs'} font-medium text-grey-tint`}>{day}</span>
             </div>
           ))}
         </div>
@@ -240,7 +250,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
               <button
                 key={index}
                 onClick={() => handleDateClick(day)}
-                className={`relative p-1 text-xs rounded transition-all duration-200 min-h-[28px] ${
+                className={`relative p-1 text-xs rounded transition-all duration-200 ${isCompact ? 'min-h-[20px]' : 'min-h-[28px]'} ${
                   isSelected
                     ? 'bg-primary-500 text-white'
                     : isTodayDate

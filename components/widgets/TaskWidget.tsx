@@ -4,7 +4,7 @@
 import useSWR from "swr";
 import { useState, FormEvent, useMemo, memo } from "react";
 import CreatableSelect from 'react-select/creatable';
-import type { Task, UserSettings } from "@/types/app";
+import type { Task, UserSettings, WidgetProps } from "@/types/app";
 import { useUser } from '@/lib/hooks/useUser';
 import { 
   Plus, 
@@ -26,7 +26,7 @@ const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((r)
   return r.json();
 });
 
-function TaskWidget() {
+function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false }: WidgetProps = {}) {
   const { user, isLoading } = useUser();
   const isLoggedIn = !!user;
 
@@ -229,28 +229,29 @@ function TaskWidget() {
   const completedTasks = tasks?.filter(t => t.done) || [];
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
-      {/* Add Task Form */}
-      <form onSubmit={addOrUpdate} className="space-y-3 flex-shrink-0">
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add</span>
-          </button>
-        </div>
+    <div className={`${isCompact ? 'space-y-2' : 'space-y-4'} h-full flex flex-col`}>
+      {/* Add Task Form - Hide in compact mode */}
+      {!isCompact && (
+        <form onSubmit={addOrUpdate} className="space-y-3 flex-shrink-0">
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Add a new task..."
+              className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors duration-200 flex items-center space-x-1"
+            >
+              <Plus className="w-4 h-4" />
+              <span className={`${isHero ? 'inline' : 'hidden sm:inline'}`}>Add</span>
+            </button>
+          </div>
 
-        {/* Task Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Task Details - Show simplified version in compact mode */}
+          <div className={`grid ${isCompact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-3`}>
           {/* Due Date */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
@@ -388,10 +389,30 @@ function TaskWidget() {
             </button>
           </div>
         )}
-      </form>
+        </form>
+      )}
+
+      {/* Compact mode: Quick add button */}
+      {isCompact && (
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => {
+              const task = prompt("Quick add task:");
+              if (task) {
+                setInput(task);
+                addOrUpdate(new Event('submit') as any);
+              }
+            }}
+            className="w-full px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 flex items-center justify-center space-x-1 text-sm"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Quick Add</span>
+          </button>
+        </div>
+      )}
 
       {/* Tasks List */}
-      <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
+      <div className={`${isCompact ? 'space-y-1' : 'space-y-3'} flex-1 overflow-y-auto min-h-0`}>
         {/* Incomplete Tasks */}
         {incompleteTasks.length > 0 && (
           <div className="space-y-2">

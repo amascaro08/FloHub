@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
+import type { WidgetProps } from '@/types/app';
 import { 
   Plus, 
   CheckCircle, 
@@ -31,7 +32,7 @@ interface HabitCompletion {
   date: string;
 }
 
-const HabitTrackerWidget: React.FC = () => {
+const HabitTrackerWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false } = {}) => {
   const { user } = useUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);

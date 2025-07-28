@@ -86,3 +86,11 @@ export interface Task {
   source?:   "personal" | "work"; // Add source tag
   tags: string[]; // Add tags property
 }
+
+export interface WidgetProps {
+  size?: 'small' | 'medium' | 'large' | 'hero';
+  colSpan?: number;
+  rowSpan?: number;
+  isCompact?: boolean;
+  isHero?: boolean;
+}

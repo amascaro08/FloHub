@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
+import type { WidgetProps } from '@/types/app';
 import {
   fetchTasks,
   fetchNotes,
@@ -64,7 +65,7 @@ interface QuickAction {
   variant?: 'default' | 'destructive' | 'ghost' | 'secondary';
 }
 
-const SmartAtAGlanceWidget = () => {
+const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false }: WidgetProps = {}) => {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

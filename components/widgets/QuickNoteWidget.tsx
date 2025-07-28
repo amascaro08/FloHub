@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
+import type { WidgetProps } from '@/types/app';
 import { 
   Plus, 
   Save, 
@@ -19,7 +20,7 @@ interface QuickNote {
   tags?: string[];
 }
 
-const QuickNoteWidget: React.FC = () => {
+const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false } = {}) => {
   const { user } = useUser();
   const [notes, setNotes] = useState<QuickNote[]>([]);
   const [currentNote, setCurrentNote] = useState('');
