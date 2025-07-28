@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import FeedbackList from '@/components/FeedbackList';
+import FeedbackDetails from '@/components/FeedbackDetails';
 
 const FeedbackPage: NextPage = () => {
   const router = useRouter();
@@ -13,6 +15,9 @@ const FeedbackPage: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [issueUrl, setIssueUrl] = useState('');
+  const [activeTab, setActiveTab] = useState<'submit' | 'history'>('submit');
+  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Available feedback types
   const feedbackTypes = [
@@ -85,11 +90,18 @@ const FeedbackPage: NextPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setSubmitMessage(data.message);
+        setShowSuccess(true);
+        setSubmitMessage("Thanks! Your feedback has been submitted and is now being tracked. We'll keep you updated here.");
         setIssueUrl(data.issueUrl);
         setFeedbackText('');
         setSelectedTags([]);
         setFeedbackType('general');
+        
+        // Hide success message after 5 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSubmitMessage('');
+        }, 5000);
       } else {
         // Handle specific authentication errors
         if (response.status === 401) {
@@ -125,12 +137,23 @@ const FeedbackPage: NextPage = () => {
     );
   }
 
+  // Handle feedback selection from list
+  const handleFeedbackSelect = (feedback: any) => {
+    setSelectedFeedback(feedback);
+    setActiveTab('submit'); // Show details in main area
+  };
+
+  // Handle back to list
+  const handleBackToList = () => {
+    setSelectedFeedback(null);
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Submit Feedback</h1>
+        <h1 className="text-3xl font-bold mb-2 text-[var(--fg)]">Feedback Center</h1>
         <p className="text-neutral-600 dark:text-neutral-400">
-          Help us improve the app by sharing your feedback. Your submission will create a GitHub issue for tracking.
+          Submit new feedback or track your existing submissions and their progress.
         </p>
         {!user && !isUserLoading && (
           <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-700 dark:text-yellow-300">
@@ -141,27 +164,89 @@ const FeedbackPage: NextPage = () => {
         )}
       </div>
 
-      {submitMessage && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          submitMessage.includes('successfully') 
-            ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200'
-            : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
-        }`}>
-          <p className="font-medium">{submitMessage}</p>
-          {issueUrl && (
-            <a 
-              href={issueUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => {
+              setActiveTab('submit');
+              setSelectedFeedback(null);
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'submit' && !selectedFeedback
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            Submit Feedback
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('history');
+              setSelectedFeedback(null);
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'history' && !selectedFeedback
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            Your Feedback
+          </button>
+          {selectedFeedback && (
+            <button
+              onClick={handleBackToList}
+              className="py-2 px-1 border-b-2 border-primary-500 text-primary-600 dark:text-primary-400 font-medium text-sm"
             >
-              View on GitHub →
-            </a>
+              ← Back to List
+            </button>
           )}
+        </nav>
+      </div>
+
+      {/* Success Message */}
+      {showSuccess && submitMessage && (
+        <div className="mb-6 p-4 rounded-lg border bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="font-medium">{submitMessage}</p>
+              {issueUrl && (
+                <div className="mt-2">
+                  <a 
+                    href={issueUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline text-sm"
+                  >
+                    View on GitHub →
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Error Message */}
+      {submitMessage && !showSuccess && (
+        <div className="mb-6 p-4 rounded-lg border bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200">
+          <p className="font-medium">{submitMessage}</p>
+        </div>
+      )}
+
+      {/* Tab Content */}
+      {selectedFeedback ? (
+        <FeedbackDetails 
+          feedback={selectedFeedback} 
+          onBack={handleBackToList}
+        />
+      ) : activeTab === 'submit' ? (
+        <form onSubmit={handleSubmit} className="space-y-6">
         {/* Feedback Type Selection */}
         <div>
           <label className="block text-sm font-medium mb-3">Feedback Type</label>
@@ -290,7 +375,10 @@ const FeedbackPage: NextPage = () => {
             {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
           </button>
         </div>
-      </form>
+        </form>
+      ) : (
+        <FeedbackList onSelectFeedback={handleFeedbackSelect} />
+      )}
 
       {/* Info Section */}
       <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

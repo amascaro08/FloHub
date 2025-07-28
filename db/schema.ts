@@ -263,6 +263,10 @@ export const feedback = pgTable("feedback", {
   status: text("status").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
   notes: text("notes"),
+  githubIssueNumber: integer("github_issue_number"),
+  githubIssueUrl: text("github_issue_url"),
+  completedAt: timestamp("completedAt", { mode: "date" }),
+  notificationSent: boolean("notification_sent").default(false),
 });
 
 // BACKLOG TABLE

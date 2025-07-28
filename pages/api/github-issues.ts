@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Octokit } from "@octokit/rest";
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
+import { db } from "@/lib/drizzle";
+import { feedback } from "@/db/schema";
 
 export default async function handler(
   req: NextApiRequest,
@@ -134,6 +136,17 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
       title,
       body: issueBody,
       labels,
+    });
+
+    // Store feedback in database with GitHub issue info
+    await db.insert(feedback).values({
+      userId: user.email,
+      feedbackType: feedbackType || "general",
+      feedbackText,
+      status: "open",
+      githubIssueNumber: issue.data.number,
+      githubIssueUrl: issue.data.html_url,
+      createdAt: new Date()
     });
 
     return res.status(201).json({
