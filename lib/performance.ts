@@ -86,51 +86,62 @@ export function setupLazyLoading(): void {
 }
 
 // Prefetch data for routes that are likely to be visited
-export function prefetchData(urls: string[]): void {
-  if (typeof window === 'undefined') return;
-  
-  // Wait until the page has loaded and is idle
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(() => {
-      urls.forEach(url => {
-        fetch(url, { method: 'GET', credentials: 'same-origin' })
-          .then(response => response.json())
-          .then(data => {
-            // Store in localStorage for quick access
-            try {
-              localStorage.setItem(`prefetch:${url}`, JSON.stringify(data));
-              console.log(`[Performance] Prefetched data for ${url}`);
-            } catch (e) {
-              console.warn(`[Performance] Failed to store prefetched data for ${url}`, e);
-            }
-          })
-          .catch(err => {
-            console.warn(`[Performance] Failed to prefetch ${url}`, err);
-          });
+export function prefetchData(url: string, userEmail?: string): Promise<any> {
+  return new Promise(async (resolve) => {
+    try {
+      const response = await fetch(url, { 
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'max-age=300' // 5 minute cache
+        }
       });
-    });
-  } else {
-    // Fallback for browsers without requestIdleCallback
-    setTimeout(() => {
-      urls.forEach(url => {
-        fetch(url, { method: 'GET', credentials: 'same-origin' })
-          .catch(err => console.warn(`[Performance] Failed to prefetch ${url}`, err));
-      });
-    }, 2000);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Store in localStorage for quick access - USER SCOPED
+      if (typeof window !== 'undefined' && userEmail) {
+        const key = `prefetch:${userEmail}:${url}`;
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+      resolve(data);
+    } catch (error) {
+      console.warn('[Performance] Prefetch failed:', error);
+      resolve(null);
+    }
+  });
+}
+
+// Enhanced error handling for localStorage operations
+function safeLocalStorageOperation<T>(operation: () => T, fallback: T): T {
+  try {
+    return operation();
+  } catch (error) {
+    console.warn('[Performance] localStorage operation failed:', error);
+    return fallback;
   }
 }
 
-// Get prefetched data from localStorage
-export function getPrefetchedData<T>(url: string): T | null {
-  if (typeof window === 'undefined') return null;
+// Get prefetched data from localStorage - USER SCOPED
+export function getPrefetchedData(url: string, userEmail?: string): any {
+  if (typeof window === 'undefined' || !userEmail) return null;
   
-  try {
-    const data = localStorage.getItem(`prefetch:${url}`);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    console.warn(`[Performance] Failed to get prefetched data for ${url}`, e);
-    return null;
-  }
+  return safeLocalStorageOperation(() => {
+    const key = `prefetch:${userEmail}:${url}`;
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    
+    try {
+      return JSON.parse(data);
+    } catch {
+      // Remove corrupted data
+      localStorage.removeItem(key);
+      return null;
+    }
+  }, null);
 }
 
 // Measure component render time
@@ -202,68 +213,109 @@ export async function initIndexedDB(): Promise<IDBDatabase | null> {
   });
 }
 
-// Store data in IndexedDB
+// Store data in IndexedDB - USER SCOPED
 export async function storeInIndexedDB(
+  userEmail: string,
   storeName: string,
-  data: any,
-  db?: IDBDatabase | null
-): Promise<boolean> {
-  if (!db) {
-    db = await initIndexedDB();
-    if (!db) return false;
+  key: string, 
+  data: any
+): Promise<void> {
+  try {
+    const db = await initIndexedDB();
+    if (!db) return;
+    
+    // Create user-scoped key
+    const scopedKey = `${userEmail}:${key}`;
+    
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put({ id: scopedKey, data, timestamp: Date.now() });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.error(`[Performance] Error in storeInIndexedDB for ${storeName}`, e);
   }
-  
-  return new Promise((resolve) => {
-    try {
-      const transaction = db.transaction(storeName, 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.put(data);
-      
-      request.onsuccess = () => {
-        resolve(true);
-      };
-      
-      request.onerror = () => {
-        console.error(`[Performance] Error storing data in ${storeName}`, request.error);
-        resolve(false);
-      };
-    } catch (e) {
-      console.error(`[Performance] Error in storeInIndexedDB for ${storeName}`, e);
-      resolve(false);
-    }
-  });
 }
 
-// Get data from IndexedDB
+// Get data from IndexedDB - USER SCOPED
 export async function getFromIndexedDB<T>(
+  userEmail: string,
   storeName: string,
-  id: string,
-  db?: IDBDatabase | null
+  key: string
 ): Promise<T | null> {
-  if (!db) {
-    db = await initIndexedDB();
+  try {
+    const db = await initIndexedDB();
     if (!db) return null;
-  }
-  
-  return new Promise((resolve) => {
-    try {
-      const transaction = db.transaction(storeName, 'readonly');
-      const store = transaction.objectStore(storeName);
-      
-      const request = store.get(id);
-      
+    
+    // Create user-scoped key
+    const scopedKey = `${userEmail}:${key}`;
+    
+    const transaction = db.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    
+    return new Promise<T | null>((resolve, reject) => {
+      const request = store.get(scopedKey);
       request.onsuccess = () => {
-        resolve(request.result || null);
+        const result = request.result;
+        if (result && result.data) {
+          resolve(result.data);
+        } else {
+          resolve(null);
+        }
       };
-      
-      request.onerror = () => {
-        console.error(`[Performance] Error getting data from ${storeName}`, request.error);
-        resolve(null);
-      };
-    } catch (e) {
-      console.error(`[Performance] Error in getFromIndexedDB for ${storeName}`, e);
-      resolve(null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.error(`[Performance] Error in getFromIndexedDB for ${storeName}`, e);
+    return null;
+  }
+}
+
+// Clear user-specific data from localStorage and IndexedDB
+export async function clearUserCache(userEmail: string): Promise<void> {
+  try {
+    // Clear localStorage entries for this user
+    if (typeof window !== 'undefined') {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes(userEmail)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
     }
-  });
+    
+    // Clear IndexedDB entries for this user
+    const db = await initIndexedDB();
+    if (db) {
+      const storeNames = ['performance', 'calendar', 'widgets'];
+      for (const storeName of storeNames) {
+        try {
+          const transaction = db.transaction([storeName], 'readwrite');
+          const store = transaction.objectStore(storeName);
+          
+          // Get all keys and remove user-scoped ones
+          const request = store.getAllKeys();
+          request.onsuccess = () => {
+            const keys = request.result;
+            keys.forEach(key => {
+              if (typeof key === 'string' && key.startsWith(`${userEmail}:`)) {
+                store.delete(key);
+              }
+            });
+          };
+        } catch (error) {
+          console.warn(`[Performance] Error clearing ${storeName} for user ${userEmail}:`, error);
+        }
+      }
+    }
+    
+    console.log(`[Performance] Cleared cache for user: ${userEmail}`);
+  } catch (error) {
+    console.error('[Performance] Error clearing user cache:', error);
+  }
 }

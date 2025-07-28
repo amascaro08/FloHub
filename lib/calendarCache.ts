@@ -29,16 +29,34 @@ interface CalendarCacheDB {
 
 class CalendarCacheService {
   private db: IDBDatabase | null = null;
-  private readonly DB_NAME = 'CalendarCacheDB';
+  private userEmail: string | null = null;
   private readonly DB_VERSION = 1;
   private readonly STORE_NAME = 'events';
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-  async init(): Promise<void> {
+  // Get user-scoped database name
+  private getDBName(userEmail: string): string {
+    // Create a user-specific database name
+    const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+    return `CalendarCacheDB_${sanitizedEmail}`;
+  }
+
+  async init(userEmail: string): Promise<void> {
+    // If user changed, close existing connection and reset
+    if (this.userEmail !== userEmail) {
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+      this.userEmail = userEmail;
+    }
+
     if (this.db) return;
 
+    const dbName = this.getDBName(userEmail);
+
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+      const request = indexedDB.open(dbName, this.DB_VERSION);
 
       request.onerror = () => {
         console.error('Failed to open IndexedDB:', request.error);
@@ -47,6 +65,7 @@ class CalendarCacheService {
 
       request.onsuccess = () => {
         this.db = request.result;
+        console.log(`Calendar cache initialized for user: ${userEmail}`);
         resolve();
       };
 
@@ -68,18 +87,22 @@ class CalendarCacheService {
     });
   }
 
-  private async getStore(mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
-    if (!this.db) {
-      await this.init();
+  private async getStore(mode: IDBTransactionMode = 'readonly', userEmail?: string): Promise<IDBObjectStore> {
+    if (!userEmail) {
+      throw new Error('User email is required for calendar cache operations');
+    }
+    
+    if (!this.db || this.userEmail !== userEmail) {
+      await this.init(userEmail);
     }
     
     const transaction = this.db!.transaction([this.STORE_NAME], mode);
     return transaction.objectStore(this.STORE_NAME);
   }
 
-  async getCachedEvents(startDate: Date, endDate: Date): Promise<CalendarEvent[]> {
+  async getCachedEvents(startDate: Date, endDate: Date, userEmail: string): Promise<CalendarEvent[]> {
     try {
-      const store = await this.getStore();
+      const store = await this.getStore('readonly', userEmail);
       const startDateStr = startDate.toISOString();
       const endDateStr = endDate.toISOString();
 
@@ -116,11 +139,12 @@ class CalendarCacheService {
     startDate: Date,
     endDate: Date,
     source: 'google' | 'o365' | 'ical',
+    userEmail: string,
     calendarId?: string
   ): Promise<void> {
     try {
-      const store = await this.getStore('readwrite');
-      const cacheKey = `${source}_${calendarId || 'default'}_${startDate.toISOString()}_${endDate.toISOString()}`;
+      const store = await this.getStore('readwrite', userEmail);
+      const cacheKey = `${source}_${calendarId || 'default'}_${startDate.toISOString()}_${endDate.toISOString()}_${userEmail}`;
 
       // First, clear any existing cache entries for this source/calendar combo to prevent duplicates
       const clearRequest = store.index('source').openCursor(IDBKeyRange.only(source));
@@ -191,10 +215,11 @@ class CalendarCacheService {
   async getDeltaEvents(
     startDate: Date,
     endDate: Date,
-    lastSyncTime: number
+    lastSyncTime: number,
+    userEmail: string
   ): Promise<{ events: CalendarEvent[]; hasNewEvents: boolean }> {
     try {
-      const store = await this.getStore();
+      const store = await this.getStore('readonly', userEmail);
       const startDateStr = startDate.toISOString();
       const endDateStr = endDate.toISOString();
 
@@ -230,9 +255,9 @@ class CalendarCacheService {
     }
   }
 
-  async clearExpiredCache(): Promise<void> {
+  async clearExpiredCache(userEmail: string): Promise<void> {
     try {
-      const store = await this.getStore('readwrite');
+      const store = await this.getStore('readwrite', userEmail);
       const cutoffTime = Date.now() - this.CACHE_DURATION;
 
       return new Promise((resolve, reject) => {
@@ -258,14 +283,15 @@ class CalendarCacheService {
     }
   }
 
-  async clearAllCache(): Promise<void> {
+  async clearAllCache(userEmail: string): Promise<void> {
     try {
-      const store = await this.getStore('readwrite');
+      const store = await this.getStore('readwrite', userEmail);
 
       return new Promise((resolve, reject) => {
         const request = store.clear();
         
         request.onsuccess = () => {
+          console.log(`Cleared all calendar cache for user: ${userEmail}`);
           resolve();
         };
 
@@ -279,9 +305,9 @@ class CalendarCacheService {
     }
   }
 
-  async getCacheStats(): Promise<{ totalEvents: number; cacheSize: number }> {
+  async getCacheStats(userEmail: string): Promise<{ totalEvents: number; cacheSize: number }> {
     try {
-      const store = await this.getStore();
+      const store = await this.getStore('readonly', userEmail);
       let totalEvents = 0;
       let cacheSize = 0;
 
@@ -305,6 +331,35 @@ class CalendarCacheService {
     } catch (error) {
       console.error('Error getting cache stats:', error);
       return { totalEvents: 0, cacheSize: 0 };
+    }
+  }
+
+  // Utility method to clear cache for a specific user (useful for logout)
+  async clearUserCache(userEmail: string): Promise<void> {
+    try {
+      const dbName = this.getDBName(userEmail);
+      
+      // Close current connection if it's the same user
+      if (this.userEmail === userEmail && this.db) {
+        this.db.close();
+        this.db = null;
+        this.userEmail = null;
+      }
+      
+      // Delete the entire database for this user
+      return new Promise((resolve, reject) => {
+        const deleteRequest = indexedDB.deleteDatabase(dbName);
+        deleteRequest.onsuccess = () => {
+          console.log(`Deleted calendar cache database for user: ${userEmail}`);
+          resolve();
+        };
+        deleteRequest.onerror = () => {
+          console.error('Error deleting user cache database:', deleteRequest.error);
+          reject(deleteRequest.error);
+        };
+      });
+    } catch (error) {
+      console.error('Error clearing user cache:', error);
     }
   }
 }

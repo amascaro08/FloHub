@@ -107,11 +107,11 @@ const SettingsModularPage = () => {
         console.log("Settings updated successfully!");
         
         // Clear calendar cache if sources changed
-        if (calendarSourcesChanged) {
+        if (calendarSourcesChanged && user?.email) {
           console.log("Calendar sources changed, clearing caches...");
           try {
-            const { clearAllCalendarCaches } = await import('@/lib/calendarUtils');
-            await clearAllCalendarCaches();
+            const { clearCalendarCaches } = await import('@/lib/calendarUtils');
+            await clearCalendarCaches(user.email);
             
             // Also force refresh calendar API cache
             await fetch('/api/calendar?forceRefresh=true&timeMin=2024-01-01T00:00:00Z&timeMax=2024-12-31T23:59:59Z');
