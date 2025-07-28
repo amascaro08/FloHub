@@ -221,6 +221,15 @@ export default async function handler(
         if (updateRes.ok) {
           console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources for authenticated user');
           
+          // Enhanced verification logging
+          console.log('🔍 Sources that should be saved:', newGoogleSources.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            sourceId: s.sourceId,
+            enabled: s.isEnabled
+          })));
+          
           // Verify the save by fetching settings again
           const verifyRes = await fetch(`${baseUrl}/api/userSettings`, {
             headers: {
@@ -237,11 +246,21 @@ export default async function handler(
             const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
             console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
             
+            console.log('🔍 Actual sources in database:', googleSourcesInDb.map(s => ({
+              id: s.id,
+              name: s.name,
+              type: s.type,
+              sourceId: s.sourceId,
+              enabled: s.isEnabled
+            })));
+            
             if (googleSourcesInDb.length !== newGoogleSources.length) {
               console.error('❌ Mismatch in saved Google calendar sources for authenticated user!', {
                 expected: newGoogleSources.length,
                 actual: googleSourcesInDb.length,
-                user: userEmail
+                user: userEmail,
+                expectedSources: newGoogleSources.map(s => s.name),
+                actualSources: googleSourcesInDb.map(s => s.name)
               });
             }
           } else {
