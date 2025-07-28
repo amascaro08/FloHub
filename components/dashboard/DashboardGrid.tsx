@@ -372,18 +372,18 @@ const DashboardGrid: React.FC = () => {
     
     const layouts: any = {};
     
-    // Use only filled slots to avoid empty layout items
-    const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
-    
-    // Simple layout generation - use original positions but only for lg breakpoint first
-    layouts.lg = filledSlots.map((slot, index) => ({
-      i: slot.id,
-      x: slot.position.col,
-      y: slot.position.row,
-      w: slot.position.colSpan,
-      h: slot.position.rowSpan,
-      static: true
-    }));
+         // Use only filled slots to avoid empty layout items
+     const filledSlots = currentConfig.slots.filter(slot => slotAssignments[slot.id]);
+     
+     // Simple layout generation - use original positions but only for lg breakpoint first
+     layouts.lg = filledSlots.map((slot, index) => ({
+       i: slot.id,
+       x: index * 6, // Simple side-by-side for testing
+       y: 0,
+       w: 6,
+       h: 8,
+       static: true
+     }));
     
     // For smaller breakpoints, stack vertically
     layouts.md = filledSlots.map((slot, index) => ({
@@ -422,7 +422,10 @@ const DashboardGrid: React.FC = () => {
       static: true
     }));
     
-    
+    console.log('Generated layouts:', layouts);
+    console.log('Filled slots:', filledSlots);
+    console.log('Current template:', currentTemplate);
+    console.log('Slot assignments:', slotAssignments);
     
     return layouts;
   };
