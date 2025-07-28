@@ -89,7 +89,19 @@ export function setupLazyLoading(): void {
 export function prefetchData(url: string, userEmail?: string): Promise<any> {
   return new Promise(async (resolve) => {
     try {
-      const data = await fetchWithCache(url);
+      const response = await fetch(url, { 
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'max-age=300' // 5 minute cache
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
       // Store in localStorage for quick access - USER SCOPED
       if (typeof window !== 'undefined' && userEmail) {
         const key = `prefetch:${userEmail}:${url}`;
