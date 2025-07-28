@@ -246,7 +246,7 @@ export default async function handler(
             const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
             console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
             
-            console.log('🔍 Actual sources in database:', googleSourcesInDb.map(s => ({
+            console.log('🔍 Actual sources in database:', googleSourcesInDb.map((s: CalendarSource) => ({
               id: s.id,
               name: s.name,
               type: s.type,
