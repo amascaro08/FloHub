@@ -414,10 +414,13 @@ const DashboardGrid = () => {
 
   // Generate layouts when active widgets or template changes
   useEffect(() => {
+    console.log('Layout generation effect triggered:', { activeWidgets, currentTemplate });
     if (activeWidgets.length > 0) {
       const smartLayouts = generateSmartLayout(activeWidgets, currentTemplate);
+      console.log('Generated smart layouts:', smartLayouts);
       setLayouts(smartLayouts);
     } else {
+      console.log('No active widgets, setting empty layouts');
       setLayouts({});
     }
   }, [activeWidgets, currentTemplate]);
@@ -594,7 +597,11 @@ const DashboardGrid = () => {
             className="layout"
             layouts={(() => {
               // Filter layouts to only include active widgets at render time
-              if (activeWidgets.length === 0 || Object.keys(layouts).length === 0) return {};
+              console.log('Render time layout filtering:', { activeWidgets, layoutsKeys: Object.keys(layouts) });
+              if (activeWidgets.length === 0 || Object.keys(layouts).length === 0) {
+                console.log('Returning empty layouts due to no active widgets or no layouts');
+                return {};
+              }
               
               const filteredLayouts: any = {};
               Object.keys(layouts).forEach(breakpoint => {
@@ -605,6 +612,7 @@ const DashboardGrid = () => {
                   );
                 }
               });
+              console.log('Filtered layouts for render:', filteredLayouts);
               return filteredLayouts;
             })()}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -619,7 +627,9 @@ const DashboardGrid = () => {
             preventCollision={false}
             useCSSTransforms={true}
           >
-            {activeWidgets.map((key) => (
+            {(() => {
+              console.log('Rendering widgets:', { activeWidgets, visibleWidgets });
+              return activeWidgets.map((key) => (
               <div key={key} className="glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-3 flex-shrink-0">
                   <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -651,7 +661,8 @@ const DashboardGrid = () => {
                   )}
                 </div>
               </div>
-            ))}
+            ));
+            })()}
           </ResponsiveGridLayout>
 
           {/* Empty State */}
