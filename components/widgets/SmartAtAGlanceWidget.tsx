@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { useWidgetTracking } from '@/lib/analyticsTracker';
+import type { WidgetProps } from '@/types/app';
 import {
   fetchTasks,
   fetchNotes,
@@ -64,7 +65,7 @@ interface QuickAction {
   variant?: 'default' | 'destructive' | 'ghost' | 'secondary';
 }
 
-const SmartAtAGlanceWidget = () => {
+const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false }: WidgetProps = {}) => {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -475,20 +476,22 @@ const SmartAtAGlanceWidget = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`${isCompact ? 'space-y-2' : 'space-y-4'} h-full flex flex-col`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-            <Brain className="w-5 h-5 text-primary-500" />
+          <div className={`${isCompact ? 'p-1.5' : 'p-2'} bg-primary-100 dark:bg-primary-900/30 rounded-xl`}>
+            <Brain className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} text-primary-500`} />
           </div>
           <div>
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white">
-              Smart Insights
+            <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white`}>
+              {isCompact ? 'Insights' : 'Smart Insights'}
             </h3>
-            <p className="text-xs text-grey-tint">
-              AI-powered recommendations
-            </p>
+                        {!isCompact && (
+              <p className="text-xs text-grey-tint">
+                AI-powered recommendations
+              </p>
+            )}
           </div>
         </div>
         

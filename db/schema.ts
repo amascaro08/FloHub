@@ -117,6 +117,8 @@ export const userSettings = pgTable("user_settings", {
   notificationSettings: jsonb("notification_settings"),
   floCatSettings: jsonb("flo_cat_settings"),
   layouts: jsonb("layouts"),
+  layoutTemplate: varchar("layout_template", { length: 50 }),
+  slotAssignments: jsonb("slot_assignments"),
 });
 
 // NOTES TABLE

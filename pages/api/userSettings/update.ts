@@ -77,6 +77,8 @@ export default async function handler(
       calendarSettings: newSettings.calendarSettings || { calendars: [] },
       notificationSettings: newSettings.notificationSettings || { subscribed: false },
       layouts: newSettings.layouts || {},
+      layoutTemplate: newSettings.layoutTemplate || undefined,
+      slotAssignments: newSettings.slotAssignments || undefined,
       calendarSources: finalCalendarSources,
       timezone: newSettings.timezone || 'UTC',
       floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },

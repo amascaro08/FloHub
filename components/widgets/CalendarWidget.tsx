@@ -8,12 +8,20 @@ import { CalendarEvent } from '@/types/calendar';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import EventDetailModal from '@/components/ui/EventDetailModal';
+import type { WidgetProps } from '@/types/app';
 
-interface CalendarWidgetProps {
+interface CalendarWidgetProps extends WidgetProps {
   className?: string;
 }
 
-const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ 
+  className = '', 
+  size = 'medium', 
+  colSpan = 4, 
+  rowSpan = 3, 
+  isCompact = false, 
+  isHero = false 
+}) => {
   const { user } = useUser();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -187,8 +195,68 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
     return { displayEvents: events, displayTitle: title };
   }, [selectedDate, eventsByDate, todayEvents]);
 
+  // Render different layouts based on size
+  if (isCompact) {
+    // Compact view: Focus on today's events
+    return (
+      <div className="space-y-2 h-full flex flex-col">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between flex-shrink-0">
+          <h3 className="text-sm font-heading font-semibold text-dark-base dark:text-soft-white">
+            {format(new Date(), 'MMM d, yyyy')}
+          </h3>
+          <button
+            onClick={goToToday}
+            className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+          >
+            Today
+          </button>
+        </div>
+        
+        {/* Today's Events List */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {todayEvents.length > 0 ? (
+            <div className="space-y-1">
+              {todayEvents.slice(0, 6).map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => handleEventClick(event)}
+                  className="w-full text-left p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-700 transition-colors"
+                >
+                  <div className="flex items-start space-x-2">
+                    <div className="w-1 h-1 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-dark-base dark:text-soft-white break-words">
+                        {event.summary && event.summary.length > 25 ? event.summary.slice(0, 25) + '...' : event.summary || 'No title'}
+                      </p>
+                      {event.start && 'dateTime' in event.start && event.start.dateTime && (
+                        <p className="text-xs text-grey-tint mt-0.5">
+                          {format(new Date(event.start.dateTime), 'h:mm a')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              {todayEvents.length > 6 && (
+                <p className="text-xs text-grey-tint text-center py-1">
+                  +{todayEvents.length - 6} more events
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Calendar className="w-6 h-6 text-grey-tint mx-auto mb-2" />
+              <p className="text-xs text-grey-tint">No events today</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3 h-full flex flex-col">
+    <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} h-full flex flex-col`}>
       {/* Calendar Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-1 min-w-0">
@@ -196,16 +264,16 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
             onClick={goToPreviousMonth}
             className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronLeft className="w-3 h-3" />
+            <ChevronLeft className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
           </button>
-          <h3 className="text-base font-heading font-semibold text-dark-base dark:text-soft-white truncate">
-            {format(currentDate, 'MMM yyyy')}
+          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-heading font-semibold text-dark-base dark:text-soft-white truncate`}>
+            {format(currentDate, isCompact ? 'MMM' : 'MMM yyyy')}
           </h3>
           <button
             onClick={goToNextMonth}
             className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
           </button>
         </div>
         <button
@@ -217,12 +285,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
       </div>
 
       {/* Calendar Grid */}
-      <div className="space-y-1 flex-shrink-0">
+      <div className={`${isCompact ? 'space-y-0.5' : 'space-y-1'} flex-shrink-0`}>
         {/* Day Headers */}
         <div className="grid grid-cols-7 gap-0.5">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <div key={index} className="text-center">
-              <span className="text-xs font-medium text-grey-tint">{day}</span>
+              <span className={`${isCompact ? 'text-xs' : 'text-xs'} font-medium text-grey-tint`}>{day}</span>
             </div>
           ))}
         </div>
@@ -240,7 +308,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ className = '' }) => {
               <button
                 key={index}
                 onClick={() => handleDateClick(day)}
-                className={`relative p-1 text-xs rounded transition-all duration-200 min-h-[28px] ${
+                className={`relative p-1 text-xs rounded transition-all duration-200 ${isCompact ? 'min-h-[20px]' : 'min-h-[28px]'} ${
                   isSelected
                     ? 'bg-primary-500 text-white'
                     : isTodayDate

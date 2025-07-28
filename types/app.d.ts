@@ -27,6 +27,8 @@ export type UserSettings = {
     enabledCapabilities: string[];
   };
   layouts?: { [key: string]: any };
+  layoutTemplate?: string;
+  slotAssignments?: { [slotId: string]: string | null };
 };
 
 // Define a type for calendar sources
@@ -83,4 +85,12 @@ export interface Task {
   createdAt: string | null;
   source?:   "personal" | "work"; // Add source tag
   tags: string[]; // Add tags property
+}
+
+export interface WidgetProps {
+  size?: 'small' | 'medium' | 'large' | 'hero';
+  colSpan?: number;
+  rowSpan?: number;
+  isCompact?: boolean;
+  isHero?: boolean;
 }
