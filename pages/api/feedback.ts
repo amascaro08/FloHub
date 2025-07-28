@@ -4,6 +4,7 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { feedback, backlog } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,22 +36,52 @@ export default async function handler(
           createdAt: new Date(item.createdAt!).getTime()
         })));
       } else {
-        // Retrieve feedback items for the current user
-        const feedbackItems = await db
-          .select()
-          .from(feedback)
-          .where(eq(feedback.userId, userEmail)) // Use email for lookup
-          .orderBy(desc(feedback.createdAt));
+        // Debug: First try to get all feedback without filtering
+        console.log("Attempting to query feedback table...");
         
-        return res.status(200).json(feedbackItems.map(item => ({
-          ...item,
-          id: String(item.id),
-          // Map database columns to expected frontend fields for backward compatibility
-          feedbackType: 'general', // Default since we don't store type separately anymore
-          feedbackText: item.description,
-          createdAt: new Date(item.createdAt!).getTime(),
-          completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
-        })));
+        try {
+          // Test 1: Try to get count first
+          const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM feedback`);
+          console.log("Feedback table count:", countResult.rows[0]);
+          
+          // Test 2: Try to get all records without filtering
+          const allFeedback = await db.execute(sql`SELECT id, user_id, title, description, status FROM feedback LIMIT 5`);
+          console.log("Sample feedback records:", allFeedback.rows);
+          
+          // Test 3: Now try the ORM query with user filter
+          const feedbackItems = await db
+            .select()
+            .from(feedback)
+            .where(eq(feedback.userId, userEmail))
+            .orderBy(desc(feedback.createdAt));
+          
+          return res.status(200).json(feedbackItems.map(item => ({
+            ...item,
+            id: String(item.id),
+            feedbackType: 'general',
+            feedbackText: item.description,
+            createdAt: new Date(item.createdAt!).getTime(),
+            completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
+          })));
+          
+        } catch (dbError: any) {
+          console.error("Database error details:", {
+            message: dbError.message,
+            code: dbError.code,
+            detail: dbError.detail,
+            hint: dbError.hint,
+            position: dbError.position,
+            table: dbError.table,
+            column: dbError.column
+          });
+          
+          return res.status(500).json({ 
+            error: "Database query failed", 
+            details: dbError.message,
+            userEmail: userEmail,
+            query: "Feedback table query failed"
+          });
+        }
       }
     } catch (err: any) {
       console.error("Get feedback error:", err);
