@@ -65,7 +65,7 @@ export default async function handler(
 
     const settingsData: Partial<UserSettings> = {
       defaultView: newSettings.defaultView || 'month',
-      powerAutomateUrl: newSettings.powerAutomateUrl || null,
+      powerAutomateUrl: newSettings.powerAutomateUrl || undefined,
       selectedCals: newSettings.selectedCals || [],
       globalTags: newSettings.globalTags || [],
       activeWidgets: newSettings.activeWidgets || [],
