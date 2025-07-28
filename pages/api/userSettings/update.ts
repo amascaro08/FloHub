@@ -107,9 +107,9 @@ export default async function handler(
       const savedCalendarSources = savedData.calendarSources as any[];
       console.log('✅ Verification: Calendar sources in database:', savedCalendarSources?.length || 0);
       
-      if (settingsData.calendarSources.length !== (savedCalendarSources?.length || 0)) {
+      if ((settingsData.calendarSources?.length || 0) !== (savedCalendarSources?.length || 0)) {
         console.error('❌ Calendar sources count mismatch!', {
-          expected: settingsData.calendarSources.length,
+          expected: settingsData.calendarSources?.length || 0,
           actual: savedCalendarSources?.length || 0
         });
       }
