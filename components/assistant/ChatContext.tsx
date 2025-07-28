@@ -57,12 +57,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }),
       });
 
+      console.log('Assistant API response status:', response.status);
+      console.log('Assistant API response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Assistant API error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Assistant API response data:', data);
+      
       const assistantContent = data.reply || "Sorry, I couldn't process that request.";
+      console.log('Assistant content:', assistantContent);
 
       // Parse assistant's response markdown to HTML
       let assistantHtmlContent;
@@ -81,7 +89,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     } catch (error) {
       console.error("Error processing message:", error);
-      const errorMessage = 'Error: Something went wrong while processing your request.';
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      
+      const errorMessage = `Error: Something went wrong while processing your request. ${error instanceof Error ? error.message : 'Unknown error'}`;
       let errorHtmlMessage;
       try {
         const result = marked(errorMessage);
