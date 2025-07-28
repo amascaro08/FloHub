@@ -257,16 +257,16 @@ export const analytics = pgTable("analytics", {
 // FEEDBACK TABLE
 export const feedback = pgTable("feedback", {
   id: serial("id").notNull().primaryKey(),
-  userId: varchar("userId", { length: 255 }).notNull(),
-  feedbackType: text("feedbackType"),
-  feedbackText: text("feedbackText").notNull(),
-  status: text("status").notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow(),
-  notes: text("notes"),
+  userId: varchar("user_id", { length: 255 }).notNull(), // Maps to user_id in database
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("open"),
   githubIssueNumber: integer("github_issue_number"),
   githubIssueUrl: text("github_issue_url"),
-  completedAt: timestamp("completedAt", { mode: "date" }),
+  completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
   notificationSent: boolean("notification_sent").default(false),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow(),
 });
 
 // BACKLOG TABLE

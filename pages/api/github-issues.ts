@@ -92,7 +92,7 @@ export default async function handler(
     const issueBody = `
 ## Feedback Details
 
-**Type:** ${feedbackType}
+**Type:** ${feedbackType || 'general'}
 **Submitted by:** ${user.email}
 **Date:** ${new Date().toISOString()}
 
@@ -138,15 +138,16 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
       labels,
     });
 
-    // Store feedback in database with GitHub issue info
+    // Store feedback in database with GitHub issue info using correct column names
     await db.insert(feedback).values({
-      userId: user.email,
-      feedbackType: feedbackType || "general",
-      feedbackText,
+      userId: user.email, // Store email in user_id field to match system pattern
+      title: title,
+      description: feedbackText,
       status: "open",
       githubIssueNumber: issue.data.number,
       githubIssueUrl: issue.data.html_url,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     return res.status(201).json({

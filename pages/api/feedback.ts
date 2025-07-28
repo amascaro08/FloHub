@@ -18,7 +18,7 @@ export default async function handler(
   if (!user?.email) {
     return res.status(401).json({ error: "User not found" });
   }
-  const userId = user.email;
+  const userEmail = user.email; // Use email as user identifier
 
   // Handle different HTTP methods
   if (req.method === "GET") {
@@ -39,12 +39,15 @@ export default async function handler(
         const feedbackItems = await db
           .select()
           .from(feedback)
-          .where(eq(feedback.userId, userId))
+          .where(eq(feedback.userId, userEmail)) // Use email for lookup
           .orderBy(desc(feedback.createdAt));
         
         return res.status(200).json(feedbackItems.map(item => ({
           ...item,
           id: String(item.id),
+          // Map database columns to expected frontend fields for backward compatibility
+          feedbackType: 'general', // Default since we don't store type separately anymore
+          feedbackText: item.description,
           createdAt: new Date(item.createdAt!).getTime(),
           completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
         })));
@@ -62,7 +65,7 @@ export default async function handler(
     }
     
     try {
-      const [newBacklogItem] = await db.insert(backlog).values({ text, userId, createdAt: new Date() }).returning();
+      const [newBacklogItem] = await db.insert(backlog).values({ text, userId: userEmail, createdAt: new Date() }).returning();
       
       return res.status(201).json({
         success: true,
@@ -80,7 +83,28 @@ export default async function handler(
     }
 
     try {
-      const [newFeedbackItem] = await db.insert(feedback).values({ userId, feedbackType: feedbackType || "general", feedbackText, status: "open", createdAt: new Date() }).returning();
+      // Create title from feedback type and text
+      const titlePrefixes: Record<string, string> = {
+        'bug': '🐛 Bug Report',
+        'feature': '✨ Feature Request', 
+        'ui': '🎨 UI Issue',
+        'calendar': '📅 Calendar Issue',
+        'performance': '⚡ Performance Issue',
+        'general': '💬 General Feedback'
+      };
+      
+      const titlePrefix = titlePrefixes[feedbackType] || '💬 Feedback';
+      const title = `${titlePrefix}: ${feedbackText.slice(0, 50)}${feedbackText.length > 50 ? '...' : ''}`;
+
+      const [newFeedbackItem] = await db.insert(feedback).values({ 
+        userId: userEmail, // Use email as user identifier
+        title: title,
+        description: feedbackText,
+        status: "open", 
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
       const feedbackId = newFeedbackItem.id;
 
       return res.status(201).json({ success: true, feedbackId });
@@ -107,11 +131,19 @@ export default async function handler(
         return res.status(404).json({ error: "Feedback not found" });
       }
       
-      await db.update(feedback).set({ status, notes }).where(eq(feedback.id, id));
+      await db.update(feedback).set({ 
+        status, 
+        updatedAt: new Date()
+      }).where(eq(feedback.id, id));
       
       // If status is "backlog", add to backlog collection
       if (status === "backlog") {
-        await db.insert(backlog).values({ originalId: id, text: existingFeedback.feedbackText, createdAt: new Date(), userId });
+        await db.insert(backlog).values({ 
+          originalId: id, 
+          text: existingFeedback.description || existingFeedback.title, 
+          createdAt: new Date(), 
+          userId: userEmail 
+        });
       }
       
       return res.status(200).json({ success: true });
