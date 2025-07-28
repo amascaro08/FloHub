@@ -249,11 +249,11 @@ const DashboardGrid = () => {
          lg: (w: string, i: number) => {
            if (i === 0) return { i: w, x: 0, y: 0, w: 8, h: 16, minW: 6, minH: 14, maxW: 10, maxH: 20 };
            return { i: w, x: 8, y: (i-1) * 8, w: 4, h: 8, minW: 3, minH: 6, maxW: 6, maxH: 12 };
-         }),
+         },
          md: (w: string, i: number) => {
            if (i === 0) return { i: w, x: 0, y: 0, w: 5, h: 16, minW: 4, minH: 14, maxW: 7, maxH: 20 };
            return { i: w, x: 5, y: (i-1) * 8, w: 3, h: 8, minW: 3, minH: 6, maxW: 5, maxH: 12 };
-         }),
+         },
          sm: (w: string, i: number) => ({ 
            i: w, x: 0, y: i * 12, w: 6, h: i === 0 ? 16 : 10, minW: 6, minH: i === 0 ? 14 : 8, maxW: 6, maxH: i === 0 ? 20 : 14 
          }),
@@ -294,7 +294,7 @@ const DashboardGrid = () => {
            ];
            const pos = positions[i] || positions[positions.length - 1];
            return { i: w, ...pos, minW: 3, minH: 6, maxW: 8, maxH: 16 };
-         }),
+         },
          md: (w: string, i: number) => {
            const positions = [
              { x: 0, y: 0, w: 4, h: 12 }, 
@@ -305,7 +305,7 @@ const DashboardGrid = () => {
            ];
            const pos = positions[i] || positions[positions.length - 1];
            return { i: w, ...pos, minW: 4, minH: 6, maxW: 6, maxH: 16 };
-         }),
+         },
          sm: (w: string, i: number) => ({ 
            i: w, x: 0, y: i * 9, w: 6, h: 9, minW: 6, minH: 7, maxW: 6, maxH: 12 
          }),
@@ -598,9 +598,12 @@ const DashboardGrid = () => {
               
               const filteredLayouts: any = {};
               Object.keys(layouts).forEach(breakpoint => {
-                filteredLayouts[breakpoint] = layouts[breakpoint as keyof typeof layouts].filter(
-                  (item: any) => activeWidgets.includes(item.i)
-                );
+                const layoutForBreakpoint = (layouts as any)[breakpoint];
+                if (Array.isArray(layoutForBreakpoint)) {
+                  filteredLayouts[breakpoint] = layoutForBreakpoint.filter(
+                    (item: any) => activeWidgets.includes(item.i)
+                  );
+                }
               });
               return filteredLayouts;
             })()}
