@@ -9,7 +9,28 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Add CORS headers to prevent redirect issues
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Hub-Signature-256, X-GitHub-Event, X-GitHub-Delivery');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  console.log("=== GITHUB WEBHOOK RECEIVED ===");
+  console.log("Method:", req.method);
+  console.log("Headers:", {
+    'x-github-event': req.headers['x-github-event'],
+    'x-github-delivery': req.headers['x-github-delivery'],
+    'x-hub-signature-256': req.headers['x-hub-signature-256'] ? 'present' : 'missing',
+    'user-agent': req.headers['user-agent']
+  });
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+
   if (req.method !== "POST") {
+    console.log(`Webhook received ${req.method} request, expected POST`);
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
@@ -18,6 +39,7 @@ export default async function handler(
   if (webhookSecret) {
     const signature = req.headers['x-hub-signature-256'] as string;
     if (!signature) {
+      console.error("Missing GitHub webhook signature");
       return res.status(401).json({ error: "Missing signature" });
     }
 
@@ -25,18 +47,41 @@ export default async function handler(
     const digest = 'sha256=' + hmac.update(JSON.stringify(req.body)).digest('hex');
     
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+      console.error("Invalid GitHub webhook signature");
       return res.status(401).json({ error: "Invalid signature" });
     }
+    console.log("GitHub webhook signature verified successfully");
+  } else {
+    console.warn("No GITHUB_WEBHOOK_SECRET configured, skipping signature verification");
   }
 
   const { action, issue } = req.body;
 
+  // Log the webhook event
+  console.log("GitHub webhook event:", {
+    action,
+    issue: issue ? {
+      number: issue.number,
+      title: issue.title,
+      state: issue.state,
+      html_url: issue.html_url
+    } : 'no issue data'
+  });
+
   // Only handle issue closed events
   if (action !== "closed") {
+    console.log(`Ignoring webhook action: ${action}`);
     return res.status(200).json({ message: "Event ignored" });
   }
 
+  if (!issue || !issue.number) {
+    console.error("No issue data in webhook payload");
+    return res.status(400).json({ error: "No issue data" });
+  }
+
   try {
+    console.log(`Looking for feedback entry with GitHub issue number: ${issue.number}`);
+    
     // Find feedback entry by GitHub issue number
     const [feedbackEntry] = await db
       .select()
@@ -44,8 +89,16 @@ export default async function handler(
       .where(eq(feedback.githubIssueNumber, issue.number));
 
     if (!feedbackEntry) {
+      console.log(`No matching feedback found for issue #${issue.number}`);
       return res.status(200).json({ message: "No matching feedback found" });
     }
+
+    console.log("Found feedback entry:", {
+      id: feedbackEntry.id,
+      userEmail: feedbackEntry.userEmail || feedbackEntry.userId, // Support both old and new format
+      status: feedbackEntry.status,
+      notificationSent: feedbackEntry.notificationSent
+    });
 
     // Update feedback status to completed
     await db
@@ -56,30 +109,51 @@ export default async function handler(
       })
       .where(eq(feedback.id, feedbackEntry.id));
 
+    console.log(`Updated feedback ${feedbackEntry.id} to completed status`);
+
     // Send notification email if not already sent
     if (!feedbackEntry.notificationSent) {
-      const success = await sendFeedbackCompletionEmail(
-        feedbackEntry.userId,
-        issue.title,
-        feedbackEntry.githubIssueUrl || issue.html_url
-      );
+      const userIdentifier = feedbackEntry.userEmail || feedbackEntry.userId;
+      
+      if (userIdentifier) {
+        console.log(`Sending completion notification to ${userIdentifier}`);
+        
+        const success = await sendFeedbackCompletionEmail(
+          userIdentifier,
+          issue.title,
+          feedbackEntry.githubIssueUrl || issue.html_url
+        );
 
-      if (success) {
-        // Mark notification as sent
-        await db
-          .update(feedback)
-          .set({ notificationSent: true })
-          .where(eq(feedback.id, feedbackEntry.id));
+        if (success) {
+          // Mark notification as sent
+          await db
+            .update(feedback)
+            .set({ notificationSent: true })
+            .where(eq(feedback.id, feedbackEntry.id));
+          
+          console.log("Notification sent and marked as sent");
+        } else {
+          console.error("Failed to send notification email");
+        }
+      } else {
+        console.warn("No user identifier found for feedback entry - cannot send notification");
       }
+    } else {
+      console.log("Notification already sent for this feedback");
     }
 
     return res.status(200).json({ 
-      message: "Feedback status updated and notification sent" 
+      message: "Feedback status updated and notification sent",
+      feedbackId: feedbackEntry.id,
+      issueNumber: issue.number
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("GitHub webhook error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: error.message 
+    });
   }
 }
 
@@ -186,10 +260,18 @@ View details: ${issueUrl}
 Have more feedback? We'd love to hear from you! Visit the feedback page in FloHub to share your thoughts.
   `;
 
-  return emailService.sendEmail({
-    to: userEmail,
-    subject,
-    html,
-    text,
-  });
+  try {
+    const result = await emailService.sendEmail({
+      to: userEmail,
+      subject,
+      html,
+      text,
+    });
+    
+    console.log("Email service result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error sending feedback completion email:", error);
+    return false;
+  }
 }
