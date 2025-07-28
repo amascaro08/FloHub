@@ -74,12 +74,13 @@ export default async function handler(
     let response: string;
     let actions: ChatResponse['actions'] = [];
 
-    if (intent.category === 'calendar' && intent.confidence > 0.6) {
+    // PERFORMANCE FIX: Only route to calendar intent for high-confidence calendar queries
+    if (intent.category === 'calendar' && intent.confidence > 0.8) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Routing to calendar intent handler');
       }
       response = await handleCalendarIntent(sanitizedInput, context, contextData);
-    } else if (intent.category === 'tasks' && intent.confidence > 0.6) {
+    } else if (intent.category === 'tasks' && intent.confidence > 0.8) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Routing to task intent handler');
       }
@@ -165,26 +166,41 @@ async function handleCalendarIntent(userInput: string, context: AssistantContext
   try {
     // PERFORMANCE FIX: Check if we have calendar data before processing
     if (!contextData?.allEvents && !contextData?.events) {
-      // PERFORMANCE FIX: Fetch minimal calendar data
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar`, {
-        headers: { 
-          'Cookie': context.cookies,
-          'Content-Type': 'application/json'
-        }
-      });
+      try {
+        // PERFORMANCE FIX: Fetch minimal calendar data with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar`, {
+          headers: { 
+            'Cookie': context.cookies,
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
 
-      if (response.ok) {
-        const calendarData = await response.json();
-        contextData = { allEvents: calendarData.events || [] };
-      } else {
-        return "I'm having trouble accessing your calendar right now. Please try again later.";
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const calendarData = await response.json();
+          contextData = { allEvents: calendarData.events || [] };
+        } else {
+          console.warn('Calendar API returned non-OK status:', response.status);
+          // Fall back to general assistant without calendar data
+          return await handleGeneralQuery(userInput, context);
+        }
+      } catch (fetchError) {
+        console.warn('Calendar fetch failed, falling back to general query:', fetchError);
+        // Fall back to general assistant without calendar data
+        return await handleGeneralQuery(userInput, context);
       }
     }
 
     return await processCalendarQuery(userInput, context.userTimezone, contextData);
   } catch (error) {
     console.error('Calendar intent error:', error);
-    return "I'm having trouble processing your calendar request. Please try again.";
+    // Fall back to general assistant
+    return await handleGeneralQuery(userInput, context);
   }
 }
 
@@ -251,8 +267,13 @@ async function handleGeneralQuery(userInput: string, context: AssistantContext, 
     // PERFORMANCE FIX: Use lightweight AI assistant  
     const smartAssistant = new SmartAIAssistant(context.email);
     
-    // Load user context before processing query
-    await smartAssistant.loadUserContext();
+    // Load user context before processing query (with error handling)
+    try {
+      await smartAssistant.loadUserContext();
+    } catch (contextError) {
+      console.warn('Could not load full user context, using basic assistant:', contextError);
+      // Continue without full context - provide basic AI assistance
+    }
     
     // Add debugging in development
     if (process.env.NODE_ENV === 'development') {
