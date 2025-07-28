@@ -8,6 +8,17 @@ import NotificationsSettings from "@/components/settings/NotificationsSettings";
 import TagsSettings from "@/components/settings/TagsSettings";
 import TimezoneSettings from "@/components/settings/TimezoneSettings";
 import WidgetsSettings from "@/components/settings/WidgetsSettings";
+import SidebarSettings from "@/components/settings/SidebarSettings";
+import { 
+  CogIcon,
+  GlobeAltIcon,
+  CalendarIcon,
+  Squares2X2Icon,
+  SparklesIcon,
+  BellIcon,
+  TagIcon,
+  Bars3Icon
+} from '@heroicons/react/24/outline';
 
 const SettingsPage = () => {
   const router = useRouter();
@@ -36,10 +47,21 @@ const SettingsPage = () => {
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Define tabs with icons and improved structure
+  const tabs = [
+    { id: "general", label: "General", icon: GlobeAltIcon, description: "Timezone and basic settings" },
+    { id: "sidebar", label: "Sidebar", icon: Bars3Icon, description: "Customize navigation menu" },
+    { id: "calendar", label: "Calendar", icon: CalendarIcon, description: "Calendar sources and settings" },
+    { id: "widgets", label: "Widgets", icon: Squares2X2Icon, description: "Dashboard widget management" },
+    { id: "flocat", label: "FloCat", icon: SparklesIcon, description: "AI assistant preferences" },
+    { id: "notifications", label: "Notifications", icon: BellIcon, description: "Alerts and email settings" },
+    { id: "tags", label: "Tags", icon: TagIcon, description: "Global tag management" },
+  ];
+
   // Handle URL parameters for tab navigation
   useEffect(() => {
     if (router.query.tab && typeof router.query.tab === 'string') {
-      const validTabs = ['general', 'calendar', 'widgets', 'flocat', 'notifications', 'tags'];
+      const validTabs = tabs.map(tab => tab.id);
       if (validTabs.includes(router.query.tab)) {
         setActiveTab(router.query.tab);
       }
@@ -132,6 +154,8 @@ const SettingsPage = () => {
     switch (activeTab) {
       case "general":
         return <TimezoneSettings settings={settings} onSettingsChange={handleSettingsChange} />;
+      case "sidebar":
+        return <SidebarSettings settings={settings} onSettingsChange={handleSettingsChange} />;
       case "calendar":
         return <CalendarSettings settings={settings} onSettingsChange={handleSettingsChange} calendars={[]} newCalendarSource={{}} setNewCalendarSource={() => {}} editingCalendarSourceIndex={null} setEditingCalendarSourceIndex={() => {}} showCalendarForm={false} setShowCalendarForm={() => {}} newCalendarTag="" setNewCalendarTag={() => {}} />;
       case "widgets":
@@ -148,21 +172,81 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-[var(--fg)]">Settings</h1>
-      {/* Fixed mobile responsive tab navigation */}
-      <div className="flex border-b border-neutral-200 dark:border-neutral-700 overflow-x-auto scrollbar-hide">
-        <div className="flex min-w-max">
-          <button onClick={() => setActiveTab("general")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "general" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>General</button>
-          <button onClick={() => setActiveTab("calendar")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "calendar" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Calendar</button>
-          <button onClick={() => setActiveTab("widgets")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "widgets" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Widgets</button>
-          <button onClick={() => setActiveTab("flocat")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "flocat" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>FloCat</button>
-          <button onClick={() => setActiveTab("notifications")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "notifications" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Notifications</button>
-          <button onClick={() => setActiveTab("tags")} className={`py-2 px-4 transition-colors whitespace-nowrap ${activeTab === "tags" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"}`}>Tags</button>
+    <div className="min-h-screen bg-[var(--bg)]">
+      {/* Header */}
+      <div className="bg-[var(--surface)] border-b border-neutral-200 dark:border-neutral-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
+              <CogIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[var(--fg)]">Settings</h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Customize your FloHub experience
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="mt-4">
-        {renderTabContent()}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          {/* Sidebar Navigation */}
+          <aside className="lg:col-span-3">
+            <div className="bg-[var(--surface)] rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+              <nav className="space-y-1 p-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`
+                        w-full text-left px-4 py-3 rounded-xl transition-all duration-200 group
+                        ${isActive 
+                          ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
+                          : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-400 group-hover:text-neutral-500'}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium ${isActive ? 'text-primary-700 dark:text-primary-300' : ''}`}>
+                            {tab.label}
+                          </p>
+                          <p className={`text-xs ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                            {tab.description}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Saving indicator */}
+            {isSaving && (
+              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 dark:bg-amber-900/20 dark:border-amber-800">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-500 border-t-transparent"></div>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">Saving changes...</p>
+                </div>
+              </div>
+            )}
+          </aside>
+
+          {/* Main Content */}
+          <main className="mt-8 lg:mt-0 lg:col-span-9">
+            <div className="animate-fade-in">
+              {renderTabContent()}
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
