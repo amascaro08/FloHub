@@ -35,12 +35,18 @@ export default async function handler(
           createdAt: new Date(item.createdAt!).getTime()
         })));
       } else {
-        // Retrieve feedback items
-        const feedbackItems = await db.select().from(feedback).orderBy(desc(feedback.createdAt));
+        // Retrieve feedback items for the current user
+        const feedbackItems = await db
+          .select()
+          .from(feedback)
+          .where(eq(feedback.userId, userId))
+          .orderBy(desc(feedback.createdAt));
+        
         return res.status(200).json(feedbackItems.map(item => ({
           ...item,
           id: String(item.id),
-          createdAt: new Date(item.createdAt!).getTime()
+          createdAt: new Date(item.createdAt!).getTime(),
+          completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
         })));
       }
     } catch (err: any) {
