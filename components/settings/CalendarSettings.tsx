@@ -164,15 +164,49 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                   Retry
                 </button>
               ) : connectionStatus.google === 'connected' ? (
-                <button
-                  onClick={() => {
-                    const refreshUrl = `/api/calendar/connect?provider=google&refresh=true`;
-                    window.location.href = refreshUrl;
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  Refresh Calendars
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        setConnectionStatus(prev => ({ ...prev, google: 'checking' }));
+                        const response = await fetch('/api/calendar/refresh-sources', {
+                          method: 'POST',
+                        });
+                        
+                        if (response.ok) {
+                          const result = await response.json();
+                          alert(`✅ Success!\n\nRefreshed Google Calendar:\n• Found ${result.data.calendarsFound} calendars\n• Created ${result.data.sourcesCreated} calendar sources\n• Calendar names: ${result.data.calendarNames.join(', ')}\n\nPlease refresh the page to see your calendars.`);
+                          window.location.reload();
+                        } else {
+                          const error = await response.json();
+                          if (error.action === 'reconnect_google') {
+                            alert(`❌ ${error.message}\n\nRedirecting to Google OAuth...`);
+                            window.location.href = `/api/calendar/connect?provider=google`;
+                          } else {
+                            alert(`❌ Failed to refresh calendars: ${error.message || error.error}`);
+                          }
+                          setConnectionStatus(prev => ({ ...prev, google: 'error' }));
+                        }
+                      } catch (error) {
+                        alert('❌ Error refreshing calendars. Please try again.');
+                        setConnectionStatus(prev => ({ ...prev, google: 'error' }));
+                      }
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    disabled={connectionStatus.google === 'checking'}
+                  >
+                    {connectionStatus.google === 'checking' ? 'Refreshing...' : 'Refresh Sources'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const refreshUrl = `/api/calendar/connect?provider=google&refresh=true`;
+                      window.location.href = refreshUrl;
+                    }}
+                    className="text-xs text-green-600 hover:text-green-800 underline"
+                  >
+                    Re-authenticate
+                  </button>
+                </div>
               ) : null}
             </div>
           </div>
