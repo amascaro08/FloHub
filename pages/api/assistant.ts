@@ -16,6 +16,8 @@ import {
 import { ChatCompletionMessageParam } from "openai/resources";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { getEnhancedNLPProcessor, EnhancedIntent } from "@/lib/enhancedNLP";
+import { EnhancedCalendarProcessor, CalendarEvent } from "@/lib/enhancedCalendarProcessor";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 // Enhanced types for better contextual awareness
@@ -212,23 +214,56 @@ function analyzeUserIntent(input: string): UserIntent {
 
 // Enhanced calendar event processing with better contextual search
 async function processCalendarQuery(userInput: string, userTimezone: string, contextData: any): Promise<string> {
-  const intent = analyzeUserIntent(userInput);
-  const events = contextData?.events || contextData?.allEvents || [];
-  
-  console.log(`[DEBUG] Processing calendar query with intent:`, intent);
-  
-  // Handle specific contextual queries (like "when do I take mum to the airport")
-  if (intent.type === 'question' && (intent.entities.person || intent.entities.location)) {
-    return await handleContextualCalendarQuery(userInput, events, userTimezone, intent);
+  try {
+    // Use enhanced NLP processor for better intent recognition
+    const nlpProcessor = getEnhancedNLPProcessor();
+    const enhancedIntent = await nlpProcessor.processQuery(userInput, userTimezone);
+    
+    console.log(`[DEBUG] Enhanced intent analysis:`, enhancedIntent);
+    
+    const events = contextData?.events || contextData?.allEvents || [];
+    
+    // Use enhanced calendar processor
+    const calendarProcessor = new EnhancedCalendarProcessor(userTimezone);
+    
+    if (enhancedIntent.calendar_context?.is_calendar_query) {
+      return calendarProcessor.processCalendarQuery(enhancedIntent, events);
+    }
+    
+    // Fallback to old intent system if enhanced NLP doesn't detect calendar query
+    const basicIntent = analyzeUserIntent(userInput);
+    console.log(`[DEBUG] Fallback to basic intent:`, basicIntent);
+    
+    // Handle specific contextual queries (like "when do I take mum to the airport")
+    if (basicIntent.type === 'question' && (basicIntent.entities.person || basicIntent.entities.location)) {
+      return await handleContextualCalendarQuery(userInput, events, userTimezone, basicIntent);
+    }
+    
+    // Handle time-specific queries
+    if (basicIntent.entities.timeRef) {
+      return await handleTimeSpecificQuery(basicIntent.entities.timeRef, events, userTimezone);
+    }
+    
+    // Default to showing upcoming events with intelligent formatting
+    return await formatCalendarResponse(events, userTimezone, 'upcoming');
+    
+  } catch (error) {
+    console.error('Error in enhanced calendar processing:', error);
+    
+    // Fallback to basic processing
+    const intent = analyzeUserIntent(userInput);
+    const events = contextData?.events || contextData?.allEvents || [];
+    
+    if (intent.type === 'question' && (intent.entities.person || intent.entities.location)) {
+      return await handleContextualCalendarQuery(userInput, events, userTimezone, intent);
+    }
+    
+    if (intent.entities.timeRef) {
+      return await handleTimeSpecificQuery(intent.entities.timeRef, events, userTimezone);
+    }
+    
+    return await formatCalendarResponse(events, userTimezone, 'upcoming');
   }
-  
-  // Handle time-specific queries
-  if (intent.entities.timeRef) {
-    return await handleTimeSpecificQuery(intent.entities.timeRef, events, userTimezone);
-  }
-  
-  // Default to showing upcoming events with intelligent formatting
-  return await formatCalendarResponse(events, userTimezone, 'upcoming');
 }
 
 // Enhanced contextual calendar query handler
@@ -1042,7 +1077,28 @@ async function generateEnhancedLocalResponse(
   intent: UserIntent,
   userTimezone: string
 ): Promise<string> {
-  // First try the smart assistant for natural language queries
+  // First try enhanced NLP processing for calendar queries
+  try {
+    const nlpProcessor = getEnhancedNLPProcessor();
+    const enhancedIntent = await nlpProcessor.processQuery(input, userTimezone);
+    
+    if (enhancedIntent.calendar_context?.is_calendar_query) {
+      console.log('[DEBUG] Local AI detected calendar query, using enhanced processing');
+      
+      // Get calendar events from global context
+      const contextData = (global as any).currentContextData || {};
+      const events = contextData.events || contextData.allEvents || [];
+      
+      if (events.length > 0) {
+        const calendarProcessor = new EnhancedCalendarProcessor(userTimezone);
+        return calendarProcessor.processCalendarQuery(enhancedIntent, events);
+      }
+    }
+  } catch (error) {
+    console.error("Error in enhanced NLP processing:", error);
+  }
+  
+  // Try the smart assistant for natural language queries
   try {
     const smartResponse = await smartAssistant.processNaturalLanguageQuery(input);
     if (smartResponse && !smartResponse.includes("I can help you with:")) {
