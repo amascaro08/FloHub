@@ -42,13 +42,22 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
 
-// Define widget components with Suspense and specific skeletons
-const widgetComponents: Record<WidgetType, ReactElement> = {
-  tasks: <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>,
-  calendar: <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget /></Suspense>,
-  ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>,
-  quicknote: <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>,
-  "habit-tracker": <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>,
+// Define widget components as factory functions to avoid React element creation issues
+const createWidgetComponent = (type: WidgetType): ReactElement => {
+  switch (type) {
+    case 'tasks':
+      return <Suspense fallback={<WidgetSkeleton type="tasks" />}><TaskWidget /></Suspense>;
+    case 'calendar':
+      return <Suspense fallback={<WidgetSkeleton type="calendar" />}><CalendarWidget /></Suspense>;
+    case 'ataglance':
+      return <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>;
+    case 'quicknote':
+      return <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>;
+    case 'habit-tracker':
+      return <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>;
+    default:
+      return <div>Unknown widget</div>;
+  }
 };
 
 // Helper function to recursively remove undefined values from an object
@@ -147,44 +156,43 @@ const DashboardGrid = () => {
   }, []);
 
   const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
-  const memoizedWidgetComponents = useMemo(() => widgetComponents, []);
 
   // Default layouts with improved responsive design and larger default sizes
   const defaultLayouts = {
     lg: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "ataglance", x: 8, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "quicknote", x: 0, y: 10, w: 6, h: 8, minW: 3, minH: 6 },
-      { i: "habit-tracker", x: 6, y: 10, w: 6, h: 8, minW: 3, minH: 6 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
+      { i: "ataglance", x: 8, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 12, maxH: 20 },
+      { i: "quicknote", x: 0, y: 12, w: 6, h: 10, minW: 4, minH: 8, maxW: 12, maxH: 16 },
+      { i: "habit-tracker", x: 6, y: 12, w: 6, h: 10, minW: 4, minH: 8, maxW: 12, maxH: 16 },
     ],
     md: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "calendar", x: 4, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "ataglance", x: 0, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "quicknote", x: 4, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "habit-tracker", x: 0, y: 20, w: 8, h: 8, minW: 4, minH: 6 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
+      { i: "calendar", x: 4, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
+      { i: "ataglance", x: 0, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
+      { i: "quicknote", x: 4, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 8, maxH: 20 },
+      { i: "habit-tracker", x: 0, y: 24, w: 8, h: 10, minW: 6, minH: 8, maxW: 8, maxH: 16 },
     ],
     sm: [
-      { i: "tasks", x: 0, y: 0, w: 6, h: 10, minW: 4, minH: 8 },
-      { i: "calendar", x: 0, y: 10, w: 6, h: 10, minW: 4, minH: 8 },
-      { i: "ataglance", x: 0, y: 20, w: 6, h: 10, minW: 4, minH: 8 },
-      { i: "quicknote", x: 0, y: 30, w: 6, h: 8, minW: 4, minH: 6 },
-      { i: "habit-tracker", x: 0, y: 38, w: 6, h: 8, minW: 4, minH: 6 },
+      { i: "tasks", x: 0, y: 0, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
+      { i: "calendar", x: 0, y: 12, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
+      { i: "ataglance", x: 0, y: 24, w: 6, h: 12, minW: 6, minH: 10, maxW: 6, maxH: 20 },
+      { i: "quicknote", x: 0, y: 36, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 16 },
+      { i: "habit-tracker", x: 0, y: 46, w: 6, h: 10, minW: 6, minH: 8, maxW: 6, maxH: 16 },
     ],
     xs: [
-      { i: "tasks", x: 0, y: 0, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "calendar", x: 0, y: 10, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "ataglance", x: 0, y: 20, w: 4, h: 10, minW: 3, minH: 8 },
-      { i: "quicknote", x: 0, y: 30, w: 4, h: 8, minW: 3, minH: 6 },
-      { i: "habit-tracker", x: 0, y: 38, w: 4, h: 8, minW: 3, minH: 6 },
+      { i: "tasks", x: 0, y: 0, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
+      { i: "calendar", x: 0, y: 12, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
+      { i: "ataglance", x: 0, y: 24, w: 4, h: 12, minW: 4, minH: 10, maxW: 4, maxH: 20 },
+      { i: "quicknote", x: 0, y: 36, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 16 },
+      { i: "habit-tracker", x: 0, y: 46, w: 4, h: 10, minW: 4, minH: 8, maxW: 4, maxH: 16 },
     ],
     xxs: [
-      { i: "tasks", x: 0, y: 0, w: 2, h: 10, minW: 2, minH: 8 },
-      { i: "calendar", x: 0, y: 10, w: 2, h: 10, minW: 2, minH: 8 },
-      { i: "ataglance", x: 0, y: 20, w: 2, h: 10, minW: 2, minH: 8 },
-      { i: "quicknote", x: 0, y: 30, w: 2, h: 8, minW: 2, minH: 6 },
-      { i: "habit-tracker", x: 0, y: 38, w: 2, h: 8, minW: 2, minH: 6 },
+      { i: "tasks", x: 0, y: 0, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
+      { i: "calendar", x: 0, y: 12, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
+      { i: "ataglance", x: 0, y: 24, w: 2, h: 12, minW: 2, minH: 10, maxW: 2, maxH: 20 },
+      { i: "quicknote", x: 0, y: 36, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 16 },
+      { i: "habit-tracker", x: 0, y: 46, w: 2, h: 10, minW: 2, minH: 8, maxW: 2, maxH: 16 },
     ],
   };
 
@@ -449,7 +457,10 @@ const DashboardGrid = () => {
             isDraggable={!isLocked}
             isResizable={!isLocked}
             margin={[20, 20]}
-            containerPadding={[0, 0]}
+            containerPadding={[20, 20]}
+            compactType="vertical"
+            preventCollision={false}
+            useCSSTransforms={true}
           >
             {activeWidgets.map((key) => (
               <div key={key} className="glass p-4 rounded-2xl border border-white/20 backdrop-blur-sm flex flex-col h-full overflow-hidden">
@@ -477,7 +488,7 @@ const DashboardGrid = () => {
                   {visibleWidgets.includes(key) ? (
                     <ErrorBoundary>
                       <div className="h-full overflow-y-auto overflow-x-hidden">
-                        {memoizedWidgetComponents[key as WidgetType]}
+                        {createWidgetComponent(key as WidgetType)}
                       </div>
                     </ErrorBoundary>
                   ) : (

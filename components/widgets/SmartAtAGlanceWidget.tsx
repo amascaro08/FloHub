@@ -83,43 +83,25 @@ const SmartAtAGlanceWidget = () => {
     error: eventsError,
   } = useCalendarContext();
 
-  // Smart data analysis functions
+  // Smart data analysis functions - memoized to prevent re-creation
   const analyzeData = useCallback((tasks: any[], events: CalendarEvent[], habits: any[], habitCompletions: any[]) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Filter incomplete tasks (using same logic as other widgets)
-    const incompleteTasks = tasks.filter(task => !task.done);
-    
-    // Debug: also check for other possible completion properties
-    const debugIncompleteWithBoth = tasks.filter(task => !(task.completed || task.done));
-    
-    console.log('SmartAtAGlanceWidget Debug:', {
-      totalTasks: tasks.length,
-      tasksData: tasks.slice(0, 3),
-      taskStatuses: tasks.slice(0, 5).map(t => ({ id: t.id, done: t.done, completed: t.completed }))
-    });
-    
-    console.log('SmartAtAGlanceWidget Task Count Debug:', {
-      totalTasksReceived: tasks.length,
-      completedTasksCount: tasks.filter(t => t.done).length,
-      incompleteTasksCount: incompleteTasks.length,
-      completedTasksPreview: tasks.filter(t => t.done).slice(0, 2),
-      incompleteTasksPreview: incompleteTasks.slice(0, 2)
-    });
-    
-    console.log('SmartAtAGlanceWidget Task Filter Debug:', {
-      totalTasksReceived: tasks.length,
-      incompleteTasksWithDoneOnly: tasks.filter(task => !task.done).length,
-      incompleteTasksWithBothProps: debugIncompleteWithBoth.length,
-      firstFewTaskProps: tasks.slice(0, 3).map(t => ({ id: t.id, done: t.done, completed: t.completed }))
-    });
+      // Safely handle arrays with fallbacks
+      const safeTasks = Array.isArray(tasks) ? tasks : [];
+      const safeEvents = Array.isArray(events) ? events : [];
+      const safeHabits = Array.isArray(habits) ? habits : [];
+      const safeHabitCompletions = Array.isArray(habitCompletions) ? habitCompletions : [];
 
-    // Get today's events
-    const todayEvents = events.filter(event => {
+      // Filter incomplete tasks (using same logic as other widgets)
+      const incompleteTasks = safeTasks.filter(task => task && !task.done);
+
+          // Get today's events
+      const todayEvents = safeEvents.filter(event => {
       let eventDate: Date;
       if (event.start instanceof Date) {
         eventDate = event.start;
@@ -133,9 +115,9 @@ const SmartAtAGlanceWidget = () => {
       return eventDate >= today && eventDate < tomorrow;
     });
 
-    // Get next meeting
-    const upcomingEvents = events
-      .filter(event => {
+          // Get next meeting
+      const upcomingEvents = safeEvents
+        .filter(event => {
         let eventStart: Date;
         if (event.start instanceof Date) {
           eventStart = event.start;
@@ -160,8 +142,8 @@ const SmartAtAGlanceWidget = () => {
       location: upcomingEvents[0].location
     } : null;
 
-    // Analyze habits
-    const todayHabits = habits.filter(habit => {
+          // Analyze habits
+      const todayHabits = safeHabits.filter(habit => {
       const dayOfWeek = now.getDay();
       if (habit.frequency === 'daily') return true;
       if (habit.frequency === 'weekly') return dayOfWeek === 1; // Monday
@@ -171,12 +153,12 @@ const SmartAtAGlanceWidget = () => {
       return false;
     });
 
-    const completedHabits = todayHabits.filter(habit => {
-      const today = now.toISOString().split('T')[0];
-      return habitCompletions.some(completion => 
-        completion.habitId === habit.id && completion.date === today
-      );
-    });
+          const completedHabits = todayHabits.filter(habit => {
+        const today = now.toISOString().split('T')[0];
+        return safeHabitCompletions.some(completion => 
+          completion && completion.habitId === habit.id && completion.date === today
+        );
+      });
 
     // Generate insights
     const insights: SmartInsight[] = [];
@@ -291,29 +273,43 @@ const SmartAtAGlanceWidget = () => {
       });
     }
 
-    return {
-      tasks: {
-        total: tasks.length,
-        incomplete: incompleteTasks.length,
-        urgent: incompleteTasks.filter(task => {
-          if (!task.dueDate) return false;
-          const dueDate = new Date(task.dueDate);
-          const diffTime = dueDate.getTime() - now.getTime();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          return diffDays <= 1;
-        }).length
-      },
-      events: {
-        today: todayEvents.length,
-        next: nextMeeting
-      },
-      habits: {
-        total: todayHabits.length,
-        completed: completedHabits.length,
-        completionRate: todayHabits.length > 0 ? (completedHabits.length / todayHabits.length) * 100 : 0
-      },
-      insights
-    };
+          return {
+        tasks: {
+          total: safeTasks.length,
+          incomplete: incompleteTasks.length,
+          urgent: incompleteTasks.filter(task => {
+            if (!task || !task.dueDate) return false;
+            try {
+              const dueDate = new Date(task.dueDate);
+              const diffTime = dueDate.getTime() - now.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return diffDays <= 1;
+            } catch {
+              return false;
+            }
+          }).length
+        },
+        events: {
+          today: todayEvents.length,
+          next: nextMeeting
+        },
+        habits: {
+          total: todayHabits.length,
+          completed: completedHabits.length,
+          completionRate: todayHabits.length > 0 ? (completedHabits.length / todayHabits.length) * 100 : 0
+        },
+        insights
+      };
+    } catch (error) {
+      console.error('Error analyzing smart widget data:', error);
+      // Return safe default data structure
+      return {
+        tasks: { total: 0, incomplete: 0, urgent: 0 },
+        events: { today: 0, next: null },
+        habits: { total: 0, completed: 0, completionRate: 0 },
+        insights: []
+      };
+    }
   }, []);
 
   // Helper functions
@@ -339,18 +335,21 @@ const SmartAtAGlanceWidget = () => {
     return diffMins <= 30 && diffMins >= 0;
   };
 
-  // Load data
+  // Load data with enhanced error handling
   useEffect(() => {
     const loadData = async () => {
       if (!user?.email) return;
 
       setLoading(true);
+      setError(null);
+      
       try {
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, but API expects 1-12
         
-        const [tasks, notes, meetings, habits, habitCompletions] = await Promise.all([
+        // Safely fetch data with fallbacks
+        const [tasks, notes, meetings, habits, habitCompletions] = await Promise.allSettled([
           fetchTasks(),
           fetchNotes(),
           fetchMeetings(),
@@ -358,7 +357,17 @@ const SmartAtAGlanceWidget = () => {
           fetchHabitCompletions(currentYear, currentMonth)
         ]);
 
-        const analyzedData = analyzeData(tasks, calendarEvents, habits, habitCompletions);
+        // Extract successful results with fallbacks
+        const safeTasks = tasks.status === 'fulfilled' ? tasks.value : [];
+        const safeNotes = notes.status === 'fulfilled' ? notes.value : [];
+        const safeMeetings = meetings.status === 'fulfilled' ? meetings.value : [];
+        const safeHabits = habits.status === 'fulfilled' ? habits.value : [];
+        const safeHabitCompletions = habitCompletions.status === 'fulfilled' ? habitCompletions.value : [];
+
+        // Ensure calendarEvents is an array
+        const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
+
+        const analyzedData = analyzeData(safeTasks, safeCalendarEvents, safeHabits, safeHabitCompletions);
         setData(analyzedData);
       } catch (error) {
         console.error('Error loading smart widget data:', error);
@@ -371,16 +380,19 @@ const SmartAtAGlanceWidget = () => {
     loadData();
   }, [user?.email, calendarEvents, analyzeData]);
 
-  // Refresh data
+  // Refresh data with enhanced error handling
   const handleRefresh = async () => {
     setRefreshing(true);
+    setError(null);
+    
     try {
       await invalidateCache('*'); // Invalidate all cached data
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, but API expects 1-12
       
-      const [tasks, notes, meetings, habits, habitCompletions] = await Promise.all([
+      // Use Promise.allSettled for safer concurrent requests
+      const [tasks, notes, meetings, habits, habitCompletions] = await Promise.allSettled([
         fetchTasks(),
         fetchNotes(),
         fetchMeetings(),
@@ -388,11 +400,22 @@ const SmartAtAGlanceWidget = () => {
         fetchHabitCompletions(currentYear, currentMonth)
       ]);
 
-      const analyzedData = analyzeData(tasks, calendarEvents, habits, habitCompletions);
+      // Extract successful results with fallbacks
+      const safeTasks = tasks.status === 'fulfilled' ? tasks.value : [];
+      const safeNotes = notes.status === 'fulfilled' ? notes.value : [];
+      const safeMeetings = meetings.status === 'fulfilled' ? meetings.value : [];
+      const safeHabits = habits.status === 'fulfilled' ? habits.value : [];
+      const safeHabitCompletions = habitCompletions.status === 'fulfilled' ? habitCompletions.value : [];
+
+      // Ensure calendarEvents is an array
+      const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
+
+      const analyzedData = analyzeData(safeTasks, safeCalendarEvents, safeHabits, safeHabitCompletions);
       setData(analyzedData);
       trackingHook.trackInteraction('refresh_data');
     } catch (error) {
       console.error('Error refreshing data:', error);
+      setError('Failed to refresh data');
     } finally {
       setRefreshing(false);
     }
@@ -485,7 +508,7 @@ const SmartAtAGlanceWidget = () => {
             <CheckSquare className="w-4 h-4 text-primary-500" />
           </div>
           <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-            {data.tasks.incomplete}
+            {data?.tasks?.incomplete ?? 0}
           </p>
           <p className="text-xs text-grey-tint">Tasks</p>
         </div>
@@ -495,7 +518,7 @@ const SmartAtAGlanceWidget = () => {
             <Calendar className="w-4 h-4 text-accent-500" />
           </div>
           <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-            {data.events.today}
+            {data?.events?.today ?? 0}
           </p>
           <p className="text-xs text-grey-tint">Events</p>
         </div>
@@ -505,7 +528,7 @@ const SmartAtAGlanceWidget = () => {
             <Target className="w-4 h-4 text-primary-500" />
           </div>
           <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-            {data.habits.completed}/{data.habits.total}
+            {data?.habits?.completed ?? 0}/{data?.habits?.total ?? 0}
           </p>
           <p className="text-xs text-grey-tint">Habits</p>
         </div>
@@ -513,7 +536,7 @@ const SmartAtAGlanceWidget = () => {
 
       {/* Insights */}
       <div className="space-y-3">
-        {data.insights.length > 0 ? (
+        {data?.insights && Array.isArray(data.insights) && data.insights.length > 0 ? (
           data.insights.slice(0, 3).map((insight: SmartInsight, index: number) => (
             <div
               key={index}
@@ -574,20 +597,20 @@ const SmartAtAGlanceWidget = () => {
       </div>
 
       {/* Next Meeting */}
-      {data.events.next && (
+      {data?.events?.next && (
         <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-xl">
               <Clock className="w-4 h-4 text-accent-500" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
-                {data.events.next.summary}
-              </h4>
-              <p className="text-xs text-grey-tint">
-                {data.events.next.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {data.events.next.timeUntilStart}
-              </p>
-            </div>
+                          <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                  {data?.events?.next?.summary || 'Meeting'}
+                </h4>
+                <p className="text-xs text-grey-tint">
+                  {data?.events?.next?.startTime?.toLocaleTimeString?.([], { hour: '2-digit', minute: '2-digit' }) || ''} • {data?.events?.next?.timeUntilStart || ''}
+                </p>
+              </div>
             <button
               onClick={() => window.location.href = '/dashboard/meetings'}
               className="p-1 text-gray-400 hover:text-accent-500 transition-colors"
