@@ -1,7 +1,18 @@
 import jwt from 'jsonwebtoken';
 import { NextApiRequest } from 'next';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+// CRITICAL SECURITY FIX: Remove hardcoded fallback secret
+function getJWTSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required and must be set');
+  }
+  if (secret.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters long');
+  }
+  return secret;
+}
 
 export interface AuthPayload {
   userId: number;
@@ -11,23 +22,40 @@ export interface AuthPayload {
 }
 
 export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { 
-    expiresIn: '7d',
-    algorithm: 'HS256'
-  });
+  try {
+    return jwt.sign(payload, getJWTSecret(), { 
+      expiresIn: '7d',
+      algorithm: 'HS256',
+      issuer: 'flohub',
+      audience: 'flohub-users'
+    });
+  } catch (error) {
+    console.error('Token signing failed:', error instanceof Error ? error.message : 'Unknown error');
+    throw new Error('Failed to generate authentication token');
+  }
 }
 
 export function verifyToken(token: string): AuthPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { 
-      algorithms: ['HS256'] 
+    const decoded = jwt.verify(token, getJWTSecret(), { 
+      algorithms: ['HS256'],
+      issuer: 'flohub',
+      audience: 'flohub-users'
     }) as AuthPayload;
     
     return decoded;
   } catch (error) {
-    console.warn('JWT verification failed:', error instanceof Error ? error.message : 'Unknown error');
+    // Don't log the actual token or detailed error in production
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('JWT verification failed:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return null;
   }
+}
+
+// Generate cryptographically secure tokens for password resets, etc.
+export function generateSecureToken(length: number = 32): string {
+  return crypto.randomBytes(length).toString('hex');
 }
 
 export function auth(req: NextApiRequest): AuthPayload | null {
@@ -49,7 +77,10 @@ export function auth(req: NextApiRequest): AuthPayload | null {
 
     return verifyToken(token);
   } catch (error) {
-    console.error('Auth error:', error);
+    // Don't log sensitive details in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Auth error:', error);
+    }
     return null;
   }
 }
@@ -90,7 +121,10 @@ export function setCookie(res: any, name: string, value: string, maxAge: number 
   const cookieString = cookieParts.join('; ');
   res.setHeader('Set-Cookie', cookieString);
   
-  console.log(`Cookie set (secure: ${isSecure}):`, cookieString);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Cookie set (secure: ${isSecure}):`, cookieString);
+  }
 }
 
 // Enhanced cookie clearing function with security awareness  
@@ -113,7 +147,10 @@ export function clearCookie(res: any, name: string, req?: NextApiRequest) {
   const cookieString = cookieParts.join('; ');
   res.setHeader('Set-Cookie', cookieString);
   
-  console.log(`Cookie cleared (secure: ${isSecure}):`, cookieString);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Cookie cleared (secure: ${isSecure}):`, cookieString);
+  }
 }
 
 // Comprehensive user cache and data cleanup function
