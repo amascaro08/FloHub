@@ -14,7 +14,7 @@ import { useChat } from '../assistant/ChatContext';
 import WidgetToggle from './WidgetToggle';
 import LogoutButton from './LogoutButton';
 
-const nav = [
+const defaultNav = [
   { name: "Hub", href: "/dashboard", icon: Home },
   { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { name: "Notes", href: "/dashboard/notes", icon: BookOpen },
@@ -25,10 +25,33 @@ const nav = [
   { name: "Feedback", href: "/feedback", icon: MessageCircle },
 ];
 
+interface SidebarPreferences {
+  visiblePages: string[];
+  order: string[];
+  collapsed: boolean;
+}
+
 const Layout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
+    // Initialize from localStorage on component mount
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
+
+  // Sidebar preferences state
+  const [sidebarPrefs, setSidebarPrefs] = useState<SidebarPreferences>({
+    visiblePages: defaultNav.map(item => item.name),
+    order: defaultNav.map(item => item.name),
+    collapsed: false
+  });
+
+  // Add refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // -- AUTH --
   const { user } = useUser();
@@ -42,6 +65,78 @@ const Layout = ({ children }: { children: ReactNode }) => {
     setIsLocked(saved === "true");
   }, []);
 
+  // Load sidebar preferences from API
+  useEffect(() => {
+    const loadSidebarPrefs = async () => {
+      if (user?.email) {
+        try {
+          console.log('Loading sidebar preferences for user:', user.email);
+          const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}&t=${Date.now()}`);
+          if (response.ok) {
+            const prefs = await response.json();
+            console.log('Loaded sidebar preferences:', prefs);
+            setSidebarPrefs(prefs);
+            // Also set collapsed state from preferences
+            if (prefs.collapsed !== undefined) {
+              setDesktopSidebarCollapsed(prefs.collapsed);
+              localStorage.setItem('sidebarCollapsed', String(prefs.collapsed));
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load sidebar preferences:', error);
+        }
+      }
+    };
+
+    loadSidebarPrefs();
+  }, [user?.email, refreshTrigger]);
+
+  // Listen for sidebar preference changes from other components
+  useEffect(() => {
+    const handleSidebarPreferencesChanged = () => {
+      console.log('Sidebar preferences changed event received, refreshing...');
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    // Listen for custom events
+    window.addEventListener('sidebarPreferencesChanged', handleSidebarPreferencesChanged);
+    
+    // Also listen for storage changes (in case of multiple tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sidebarPreferencesUpdated') {
+        console.log('Storage change detected for sidebar preferences');
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('sidebarPreferencesChanged', handleSidebarPreferencesChanged);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Save sidebar collapsed state to preferences
+  const saveSidebarState = async (collapsed: boolean) => {
+    if (user?.email) {
+      try {
+        const newPrefs = { ...sidebarPrefs, collapsed };
+        await fetch('/api/user/sidebar-preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.email,
+            preferences: newPrefs
+          })
+        });
+        setSidebarPrefs(newPrefs);
+      } catch (error) {
+        console.error('Failed to save sidebar state:', error);
+      }
+    }
+  };
+
   const toggleLock = () => {
     setIsLocked(current => {
       const newState = !current;
@@ -53,7 +148,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = user?.primaryEmail === 'amascaro08@gmail.com';
-      const adminNavItem = { name: "User Management", href: "/dashboard/admin", icon: Users };
+  const adminNavItem = { name: "User Management", href: "/dashboard/admin", icon: Users };
 
   // -- CHAT --
   const chatContext = useChat();
@@ -61,12 +156,59 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const setIsChatOpen = chatContext?.setIsChatOpen || (() => {});
 
   const toggleDesktopSidebar = () => {
-    setDesktopSidebarCollapsed(!desktopSidebarCollapsed);
+    const newCollapsed = !desktopSidebarCollapsed;
+    setDesktopSidebarCollapsed(newCollapsed);
+    localStorage.setItem('sidebarCollapsed', String(newCollapsed));
+    saveSidebarState(newCollapsed);
   };
 
   const toggleChat = () => {
     setIsChatOpen(!isChatOpen);
   };
+
+  // Build navigation items based on user preferences
+  const buildNavigation = () => {
+    // Create a map of all available navigation items
+    const navMap = new Map();
+    defaultNav.forEach(item => navMap.set(item.name, item));
+    if (isAdmin) {
+      navMap.set("User Management", adminNavItem);
+    }
+
+    console.log('Building navigation with preferences:', sidebarPrefs);
+    console.log('Available nav items:', Array.from(navMap.keys()));
+    console.log('Visible pages:', sidebarPrefs.visiblePages);
+    console.log('Order:', sidebarPrefs.order);
+
+    // Order items according to user preferences
+    const orderedNav = sidebarPrefs.order
+      .map(name => navMap.get(name))
+      .filter(item => item && sidebarPrefs.visiblePages.includes(item.name));
+
+    // Add any items that aren't in the order but are visible (fallback)
+    sidebarPrefs.visiblePages.forEach(name => {
+      if (!sidebarPrefs.order.includes(name) && navMap.has(name)) {
+        orderedNav.push(navMap.get(name));
+      }
+    });
+
+    console.log('Final navigation items:', orderedNav.map(item => item.name));
+    return orderedNav;
+  };
+
+  const navigationItems = buildNavigation();
+
+  // Close mobile sidebar when route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setMobileSidebarOpen(false);
+    };
+
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router.events]);
 
   // Loading state for user (optional, depends if you want to delay render)
   if (user === undefined) {
@@ -100,9 +242,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
+          overflow-y-auto scrollbar-thin
         `}
       >
-        <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+        {/* Header */}
+        <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} flex-shrink-0`}>
           {!desktopSidebarCollapsed && (
             <Image
               src="/FloHub_Logo_Transparent.png"
@@ -123,54 +267,45 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         
-        {/* Main navigation - top half */}
-        <nav className="p-4 space-y-1 flex-1">
-          {nav.map((x) => (
+        {/* Main navigation - scrollable */}
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+          {navigationItems.map((item) => (
             <Link
-              key={x.href}
-              href={x.href}
+              key={item.href}
+              href={item.href}
               className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
-              } group`}
+              } group ${
+                router.pathname === item.href 
+                  ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
+                  : ''
+              }`}
               onClick={() => {
                 setMobileSidebarOpen(false);
               }}
             >
-              <x.icon className={`w-5 h-5 text-primary-500 group-hover:text-primary-600 transition-colors ${
+              <item.icon className={`w-5 h-5 transition-colors ${
+                router.pathname === item.href 
+                  ? 'text-primary-600 dark:text-primary-400' 
+                  : 'text-primary-500 group-hover:text-primary-600'
+              } ${
                 !desktopSidebarCollapsed && 'mr-3'
               }`} />
               {!desktopSidebarCollapsed && (
-                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
-                  {x.name}
+                <span className={`font-medium transition-colors ${
+                  router.pathname === item.href 
+                    ? 'text-primary-700 dark:text-primary-300' 
+                    : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
+                }`}>
+                  {item.name}
                 </span>
               )}
             </Link>
           ))}
-
-          {isAdmin && (
-            <Link
-              href={adminNavItem.href}
-              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
-                desktopSidebarCollapsed ? 'justify-center' : ''
-              } group`}
-              onClick={() => {
-                setMobileSidebarOpen(false);
-              }}
-            >
-              <Users className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
-                !desktopSidebarCollapsed && 'mr-3'
-              }`} />
-              {!desktopSidebarCollapsed && (
-                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
-                  {adminNavItem.name}
-                </span>
-              )}
-            </Link>
-          )}
         </nav>
 
         {/* User account section - bottom third */}
-        <div className="border-t border-neutral-200 dark:border-neutral-700">
+        <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {/* User account indicator */}
           {!desktopSidebarCollapsed && user && (
             <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
@@ -205,16 +340,28 @@ const Layout = ({ children }: { children: ReactNode }) => {
               href="/dashboard/settings"
               className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
-              } group`}
+              } group ${
+                router.pathname === '/dashboard/settings' 
+                  ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
+                  : ''
+              }`}
               onClick={() => {
                 setMobileSidebarOpen(false);
               }}
             >
-              <Settings className={`w-5 h-5 text-neutral-500 group-hover:text-neutral-600 transition-colors ${
+              <Settings className={`w-5 h-5 transition-colors ${
+                router.pathname === '/dashboard/settings' 
+                  ? 'text-primary-600 dark:text-primary-400' 
+                  : 'text-neutral-500 group-hover:text-neutral-600'
+              } ${
                 !desktopSidebarCollapsed && 'mr-3'
               }`} />
               {!desktopSidebarCollapsed && (
-                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                <span className={`font-medium transition-colors ${
+                  router.pathname === '/dashboard/settings' 
+                    ? 'text-primary-700 dark:text-primary-300' 
+                    : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
+                }`}>
                   Settings
                 </span>
               )}
