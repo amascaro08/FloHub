@@ -379,9 +379,9 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     // Note: IndexedDB cache will be updated on next background refresh
   }, [cacheKey]);
 
-  // Invalidate cache for a specific date range
+  // Invalidate cache for a specific date range - stable version
   const invalidateCache = useCallback(async (start?: Date, end?: Date) => {
-    const key = getCacheKey(start || startDate, end || endDate);
+    const key = start && end ? getCacheKey(start, end) : cacheKey;
     eventCache.delete(key);
     
     // Clear IndexedDB cache for the range
@@ -390,9 +390,9 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
     } catch (error) {
       console.error('Error clearing IndexedDB cache:', error);
     }
-  }, [startDate, endDate]);
+  }, [cacheKey]);
 
-  // Clear cache and reload when calendar sources change - heavily debounced and stabilized
+  // Clear cache and reload when calendar sources change - prevent dependency loops
   useEffect(() => {
     if (!isInitializing && calendarSourcesHash) {
       const timeoutId = setTimeout(() => {
@@ -400,22 +400,22 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         invalidateCache().then(() => {
           loadEventsStable(startDate, endDate, false, true); // Force reload
         });
-      }, 3000); // Increased debounce to 3 seconds to prevent loops
+      }, 5000); // Increased debounce to 5 seconds to prevent loops
 
       return () => clearTimeout(timeoutId);
     }
-  }, [calendarSourcesHash, isInitializing, loadEventsStable, startDate, endDate]); // Use stable function
+  }, [calendarSourcesHash, isInitializing]); // Removed all date and function dependencies
 
-  // Load events on mount and when date range changes - stabilized dependencies
+  // Load events on mount and when date range changes - minimal dependencies
   useEffect(() => {
     if (!isInitializing) {
       const timeoutId = setTimeout(() => {
         loadEventsStable(startDate, endDate);
-      }, 1000); // Increased debounce to prevent rapid calls
+      }, 1500); // Increased debounce to prevent rapid calls
 
       return () => clearTimeout(timeoutId);
     }
-  }, [startDate.getTime(), endDate.getTime(), isInitializing, loadEventsStable]); // Use stable function and getTime()
+  }, [startDate.getTime(), endDate.getTime(), isInitializing]); // Only date and init state
 
   // Start background refresh when component mounts
   useEffect(() => {
