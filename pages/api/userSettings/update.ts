@@ -69,6 +69,7 @@ export default async function handler(
       selectedCals: newSettings.selectedCals || [],
       globalTags: newSettings.globalTags || [],
       activeWidgets: newSettings.activeWidgets || [],
+      hiddenWidgets: newSettings.hiddenWidgets || [],
       floCatStyle: newSettings.floCatStyle || 'default',
       floCatPersonality: newSettings.floCatPersonality || [],
       preferredName: newSettings.preferredName || '',

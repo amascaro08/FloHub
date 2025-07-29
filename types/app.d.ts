@@ -10,6 +10,7 @@ export type UserSettings = {
   powerAutomateUrl?: string;
   globalTags?: string[];
   activeWidgets?: string[];
+  hiddenWidgets?: string[];
   calendarSources?: CalendarSource[];
   timezone?: string;
   floCatStyle?: "default" | "more_catty" | "less_catty" | "professional";

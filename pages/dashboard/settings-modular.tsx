@@ -6,7 +6,6 @@ import { useUser } from '@/lib/hooks/useUser';
 import dynamic from 'next/dynamic';
 import Layout from "@/components/ui/Layout";
 import CalendarSettings from "@/components/settings/CalendarSettings";
-import WidgetsSettings from "@/components/settings/WidgetsSettings";
 import TimezoneSettings from "@/components/settings/TimezoneSettings";
 import TagsSettings from "@/components/settings/TagsSettings";
 import FloCatSettings from "@/components/settings/FloCatSettings";
@@ -45,8 +44,8 @@ const SettingsModularPage = () => {
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState('');
 
 
-  // Use user.email as userId
-  const userId = user?.email;
+  // Use user.primaryEmail as userId
+  const userId = user?.primaryEmail;
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(
@@ -107,7 +106,7 @@ const SettingsModularPage = () => {
         console.log("Settings updated successfully!");
         
         // Clear calendar cache if sources changed
-        if (calendarSourcesChanged && user?.email) {
+        if (calendarSourcesChanged && user?.primaryEmail) {
           console.log("Calendar sources changed, clearing caches...");
           try {
             const { clearCalendarCaches } = await import('@/lib/calendarUtils');
@@ -161,7 +160,6 @@ const SettingsModularPage = () => {
             newCalendarTag={newCalendarTag}
             setNewCalendarTag={setNewCalendarTag}
         />
-        <WidgetsSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <TimezoneSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <TagsSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <FloCatSettings

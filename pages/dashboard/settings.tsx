@@ -7,13 +7,11 @@ import FloCatSettings from "@/components/settings/FloCatSettings";
 import NotificationsSettings from "@/components/settings/NotificationsSettings";
 import TagsSettings from "@/components/settings/TagsSettings";
 import TimezoneSettings from "@/components/settings/TimezoneSettings";
-import WidgetsSettings from "@/components/settings/WidgetsSettings";
 import SidebarSettings from "@/components/settings/SidebarSettings";
 import { 
   CogIcon,
   GlobeAltIcon,
   CalendarIcon,
-  Squares2X2Icon,
   SparklesIcon,
   BellIcon,
   TagIcon,
@@ -52,7 +50,6 @@ const SettingsPage = () => {
     { id: "general", label: "General", icon: GlobeAltIcon, description: "Timezone and basic settings" },
     { id: "sidebar", label: "Sidebar", icon: Bars3Icon, description: "Customize navigation menu" },
     { id: "calendar", label: "Calendar", icon: CalendarIcon, description: "Calendar sources and settings" },
-    { id: "widgets", label: "Widgets", icon: Squares2X2Icon, description: "Dashboard widget management" },
     { id: "flocat", label: "FloCat", icon: SparklesIcon, description: "AI assistant preferences" },
     { id: "notifications", label: "Notifications", icon: BellIcon, description: "Alerts and email settings" },
     { id: "tags", label: "Tags", icon: TagIcon, description: "Global tag management" },
@@ -76,9 +73,9 @@ const SettingsPage = () => {
       // Clear the query parameters and refresh settings
       router.replace(router.pathname, undefined, { shallow: true });
       // Reload settings after OAuth success to get updated calendar sources
-      if (user?.email) {
+      if (user?.primaryEmail) {
         setTimeout(() => {
-          fetch(`/api/userSettings?userId=${user.email}`)
+          fetch(`/api/userSettings?userId=${user.primaryEmail}`)
             .then((res) => res.json())
             .then((data) => {
               console.log('Refreshed settings after OAuth:', data);
@@ -93,11 +90,11 @@ const SettingsPage = () => {
       // Clear the query parameters
       router.replace(router.pathname, undefined, { shallow: true });
     }
-  }, [router.query.success, router.query.error, router, user?.email]);
+      }, [router.query.success, router.query.error, router, user?.primaryEmail]);
 
   useEffect(() => {
-    if (user?.email) {
-      fetch(`/api/userSettings?userId=${user.email}`)
+    if (user?.primaryEmail) {
+      fetch(`/api/userSettings?userId=${user.primaryEmail}`)
         .then((res) => res.json())
         .then((data) => setSettings(data));
     }
@@ -113,10 +110,10 @@ const SettingsPage = () => {
     setIsSaving(true);
     setSettings(newSettings);
     
-    if (user?.email) {
+    if (user?.primaryEmail) {
       try {
         console.log('Saving settings with calendar sources:', newSettings.calendarSources?.length || 0);
-        const response = await fetch(`/api/userSettings/update?userId=${user.email}`, {
+        const response = await fetch(`/api/userSettings/update?userId=${user.primaryEmail}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newSettings),
@@ -133,7 +130,7 @@ const SettingsPage = () => {
         console.log('Settings saved successfully');
         
         // Verify the save by fetching settings again
-        const verifyResponse = await fetch(`/api/userSettings?userId=${user.email}`);
+        const verifyResponse = await fetch(`/api/userSettings?userId=${user.primaryEmail}`);
         if (verifyResponse.ok) {
           const savedSettings = await verifyResponse.json();
           console.log('Verified saved calendar sources:', savedSettings.calendarSources?.length || 0);
@@ -158,8 +155,6 @@ const SettingsPage = () => {
         return <SidebarSettings settings={settings} onSettingsChange={handleSettingsChange} />;
       case "calendar":
         return <CalendarSettings settings={settings} onSettingsChange={handleSettingsChange} calendars={[]} newCalendarSource={{}} setNewCalendarSource={() => {}} editingCalendarSourceIndex={null} setEditingCalendarSourceIndex={() => {}} showCalendarForm={false} setShowCalendarForm={() => {}} newCalendarTag="" setNewCalendarTag={() => {}} />;
-      case "widgets":
-        return <WidgetsSettings settings={settings} onSettingsChange={handleSettingsChange} />;
       case "flocat":
         return <FloCatSettings settings={settings} onSettingsChange={handleSettingsChange} newPersonalityKeyword={newPersonalityKeyword} setNewPersonalityKeyword={setNewPersonalityKeyword} />;
       case "notifications":
