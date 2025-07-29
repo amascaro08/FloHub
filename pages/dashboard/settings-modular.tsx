@@ -6,7 +6,6 @@ import { useUser } from '@/lib/hooks/useUser';
 import dynamic from 'next/dynamic';
 import Layout from "@/components/ui/Layout";
 import CalendarSettings from "@/components/settings/CalendarSettings";
-import WidgetsSettings from "@/components/settings/WidgetsSettings";
 import TimezoneSettings from "@/components/settings/TimezoneSettings";
 import TagsSettings from "@/components/settings/TagsSettings";
 import FloCatSettings from "@/components/settings/FloCatSettings";
@@ -161,7 +160,6 @@ const SettingsModularPage = () => {
             newCalendarTag={newCalendarTag}
             setNewCalendarTag={setNewCalendarTag}
         />
-        <WidgetsSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <TimezoneSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <TagsSettings settings={settings} onSettingsChange={handleSettingsChange} />
         <FloCatSettings
