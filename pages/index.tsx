@@ -80,35 +80,26 @@ function LandingPage() {
         <div className="bg-gradient-to-r from-[#00C9A7] to-[#00B396] text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-black/5"></div>
           <div className="relative max-w-6xl mx-auto px-6 py-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Image 
                     src="/flocat_flohub.png" 
                     alt="FloCat" 
-                    width={32} 
-                    height={32} 
-                    className="rounded-full bg-white/20 p-1" 
+                    width={28} 
+                    height={28} 
+                    className="rounded-full bg-white/20 p-1 sm:w-8 sm:h-8" 
                   />
-                  <div className="bg-[#FF6B6B] text-white px-3 py-1 rounded-full text-sm font-semibold">
+                  <div className="bg-[#FF6B6B] text-white px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold">
                     ALPHA
                   </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-lg">Welcome to FloHub Alpha! 🚀</p>
-                  <p className="text-sm opacity-90">
-                    You're testing the future of productivity. <strong>Completely free</strong> during alpha — help us perfect your workflow!
+                <div className="text-center sm:text-left">
+                  <p className="font-semibold text-base sm:text-lg">Welcome to FloHub Alpha! 🚀</p>
+                  <p className="text-xs sm:text-sm opacity-90">
+                    <strong>Register now</strong> to test the future of productivity and help us perfect your workflow!
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="hidden sm:block text-right opacity-90">
-                  <p>Found a bug? Have feedback?</p>
-                  <p>FloCat is listening! 😺</p>
-                </div>
-                <Link href="/feedback" className="bg-white/20 hover:bg-white/30 transition-colors px-4 py-2 rounded-xl font-medium border border-white/30">
-                  Share Feedback
-                </Link>
               </div>
             </div>
           </div>
