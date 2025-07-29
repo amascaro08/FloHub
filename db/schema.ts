@@ -136,6 +136,8 @@ export const notes = pgTable("notes", {
   actions: jsonb("actions"),
   agenda: text("agenda"),
   aiSummary: text("ai_summary"),
+  meetingSeries: varchar("meeting_series", { length: 255 }),
+  linkedMeetingIds: text("linked_meeting_ids").array(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow(),
 });
 
