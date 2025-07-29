@@ -104,12 +104,38 @@ export default async function handler(
     const user = currentUser;
     console.log('✅ Using authenticated user:', user.id);
 
+    // Get Google user info to obtain the proper provider account ID
+    console.log('🔍 Fetching Google user profile for proper account identification...');
+    let googleUserInfo: any = null;
+    try {
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` }
+      });
+      
+      if (userInfoResponse.ok) {
+        googleUserInfo = await userInfoResponse.json();
+        console.log('✅ Google user info received:', {
+          id: googleUserInfo.id,
+          email: googleUserInfo.email,
+          verified_email: googleUserInfo.verified_email
+        });
+      } else {
+        console.error('❌ Failed to fetch Google user info:', userInfoResponse.status);
+        // Continue without user info - will use fallback provider account ID
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Google user info:', error);
+      // Continue without user info - will use fallback provider account ID
+    }
+
     console.log('🔍 Checking for existing Google account for authenticated user...');
     // Store or update the Google account in the database - SCOPED TO AUTHENTICATED USER
+    const googleAccountId = googleUserInfo?.id || 'google'; // Use Google user ID or fallback
     const existingAccount = await db.query.accounts.findFirst({
       where: and(
         eq(accounts.userId, user.id), // Use authenticated user's ID
-        eq(accounts.provider, 'google')
+        eq(accounts.provider, 'google'),
+        eq(accounts.providerAccountId, googleAccountId) // Also match by provider account ID
       ),
     });
     console.log('Existing account for authenticated user:', existingAccount ? 'Found' : 'Not found');
@@ -122,6 +148,7 @@ export default async function handler(
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || existingAccount.refresh_token,
           expires_at: tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : null,
+          providerAccountId: googleAccountId, // Update provider account ID if we got new info
         })
         .where(and(
           eq(accounts.id, existingAccount.id),
@@ -135,12 +162,33 @@ export default async function handler(
         userId: user.id, // Use authenticated user's ID
         type: 'oauth',
         provider: 'google',
-        providerAccountId: 'google',
+        providerAccountId: googleAccountId, // Use proper Google user ID
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : null,
       });
       console.log('✅ Created new Google account for authenticated user');
+    }
+
+    // Verify that the token was actually saved
+    console.log('🔍 Verifying token storage...');
+    const verifyAccount = await db.query.accounts.findFirst({
+      where: and(
+        eq(accounts.userId, user.id),
+        eq(accounts.provider, 'google')
+      ),
+    });
+    
+    if (verifyAccount?.access_token) {
+      console.log('✅ Access token verified in database:', {
+        hasToken: !!verifyAccount.access_token,
+        hasRefreshToken: !!verifyAccount.refresh_token,
+        expiresAt: verifyAccount.expires_at,
+        providerAccountId: verifyAccount.providerAccountId
+      });
+    } else {
+      console.error('❌ CRITICAL: Access token not found in database after save!');
+      console.error('Database verification result:', verifyAccount);
     }
 
     console.log('🔄 Fetching all available Google calendars for authenticated user...');
