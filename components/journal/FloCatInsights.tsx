@@ -66,34 +66,44 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
         
         try {
           // Fetch mood
-          const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
+          const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`, { 
+            withCredentials: true,
+            timeout: 5000 
+          });
           if (moodResponse.data && moodResponse.data.emoji) {
             const moodScores: {[key: string]: number} = {
+              'Awful': 1, 'Bad': 2, 'Meh': 3, 'Good': 4, 'Rad': 5,
               '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😄': 5
             };
             dayData.mood = {
               emoji: moodResponse.data.emoji,
               label: moodResponse.data.label,
-              score: moodScores[moodResponse.data.emoji] || 3
+              score: moodScores[moodResponse.data.label] || moodScores[moodResponse.data.emoji] || 3
             };
           }
         } catch (error) {
-          // No mood data for this day
+          console.log(`No mood data for ${dateStr}:`, error);
         }
         
         try {
           // Fetch activities
-          const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
+          const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`, { 
+            withCredentials: true,
+            timeout: 5000 
+          });
           if (activitiesResponse.data && activitiesResponse.data.activities) {
             dayData.activities = activitiesResponse.data.activities;
           }
         } catch (error) {
-          // No activities data for this day
+          console.log(`No activities data for ${dateStr}:`, error);
         }
         
         try {
           // Fetch sleep
-          const sleepResponse = await axios.get(`/api/journal/sleep?date=${dateStr}`);
+          const sleepResponse = await axios.get(`/api/journal/sleep?date=${dateStr}`, { 
+            withCredentials: true,
+            timeout: 5000 
+          });
           if (sleepResponse.data && sleepResponse.data.quality) {
             dayData.sleep = {
               quality: sleepResponse.data.quality,
@@ -101,14 +111,18 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
             };
           }
         } catch (error) {
-          // No sleep data for this day
+          console.log(`No sleep data for ${dateStr}:`, error);
         }
         
         try {
           // Check if there's an entry
-          const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`);
-          dayData.hasEntry = !!(entryResponse.data && entryResponse.data.content);
+          const entryResponse = await axios.get(`/api/journal/entry?date=${dateStr}`, { 
+            withCredentials: true,
+            timeout: 5000 
+          });
+          dayData.hasEntry = !!(entryResponse.data && entryResponse.data.content && entryResponse.data.content.trim());
         } catch (error) {
+          console.log(`No entry data for ${dateStr}:`, error);
           dayData.hasEntry = false;
         }
         
@@ -125,6 +139,15 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     } finally {
       setIsLoading(false);
     }
+    
+    // Fallback timeout to ensure loading never gets stuck
+    setTimeout(() => {
+      if (isLoading) {
+        console.log('FloCatInsights: Timeout reached, stopping loading state');
+        setIsLoading(false);
+        setInsights(getDefaultInsights());
+      }
+    }, 15000); // 15 second timeout
   };
 
   const generateInsights = (data: JournalData[]): Insight[] => {
@@ -490,6 +513,14 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
       message: "I'm FloCat, and I'm here to help you discover patterns in your life. Start journaling and I'll learn with you!",
       icon: '🌟',
       confidence: 100
+    },
+    {
+      id: 'getting_started',
+      type: 'suggestion',
+      title: 'Building Your Data 📊',
+      message: "Keep tracking your moods and activities daily. After 5-7 days of consistent journaling, I'll start showing you personalized patterns and insights!",
+      icon: '📊',
+      confidence: 95
     }
   ];
 
@@ -530,7 +561,13 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
             <p className="text-sm text-slate-500 dark:text-slate-400">Analyzing your journal patterns...</p>
           </div>
         </div>
-        <div className="h-24 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse"></div>
+        <div className="bg-gradient-to-br from-[#00C9A7]/10 to-[#FF6B6B]/10 rounded-xl p-4">
+          <div className="flex items-center space-x-2 mb-3">
+            <div className="animate-spin h-4 w-4 border-2 border-[#00C9A7] rounded-full border-t-transparent"></div>
+            <p className="text-slate-600 dark:text-slate-300">Looking for patterns in your data...</p>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">This may take a few moments.</p>
+        </div>
       </div>
     );
   }

@@ -308,7 +308,7 @@ export default function JournalPage() {
             <div className="space-y-6">
               {/* Date selector */}
               <div className="mb-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <p className="text-sm text-grey-tint">
                     {selectedDate === today 
                       ? "Today's entry" 

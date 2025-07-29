@@ -525,7 +525,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
       </div>
       
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 mb-4 w-full min-w-[280px] max-w-full overflow-x-auto">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-4 w-full min-w-[280px] max-w-full overflow-x-auto">
         {/* Weekday headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div key={day} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 p-1">
@@ -539,8 +539,8 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             key={index}
             onClick={() => handleDateSelect(day.date)}
             className={`
-              relative aspect-square flex flex-col rounded-xl transition-all p-1 sm:p-2
-              min-w-[30px] w-full border-2 border-transparent
+              relative aspect-square flex flex-col rounded-lg sm:rounded-xl transition-all p-1 sm:p-2
+              min-w-[36px] sm:min-w-[40px] w-full border-2 border-transparent
               ${isCurrentMonth(day.date) ? 'opacity-100' : 'opacity-40'}
               ${selectedDate === day.date ? 'ring-2 ring-black dark:ring-white' : ''}
               ${getMoodColor(day.mood?.score)}
@@ -548,13 +548,13 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             `}
           >
             {/* Date number in top-left */}
-            <span className={`absolute top-0.5 sm:top-1 left-0.5 sm:left-1 text-[0.6rem] sm:text-xs font-medium ${isToday(day.date) ? 'text-teal-600 dark:text-teal-400' : ''}`}>
+            <span className={`absolute top-0.5 sm:top-1 left-0.5 sm:left-1 text-xs sm:text-sm font-medium ${isToday(day.date) ? 'text-teal-600 dark:text-teal-400' : ''}`}>
               {new Date(day.date).getDate()}
             </span>
             
             {/* Sleep hours in top-right */}
             {day.sleep && day.sleep.hours > 0 && (
-              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-0.5 sm:px-1 rounded text-[0.5rem] sm:text-[0.6rem] text-blue-800 dark:text-blue-200 max-w-[40%] truncate">
+              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 bg-blue-200 dark:bg-blue-800 px-1 sm:px-1.5 rounded text-[0.6rem] sm:text-xs text-blue-800 dark:text-blue-200 max-w-[45%] truncate">
                 💤{day.sleep.hours}h
               </div>
             )}
@@ -562,19 +562,19 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
             {/* Mood emoji in center */}
             <div className="flex-grow flex items-center justify-center">
               {day.mood && (
-                <span className="text-base sm:text-xl">{day.mood.emoji}</span>
+                <span className="text-lg sm:text-2xl">{day.mood.emoji}</span>
               )}
               
               {/* Entry indicator if no mood */}
               {day.hasEntry && !day.mood && (
-                <span className="text-base sm:text-xl">📝</span>
+                <span className="text-lg sm:text-2xl">📝</span>
               )}
             </div>
             
             {/* Activities at bottom */}
             {day.activities && day.activities.length > 0 && (
               <div className="w-full mt-auto border-t border-black/10 dark:border-white/10 pt-0.5 sm:pt-1">
-                <div className="flex flex-wrap justify-center gap-[1px] sm:gap-[2px]">
+                <div className="flex flex-wrap justify-center gap-[2px] sm:gap-1">
                   {day.activities.slice(0, 3).map((activity, idx) => {
                     // Get icon for activity
                     const activityIcons: {[key: string]: string} = {
@@ -585,13 +585,13 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                       'Study': '📝', 'Meditation': '🧘', 'Art': '🖼️', 'Writing': '✍️'
                     };
                     return (
-                      <span key={idx} className="text-[0.6rem] sm:text-xs">
+                      <span key={idx} className="text-xs sm:text-sm">
                         {activityIcons[activity] || '📌'}
                       </span>
                     );
                   })}
                   {day.activities.length > 3 && (
-                    <span className="text-[0.6rem] sm:text-xs">+{day.activities.length - 3}</span>
+                    <span className="text-xs sm:text-sm">+{day.activities.length - 3}</span>
                   )}
                 </div>
               </div>
