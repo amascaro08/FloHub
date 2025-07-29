@@ -306,14 +306,74 @@ export default function JournalPage() {
           {/* Content based on current view */}
           {activeTab === 'today' && (
             <div className="space-y-6">
-              {/* Date indicator */}
-              <div>
-                <p className="text-sm text-grey-tint mb-6">
-                  {selectedDate === today 
-                    ? "Today's entry" 
-                    : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} entry`
-                  }
-                </p>
+              {/* Date selector */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-grey-tint">
+                    {selectedDate === today 
+                      ? "Today's entry" 
+                      : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} entry`
+                    }
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        const date = new Date(selectedDate);
+                        date.setDate(date.getDate() - 1);
+                        const prevDate = formatDate(date.toISOString(), timezone, {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+                        handleSelectDate(prevDate);
+                      }}
+                      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      title="Previous day"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => handleSelectDate(e.target.value)}
+                      className="px-3 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-dark-base dark:text-soft-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    
+                    <button
+                      onClick={() => {
+                        const date = new Date(selectedDate);
+                        date.setDate(date.getDate() + 1);
+                        const nextDate = formatDate(date.toISOString(), timezone, {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
+                        if (nextDate <= today) {
+                          handleSelectDate(nextDate);
+                        }
+                      }}
+                      disabled={selectedDate >= today}
+                      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Next day"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    
+                    {selectedDate !== today && (
+                      <button
+                        onClick={() => handleSelectDate(today)}
+                        className="px-3 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                      >
+                        Today
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
               {/* Main Entry */}
               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">

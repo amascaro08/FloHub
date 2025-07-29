@@ -179,6 +179,13 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
       insights.push(...consistencyInsights);
     }
     
+    // If we don't have enough data, show informative message
+    const daysWithData = data.filter(day => 
+      day.hasEntry || day.mood || (day.activities && day.activities.length > 0)
+    ).length;
+    
+    console.log(`FloCatInsights: Found ${daysWithData} days with data out of ${data.length} total days`);
+    
     // If we don't have enough insights, add some encouragement
     if (insights.length < 2) {
       insights.push(...getEncouragementInsights(data));
@@ -543,13 +550,19 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
           </div>
           <div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">FloCat's Insights</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">No patterns detected yet</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Building your insights...</p>
           </div>
         </div>
         <div className="bg-gradient-to-br from-[#00C9A7]/10 to-[#FF6B6B]/10 rounded-xl p-4">
-          <p className="text-slate-600 dark:text-slate-300">
-            Keep journaling and tracking your moods! I need more data to spot patterns and give you personalized insights.
+          <p className="text-slate-600 dark:text-slate-300 mb-3">
+            I need at least <strong>5 days</strong> of journal entries with mood and activity tracking to generate meaningful insights.
           </p>
+          <div className="text-sm text-slate-500 dark:text-slate-400">
+            <p>✓ Track your daily mood</p>
+            <p>✓ Log your activities</p>
+            <p>✓ Write journal entries</p>
+            <p className="mt-2 font-medium">Come back after 5 days of consistent journaling to see your personalized patterns!</p>
+          </div>
         </div>
       </div>
     );
