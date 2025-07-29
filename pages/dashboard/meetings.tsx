@@ -6,7 +6,7 @@ import Head from "next/head";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import type { Note, UserSettings, Action } from "@/types/app";
-import type { CalendarEvent, CalendarSettings } from "@/types/calendar";
+import type { CalendarEvent, CalendarSettings, CalendarEventDateTime } from "@/types/calendar";
 import { parseISO } from 'date-fns';
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
@@ -200,13 +200,23 @@ export default function MeetingsPage() {
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
 
+  // Helper function to safely extract date from calendar event
+  const getEventDate = (start: CalendarEventDateTime | Date): Date => {
+    if (start instanceof Date) {
+      return start;
+    }
+    // For CalendarEventDateTime, try dateTime first, then date
+    const dateString = start.dateTime || start.date;
+    return dateString ? new Date(dateString) : new Date();
+  };
+
   // Calculate stats for tabs
   const meetingNotes = meetingNotesResponse?.meetingNotes || [];
   const totalActions = meetingNotes.reduce((acc, note) => acc + (note.actions?.length || 0), 0);
   const pendingActions = meetingNotes.reduce((acc, note) => 
     acc + (note.actions?.filter(action => action.status === 'todo')?.length || 0), 0);
   const upcomingMeetings = workCalendarEvents.filter(event => 
-    new Date(event.start.dateTime || event.start.date) > new Date()).length;
+    getEventDate(event.start) > new Date()).length;
 
   // Group meetings by series for series tab
   const meetingSeries = useMemo(() => {
@@ -586,16 +596,16 @@ export default function MeetingsPage() {
                       <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
                       <p className="text-grey-tint">Loading upcoming meetings...</p>
                     </div>
-                  ) : workCalendarEvents.filter(event => new Date(event.start.dateTime || event.start.date) > new Date()).length === 0 ? (
+                                     ) : workCalendarEvents.filter(event => getEventDate(event.start) > new Date()).length === 0 ? (
                     <div className="text-center py-8">
                       <CalendarDaysIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Upcoming Meetings</h3>
                       <p className="text-gray-500 dark:text-gray-400">Your scheduled meetings will appear here</p>
                     </div>
                   ) : (
-                    workCalendarEvents
-                      .filter(event => new Date(event.start.dateTime || event.start.date) > new Date())
-                      .slice(0, 10)
+                                         workCalendarEvents
+                       .filter(event => getEventDate(event.start) > new Date())
+                       .slice(0, 10)
                       .map(event => (
                         <div key={event.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                           <div className="flex items-start justify-between mb-2">
@@ -607,10 +617,10 @@ export default function MeetingsPage() {
                               Take Notes
                             </button>
                           </div>
-                          <p className="text-sm text-grey-tint">
-                            {new Date(event.start.dateTime || event.start.date).toLocaleDateString()} at{' '}
-                            {new Date(event.start.dateTime || event.start.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                                                     <p className="text-sm text-grey-tint">
+                             {getEventDate(event.start).toLocaleDateString()} at{' '}
+                             {getEventDate(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                           </p>
                         </div>
                       ))
                   )}
