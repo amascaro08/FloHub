@@ -36,88 +36,21 @@ export default async function handler(
           createdAt: new Date(item.createdAt!).getTime()
         })));
       } else {
-        // TESTING: Use raw SQL to bypass ORM and test the actual database
-        console.log("Testing feedback table access...");
+        // Get user feedback using the correct schema
+        const userFeedback = await db
+          .select()
+          .from(feedback)
+          .where(eq(feedback.userEmail, userEmail))
+          .orderBy(desc(feedback.createdAt));
         
-        try {
-          // Test 1: Check if feedback table exists
-          const tableCheck = await db.execute(sql`
-            SELECT EXISTS (
-              SELECT FROM information_schema.tables 
-              WHERE table_schema = 'public' 
-              AND table_name = 'feedback'
-            );
-          `);
-          console.log("Table exists:", tableCheck.rows[0]);
-          
-          // Test 2: Get table columns
-          const columnsCheck = await db.execute(sql`
-            SELECT column_name, data_type, is_nullable 
-            FROM information_schema.columns 
-            WHERE table_name = 'feedback' 
-            ORDER BY ordinal_position;
-          `);
-          console.log("Table columns:", columnsCheck.rows);
-          
-          // Test 3: Try simple count
-          const countCheck = await db.execute(sql`SELECT COUNT(*) as count FROM feedback;`);
-          console.log("Row count:", countCheck.rows[0]);
-          
-          // Test 4: Check if user_email column exists, if not fall back to user_id
-          const hasUserEmail = columnsCheck.rows.some(col => col.column_name === 'user_email');
-          console.log("Has user_email column:", hasUserEmail);
-          
-          if (hasUserEmail) {
-            // Use the new user_email column (consistent with other tables)
-            const userFeedback = await db
-              .select()
-              .from(feedback)
-              .where(eq(feedback.userEmail, userEmail))
-              .orderBy(desc(feedback.createdAt));
-            
-            return res.status(200).json(userFeedback.map(item => ({
-              ...item,
-              id: String(item.id),
-              feedbackType: 'general',
-              feedbackText: item.description,
-              createdAt: new Date(item.createdAt!).getTime(),
-              completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
-            })));
-          } else {
-            // Return structure info if user_email column doesn't exist yet
-            return res.status(200).json({
-              success: false,
-              debug: {
-                tableExists: tableCheck.rows[0],
-                columns: columnsCheck.rows,
-                count: countCheck.rows[0],
-                userEmail: userEmail,
-                message: "user_email column not found - migration needed"
-              },
-              data: [],
-              migrationNeeded: true
-            });
-          }
-          
-        } catch (dbError: any) {
-          console.error("Database test error:", {
-            message: dbError.message,
-            code: dbError.code,
-            detail: dbError.detail,
-            hint: dbError.hint,
-            position: dbError.position,
-            table: dbError.table,
-            column: dbError.column,
-            stack: dbError.stack
-          });
-          
-          return res.status(500).json({ 
-            error: "Database test failed", 
-            details: dbError.message,
-            userEmail: userEmail,
-            errorCode: dbError.code
-          });
-        }
+        return res.status(200).json(userFeedback.map(item => ({
+          ...item,
+          id: String(item.id),
+          feedbackType: 'general',
+          feedbackText: item.description,
+          createdAt: new Date(item.createdAt!).getTime(),
+          completedAt: item.completedAt ? new Date(item.completedAt).getTime() : null
+        })));
       }
     } catch (err: any) {
       console.error("Get feedback error:", err);
@@ -163,31 +96,9 @@ export default async function handler(
       const titlePrefix = titlePrefixes[feedbackType] || '💬 Feedback';
       const title = `${titlePrefix}: ${feedbackText.slice(0, 50)}${feedbackText.length > 50 ? '...' : ''}`;
 
-      // Check what columns exist in the feedback table to handle both old and new schemas
-      const columnsCheck = await db.execute(sql`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'feedback' 
-        AND table_schema = 'public'
-      `);
-      
-      const availableColumns = columnsCheck.rows.map(row => row.column_name);
-      console.log("Available columns in feedback table:", availableColumns);
-      
-      const hasUserEmail = availableColumns.includes('user_email');
-      const hasTitle = availableColumns.includes('title');
-      const hasDescription = availableColumns.includes('description');
-      
-      // Determine which columns to use based on what's available
-      const userField = hasUserEmail ? 'user_email' : 'userId';
-      const titleField = hasTitle ? 'title' : 'feedbackType';
-      const descriptionField = hasDescription ? 'description' : 'feedbackText';
-      
-      console.log("Using columns for feedback insertion:", { userField, titleField, descriptionField });
-
-      // Use raw SQL for insertion to handle schema differences
+      // Insert feedback using the correct schema
       const insertResult = await db.execute(sql`
-        INSERT INTO feedback (${sql.raw(userField)}, ${sql.raw(titleField)}, ${sql.raw(descriptionField)}, status, created_at)
+        INSERT INTO feedback (user_email, title, description, status, created_at)
         VALUES (${userEmail}, ${title}, ${feedbackText}, 'open', ${new Date().toISOString()})
         RETURNING id
       `);

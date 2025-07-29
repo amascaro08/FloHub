@@ -150,41 +150,19 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
         githubIssueUrl: issue.data.html_url
       });
 
-      // First, check what columns exist in the feedback table
-      const columnsCheck = await db.execute(sql`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'feedback' 
-        AND table_schema = 'public'
-      `);
-      
-      const availableColumns = columnsCheck.rows.map(row => row.column_name);
-      console.log("Available columns in feedback table:", availableColumns);
-      
-      const hasUserEmail = availableColumns.includes('user_email');
-      const hasTitle = availableColumns.includes('title');
-      const hasDescription = availableColumns.includes('description');
-      
-      // Determine which columns to use based on what's available
-      const userField = hasUserEmail ? 'user_email' : 'userId';
-      const titleField = hasTitle ? 'title' : 'feedbackType';
-      const descriptionField = hasDescription ? 'description' : 'feedbackText';
-      
-      console.log("Using columns:", { userField, titleField, descriptionField });
-
-      // Insert feedback with the correct column names
+      // Insert feedback using the correct schema
       await db.execute(sql`
-        INSERT INTO feedback (${sql.raw(userField)}, ${sql.raw(titleField)}, ${sql.raw(descriptionField)}, status)
+        INSERT INTO feedback (user_email, title, description, status)
         VALUES (${user.email}, ${title}, ${feedbackText}, 'open')
       `);
 
       console.log("Basic insertion successful, now updating with GitHub info...");
 
-      // Update with GitHub info using the same column detection
+      // Update with GitHub info
       await db.execute(sql`
         UPDATE feedback 
         SET github_issue_number = ${issue.data.number}, github_issue_url = ${issue.data.html_url}
-        WHERE ${sql.raw(userField)} = ${user.email} AND ${sql.raw(titleField)} = ${title} AND status = 'open'
+        WHERE user_email = ${user.email} AND title = ${title} AND status = 'open'
         ORDER BY created_at DESC 
         LIMIT 1
       `);
