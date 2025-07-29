@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
-import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import { getCurrentDate, getDateStorageKey, formatDate } from '@/lib/dateUtils';
 import axios from 'axios';
 
 interface MoodStatisticsProps {
@@ -29,13 +29,20 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const userData = user ? user : null;
 
   if (!user) {
-    return <div>Loading...</div>; // Or any other fallback UI
+    return (
+      <div className="text-center py-8">
+        <div className="text-4xl mb-4">📊</div>
+        <p className="text-grey-tint text-sm">Loading mood statistics...</p>
+      </div>
+    );
   }
 
   // Load mood data and calculate statistics from API
   useEffect(() => {
     const fetchMoodData = async () => {
-      if (user?.primaryEmail) {
+      if (!user?.primaryEmail) return;
+      
+      try {
         // Determine how many days to look back based on timeRange
         const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
         
@@ -47,7 +54,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
         for (let i = daysToLookBack - 1; i >= 0; i--) {
           const date = new Date(today);
           date.setDate(date.getDate() - i);
-          const dateStr = formatDate(date);
+          const dateStr = date.toISOString().split('T')[0];
           
           try {
             // Try to load mood for this date
@@ -129,6 +136,10 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
         });
         
         setActivityCorrelations(correlations);
+      } catch (error) {
+        console.error('Error fetching mood statistics:', error);
+        setMoodData([]);
+        setActivityCorrelations({});
       }
     };
     
@@ -221,6 +232,21 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
   const percentages = getMoodPercentages();
   const topGoodActivities = getTopActivitiesForMood();
   const topBadActivities = getActivitiesForBadMood();
+
+  // Show no data state if no mood data
+  if (moodData.length === 0) {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Mood Statistics</h2>
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">📊</div>
+          <p className="text-grey-tint text-sm">
+            Start tracking your moods to see statistics and patterns!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">

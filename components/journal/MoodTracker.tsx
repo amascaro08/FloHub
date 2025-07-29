@@ -6,9 +6,10 @@ import axios from 'axios';
 interface MoodTrackerProps {
   onSave: (mood: { emoji: string; label: string; tags: string[] }) => void;
   timezone?: string;
+  date?: string;
 }
 
-const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
+const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone, date }) => {
   const [selectedEmoji, setSelectedEmoji] = useState<string>('😐');
   const [selectedLabel, setSelectedLabel] = useState<string>('Meh');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -31,11 +32,11 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
   useEffect(() => {
     const fetchMoodData = async () => {
       if (user?.primaryEmail) {
-        const today = getCurrentDate(timezone);
+        const targetDate = date || getCurrentDate(timezone);
         
-        // Fetch today's mood
+        // Fetch mood for the selected date
         try {
-          const response = await axios.get(`/api/journal/mood?date=${today}`, {
+          const response = await axios.get(`/api/journal/mood?date=${targetDate}`, {
             withCredentials: true
           });
           if (response.data) {
@@ -100,7 +101,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
     if (user?.primaryEmail) {
       fetchMoodData();
     }
-  }, [user, timezone]);
+  }, [user, timezone, date]);
 
   const handleSave = () => {
     const mood = {
@@ -109,10 +110,10 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
       tags: selectedTags,
     };
     
-    // Save to localStorage with today's date in user's timezone
+    // Save to localStorage with the selected date in user's timezone
     if (user?.primaryEmail) {
-      const today = getCurrentDate(timezone);
-      const storageKey = getDateStorageKey('journal_mood', user.primaryEmail, timezone, today);
+      const targetDate = date || getCurrentDate(timezone);
+      const storageKey = getDateStorageKey('journal_mood', user.primaryEmail, timezone, targetDate);
       localStorage.setItem(storageKey, JSON.stringify(mood));
       
       // Show save confirmation
@@ -139,13 +140,13 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
         tags: selectedTags,
       };
       
-      // Save to API with today's date in user's timezone
+      // Save to API with the selected date in user's timezone
       if (user?.primaryEmail) {
-        const today = getCurrentDate(timezone);
+        const targetDate = date || getCurrentDate(timezone);
         
         try {
           await axios.post('/api/journal/mood', {
-            date: today,
+            date: targetDate,
             emoji: emoji,
             label: labels[index],
             tags: selectedTags
@@ -231,13 +232,13 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone }) => {
           tags: newTags,
         };
         
-        // Save to API with today's date in user's timezone
+        // Save to API with the selected date in user's timezone
         if (user?.primaryEmail) {
-          const today = getCurrentDate(timezone);
+          const targetDate = date || getCurrentDate(timezone);
           
           try {
             await axios.post('/api/journal/mood', {
-              date: today,
+              date: targetDate,
               emoji: selectedEmoji,
               label: selectedLabel,
               tags: newTags

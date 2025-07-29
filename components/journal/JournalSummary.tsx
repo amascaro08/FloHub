@@ -175,8 +175,8 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">FloCats Insights</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered journal analysis</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Journal Summary</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Overview of your journal entries</p>
         </div>
         {isGenerating && (
           <div className="flex items-center">
