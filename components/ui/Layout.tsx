@@ -237,11 +237,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <aside
         className={`
           bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
-          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
+          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-64' : 'fixed inset-y-0 left-0 -translate-x-full w-64'}
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
-          overflow-y-auto scrollbar-thin
+          max-h-screen
         `}
       >
         {/* Header */}
@@ -266,57 +266,59 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         
-        {/* Main navigation - scrollable */}
-        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
-                desktopSidebarCollapsed ? 'justify-center' : ''
-              } group ${
-                router.pathname === item.href 
-                  ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
-                  : ''
-              }`}
-              onClick={() => {
-                setMobileSidebarOpen(false);
-              }}
-            >
-              <item.icon className={`w-5 h-5 transition-colors ${
-                router.pathname === item.href 
-                  ? 'text-primary-600 dark:text-primary-400' 
-                  : 'text-primary-500 group-hover:text-primary-600'
-              } ${
-                !desktopSidebarCollapsed && 'mr-3'
-              }`} />
-              {!desktopSidebarCollapsed && (
-                <span className={`font-medium transition-colors ${
+        {/* Main navigation - height-responsive */}
+        <nav className="flex-1 overflow-y-auto min-h-0 flex flex-col justify-start sidebar-nav">
+          <div className="space-y-1 p-3 md:p-4">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
+                  desktopSidebarCollapsed ? 'justify-center' : ''
+                } group ${
                   router.pathname === item.href 
-                    ? 'text-primary-700 dark:text-primary-300' 
-                    : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
-                }`}>
-                  {item.name}
-                </span>
-              )}
-            </Link>
-          ))}
+                    ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
+                    : ''
+                }`}
+                onClick={() => {
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <item.icon className={`transition-colors sidebar-icon-responsive ${
+                  router.pathname === item.href 
+                    ? 'text-primary-600 dark:text-primary-400' 
+                    : 'text-primary-500 group-hover:text-primary-600'
+                } ${
+                  !desktopSidebarCollapsed && 'mr-3'
+                }`} />
+                {!desktopSidebarCollapsed && (
+                  <span className={`font-medium transition-colors sidebar-text-responsive ${
+                    router.pathname === item.href 
+                      ? 'text-primary-700 dark:text-primary-300' 
+                      : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
+                  }`}>
+                    {item.name}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
         </nav>
 
         {/* User account section - bottom third */}
         <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {/* User account indicator */}
           {!desktopSidebarCollapsed && user && (
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-white" />
+            <div className="border-b border-neutral-200 dark:border-neutral-700 sidebar-bottom-section">
+              <div className="flex items-center space-x-3 sidebar-item-responsive">
+                <div className="bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 sidebar-avatar">
+                  <User className="text-white sidebar-icon-responsive" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                  <p className="font-medium text-neutral-900 dark:text-white truncate sidebar-text-responsive">
                     {user.primaryEmail || user.email || 'User'}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                  <p className="text-neutral-500 dark:text-neutral-400 truncate sidebar-subtext-responsive">
                     FloHub Account
                   </p>
                 </div>
@@ -334,10 +336,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
           )}
 
           {/* Settings and Sign Out */}
-          <div className="p-4 space-y-1">
+          <div className="space-y-1 sidebar-bottom-section">
             <Link
               href="/dashboard/settings"
-              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group ${
                 router.pathname === '/dashboard/settings' 
@@ -348,7 +350,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 setMobileSidebarOpen(false);
               }}
             >
-              <Settings className={`w-5 h-5 transition-colors ${
+              <Settings className={`transition-colors sidebar-icon-responsive ${
                 router.pathname === '/dashboard/settings' 
                   ? 'text-primary-600 dark:text-primary-400' 
                   : 'text-neutral-500 group-hover:text-neutral-600'
@@ -356,7 +358,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 !desktopSidebarCollapsed && 'mr-3'
               }`} />
               {!desktopSidebarCollapsed && (
-                <span className={`font-medium transition-colors ${
+                <span className={`font-medium transition-colors sidebar-text-responsive ${
                   router.pathname === '/dashboard/settings' 
                     ? 'text-primary-700 dark:text-primary-300' 
                     : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
@@ -367,23 +369,23 @@ const Layout = ({ children }: { children: ReactNode }) => {
             </Link>
 
             <LogoutButton
-              className={`flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center w-full text-left rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group`}
             >
-              <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
+              <LogOut className={`text-red-500 group-hover:text-red-600 transition-colors sidebar-icon-responsive ${
                 !desktopSidebarCollapsed && 'mr-3'
               }`} />
               {!desktopSidebarCollapsed && (
-                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors sidebar-text-responsive">
                   Sign Out
                 </span>
               )}
             </LogoutButton>
           </div>
 
-          {/* Theme toggle */}
-          <div className={`p-4 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-center ${desktopSidebarCollapsed ? 'hidden' : ''}`}>
+          {/* Theme toggle - Hide on mobile for space */}
+          <div className={`hidden md:flex p-4 border-t border-neutral-200 dark:border-neutral-700 items-center justify-center ${desktopSidebarCollapsed ? 'md:hidden' : ''}`}>
             <ThemeToggle />
           </div>
         </div>
