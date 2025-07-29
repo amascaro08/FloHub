@@ -9,13 +9,19 @@ export const generateCalendarSourcesHash = (calendarSources?: CalendarSource[]):
     return 'empty';
   }
   
-  // Sort sources by ID to ensure consistent ordering
-  const sortedSources = [...calendarSources].sort((a, b) => a.id.localeCompare(b.id));
+  // Sort sources by ID to ensure consistent ordering - with null safety
+  const sortedSources = [...calendarSources]
+    .filter(source => source) // Filter out null/undefined sources
+    .sort((a, b) => {
+      const aId = a.id || '';
+      const bId = b.id || '';
+      return aId.localeCompare(bId);
+    });
   
   // Create hash based on enabled sources only
-  const enabledSources = sortedSources.filter(source => source.isEnabled);
+  const enabledSources = sortedSources.filter(source => source && source.isEnabled);
   const hashInput = enabledSources.map(source => 
-    `${source.id}:${source.type}:${source.sourceId}:${source.isEnabled}:${(source.tags || []).join(',')}`
+    `${source.id || ''}:${source.type || ''}:${source.sourceId || ''}:${source.isEnabled}:${(source.tags || []).join(',')}`
   ).join('|');
   
   // Simple hash function (you could use a more robust one if needed)

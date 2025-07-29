@@ -189,17 +189,22 @@ const CalendarPage = () => {
     
     // Only include essential properties that actually matter for calendar loading
     const stableSourcesData = settings.calendarSources
-      .filter(source => source.isEnabled) // Only enabled sources
+      .filter(source => source && source.isEnabled) // Only enabled sources, check for null/undefined
       .map(source => ({
-        type: source.type,
-        sourceId: source.sourceId,
-        connectionData: source.connectionData,
+        type: source.type || 'unknown',
+        sourceId: source.sourceId || 'unknown',
+        connectionData: source.connectionData || '',
         isEnabled: source.isEnabled
       }))
-      .sort((a, b) => `${a.type}:${a.sourceId}`.localeCompare(`${b.type}:${b.sourceId}`)); // Stable sort
+      .sort((a, b) => {
+        // Safe sorting with null checks
+        const aKey = `${a.type || ''}:${a.sourceId || ''}`;
+        const bKey = `${b.type || ''}:${b.sourceId || ''}`;
+        return aKey.localeCompare(bKey);
+      }); // Stable sort
     
     return generateCalendarSourcesHash(stableSourcesData as any);
-  }, [settings?.calendarSources?.length, settings?.calendarSources?.map(s => `${s.type}:${s.sourceId}:${s.isEnabled}`).join('|')]);
+  }, [settings?.calendarSources?.length, settings?.calendarSources?.map(s => `${s?.type || ''}:${s?.sourceId || ''}:${s?.isEnabled || false}`).join('|')]);
 
   // Use cached calendar events hook with stable parameters
   const {
@@ -396,17 +401,27 @@ const CalendarPage = () => {
   }, [currentDate]);
 
   const getEventsForCurrentView = () => {
-    if (currentView === 'day') {
-      return getEventsForDay(currentDate);
+    try {
+      if (currentView === 'day') {
+        return getEventsForDay(currentDate);
+      }
+      return Array.isArray(events) ? events : [];
+    } catch (error) {
+      console.warn('Error in getEventsForCurrentView:', error);
+      return [];
     }
-    return events;
   };
 
   // Calculate calendar days for the current month
   const calendarDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentDate));
-    const end = endOfWeek(endOfMonth(currentDate));
-    return eachDayOfInterval({ start, end });
+    try {
+      const start = startOfWeek(startOfMonth(currentDate));
+      const end = endOfWeek(endOfMonth(currentDate));
+      return eachDayOfInterval({ start, end });
+    } catch (error) {
+      console.warn('Error calculating calendar days:', error);
+      return [];
+    }
   }, [currentDate]);
 
   // Handle event form submission
@@ -831,6 +846,8 @@ const CalendarPage = () => {
                       
                       <div className="space-y-1">
                         {dayEvents.slice(0, isMobile ? 2 : 3).map(event => {
+                          if (!event || !event.id) return null; // Safety check
+                          
                           const colorClass = event.source === 'work'
                             ? 'border-l-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
                             : 'border-l-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-900 dark:text-accent-100';
@@ -851,7 +868,7 @@ const CalendarPage = () => {
                               )}
                             </div>
                           );
-                        })}
+                        }).filter(Boolean)}
                         {dayEvents.length > (isMobile ? 2 : 3) && (
                           <div
                             className="text-xs text-grey-tint text-center py-1 cursor-pointer hover:underline"
