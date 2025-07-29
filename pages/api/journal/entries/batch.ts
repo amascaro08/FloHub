@@ -4,6 +4,7 @@ import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { journalEntries } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
+import { retrieveContentFromStorage } from '@/lib/contentSecurity';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -43,10 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from(journalEntries)
       .where(and(eq(journalEntries.user_email, user_email), inArray(journalEntries.date, dates)));
       
-    // Update entries that have content
+    // Update entries that have content (decrypt to check if content exists)
     rows.forEach(row => {
-      if (row.date && row.content && row.content.trim() !== '') {
-        entries[row.date] = true;
+      if (row.date && row.content) {
+        const decryptedContent = retrieveContentFromStorage(row.content);
+        if (decryptedContent && decryptedContent.trim() !== '') {
+          entries[row.date] = true;
+        }
       }
     });
     

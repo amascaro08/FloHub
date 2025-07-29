@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes } from "@/db/schema";
+import { prepareContentForStorage } from "@/lib/contentSecurity";
 
 type CreateNoteRequest = {
   title?: string; // Add optional title field
@@ -51,11 +52,15 @@ export default async function handler(
 
 
   try {
-    // 3) Save the note to the database
+    // 3) Encrypt sensitive content before saving to database
+    const encryptedContent = prepareContentForStorage(content);
+    const encryptedTitle = title ? prepareContentForStorage(title) : "";
+    
+    // 4) Save the note to the database
     const [newNote] = await db.insert(notes).values({
       user_email: userId,
-      title: title ?? "",
-      content,
+      title: encryptedTitle,
+      content: encryptedContent,
       tags: tags ?? [],
       eventId: eventId ?? null,
       eventTitle: eventTitle ?? null,

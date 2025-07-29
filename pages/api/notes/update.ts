@@ -4,6 +4,7 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { prepareContentForStorage } from "@/lib/contentSecurity";
 
 type UpdateNoteRequest = {
   id: string;
@@ -77,13 +78,13 @@ export default async function handler(
       return res.status(403).json({ error: "Unauthorized to update this note" });
     }
 
-    // 4) Prepare update data
+    // 4) Prepare update data with encryption
     const updateData: any = {};
     if (title !== undefined) {
-        updateData.title = title;
+        updateData.title = title ? prepareContentForStorage(title) : "";
     }
     if (content !== undefined) {
-        updateData.content = content;
+        updateData.content = prepareContentForStorage(content);
     }
     if (tags !== undefined) {
         updateData.tags = tags;

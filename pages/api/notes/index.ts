@@ -5,6 +5,7 @@ import { db } from "@/lib/drizzle";
 import { notes } from "@/db/schema";
 import { eq, desc, and, isNull, or, ne } from "drizzle-orm";
 import type { Note } from "@/types/app"; // Import shared Note type
+import { retrieveContentFromStorage } from "@/lib/contentSecurity";
 
 export type GetNotesResponse = { // Export the type
   notes?: Note[];
@@ -49,8 +50,8 @@ export default async function handler(
 
     const notesResult: Note[] = notesData.map((row) => ({
       id: String(row.id),
-      title: row.title || "",
-      content: row.content,
+      title: retrieveContentFromStorage(row.title || ""),
+      content: retrieveContentFromStorage(row.content),
       tags: (row.tags as string[]) || [],
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : "",
       source: row.source || undefined,
@@ -58,8 +59,8 @@ export default async function handler(
       eventTitle: row.eventTitle || undefined,
       isAdhoc: row.isAdhoc || false,
       actions: (row.actions as any) || undefined,
-      agenda: row.agenda || undefined,
-      aiSummary: row.aiSummary || undefined,
+      agenda: retrieveContentFromStorage(row.agenda || ""),
+      aiSummary: retrieveContentFromStorage(row.aiSummary || ""),
     }));
 
     return res.status(200).json({ notes: notesResult });

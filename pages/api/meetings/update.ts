@@ -7,6 +7,7 @@ import { db } from "@/lib/drizzle";
 import { notes, tasks } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import OpenAI from "openai"; // Import OpenAI
+import { prepareContentForStorage, retrieveContentFromStorage } from "@/lib/contentSecurity";
 
 import type { Action } from "@/types/app"; // Import Action type
 
@@ -159,9 +160,9 @@ export default async function handler(
     
     if ((agenda !== undefined || noteData.agenda) && (content !== undefined || noteData.content)) {
       console.log("update.ts - Conditions met for AI summary generation");
-      // Use the updated values or fall back to existing values
-      const currentAgenda = agenda !== undefined ? agenda : noteData.agenda;
-      const currentContent = content !== undefined ? content : noteData.content;
+      // Use the updated values or fall back to existing values (decrypt existing content)
+      const currentAgenda = agenda !== undefined ? agenda : retrieveContentFromStorage(noteData.agenda || "");
+      const currentContent = content !== undefined ? content : retrieveContentFromStorage(noteData.content);
       const currentActions = actions !== undefined ? actions : (noteData.actions as Action[]) || [];
       
       console.log("update.ts - Current agenda:", currentAgenda);
@@ -258,18 +259,18 @@ export default async function handler(
       // Log the final update data being sent to Neon
       console.log("update.ts - Final update data with timestamp:", JSON.stringify(updateFields, null, 2), JSON.stringify(updateParams, null, 2));
       
-      // Perform the update
+      // Perform the update with encryption
       console.log(`update.ts - Updating document in table 'notes' with ID '${id}'`);
       const updateData: any = {};
-      if (title !== undefined) updateData.title = title;
-      if (content !== undefined) updateData.content = content;
+      if (title !== undefined) updateData.title = title ? prepareContentForStorage(title) : "";
+      if (content !== undefined) updateData.content = prepareContentForStorage(content);
       if (tags !== undefined) updateData.tags = tags;
       if (eventId !== undefined) updateData.eventId = eventId;
       if (eventTitle !== undefined) updateData.eventTitle = eventTitle;
       if (isAdhoc !== undefined) updateData.isAdhoc = isAdhoc;
       if (actions !== undefined) updateData.actions = actions;
-      if (agenda !== undefined) updateData.agenda = agenda;
-      if (aiSummary) updateData.aiSummary = aiSummary;
+      if (agenda !== undefined) updateData.agenda = agenda ? prepareContentForStorage(agenda) : "";
+      if (aiSummary) updateData.aiSummary = prepareContentForStorage(aiSummary);
       updateData.updatedAt = new Date();
       await db.update(notes).set(updateData).where(eq(notes.id, Number(id)));
       console.log("update.ts - Document updated successfully");
@@ -294,20 +295,20 @@ export default async function handler(
         console.warn("update.ts - AI Summary was not saved properly");
       }
       
-      // Return success response with the updated document
+      // Return success response with the updated document (decrypted)
       return res.status(200).json({
         success: true,
         updatedNote: {
           id: String(updatedNoteData.id),
-          title: updatedNoteData.title,
-          content: updatedNoteData.content,
+          title: retrieveContentFromStorage(updatedNoteData.title || ""),
+          content: retrieveContentFromStorage(updatedNoteData.content),
           tags: updatedNoteData.tags,
           eventId: updatedNoteData.eventId,
           eventTitle: updatedNoteData.eventTitle,
           isAdhoc: updatedNoteData.isAdhoc,
           actions: updatedNoteData.actions,
-          agenda: updatedNoteData.agenda,
-          aiSummary: updatedNoteData.aiSummary,
+          agenda: retrieveContentFromStorage(updatedNoteData.agenda || ""),
+          aiSummary: retrieveContentFromStorage(updatedNoteData.aiSummary || ""),
           createdAt: Number(updatedNoteData.createdAt),
           updatedAt: updatedNoteData.updatedAt ? new Date(updatedNoteData.updatedAt).getTime() : 0
         }
