@@ -117,6 +117,45 @@
   transform: translateY(-2px);
 }
 
+/* Responsive sidebar utilities for varying screen sizes */
+@media (max-height: 600px) {
+  .sidebar-compact {
+    --sidebar-item-padding: 0.25rem 0.5rem;
+    --sidebar-item-font-size: 0.75rem;
+    --sidebar-icon-size: 1rem;
+    --sidebar-spacing: 0.125rem;
+  }
+}
+
+@media (max-height: 700px) and (min-height: 601px) {
+  .sidebar-compact {
+    --sidebar-item-padding: 0.375rem 0.75rem;
+    --sidebar-item-font-size: 0.875rem;
+    --sidebar-icon-size: 1.125rem;
+    --sidebar-spacing: 0.25rem;
+  }
+}
+
+@media (max-height: 800px) and (min-height: 701px) {
+  .sidebar-compact {
+    --sidebar-item-padding: 0.5rem 0.75rem;
+    --sidebar-item-font-size: 0.875rem;
+    --sidebar-icon-size: 1.25rem;
+    --sidebar-spacing: 0.375rem;
+  }
+}
+
+.sidebar-item-responsive {
+  padding: var(--sidebar-item-padding, 0.5rem 0.75rem);
+  font-size: var(--sidebar-item-font-size, 1rem);
+  gap: var(--sidebar-spacing, 0.5rem);
+}
+
+.sidebar-icon-responsive {
+  width: var(--sidebar-icon-size, 1.25rem);
+  height: var(--sidebar-icon-size, 1.25rem);
+}
+
 /* Modern button styles */
 .btn-primary {
   @apply bg-primary-500 text-white px-4 py-2 rounded-2xl font-medium

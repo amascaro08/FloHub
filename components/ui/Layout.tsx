@@ -241,7 +241,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
-          max-h-screen
+          max-h-screen sidebar-compact
         `}
       >
         {/* Header */}
@@ -266,57 +266,86 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         
-        {/* Main navigation - scrollable */}
-        <nav className="p-3 md:p-4 space-y-1 flex-1 overflow-y-auto min-h-0">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
-                desktopSidebarCollapsed ? 'justify-center' : ''
-              } group ${
-                router.pathname === item.href 
-                  ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
-                  : ''
-              }`}
-              onClick={() => {
-                setMobileSidebarOpen(false);
-              }}
-            >
-              <item.icon className={`w-5 h-5 transition-colors ${
-                router.pathname === item.href 
-                  ? 'text-primary-600 dark:text-primary-400' 
-                  : 'text-primary-500 group-hover:text-primary-600'
-              } ${
-                !desktopSidebarCollapsed && 'mr-3'
-              }`} />
-              {!desktopSidebarCollapsed && (
-                <span className={`font-medium transition-colors ${
+        {/* Main navigation - responsive */}
+        <nav className="p-2 sm:p-3 md:p-4 flex-1 overflow-y-auto min-h-0 flex flex-col justify-start">
+          <div className={`space-y-0.5 sm:space-y-1 ${navigationItems.length > 8 ? 'space-y-0' : ''}`}>
+            {navigationItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+                  desktopSidebarCollapsed ? 'justify-center' : ''
+                } group ${
                   router.pathname === item.href 
-                    ? 'text-primary-700 dark:text-primary-300' 
-                    : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
-                }`}>
-                  {item.name}
-                </span>
-              )}
-            </Link>
-          ))}
+                    ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
+                    : ''
+                } ${
+                  // Dynamic sizing based on number of items and screen size
+                  navigationItems.length > 8 
+                    ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-3 md:py-2' 
+                    : navigationItems.length > 6 
+                    ? 'px-2 py-1.5 sm:px-3 sm:py-2 md:px-3 md:py-2.5'
+                    : 'px-3 py-2 md:py-2.5'
+                }`}
+                onClick={() => {
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <item.icon className={`transition-colors ${
+                  router.pathname === item.href 
+                    ? 'text-primary-600 dark:text-primary-400' 
+                    : 'text-primary-500 group-hover:text-primary-600'
+                } ${
+                  !desktopSidebarCollapsed && 'mr-2 sm:mr-3'
+                } ${
+                  // Dynamic icon sizing
+                  navigationItems.length > 8 
+                    ? 'w-4 h-4 sm:w-5 sm:h-5' 
+                    : 'w-5 h-5'
+                }`} />
+                {!desktopSidebarCollapsed && (
+                  <span className={`font-medium transition-colors ${
+                    router.pathname === item.href 
+                      ? 'text-primary-700 dark:text-primary-300' 
+                      : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
+                  } ${
+                    // Dynamic text sizing
+                    navigationItems.length > 8 
+                      ? 'text-xs sm:text-sm md:text-base' 
+                      : navigationItems.length > 6 
+                      ? 'text-sm md:text-base'
+                      : 'text-base'
+                  }`}>
+                    {item.name}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
         </nav>
 
         {/* User account section - bottom third */}
         <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {/* User account indicator */}
           {!desktopSidebarCollapsed && user && (
-            <div className="p-3 md:p-4 border-b border-neutral-200 dark:border-neutral-700">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-white" />
+            <div className={`p-2 sm:p-3 md:p-4 border-b border-neutral-200 dark:border-neutral-700 ${navigationItems.length > 8 ? 'p-1.5 sm:p-2 md:p-3' : ''}`}>
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className={`bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  navigationItems.length > 8 ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-8 h-8'
+                }`}>
+                  <User className={`text-white ${
+                    navigationItems.length > 8 ? 'w-3 h-3 sm:w-4 sm:h-4' : 'w-4 h-4'
+                  }`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                  <p className={`font-medium text-neutral-900 dark:text-white truncate ${
+                    navigationItems.length > 8 ? 'text-xs sm:text-sm' : 'text-sm'
+                  }`}>
                     {user.primaryEmail || user.email || 'User'}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                  <p className={`text-neutral-500 dark:text-neutral-400 truncate ${
+                    navigationItems.length > 8 ? 'text-xs' : 'text-xs'
+                  }`}>
                     FloHub Account
                   </p>
                 </div>
@@ -334,32 +363,44 @@ const Layout = ({ children }: { children: ReactNode }) => {
           )}
 
           {/* Settings and Sign Out */}
-          <div className="p-3 md:p-4 space-y-1">
+          <div className={`space-y-0.5 sm:space-y-1 ${
+            navigationItems.length > 8 
+              ? 'p-1.5 sm:p-2 md:p-3' 
+              : 'p-2 sm:p-3 md:p-4'
+          }`}>
             <Link
               href="/dashboard/settings"
-              className={`flex items-center px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group ${
                 router.pathname === '/dashboard/settings' 
                   ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
                   : ''
+              } ${
+                navigationItems.length > 8 
+                  ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-3 md:py-2' 
+                  : 'px-3 py-2 md:py-2.5'
               }`}
               onClick={() => {
                 setMobileSidebarOpen(false);
               }}
             >
-              <Settings className={`w-5 h-5 transition-colors ${
+              <Settings className={`transition-colors ${
                 router.pathname === '/dashboard/settings' 
                   ? 'text-primary-600 dark:text-primary-400' 
                   : 'text-neutral-500 group-hover:text-neutral-600'
               } ${
-                !desktopSidebarCollapsed && 'mr-3'
+                !desktopSidebarCollapsed && 'mr-2 sm:mr-3'
+              } ${
+                navigationItems.length > 8 ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5'
               }`} />
               {!desktopSidebarCollapsed && (
                 <span className={`font-medium transition-colors ${
                   router.pathname === '/dashboard/settings' 
                     ? 'text-primary-700 dark:text-primary-300' 
                     : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white'
+                } ${
+                  navigationItems.length > 8 ? 'text-xs sm:text-sm md:text-base' : 'text-base'
                 }`}>
                   Settings
                 </span>
@@ -367,15 +408,23 @@ const Layout = ({ children }: { children: ReactNode }) => {
             </Link>
 
             <LogoutButton
-              className={`flex items-center w-full text-left px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center w-full text-left rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
-              } group`}
+              } group ${
+                navigationItems.length > 8 
+                  ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-3 md:py-2' 
+                  : 'px-3 py-2 md:py-2.5'
+              }`}
             >
-              <LogOut className={`w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors ${
-                !desktopSidebarCollapsed && 'mr-3'
+              <LogOut className={`text-red-500 group-hover:text-red-600 transition-colors ${
+                !desktopSidebarCollapsed && 'mr-2 sm:mr-3'
+              } ${
+                navigationItems.length > 8 ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-5 h-5'
               }`} />
               {!desktopSidebarCollapsed && (
-                <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                <span className={`font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors ${
+                  navigationItems.length > 8 ? 'text-xs sm:text-sm md:text-base' : 'text-base'
+                }`}>
                   Sign Out
                 </span>
               )}
