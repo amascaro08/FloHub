@@ -1,11 +1,9 @@
 import crypto from 'crypto';
 
 // Configuration for content encryption
-const ALGORITHM = 'aes-256-gcm';
+const ALGORITHM = 'aes-256-cbc';
 const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 16;  // 128 bits
-const TAG_LENGTH = 16; // 128 bits
-const SALT_LENGTH = 32; // 256 bits
 
 // Environment variable for encryption key
 const getEncryptionKey = (): Buffer => {
@@ -20,7 +18,6 @@ const getEncryptionKey = (): Buffer => {
 interface EncryptedContent {
   data: string;
   iv: string;
-  tag: string;
   isEncrypted: boolean;
 }
 
@@ -32,7 +29,6 @@ export const encryptContent = (content: string): EncryptedContent => {
     return {
       data: content,
       iv: '',
-      tag: '',
       isEncrypted: false
     };
   }
@@ -40,18 +36,14 @@ export const encryptContent = (content: string): EncryptedContent => {
   try {
     const key = getEncryptionKey();
     const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipherGCM(ALGORITHM, key, iv);
-    cipher.setAAD(Buffer.from('flohub-content'));
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     
     let encrypted = cipher.update(content, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
-    const tag = cipher.getAuthTag();
-    
     return {
       data: encrypted,
       iv: iv.toString('hex'),
-      tag: tag.toString('hex'),
       isEncrypted: true
     };
   } catch (error) {
@@ -60,7 +52,6 @@ export const encryptContent = (content: string): EncryptedContent => {
     return {
       data: content,
       iv: '',
-      tag: '',
       isEncrypted: false
     };
   }
@@ -83,9 +74,7 @@ export const decryptContent = (encryptedData: EncryptedContent | string): string
   try {
     const key = getEncryptionKey();
     const iv = Buffer.from(encryptedData.iv, 'hex');
-    const decipher = crypto.createDecipherGCM(ALGORITHM, key, iv);
-    decipher.setAAD(Buffer.from('flohub-content'));
-    decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     
     let decrypted = decipher.update(encryptedData.data, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
@@ -106,8 +95,7 @@ export const isContentEncrypted = (content: any): boolean => {
          content !== null && 
          content.isEncrypted === true &&
          typeof content.data === 'string' &&
-         typeof content.iv === 'string' &&
-         typeof content.tag === 'string';
+         typeof content.iv === 'string';
 };
 
 /**

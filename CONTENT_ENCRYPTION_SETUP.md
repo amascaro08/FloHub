@@ -10,7 +10,7 @@ FloHub now includes end-to-end encryption for sensitive user content including:
 - Habit completion notes
 - Meeting notes and agendas
 
-The encryption uses AES-256-GCM for maximum security while maintaining backward compatibility with existing data.
+The encryption uses AES-256-CBC for strong security while maintaining backward compatibility with existing data.
 
 ## Features
 
@@ -231,10 +231,10 @@ The encryption is transparent to API consumers. All endpoints continue to work t
 ## Technical Implementation
 
 ### Encryption Specifications
-- **Algorithm**: AES-256-GCM
+- **Algorithm**: AES-256-CBC
 - **Key Derivation**: PBKDF2 with 100,000 iterations
-- **IV**: Randomly generated per record
-- **Authentication**: Built-in authentication tag prevents tampering
+- **IV**: Randomly generated per record (128-bit)
+- **Key Size**: 256-bit derived key
 
 ### Data Format
 Encrypted content is stored as JSON:
@@ -242,7 +242,6 @@ Encrypted content is stored as JSON:
 {
   "data": "encrypted_hex_data",
   "iv": "initialization_vector_hex",
-  "tag": "authentication_tag_hex",
   "isEncrypted": true
 }
 ```
