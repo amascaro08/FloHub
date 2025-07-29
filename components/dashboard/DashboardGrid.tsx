@@ -78,9 +78,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
+        md: { cols: 8, rowHeight: 0 },
+        sm: { cols: 6, rowHeight: 0 }
       }
     }
   },
@@ -108,9 +108,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
+        md: { cols: 8, rowHeight: 0 },
+        sm: { cols: 6, rowHeight: 0 }
       }
     }
   },
@@ -140,9 +140,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 3,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 70 },
-        md: { cols: 8, rowHeight: 60 },
-        sm: { cols: 6, rowHeight: 50 }
+        lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
+        md: { cols: 8, rowHeight: 0 },
+        sm: { cols: 6, rowHeight: 0 }
       }
     }
   },
@@ -179,9 +179,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 60 },
-        md: { cols: 8, rowHeight: 50 },
-        sm: { cols: 6, rowHeight: 45 }
+        lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
+        md: { cols: 8, rowHeight: 0 },
+        sm: { cols: 6, rowHeight: 0 }
       }
     }
   },
@@ -225,9 +225,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 180 },
-        md: { cols: 8, rowHeight: 160 },
-        sm: { cols: 6, rowHeight: 140 }
+        lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
+        md: { cols: 8, rowHeight: 0 },
+        sm: { cols: 6, rowHeight: 0 }
       }
     }
   }
@@ -426,8 +426,8 @@ const DashboardGrid: React.FC = () => {
     >
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-dark-base dark:to-dark-base">
         {/* Dashboard Header */}
-        <div className="w-full px-1 py-2 max-w-none">
-          <div className="flex items-center justify-between mb-2">
+        <div className="w-full px-2 py-1 max-w-none">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white mb-1">
                 Dashboard
@@ -467,7 +467,7 @@ const DashboardGrid: React.FC = () => {
           {filledSlots.length > 0 ? (
             <div className="w-full">
               {/* Desktop Grid Layout (lg and above) */}
-              <div className="hidden lg:block relative w-full h-[720px] min-h-[600px]">
+              <div className="hidden lg:block relative w-full" style={{ height: 'calc(100vh - 180px)' }}>
                 {filledSlots.map((slot) => {
                   const widgetType = slotAssignments[slot.id] as WidgetType;
                   
@@ -478,10 +478,10 @@ const DashboardGrid: React.FC = () => {
                   const left = `${slot.position.col * colWidth}%`;
                   const width = `${slot.position.colSpan * colWidth}%`;
                   
-                  // Dynamic height calculation based on row span
-                  const baseRowHeight = 180; // 180px per row
-                  const height = `${slot.position.rowSpan * baseRowHeight}px`;
-                  const top = `${slot.position.row * baseRowHeight}px`;
+                  // Dynamic height calculation based on available space and row span
+                  const availableHeight = `calc((100vh - 180px) / ${currentConfig?.gridConfig.rows || 4})`;
+                  const height = `calc(${availableHeight} * ${slot.position.rowSpan})`;
+                  const top = `calc(${availableHeight} * ${slot.position.row})`;
                   
                   return (
                     <div 
@@ -490,8 +490,8 @@ const DashboardGrid: React.FC = () => {
                       style={{
                         left: left,
                         top: top,
-                        width: `calc(${width} - 16px)`,
-                        height: `calc(${height} - 16px)`,
+                        width: `calc(${width} - 12px)`,
+                        height: `calc(${height} - 12px)`,
                       }}
                     >
                       <div className="flex items-center justify-between mb-3 flex-shrink-0">
@@ -525,7 +525,7 @@ const DashboardGrid: React.FC = () => {
               </div>
 
               {/* Mobile/Tablet Stacked Layout (below lg) */}
-              <div className="lg:hidden space-y-6">
+              <div className="lg:hidden space-y-4">
                 {filledSlots
                   .sort((a, b) => {
                     // Sort by row first, then by column for proper stacking
@@ -540,7 +540,8 @@ const DashboardGrid: React.FC = () => {
                                          return (
                        <div 
                          key={slot.id} 
-                         className="w-full glass p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col min-h-[400px]"
+                         className="w-full glass p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col"
+                         style={{ minHeight: 'calc(50vh - 100px)' }}
                        >
                          <div className="flex items-center justify-between mb-3 flex-shrink-0">
                            <div className="flex items-center space-x-2 min-w-0 flex-1">

@@ -420,8 +420,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 max-w-full">
-          <div className="w-full max-w-[100vw]">
+        <main className="flex-1 overflow-auto p-2 w-full">
+          <div className="w-full h-full">
             {children}
           </div>
         </main>
