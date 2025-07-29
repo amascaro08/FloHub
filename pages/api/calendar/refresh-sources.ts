@@ -32,21 +32,44 @@ export default async function handler(
 
     console.log(`🔄 Refreshing calendar sources for: ${user.email}`);
 
-    // Find Google OAuth account
-    const googleAccount = await db.query.accounts.findFirst({
+    // Find Google OAuth account - look for the most recent one with a valid token
+    const googleAccounts = await db.query.accounts.findMany({
       where: and(
         eq(accounts.userId, user.id),
         eq(accounts.provider, 'google')
       ),
+      orderBy: accounts.id // Get most recent first
     });
 
+    console.log(`🔍 Found ${googleAccounts.length} Google account(s) for user ${user.email}`);
+    
+    // Find the first account with a valid access token
+    const googleAccount = googleAccounts.find(account => account.access_token);
+    
     if (!googleAccount) {
+      console.log('❌ No Google accounts found or no accounts have access tokens');
+      console.log('Available accounts:', googleAccounts.map(acc => ({
+        id: acc.id,
+        hasToken: !!acc.access_token,
+        hasRefreshToken: !!acc.refresh_token,
+        providerAccountId: acc.providerAccountId,
+        expiresAt: acc.expires_at
+      })));
+      
       return res.status(400).json({ 
         error: "No Google account connected",
         action: "connect_google",
         message: "Please connect your Google Calendar first"
       });
     }
+
+    console.log('✅ Using Google account:', {
+      id: googleAccount.id,
+      hasToken: !!googleAccount.access_token,
+      hasRefreshToken: !!googleAccount.refresh_token,
+      providerAccountId: googleAccount.providerAccountId,
+      expiresAt: googleAccount.expires_at
+    });
 
     if (!googleAccount.access_token) {
       return res.status(400).json({ 

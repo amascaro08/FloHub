@@ -5,6 +5,8 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/userinfo.profile', // Needed to get Google user ID
+  'https://www.googleapis.com/auth/userinfo.email', // Needed to verify user email
 ];
 
 // Google OAuth configuration
