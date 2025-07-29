@@ -99,12 +99,12 @@ interface ProactiveSuggestion {
 }
 
 export class SmartAIAssistant {
-  private userId: string;
+  private userEmail: string;
   private context: UserContext | null = null;
   private patterns: PatternAnalysis | null = null;
 
-  constructor(userId: string) {
-    this.userId = userId;
+  constructor(userEmail: string) {
+    this.userEmail = userEmail;
   }
 
   // Public method to update calendar events with external data
@@ -137,24 +137,15 @@ export class SmartAIAssistant {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+    console.log('Loading user context for:', this.userEmail);
+
     try {
-      // Fetch all user data in parallel for better performance
-      const [
-        userTasks,
-        userNotes,
-        userHabits,
-        userHabitCompletions,
-        userJournalEntries,
-        userJournalMoods,
-        userCalendarEvents,
-        userMeetings,
-        userConversations,
-        settings
-      ] = await Promise.all([
+      // Fetch all user data in parallel for better performance, with individual error handling
+      const results = await Promise.allSettled([
         // Tasks (last 30 days)
         db.select().from(tasks)
           .where(and(
-            eq(tasks.user_email, this.userId),
+            eq(tasks.user_email, this.userEmail),
             gte(tasks.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(tasks.createdAt)),
@@ -162,20 +153,20 @@ export class SmartAIAssistant {
         // Notes (last 30 days)
         db.select().from(notes)
           .where(and(
-            eq(notes.user_email, this.userId),
+            eq(notes.user_email, this.userEmail),
             gte(notes.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(notes.createdAt)),
 
         // Habits
         db.select().from(habits)
-          .where(eq(habits.userId, this.userId))
+          .where(eq(habits.userId, this.userEmail))
           .orderBy(desc(habits.createdAt)),
 
         // Habit completions (last 30 days)
         db.select().from(habitCompletions)
           .where(and(
-            eq(habitCompletions.userId, this.userId),
+            eq(habitCompletions.userId, this.userEmail),
             gte(habitCompletions.timestamp, thirtyDaysAgo)
           ))
           .orderBy(desc(habitCompletions.timestamp)),
@@ -183,7 +174,7 @@ export class SmartAIAssistant {
         // Journal entries (last 30 days)
         db.select().from(journalEntries)
           .where(and(
-            eq(journalEntries.user_email, this.userId),
+            eq(journalEntries.user_email, this.userEmail),
             gte(journalEntries.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(journalEntries.createdAt)),
@@ -191,19 +182,19 @@ export class SmartAIAssistant {
         // Journal moods (last 30 days)
         db.select().from(journalMoods)
           .where(and(
-            eq(journalMoods.user_email, this.userId),
+            eq(journalMoods.user_email, this.userEmail),
             gte(journalMoods.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(journalMoods.createdAt)),
 
         // Calendar events (last 7 days + next 7 days)
         db.select().from(calendarEvents)
-          .where(eq(calendarEvents.user_email, this.userId)),
+          .where(eq(calendarEvents.user_email, this.userEmail)),
 
         // Meetings (last 30 days)
         db.select().from(meetings)
           .where(and(
-            eq(meetings.userId, this.userId),
+            eq(meetings.userId, this.userEmail),
             gte(meetings.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(meetings.createdAt)),
@@ -211,19 +202,53 @@ export class SmartAIAssistant {
         // Conversations (last 30 days)
         db.select().from(conversations)
           .where(and(
-            eq(conversations.userId, this.userId),
+            eq(conversations.userId, this.userEmail),
             gte(conversations.createdAt, thirtyDaysAgo)
           ))
           .orderBy(desc(conversations.createdAt)),
 
         // User settings
         db.select().from(userSettings)
-          .where(eq(userSettings.user_email, this.userId))
+          .where(eq(userSettings.user_email, this.userEmail))
           .limit(1)
       ]);
 
+      // Extract results and handle failures gracefully
+      const [
+        userTasksResult,
+        userNotesResult,
+        userHabitsResult,
+        userHabitCompletionsResult,
+        userJournalEntriesResult,
+        userJournalMoodsResult,
+        userCalendarEventsResult,
+        userMeetingsResult,
+        userConversationsResult,
+        settingsResult
+      ] = results;
+
+      // Extract successful results or use empty arrays for failures
+      const userTasks = userTasksResult.status === 'fulfilled' ? userTasksResult.value : [];
+      const userNotes = userNotesResult.status === 'fulfilled' ? userNotesResult.value : [];
+      const userHabits = userHabitsResult.status === 'fulfilled' ? userHabitsResult.value : [];
+      const userHabitCompletions = userHabitCompletionsResult.status === 'fulfilled' ? userHabitCompletionsResult.value : [];
+      const userJournalEntries = userJournalEntriesResult.status === 'fulfilled' ? userJournalEntriesResult.value : [];
+      const userJournalMoods = userJournalMoodsResult.status === 'fulfilled' ? userJournalMoodsResult.value : [];
+      const userCalendarEvents = userCalendarEventsResult.status === 'fulfilled' ? userCalendarEventsResult.value : [];
+      const userMeetings = userMeetingsResult.status === 'fulfilled' ? userMeetingsResult.value : [];
+      const userConversations = userConversationsResult.status === 'fulfilled' ? userConversationsResult.value : [];
+      const settings = settingsResult.status === 'fulfilled' ? settingsResult.value : [];
+
+      // Log any failures for debugging
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const queryNames = ['tasks', 'notes', 'habits', 'habitCompletions', 'journalEntries', 'journalMoods', 'calendarEvents', 'meetings', 'conversations', 'settings'];
+          console.warn(`Query failed for ${queryNames[index]}:`, result.reason);
+        }
+      });
+
       this.context = {
-        userId: this.userId,
+        userId: this.userEmail,
         tasks: userTasks,
         completedTasks: userTasks.filter(task => task.done),
         notes: userNotes,
@@ -239,8 +264,10 @@ export class SmartAIAssistant {
 
       return this.context;
     } catch (error) {
-      console.error('Error loading user context:', error);
-      throw new Error('Failed to load user context');
+      console.error('Error loading user context for user:', this.userEmail);
+      console.error('Detailed error:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw new Error(`Failed to load user context: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

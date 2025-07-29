@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../lib/drizzle';
 import { users } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
+import { generateSecureToken } from '../../../lib/auth';
 import { emailService } from '../../../lib/emailService';
 
 export default async function handler(
@@ -30,8 +30,8 @@ export default async function handler(
       });
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    // SECURITY FIX: Generate cryptographically secure reset token
+    const resetToken = generateSecureToken(32);
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
     // Store reset token in database
