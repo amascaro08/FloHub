@@ -134,6 +134,33 @@ export default function MeetingsPage() {
     }
   );
 
+  // Helper function to safely extract date from calendar event
+  const getEventDate = (start: CalendarEventDateTime | Date): Date => {
+    try {
+      if (start instanceof Date) {
+        return isNaN(start.getTime()) ? new Date() : start;
+      }
+      
+      if (!start || (typeof start !== 'object')) {
+        console.warn("Invalid start parameter:", start);
+        return new Date();
+      }
+      
+      // For CalendarEventDateTime, try dateTime first, then date
+      const dateString = start.dateTime || start.date;
+      if (!dateString) {
+        console.warn("No date found in start object:", start);
+        return new Date();
+      }
+      
+      const parsedDate = new Date(dateString);
+      return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+    } catch (error) {
+      console.error("Error parsing event date:", error, start);
+      return new Date();
+    }
+  };
+
   // Filter fetched events to include only "work" events
   const workCalendarEvents = useMemo(() => {
     if (!calendarEvents || !Array.isArray(calendarEvents)) {
@@ -145,14 +172,33 @@ export default function MeetingsPage() {
 
   // Filter work events to only show today's events for the modal
   const todaysWorkCalendarEvents = useMemo(() => {
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    if (!workCalendarEvents || workCalendarEvents.length === 0) {
+      return [];
+    }
 
-    return workCalendarEvents.filter(event => {
-      const eventDate = getEventDate(event.start);
-      return eventDate >= todayStart && eventDate < todayEnd;
-    });
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      return workCalendarEvents.filter(event => {
+        if (!event || !event.start) {
+          console.warn("Invalid event found:", event);
+          return false;
+        }
+        
+        try {
+          const eventDate = getEventDate(event.start);
+          return eventDate >= todayStart && eventDate < todayEnd;
+        } catch (error) {
+          console.error("Error processing event date:", error, event);
+          return false;
+        }
+      });
+    } catch (error) {
+      console.error("Error filtering today's events:", error);
+      return [];
+    }
   }, [workCalendarEvents]);
 
   const [searchContent, setSearchContent] = useState("");
@@ -211,16 +257,6 @@ export default function MeetingsPage() {
     if (!selectedNoteId || !filteredMeetingNotes) return null;
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
-
-  // Helper function to safely extract date from calendar event
-  const getEventDate = (start: CalendarEventDateTime | Date): Date => {
-    if (start instanceof Date) {
-      return start;
-    }
-    // For CalendarEventDateTime, try dateTime first, then date
-    const dateString = start.dateTime || start.date;
-    return dateString ? new Date(dateString) : new Date();
-  };
 
   // Calculate stats for tabs
   const meetingNotes = meetingNotesResponse?.meetingNotes || [];
