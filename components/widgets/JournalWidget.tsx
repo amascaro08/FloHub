@@ -9,9 +9,7 @@ import {
   Clock,
   X,
   Plus,
-  ChevronRight,
-  PenTool,
-  CalendarDays
+  ChevronRight
 } from 'lucide-react';
 import { getCurrentDate } from '@/lib/dateUtils';
 import axios from 'axios';
@@ -302,14 +300,6 @@ const JournalWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, ro
 
       {/* Recent Entries */}
       <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} flex-1 overflow-y-auto min-h-0`}>
-        {recentEntries.length > 0 && (
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
-              <CalendarDays className="w-4 h-4 text-primary-500" />
-              <span>{isCompact ? `Recent (${recentEntries.length})` : `Recent Entries (${recentEntries.length})`}</span>
-            </h4>
-          </div>
-        )}
 
         <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
           {isLoading ? (
@@ -374,23 +364,7 @@ const JournalWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, ro
           )}
         </div>
 
-        {/* Empty State */}
-        {!isLoading && recentEntries.length === 0 && (
-          <div className="text-center py-6">
-            <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-              <PenTool className="w-5 h-5 text-primary-500" />
-            </div>
-            <p className="text-grey-tint font-body text-sm">
-              No journal entries yet. Write your first entry above!
-            </p>
-            <button
-              onClick={navigateToJournal}
-              className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors"
-            >
-              Open full journal
-            </button>
-          </div>
-        )}
+
       </div>
 
       {/* Success Message */}
