@@ -4,6 +4,7 @@ import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { journalEntries } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { prepareContentForStorage, retrieveContentFromStorage } from '@/lib/contentSecurity';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Use getToken instead of getuser for better compatibility with API routes
@@ -34,7 +35,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ content: '', timestamp: new Date().toISOString() });
       }
       
-      return res.status(200).json({ content: entry.content, timestamp: entry.createdAt ? new Date(entry.createdAt).toISOString() : new Date().toISOString() });
+      return res.status(200).json({ 
+        content: retrieveContentFromStorage(entry.content || ""), 
+        timestamp: entry.createdAt ? new Date(entry.createdAt).toISOString() : new Date().toISOString() 
+      });
     } catch (error) {
       console.error('Error retrieving journal entry:', error);
       return res.status(500).json({ error: 'Failed to retrieve journal entry' });
@@ -50,14 +54,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
+      const encryptedContent = prepareContentForStorage(content);
+      
       await db.insert(journalEntries).values({
         user_email,
         date,
-        content,
+        content: encryptedContent,
       }).onConflictDoUpdate({
         target: [journalEntries.user_email, journalEntries.date],
         set: {
-          content,
+          content: encryptedContent,
           updatedAt: new Date(),
         },
       });

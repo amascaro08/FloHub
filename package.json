@@ -20,7 +20,9 @@
     "notifications:diagnose": "node scripts/test-push-notification.js",
     "notifications:clean-subscriptions": "node scripts/clean-subscriptions.js",
     "delete-user-accounts": "tsx scripts/delete-user-accounts.ts",
-    "fix-google-calendar": "tsx scripts/fix-google-calendar-integration.ts"
+    "fix-google-calendar": "tsx scripts/fix-google-calendar-integration.ts",
+    "migrate-content-encryption": "tsx scripts/migrate-content-encryption.ts",
+    "migrate-content-encryption:dry-run": "tsx scripts/migrate-content-encryption.ts --dry-run"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",

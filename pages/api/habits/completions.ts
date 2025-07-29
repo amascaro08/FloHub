@@ -4,6 +4,7 @@ import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { habitCompletions } from '@/db/schema';
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { retrieveContentFromStorage } from '@/lib/contentSecurity';
 
 export default async function handler(
   req: NextApiRequest,
@@ -56,6 +57,7 @@ export default async function handler(
       const completions = rows.map(row => ({
         ...row,
         habitId: String(row.habitId),
+        notes: row.notes ? retrieveContentFromStorage(row.notes) : null,
         timestamp: row.timestamp ? Number(row.timestamp) : Date.now()
       }));
       

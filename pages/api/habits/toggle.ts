@@ -4,6 +4,7 @@ import { getUserById } from '@/lib/user';
 import { db } from '@/lib/drizzle';
 import { habitCompletions } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { prepareContentForStorage, retrieveContentFromStorage } from '@/lib/contentSecurity';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,7 +24,7 @@ export default async function handler(
   // Handle POST request to toggle habit completion
   if (req.method === 'POST') {
     try {
-      const { habitId, date } = req.body;
+      const { habitId, date, notes } = req.body;
       
       if (!habitId || !date) {
         return res.status(400).json({ error: 'Habit ID and date are required' });
@@ -43,11 +44,17 @@ export default async function handler(
       
       if (existingCompletion.length > 0) {
         // Update existing completion (toggle)
+        const updateData: any = {
+          completed: !existingCompletion[0].completed
+        };
+        
+        if (notes !== undefined) {
+          updateData.notes = notes ? prepareContentForStorage(notes) : null;
+        }
+        
         const updatedCompletion = await db
           .update(habitCompletions)
-          .set({
-            completed: !existingCompletion[0].completed
-          })
+          .set(updateData)
           .where(
             and(
               eq(habitCompletions.userId, userId),
@@ -60,25 +67,33 @@ export default async function handler(
         const formattedCompletion = {
           ...updatedCompletion[0],
           habitId: String(updatedCompletion[0].habitId),
+          notes: updatedCompletion[0].notes ? retrieveContentFromStorage(updatedCompletion[0].notes) : null,
           timestamp: updatedCompletion[0].timestamp ? Number(updatedCompletion[0].timestamp) : Date.now()
         };
         
         return res.status(200).json(formattedCompletion);
       } else {
         // Create new completion
+        const insertData: any = {
+          userId,
+          habitId: parseInt(habitId),
+          date,
+          completed: true
+        };
+        
+        if (notes) {
+          insertData.notes = prepareContentForStorage(notes);
+        }
+        
         const newCompletion = await db
           .insert(habitCompletions)
-          .values({
-            userId,
-            habitId: parseInt(habitId),
-            date,
-            completed: true
-          })
+          .values(insertData)
           .returning();
         
         const formattedCompletion = {
           ...newCompletion[0],
           habitId: String(newCompletion[0].habitId),
+          notes: newCompletion[0].notes ? retrieveContentFromStorage(newCompletion[0].notes) : null,
           timestamp: newCompletion[0].timestamp ? Number(newCompletion[0].timestamp) : Date.now()
         };
         
