@@ -187,11 +187,13 @@ export default async function handler(
     const baseUrl = requestOrigin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     console.log('Making request to:', `${baseUrl}/api/userSettings`);
     
-    // Enhanced resilience with retry logic to prevent OAuth/calendar source disconnect
-    let updateSuccess = false;
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+         // Enhanced resilience with retry logic to prevent OAuth/calendar source disconnect
+     let updateSuccess = false;
+     let finalAttempt = 0;
+     const maxRetries = 3;
+     
+     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+       finalAttempt = attempt;
       try {
         console.log(`🔄 Attempt ${attempt}/${maxRetries}: Updating calendar sources...`);
         
@@ -311,15 +313,16 @@ export default async function handler(
       }
     }
     
-    // Log completion stats for monitoring
-    console.log('📊 OAuth completion stats:', {
-      oauthCompleted: true,
-      userEmail,
-      sourcesAttempted: newGoogleSources.length,
-      updateSuccess,
-      attempts: updateSuccess ? attempt : maxRetries,
-      timestamp: new Date().toISOString()
-    });
+              // Log completion stats for monitoring
+     console.log('📊 OAuth completion stats:', {
+       oauthCompleted: true,
+       userEmail,
+       sourcesAttempted: newGoogleSources.length,
+       updateSuccess,
+       attempts: finalAttempt,
+       maxRetries,
+       timestamp: new Date().toISOString()
+     });
     } catch (settingsError) {
       console.error("❌ Error updating calendar settings for authenticated user:", settingsError);
       // Don't fail the whole flow if settings update fails
