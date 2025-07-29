@@ -10,7 +10,7 @@ import { useUser } from "@/lib/hooks/useUser";
 // Import journal components 
 import TodayEntry from "@/components/journal/TodayEntry";
 import MoodTracker from "@/components/journal/MoodTracker";
-import JournalTimeline from "@/components/journal/JournalTimeline";
+
 import OnThisDay from "@/components/journal/OnThisDay";
 import JournalSummary from "@/components/journal/JournalSummary";
 import LinkedMoments from "@/components/journal/LinkedMoments";
@@ -222,7 +222,7 @@ export default function JournalPage() {
 
   const tabs = [
     { id: 'today', label: 'Today', icon: BookOpenIcon },
-    { id: 'timeline', label: 'Timeline', icon: CalendarDaysIcon },
+    { id: 'timeline', label: 'Calendar', icon: CalendarDaysIcon },
     { id: 'insights', label: 'FloCat Insights', icon: SparklesIcon },
     { id: 'settings', label: 'Settings', icon: CogIcon }
   ];
@@ -297,25 +297,24 @@ export default function JournalPage() {
                 <tab.icon className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">
-                  {tab.id === 'today' ? 'Today' : tab.id === 'timeline' ? 'Time' : tab.id === 'insights' ? '😺' : 'Set'}
+                  {tab.id === 'today' ? 'Today' : tab.id === 'timeline' ? 'Cal' : tab.id === 'insights' ? '😺' : 'Set'}
                 </span>
               </button>
             ))}
           </div>
 
-          {/* Date indicator */}
-          <div className="mb-6">
-            <p className="text-sm text-grey-tint">
-              {selectedDate === today 
-                ? "Today's entry" 
-                : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric' })} entry`
-              }
-            </p>
-          </div>
-
           {/* Content based on current view */}
           {activeTab === 'today' && (
             <div className="space-y-6">
+              {/* Date indicator */}
+              <div>
+                <p className="text-sm text-grey-tint mb-6">
+                  {selectedDate === today 
+                    ? "Today's entry" 
+                    : `${formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} entry`
+                  }
+                </p>
+              </div>
               {/* Main Entry */}
               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">
                 {isSelectedToday || isEditing ? (
@@ -385,7 +384,7 @@ export default function JournalPage() {
             <div className="space-y-6">
               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">Your Journal Timeline</h3>
+                  <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">Your Journal Calendar</h3>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setActiveTab('today')}
@@ -396,14 +395,6 @@ export default function JournalPage() {
                     </button>
                   </div>
                 </div>
-                <JournalTimeline
-                  onSelectDate={handleSelectDate}
-                  timezone={timezone}
-                  autoScrollToLatest={true}
-                />
-              </div>
-              
-              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
                 <JournalCalendar
                   onSelectDate={handleSelectDate}
                   timezone={timezone}
@@ -435,19 +426,11 @@ export default function JournalPage() {
                     <span className="text-2xl mr-3">😴</span>
                     Sleep Insights
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Avg Sleep Hours</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">7.5h</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Sleep Quality</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">Good</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Consistency</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">85%</span>
-                    </div>
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">😴</div>
+                    <p className="text-grey-tint text-sm">
+                      Sleep insights will appear here as you track your sleep in the journal.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -458,19 +441,11 @@ export default function JournalPage() {
                     <span className="text-2xl mr-3">🎯</span>
                     Activity Patterns
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Most Frequent</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">Exercise (12x)</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Activity Variety</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">8 different</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Active Days</span>
-                      <span className="font-medium text-dark-base dark:text-soft-white">22/30</span>
-                    </div>
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-grey-tint text-sm">
+                      Activity patterns will appear here as you track more activities in your journal entries.
+                    </p>
                   </div>
                 </div>
 
@@ -479,19 +454,11 @@ export default function JournalPage() {
                     <span className="text-2xl mr-3">📈</span>
                     Trends
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Mood Trend</span>
-                      <span className="font-medium text-green-600 dark:text-green-400">↗ Improving</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Sleep Trend</span>
-                      <span className="font-medium text-blue-600 dark:text-blue-400">→ Stable</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-grey-tint">Activity Trend</span>
-                      <span className="font-medium text-purple-600 dark:text-purple-400">↗ Increasing</span>
-                    </div>
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📈</div>
+                    <p className="text-grey-tint text-sm">
+                      Mood and activity trends will be analyzed and displayed here based on your journal data.
+                    </p>
                   </div>
                 </div>
               </div>

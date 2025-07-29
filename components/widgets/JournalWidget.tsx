@@ -113,7 +113,7 @@ const JournalWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, ro
       const currentEntryResponse = await axios.get(`/api/journal/entry?date=${today}`);
       const currentContent = currentEntryResponse.data?.content || '';
       
-      // Append new entry with timestamp
+      // Append new entry with timestamp on a new line
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const newEntryText = `\n\n**${timestamp}** - ${quickEntry.trim()}`;
       const updatedContent = currentContent + newEntryText;
