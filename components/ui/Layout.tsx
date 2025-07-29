@@ -237,11 +237,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <aside
         className={`
           bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
-          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed inset-y-0 left-0 -translate-x-full'}
+          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-64' : 'fixed inset-y-0 left-0 -translate-x-full w-64'}
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
-          overflow-y-auto scrollbar-thin
+          max-h-screen
         `}
       >
         {/* Header */}
@@ -267,12 +267,12 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
         
         {/* Main navigation - scrollable */}
-        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+        <nav className="p-3 md:p-4 space-y-1 flex-1 overflow-y-auto min-h-0">
           {navigationItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group ${
                 router.pathname === item.href 
@@ -307,7 +307,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {/* User account indicator */}
           {!desktopSidebarCollapsed && user && (
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+            <div className="p-3 md:p-4 border-b border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="w-4 h-4 text-white" />
@@ -334,10 +334,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
           )}
 
           {/* Settings and Sign Out */}
-          <div className="p-4 space-y-1">
+          <div className="p-3 md:p-4 space-y-1">
             <Link
               href="/dashboard/settings"
-              className={`flex items-center px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group ${
                 router.pathname === '/dashboard/settings' 
@@ -367,7 +367,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             </Link>
 
             <LogoutButton
-              className={`flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
+              className={`flex items-center w-full text-left px-3 py-2 md:py-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all ${
                 desktopSidebarCollapsed ? 'justify-center' : ''
               } group`}
             >
@@ -382,8 +382,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
             </LogoutButton>
           </div>
 
-          {/* Theme toggle */}
-          <div className={`p-4 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-center ${desktopSidebarCollapsed ? 'hidden' : ''}`}>
+          {/* Theme toggle - Hide on mobile for space */}
+          <div className={`hidden md:flex p-4 border-t border-neutral-200 dark:border-neutral-700 items-center justify-center ${desktopSidebarCollapsed ? 'md:hidden' : ''}`}>
             <ThemeToggle />
           </div>
         </div>
