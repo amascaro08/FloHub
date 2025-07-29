@@ -117,43 +117,109 @@
   transform: translateY(-2px);
 }
 
-/* Responsive sidebar utilities for varying screen sizes */
-@media (max-height: 600px) {
-  .sidebar-compact {
+/* Responsive sidebar utilities - height-based responsive design */
+:root {
+  --sidebar-item-padding: 0.5rem 0.75rem;
+  --sidebar-item-font-size: 1rem;
+  --sidebar-icon-size: 1.25rem;
+  --sidebar-nav-spacing: 0.25rem;
+  --sidebar-nav-padding: 0.75rem 1rem;
+}
+
+/* Ultra-compact for very small heights (MacBook Pro 13" and similar) */
+@media (max-height: 650px) {
+  :root {
     --sidebar-item-padding: 0.25rem 0.5rem;
     --sidebar-item-font-size: 0.75rem;
     --sidebar-icon-size: 1rem;
-    --sidebar-spacing: 0.125rem;
+    --sidebar-nav-spacing: 0.125rem;
+    --sidebar-nav-padding: 0.5rem 0.75rem;
+  }
+  
+  .sidebar-nav {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  .sidebar-nav > div {
+    gap: 0.125rem !important;
+    padding: 0.5rem 0.75rem !important;
   }
 }
 
-@media (max-height: 700px) and (min-height: 601px) {
-  .sidebar-compact {
+/* Compact for small heights (mobile landscape, smaller laptops) */
+@media (max-height: 750px) and (min-height: 651px) {
+  :root {
+    --sidebar-item-padding: 0.375rem 0.625rem;
+    --sidebar-item-font-size: 0.875rem;
+    --sidebar-icon-size: 1.125rem;
+    --sidebar-nav-spacing: 0.1875rem;
+    --sidebar-nav-padding: 0.625rem 0.875rem;
+  }
+}
+
+/* Medium for average heights */
+@media (max-height: 900px) and (min-height: 751px) {
+  :root {
+    --sidebar-item-padding: 0.4375rem 0.6875rem;
+    --sidebar-item-font-size: 0.9375rem;
+    --sidebar-icon-size: 1.1875rem;
+    --sidebar-nav-spacing: 0.21875rem;
+    --sidebar-nav-padding: 0.6875rem 0.9375rem;
+  }
+}
+
+/* Mobile devices - ensure text is always visible on mobile */
+@media (max-width: 768px) {
+  :root {
     --sidebar-item-padding: 0.375rem 0.75rem;
     --sidebar-item-font-size: 0.875rem;
     --sidebar-icon-size: 1.125rem;
-    --sidebar-spacing: 0.25rem;
+    --sidebar-nav-spacing: 0.1875rem;
+    --sidebar-nav-padding: 0.75rem 1rem;
   }
 }
 
-@media (max-height: 800px) and (min-height: 701px) {
-  .sidebar-compact {
-    --sidebar-item-padding: 0.5rem 0.75rem;
-    --sidebar-item-font-size: 0.875rem;
-    --sidebar-icon-size: 1.25rem;
-    --sidebar-spacing: 0.375rem;
+/* Very small mobile devices */
+@media (max-width: 400px) {
+  :root {
+    --sidebar-item-padding: 0.3125rem 0.625rem;
+    --sidebar-item-font-size: 0.8125rem;
+    --sidebar-icon-size: 1rem;
+    --sidebar-nav-spacing: 0.15625rem;
+    --sidebar-nav-padding: 0.625rem 0.875rem;
   }
 }
 
 .sidebar-item-responsive {
-  padding: var(--sidebar-item-padding, 0.5rem 0.75rem);
-  font-size: var(--sidebar-item-font-size, 1rem);
-  gap: var(--sidebar-spacing, 0.5rem);
+  padding: var(--sidebar-item-padding);
 }
 
 .sidebar-icon-responsive {
-  width: var(--sidebar-icon-size, 1.25rem);
-  height: var(--sidebar-icon-size, 1.25rem);
+  width: var(--sidebar-icon-size);
+  height: var(--sidebar-icon-size);
+}
+
+.sidebar-text-responsive {
+  font-size: var(--sidebar-item-font-size);
+}
+
+.sidebar-nav > div {
+  gap: var(--sidebar-nav-spacing);
+  padding: var(--sidebar-nav-padding);
+}
+
+.sidebar-bottom-section {
+  padding: var(--sidebar-nav-padding);
+}
+
+.sidebar-avatar {
+  width: calc(var(--sidebar-icon-size) * 1.6);
+  height: calc(var(--sidebar-icon-size) * 1.6);
+}
+
+.sidebar-subtext-responsive {
+  font-size: calc(var(--sidebar-item-font-size) * 0.85);
 }
 
 /* Modern button styles */
