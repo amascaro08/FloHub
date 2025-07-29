@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, useMemo } from 'react';
 // Removed react-grid-layout in favor of custom CSS positioning
-import { Settings, Plus, CheckSquare, Calendar, Clock, FileText, Sparkles, Grid3X3 } from 'lucide-react';
+import { Settings, Plus, CheckSquare, Calendar, Clock, FileText, Sparkles, Grid3X3, BookOpen } from 'lucide-react';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import LayoutTemplateSelector, { LayoutTemplate } from '../ui/LayoutTemplateSelector';
 
@@ -20,12 +20,13 @@ const ChatWidget = lazy(() => import("@/components/assistant/ChatWidget"));
 const SmartAtAGlanceWidget = lazy(() => import("@/components/widgets/SmartAtAGlanceWidget"));
 const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"));
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
+const JournalWidget = lazy(() => import("@/components/widgets/JournalWidget"));
 
 // User hooks
 import { useUser } from "@/lib/hooks/useUser";
 import { UserSettings } from "@/types/app";
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker" | "journal";
 
 interface WidgetSlotAssignment {
   [slotId: string]: string | null; // widget type or null
@@ -271,6 +272,8 @@ const DashboardGrid: React.FC = () => {
         return <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget {...widgetProps} /></Suspense>;
       case "habit-tracker":
         return <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget {...widgetProps} /></Suspense>;
+      case "journal":
+        return <Suspense fallback={<WidgetSkeleton type="generic" />}><JournalWidget {...widgetProps} /></Suspense>;
       default:
         return <div>Unknown widget</div>;
     }
@@ -289,6 +292,8 @@ const DashboardGrid: React.FC = () => {
         return <FileText className="w-5 h-5" />;
       case "habit-tracker":
         return <Sparkles className="w-5 h-5" />;
+      case "journal":
+        return <BookOpen className="w-5 h-5" />;
       default:
         return <Grid3X3 className="w-5 h-5" />;
     }

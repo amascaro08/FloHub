@@ -21,7 +21,8 @@ import {
   CheckSquare,
   Calendar,
   Clock,
-  FileText
+  FileText,
+  BookOpen
 } from 'lucide-react';
 
 // Widget skeleton for loading state
@@ -35,8 +36,9 @@ const CalendarWidget = lazy(() => import("@/components/widgets/CalendarWidget"))
 const SmartAtAGlanceWidget = lazy(() => import("@/components/widgets/SmartAtAGlanceWidget"));
 const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"));
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
+const JournalWidget = lazy(() => import("@/components/widgets/JournalWidget"));
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker" | "journal";
 
 // Define widget components with Suspense and optimized skeletons
 const widgetComponents: Record<WidgetType, ReactElement> = {
@@ -45,6 +47,7 @@ const widgetComponents: Record<WidgetType, ReactElement> = {
   ataglance: <Suspense fallback={<WidgetSkeleton type="ataglance" />}><SmartAtAGlanceWidget /></Suspense>,
   quicknote: <Suspense fallback={<WidgetSkeleton type="generic" />}><QuickNoteWidget /></Suspense>,
   "habit-tracker": <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget /></Suspense>,
+  journal: <Suspense fallback={<WidgetSkeleton type="generic" />}><JournalWidget /></Suspense>,
 };
 
 // Helper function to get the appropriate icon for each widget
@@ -60,13 +63,15 @@ const getWidgetIcon = (widgetKey: string) => {
       return <FileText className="w-5 h-5" />;
     case 'habit-tracker':
       return <Sparkles className="w-5 h-5" />;
+    case 'journal':
+      return <BookOpen className="w-5 h-5" />;
     default:
       return null;
   }
 };
 
 // Default widget order for mobile
-const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote"];
+const defaultWidgetOrder: WidgetType[] = ["ataglance", "calendar", "tasks", "habit-tracker", "quicknote", "journal"];
 
 export default function MobileDashboard() {
   const isClient = typeof window !== 'undefined';
