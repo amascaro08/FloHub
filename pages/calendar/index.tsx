@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, ErrorInfo } from 'react';
 import useSWR from 'swr';
 import { useUser } from "@/lib/hooks/useUser";
 import Head from 'next/head';
@@ -26,6 +26,46 @@ import {
   TrashIcon,
   XMarkIcon
 } from '@heroicons/react/24/solid';
+
+// Error Boundary Component
+class CalendarErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Calendar Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-6 rounded-2xl shadow-xl">
+            <h3 className="font-heading font-bold text-lg mb-3">Calendar Error</h3>
+            <p className="mb-4">There was an error loading the calendar. Please refresh the page or contact support if this persists.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Generic fetcher for SWR with caching
 const fetcher = async (url: string) => {
@@ -149,17 +189,22 @@ const CalendarPage = () => {
     
     // Only include essential properties that actually matter for calendar loading
     const stableSourcesData = settings.calendarSources
-      .filter(source => source.isEnabled) // Only enabled sources
+      .filter(source => source && source.isEnabled) // Only enabled sources, check for null/undefined
       .map(source => ({
-        type: source.type,
-        sourceId: source.sourceId,
-        connectionData: source.connectionData,
+        type: source.type || 'unknown',
+        sourceId: source.sourceId || 'unknown',
+        connectionData: source.connectionData || '',
         isEnabled: source.isEnabled
       }))
-      .sort((a, b) => `${a.type}:${a.sourceId}`.localeCompare(`${b.type}:${b.sourceId}`)); // Stable sort
+      .sort((a, b) => {
+        // Safe sorting with null checks
+        const aKey = `${a.type || ''}:${a.sourceId || ''}`;
+        const bKey = `${b.type || ''}:${b.sourceId || ''}`;
+        return aKey.localeCompare(bKey);
+      }); // Stable sort
     
     return generateCalendarSourcesHash(stableSourcesData as any);
-  }, [settings?.calendarSources?.length, settings?.calendarSources?.map(s => `${s.type}:${s.sourceId}:${s.isEnabled}`).join('|')]);
+  }, [settings?.calendarSources?.length, settings?.calendarSources?.map(s => `${s?.type || ''}:${s?.sourceId || ''}:${s?.isEnabled || false}`).join('|')]);
 
   // Use cached calendar events hook with stable parameters
   const {
@@ -186,51 +231,72 @@ const CalendarPage = () => {
     }
   }, [fetchError]);
 
+  // Safe date parsing function
+  const safeParseDate = (dateInput: any): Date => {
+    try {
+      if (!dateInput) return new Date();
+      
+      if (dateInput instanceof Date) {
+        return dateInput;
+      }
+      
+      if (typeof dateInput === 'object') {
+        if (dateInput.dateTime) {
+          const parsed = parseISO(dateInput.dateTime);
+          return isNaN(parsed.getTime()) ? new Date() : parsed;
+        }
+        if (dateInput.date) {
+          const parsed = parseISO(dateInput.date);
+          return isNaN(parsed.getTime()) ? new Date() : parsed;
+        }
+      }
+      
+      if (typeof dateInput === 'string') {
+        const parsed = parseISO(dateInput);
+        return isNaN(parsed.getTime()) ? new Date() : parsed;
+      }
+      
+      return new Date();
+    } catch (error) {
+      console.warn('Error parsing date:', dateInput, error);
+      return new Date();
+    }
+  };
+
+  // Safe event date getter
   const getEventDate = (event: CalendarEvent): Date => {
-    if (event.start instanceof Date) {
-      return event.start;
+    try {
+      return safeParseDate(event.start);
+    } catch (error) {
+      console.warn('Error getting event date:', event, error);
+      return new Date();
     }
-    if (event.start.dateTime) {
-      return parseISO(event.start.dateTime);
-    }
-    if (event.start.date) {
-      return parseISO(event.start.date);
-    }
-    return new Date();
   };
 
+  // Safe date time formatter
   const formatDateTime = (dateTime: any): string => {
-    if (!dateTime) return '';
-    
-    let date: Date;
-    if (dateTime instanceof Date) {
-      date = dateTime;
-    } else if (dateTime.dateTime) {
-      date = parseISO(dateTime.dateTime);
-    } else if (dateTime.date) {
-      date = parseISO(dateTime.date);
-    } else {
+    try {
+      if (!dateTime) return '';
+      
+      const date = safeParseDate(dateTime);
+      return format(date, 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      console.warn('Error formatting date time:', dateTime, error);
       return '';
     }
-    
-    return format(date, 'MMM d, yyyy h:mm a');
   };
 
+  // Safe time formatter
   const formatTime = (dateTime: any): string => {
-    if (!dateTime) return '';
-    
-    let date: Date;
-    if (dateTime instanceof Date) {
-      date = dateTime;
-    } else if (dateTime.dateTime) {
-      date = parseISO(dateTime.dateTime);
-    } else if (dateTime.date) {
-      date = parseISO(dateTime.date);
-    } else {
+    try {
+      if (!dateTime) return '';
+      
+      const date = safeParseDate(dateTime);
+      return format(date, 'h:mm a');
+    } catch (error) {
+      console.warn('Error formatting time:', dateTime, error);
       return '';
     }
-    
-    return format(date, 'h:mm a');
   };
 
   const goToPrevious = () => {
@@ -262,26 +328,62 @@ const CalendarPage = () => {
   };
 
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => {
-      const eventDate = getEventDate(event);
-      return isSameDay(eventDate, day);
-    }).sort((a, b) => {
-      const aDate = getEventDate(a);
-      const bDate = getEventDate(b);
-      return aDate.getTime() - bDate.getTime();
-    });
+    try {
+      if (!Array.isArray(events)) return [];
+      
+      return events.filter(event => {
+        try {
+          if (!event || !event.start) return false;
+          const eventDate = getEventDate(event);
+          return isSameDay(eventDate, day);
+        } catch (error) {
+          console.warn('Error filtering event for day:', event, error);
+          return false;
+        }
+      }).sort((a, b) => {
+        try {
+          const aDate = getEventDate(a);
+          const bDate = getEventDate(b);
+          return aDate.getTime() - bDate.getTime();
+        } catch (error) {
+          console.warn('Error sorting events:', a, b, error);
+          return 0;
+        }
+      });
+    } catch (error) {
+      console.warn('Error in getEventsForDay:', error);
+      return [];
+    }
   };
 
   // Helper function to get events for a specific hour
   const getEventsForHour = useCallback((hour: Date) => {
-    return events.filter(event => {
-      const eventStart = getEventDate(event);
-      return isSameHour(eventStart, hour);
-    }).sort((a, b) => {
-      const aDate = getEventDate(a);
-      const bDate = getEventDate(b);
-      return aDate.getTime() - bDate.getTime();
-    });
+    try {
+      if (!Array.isArray(events)) return [];
+      
+      return events.filter(event => {
+        try {
+          if (!event || !event.start) return false;
+          const eventStart = getEventDate(event);
+          return isSameHour(eventStart, hour);
+        } catch (error) {
+          console.warn('Error filtering event for hour:', event, error);
+          return false;
+        }
+      }).sort((a, b) => {
+        try {
+          const aDate = getEventDate(a);
+          const bDate = getEventDate(b);
+          return aDate.getTime() - bDate.getTime();
+        } catch (error) {
+          console.warn('Error sorting events by hour:', a, b, error);
+          return 0;
+        }
+      });
+    } catch (error) {
+      console.warn('Error in getEventsForHour:', error);
+      return [];
+    }
   }, [events]);
 
   // Generate hours for agenda view
@@ -299,17 +401,27 @@ const CalendarPage = () => {
   }, [currentDate]);
 
   const getEventsForCurrentView = () => {
-    if (currentView === 'day') {
-      return getEventsForDay(currentDate);
+    try {
+      if (currentView === 'day') {
+        return getEventsForDay(currentDate);
+      }
+      return Array.isArray(events) ? events : [];
+    } catch (error) {
+      console.warn('Error in getEventsForCurrentView:', error);
+      return [];
     }
-    return events;
   };
 
   // Calculate calendar days for the current month
   const calendarDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentDate));
-    const end = endOfWeek(endOfMonth(currentDate));
-    return eachDayOfInterval({ start, end });
+    try {
+      const start = startOfWeek(startOfMonth(currentDate));
+      const end = endOfWeek(endOfMonth(currentDate));
+      return eachDayOfInterval({ start, end });
+    } catch (error) {
+      console.warn('Error calculating calendar days:', error);
+      return [];
+    }
   }, [currentDate]);
 
   // Handle event form submission
@@ -559,7 +671,7 @@ const CalendarPage = () => {
   ];
 
   return (
-    <>
+    <CalendarErrorBoundary>
       <Head>
         <title>Calendar | FlowHub</title>
         <meta name="description" content="Manage your events and schedule with FlowHub's intelligent calendar" />
@@ -734,6 +846,8 @@ const CalendarPage = () => {
                       
                       <div className="space-y-1">
                         {dayEvents.slice(0, isMobile ? 2 : 3).map(event => {
+                          if (!event || !event.id) return null; // Safety check
+                          
                           const colorClass = event.source === 'work'
                             ? 'border-l-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
                             : 'border-l-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-900 dark:text-accent-100';
@@ -754,7 +868,7 @@ const CalendarPage = () => {
                               )}
                             </div>
                           );
-                        })}
+                        }).filter(Boolean)}
                         {dayEvents.length > (isMobile ? 2 : 3) && (
                           <div
                             className="text-xs text-grey-tint text-center py-1 cursor-pointer hover:underline"
@@ -1362,7 +1476,7 @@ const CalendarPage = () => {
           }
         />
       </div>
-    </>
+    </CalendarErrorBoundary>
   );
 };
 
