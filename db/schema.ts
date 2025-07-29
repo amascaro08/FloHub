@@ -10,6 +10,7 @@ import {
   jsonb,
   uniqueIndex,
   bigint,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { InferSelectModel, InferInsertModel, relations } from 'drizzle-orm';
 
@@ -261,9 +262,9 @@ export const analytics = pgTable("analytics", {
 // FEEDBACK TABLE
 export const feedback = pgTable("feedback", {
   id: serial("id").notNull().primaryKey(),
-  userId: varchar("user_id"), // UUID in database, but varchar works for compatibility
+  userId: uuid("user_id"),
   userEmail: varchar("user_email", { length: 255 }),
-  title: text("title"), // Nullable in actual database
+  title: text("title").notNull(),
   description: text("description"),
   status: text("status").default("open"),
   githubIssueNumber: integer("github_issue_number"),
