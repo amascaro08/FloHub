@@ -163,16 +163,36 @@ export default async function handler(
       const titlePrefix = titlePrefixes[feedbackType] || '💬 Feedback';
       const title = `${titlePrefix}: ${feedbackText.slice(0, 50)}${feedbackText.length > 50 ? '...' : ''}`;
 
-      const [newFeedbackItem] = await db.insert(feedback).values({ 
-        userEmail: userEmail, // Use the new user_email field for consistency
-        title: title,
-        description: feedbackText,
-        status: "open", 
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+      // Check what columns exist in the feedback table to handle both old and new schemas
+      const columnsCheck = await db.execute(sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'feedback' 
+        AND table_schema = 'public'
+      `);
       
-      const feedbackId = newFeedbackItem.id;
+      const availableColumns = columnsCheck.rows.map(row => row.column_name);
+      console.log("Available columns in feedback table:", availableColumns);
+      
+      const hasUserEmail = availableColumns.includes('user_email');
+      const hasTitle = availableColumns.includes('title');
+      const hasDescription = availableColumns.includes('description');
+      
+      // Determine which columns to use based on what's available
+      const userField = hasUserEmail ? 'user_email' : 'userId';
+      const titleField = hasTitle ? 'title' : 'feedbackType';
+      const descriptionField = hasDescription ? 'description' : 'feedbackText';
+      
+      console.log("Using columns for feedback insertion:", { userField, titleField, descriptionField });
+
+      // Use raw SQL for insertion to handle schema differences
+      const insertResult = await db.execute(sql`
+        INSERT INTO feedback (${sql.raw(userField)}, ${sql.raw(titleField)}, ${sql.raw(descriptionField)}, status, created_at)
+        VALUES (${userEmail}, ${title}, ${feedbackText}, 'open', ${new Date().toISOString()})
+        RETURNING id
+      `);
+      
+      const feedbackId = insertResult.rows[0]?.id;
 
       return res.status(201).json({ success: true, feedbackId });
     } catch (err: any) {
