@@ -1,14 +1,14 @@
 import { usePWA } from '@/utils/usePWA';
 
 export default function PWAInstallPrompt() {
-  const { isInstallable, installApp } = usePWA();
+  const { isInstallable, installApp, dismissInstallPrompt } = usePWA();
 
   const handleInstallClick = async () => {
     await installApp();
   };
 
   const handleDismiss = () => {
-    // This will be handled by the hook
+    dismissInstallPrompt();
   };
 
   if (!isInstallable) return null;
