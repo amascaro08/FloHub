@@ -86,10 +86,13 @@ export default function JournalPage() {
   
   // Initialize selectedDate once we have the timezone
   useEffect(() => {
-    if (timezone && !selectedDate) {
-      setSelectedDate(getCurrentDate(timezone));
+    if (timezone) {
+      const todayInUserTimezone = getCurrentDate(timezone);
+      if (!selectedDate || selectedDate !== todayInUserTimezone) {
+        setSelectedDate(todayInUserTimezone);
+      }
     }
-  }, [timezone, selectedDate]);
+  }, [timezone]);
 
   // Check if device is mobile
   useEffect(() => {
@@ -211,8 +214,13 @@ export default function JournalPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
       
-      // Trigger refresh
+      // Trigger refresh for all components including calendar
       setRefreshTrigger(prev => prev + 1);
+      
+      // Force calendar refresh after a short delay to ensure data is saved
+      setTimeout(() => {
+        setRefreshTrigger(prev => prev + 1);
+      }, 500);
     } catch (error) {
       console.error('Error saving journal data:', error);
     } finally {
@@ -456,6 +464,7 @@ export default function JournalPage() {
                   </div>
                 </div>
                 <JournalCalendar
+                  key={`calendar-${refreshTrigger}`}
                   onSelectDate={handleSelectDate}
                   timezone={timezone}
                   refreshTrigger={refreshTrigger}
