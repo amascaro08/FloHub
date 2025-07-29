@@ -102,6 +102,7 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         setIsInitializing(false);
       } catch (error) {
         console.error('Failed to initialize calendar cache:', error);
+        // Don't fail if IndexedDB is not available (e.g., private browsing)
         setIsInitializing(false);
       }
     };
@@ -132,17 +133,21 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
         return cached.events;
       }
 
-      // Check IndexedDB cache
-      const cachedEvents = await calendarCache.getCachedEvents(startDate, endDate, userEmail);
-      if (cachedEvents.length > 0) {
-        // Update in-memory cache
-        eventCache.set(cacheKey, {
-          id: cacheKey,
-          events: cachedEvents,
-          lastUpdated: Date.now(),
-          userEmail,
-        });
-        return cachedEvents;
+      // Check IndexedDB cache - wrap in try-catch for browser compatibility
+      try {
+        const cachedEvents = await calendarCache.getCachedEvents(startDate, endDate, userEmail);
+        if (cachedEvents && cachedEvents.length > 0) {
+          // Update in-memory cache
+          eventCache.set(cacheKey, {
+            id: cacheKey,
+            events: cachedEvents,
+            lastUpdated: Date.now(),
+            userEmail,
+          });
+          return cachedEvents;
+        }
+      } catch (idbError) {
+        console.warn('IndexedDB cache read error (possibly private browsing):', idbError);
       }
     } catch (error) {
       console.warn('Error reading from cache:', error);
@@ -205,7 +210,11 @@ export const useCalendarEvents = ({ startDate, endDate, enabled = true, calendar
       
       // Deduplicate events by ID to prevent duplicates from Power Automate or other sources
       const deduplicatedEvents = Array.from(
-        new Map(events.map(event => [event.id, event])).values()
+        new Map(
+          (events || [])
+            .filter(event => event && event.id) // Filter out invalid events
+            .map(event => [event.id, event])
+        ).values()
       );
       
       // Cache the result in both in-memory and IndexedDB - USER SCOPED
