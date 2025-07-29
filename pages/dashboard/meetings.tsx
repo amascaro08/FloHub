@@ -143,6 +143,18 @@ export default function MeetingsPage() {
     return calendarEvents.filter(event => event.source === 'work');
   }, [calendarEvents]);
 
+  // Filter work events to only show today's events for the modal
+  const todaysWorkCalendarEvents = useMemo(() => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    return workCalendarEvents.filter(event => {
+      const eventDate = getEventDate(event.start);
+      return eventDate >= todayStart && eventDate < todayEnd;
+    });
+  }, [workCalendarEvents]);
+
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -688,7 +700,7 @@ export default function MeetingsPage() {
           onSave={handleSaveMeetingNote}
           isSaving={isSaving}
           existingTags={allAvailableTags}
-          workCalendarEvents={workCalendarEvents}
+          workCalendarEvents={todaysWorkCalendarEvents}
           calendarLoading={calendarLoading}
         />
       </div>
