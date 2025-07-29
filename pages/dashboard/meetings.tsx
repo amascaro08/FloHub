@@ -209,6 +209,7 @@ export default function MeetingsPage() {
   const [activeTab, setActiveTab] = useState<"recent" | "series" | "actions" | "upcoming">("recent");
   const [isMobile, setIsMobile] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+  const [showLinkingModal, setShowLinkingModal] = useState(false);
 
   // Check if device is mobile
   useEffect(() => {
@@ -266,19 +267,53 @@ export default function MeetingsPage() {
   const upcomingMeetings = workCalendarEvents.filter(event => 
     getEventDate(event.start) > new Date()).length;
 
-  // Group meetings by series for series tab
+  // Group meetings by series for series tab (both manual and auto-detected)
   const meetingSeries = useMemo(() => {
     const series: Record<string, Note[]> = {};
+    
     meetingNotes.forEach(note => {
-      if (note.eventTitle) {
-        // Simple series detection based on event title patterns
-        const seriesKey = note.eventTitle.replace(/\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4}|#\d+/g, '').trim();
-        if (!series[seriesKey]) {
-          series[seriesKey] = [];
+      // Priority 1: Manual series grouping
+      if (note.meetingSeries) {
+        if (!series[note.meetingSeries]) {
+          series[note.meetingSeries] = [];
         }
-        series[seriesKey].push(note);
+        series[note.meetingSeries].push(note);
+      }
+      // Priority 2: Linked meetings
+      else if (note.linkedMeetingIds && note.linkedMeetingIds.length > 0) {
+        const linkedKey = `Linked Series (${note.id.slice(0, 8)})`;
+        if (!series[linkedKey]) {
+          series[linkedKey] = [];
+        }
+        series[linkedKey].push(note);
+        
+        // Add linked notes to the same series
+        note.linkedMeetingIds.forEach(linkedId => {
+          const linkedNote = meetingNotes.find(n => n.id === linkedId);
+          if (linkedNote && !series[linkedKey].includes(linkedNote)) {
+            series[linkedKey].push(linkedNote);
+          }
+        });
+      }
+      // Fallback: Auto-detection based on event title patterns (improved)
+      else if (note.eventTitle) {
+        const seriesKey = note.eventTitle
+          .replace(/\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4}|#\d+/g, '')
+          .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/gi, '')
+          .replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
+          .replace(/\b(week|weekly|daily|monthly)\b/gi, '')
+          .trim();
+        
+        if (seriesKey.length > 3) { // Only group if there's meaningful text left
+          if (!series[seriesKey]) {
+            series[seriesKey] = [];
+          }
+          series[seriesKey].push(note);
+        }
       }
     });
+    
+    // Filter to only show series with multiple meetings
     return Object.entries(series).filter(([, notes]) => notes.length > 1);
   }, [meetingNotes]);
 
@@ -394,6 +429,66 @@ export default function MeetingsPage() {
       setIsSaving(false);
     }
   };
+
+  const handleToggleAction = async (noteId: string, actionId: string, newStatus: 'todo' | 'done') => {
+    const note = meetingNotes.find(n => n.id === noteId);
+    if (!note || !note.actions) return;
+
+    const actionIndex = note.actions.findIndex(a => a.id === actionId);
+    if (actionIndex === -1) return;
+
+    const updatedActions = [...note.actions];
+    const action = updatedActions[actionIndex];
+    
+    // Update action status and completion time
+    updatedActions[actionIndex] = {
+      ...action,
+      status: newStatus,
+      completedAt: newStatus === 'done' ? new Date().toISOString() : undefined
+    };
+
+    try {
+      // Update the meeting note with new action status
+      await handleUpdateMeetingNote(
+        noteId,
+        note.title || '',
+        note.content,
+        note.tags,
+        note.eventId,
+        note.eventTitle,
+        note.isAdhoc,
+        updatedActions,
+        note.agenda
+      );
+
+      // If action is assigned to "Me" and has a linked task, update the task status too
+      if (action.assignedTo === 'Me' && action.taskId) {
+        try {
+          await fetch('/api/tasks', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: action.taskId,
+              done: newStatus === 'done'
+            })
+          });
+        } catch (error) {
+          console.error('Error syncing task status:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating action status:', error);
+         }
+   };
+
+   const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
+     // For now, just select the most recent note in the series
+     // This could be enhanced to show a dedicated series view
+     if (notes.length > 0) {
+       const mostRecent = notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+       setSelectedNoteId(mostRecent.id);
+     }
+   };
 
   // Show loading state if data is still loading
   if ((!meetingNotesResponse && !meetingNotesError) || (!userSettings && !settingsError && shouldFetch)) {
@@ -535,102 +630,181 @@ export default function MeetingsPage() {
               </div>
             )}
 
-            {activeTab === 'series' && (
-              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Meeting Series</h2>
-                  <p className="text-sm text-grey-tint mt-1">Related meetings grouped for context</p>
-                </div>
-                <div className="p-4 space-y-4">
-                  {meetingSeries.length === 0 ? (
-                    <div className="text-center py-8">
-                      <LinkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Series Found</h3>
-                      <p className="text-gray-500 dark:text-gray-400">Related meetings will appear here when detected</p>
-                    </div>
-                  ) : (
-                    meetingSeries.map(([seriesTitle, notes]) => (
-                      <div key={seriesTitle} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                        <h3 className="font-medium text-dark-base dark:text-soft-white mb-2">{seriesTitle}</h3>
-                        <p className="text-sm text-grey-tint mb-3">{notes.length} meetings</p>
-                        <div className="flex flex-wrap gap-2">
-                          {notes.slice(0, 3).map(note => (
-                            <button
-                              key={note.id}
-                              onClick={() => setSelectedNoteId(note.id)}
-                              className="text-xs px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
-                            >
-                              {new Date(note.createdAt).toLocaleDateString()}
-                            </button>
-                          ))}
-                          {notes.length > 3 && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                              +{notes.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+                         {activeTab === 'series' && (
+               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Meeting Series</h2>
+                       <p className="text-sm text-grey-tint mt-1">Related meetings grouped for context building</p>
+                     </div>
+                     <button
+                       onClick={() => setShowLinkingModal(true)}
+                       className="text-sm px-3 py-1.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                     >
+                       Link Meetings
+                     </button>
+                   </div>
+                 </div>
+                 <div className="p-4 space-y-4">
+                   {meetingSeries.length === 0 ? (
+                     <div className="text-center py-8">
+                       <LinkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Series Found</h3>
+                       <p className="text-gray-500 dark:text-gray-400 mb-4">Create meeting series to build context across related meetings</p>
+                       <button
+                         onClick={() => setShowLinkingModal(true)}
+                         className="btn-primary text-sm"
+                       >
+                         Create First Series
+                       </button>
+                     </div>
+                   ) : (
+                     meetingSeries.map(([seriesTitle, notes]) => (
+                       <div key={seriesTitle} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                         <div className="flex items-start justify-between mb-3">
+                           <div>
+                             <h3 className="font-medium text-dark-base dark:text-soft-white mb-1">{seriesTitle}</h3>
+                             <p className="text-sm text-grey-tint">{notes.length} meetings • Last updated {new Date(Math.max(...notes.map(n => new Date(n.createdAt).getTime()))).toLocaleDateString()}</p>
+                           </div>
+                           <button
+                             onClick={() => handleViewSeries(seriesTitle, notes)}
+                             className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                           >
+                             View All
+                           </button>
+                         </div>
+                         
+                         {/* Meeting Timeline */}
+                         <div className="space-y-2">
+                           {notes.slice(0, 3).map((note, index) => (
+                             <div key={note.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors">
+                               <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
+                               <div className="flex-1 min-w-0">
+                                 <p className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                                   {note.title || note.eventTitle || 'Untitled Meeting'}
+                                 </p>
+                                 <p className="text-xs text-grey-tint">
+                                   {new Date(note.createdAt).toLocaleDateString()} • {note.actions?.length || 0} actions
+                                 </p>
+                               </div>
+                               <button
+                                 onClick={() => setSelectedNoteId(note.id)}
+                                 className="text-xs px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                               >
+                                 View
+                               </button>
+                             </div>
+                           ))}
+                           {notes.length > 3 && (
+                             <div className="text-center pt-2">
+                               <button
+                                 onClick={() => handleViewSeries(seriesTitle, notes)}
+                                 className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                               >
+                                 +{notes.length - 3} more meetings
+                               </button>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     ))
+                   )}
+                 </div>
+               </div>
+             )}
 
-            {activeTab === 'actions' && (
-              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Action Items</h2>
-                  <p className="text-sm text-grey-tint mt-1">Tasks and decisions from your meetings</p>
-                </div>
-                <div className="p-4 space-y-4">
-                  {meetingNotes.filter(note => note.actions && note.actions.length > 0).length === 0 ? (
-                    <div className="text-center py-8">
-                      <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Actions Yet</h3>
-                      <p className="text-gray-500 dark:text-gray-400">Action items from meetings will appear here</p>
-                    </div>
-                  ) : (
-                    meetingNotes
-                      .filter(note => note.actions && note.actions.length > 0)
-                      .map(note => (
-                        <div key={note.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-medium text-dark-base dark:text-soft-white">{note.eventTitle || note.title || 'Untitled Meeting'}</h3>
-                            <button
-                              onClick={() => setSelectedNoteId(note.id)}
-                              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm"
-                            >
-                              View Note
-                            </button>
-                          </div>
-                          <div className="space-y-2">
-                            {note.actions?.map(action => (
-                              <div key={action.id} className={`flex items-center space-x-3 p-2 rounded-lg ${
-                                action.status === 'done' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'
-                              }`}>
-                                <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
-                                  action.status === 'done' ? 'bg-green-500' : 'bg-yellow-500'
-                                }`}></div>
-                                <div className="flex-1">
-                                  <p className="text-sm text-dark-base dark:text-soft-white">{action.description}</p>
-                                  <p className="text-xs text-grey-tint">Assigned to: {action.assignedTo}</p>
-                                </div>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  action.status === 'done' 
-                                    ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                                    : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
-                                }`}>
-                                  {action.status === 'done' ? 'Done' : 'Pending'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            )}
+                         {activeTab === 'actions' && (
+               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                   <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Action Items</h2>
+                   <p className="text-sm text-grey-tint mt-1">Tasks and decisions from your meetings</p>
+                 </div>
+                 <div className="p-4 space-y-4">
+                   {meetingNotes.filter(note => note.actions && note.actions.length > 0).length === 0 ? (
+                     <div className="text-center py-8">
+                       <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Actions Yet</h3>
+                       <p className="text-gray-500 dark:text-gray-400">Action items from meetings will appear here</p>
+                     </div>
+                   ) : (
+                     meetingNotes
+                       .filter(note => note.actions && note.actions.length > 0)
+                       .map(note => (
+                         <div key={note.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+                           <div className="flex items-center justify-between mb-3">
+                             <h3 className="font-medium text-dark-base dark:text-soft-white">{note.eventTitle || note.title || 'Untitled Meeting'}</h3>
+                             <button
+                               onClick={() => setSelectedNoteId(note.id)}
+                               className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm"
+                             >
+                               View Note
+                             </button>
+                           </div>
+                           <div className="space-y-2">
+                             {note.actions?.map(action => (
+                               <div key={action.id} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                                 action.status === 'done' 
+                                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                                   : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                               }`}>
+                                 <button
+                                   onClick={() => handleToggleAction(note.id, action.id, action.status === 'todo' ? 'done' : 'todo')}
+                                   className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                                     action.status === 'done' 
+                                       ? 'bg-green-500 hover:bg-green-600' 
+                                       : 'bg-yellow-500 hover:bg-yellow-600'
+                                   }`}
+                                 >
+                                   {action.status === 'done' && (
+                                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                     </svg>
+                                   )}
+                                 </button>
+                                 <div className="flex-1">
+                                   <p className={`text-sm ${action.status === 'done' ? 'line-through text-gray-500' : 'text-dark-base dark:text-soft-white'}`}>
+                                     {action.description}
+                                   </p>
+                                   <div className="flex items-center space-x-2 text-xs text-grey-tint mt-1">
+                                     <span>Assigned to: {action.assignedTo}</span>
+                                     {action.dueDate && (
+                                       <>
+                                         <span>•</span>
+                                         <span>Due: {new Date(action.dueDate).toLocaleDateString()}</span>
+                                       </>
+                                     )}
+                                     {action.taskId && action.assignedTo === 'Me' && (
+                                       <>
+                                         <span>•</span>
+                                         <span className="text-blue-600 dark:text-blue-400">Synced to Tasks</span>
+                                       </>
+                                     )}
+                                   </div>
+                                 </div>
+                                 <div className="flex items-center space-x-2">
+                                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                     action.status === 'done' 
+                                       ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                                       : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+                                   }`}>
+                                     {action.status === 'done' ? 'Completed' : 'Pending'}
+                                   </span>
+                                   {action.status === 'done' && action.completedAt && (
+                                     <span className="text-xs text-grey-tint">
+                                       {new Date(action.completedAt).toLocaleDateString()}
+                                     </span>
+                                   )}
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       ))
+                   )}
+                 </div>
+               </div>
+             )}
 
             {activeTab === 'upcoming' && (
               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
@@ -739,6 +913,46 @@ export default function MeetingsPage() {
           workCalendarEvents={todaysWorkCalendarEvents}
           calendarLoading={calendarLoading}
         />
+
+        {/* Meeting Linking Modal */}
+        {showLinkingModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+              <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Link Meetings</h2>
+                    <p className="text-white/80 text-sm">Create a series to build context across related meetings</p>
+                  </div>
+                  <button
+                    onClick={() => setShowLinkingModal(false)}
+                    className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="text-center py-8">
+                  <LinkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Linking Feature Coming Soon</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    This feature will allow you to manually link meeting notes together to build context across related discussions.
+                  </p>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p>• Create custom meeting series (e.g., "Weekly Team Sync", "Project Alpha")</p>
+                    <p>• Link related meetings for context building</p>
+                    <p>• Track decisions and actions across multiple meetings</p>
+                    <p>• Enhanced AI summaries with historical context</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
