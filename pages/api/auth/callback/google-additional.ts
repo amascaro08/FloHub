@@ -182,20 +182,32 @@ export default async function handler(
         }];
       }
     
-      console.log('🔄 Updating user settings with Google Calendar sources for authenticated user...');
-      // Update user settings with the new calendar sources - SCOPED TO AUTHENTICATED USER
-      const baseUrl = requestOrigin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      console.log('Making request to:', `${baseUrl}/api/userSettings`);
-      
-      // Use authenticated session to update settings (more secure than passing cookies)
-      const userSettingsRes = await fetch(`${baseUrl}/api/userSettings`, {
-        headers: {
-          Cookie: req.headers.cookie || "",
-          'X-User-Email': userEmail, // Additional verification header
-        },
-      });
-      
-      if (userSettingsRes.ok) {
+          console.log('🔄 Updating user settings with Google Calendar sources for authenticated user...');
+    // Update user settings with the new calendar sources - SCOPED TO AUTHENTICATED USER
+    const baseUrl = requestOrigin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    console.log('Making request to:', `${baseUrl}/api/userSettings`);
+    
+    // Enhanced resilience with retry logic to prevent OAuth/calendar source disconnect
+    let updateSuccess = false;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt}/${maxRetries}: Updating calendar sources...`);
+        
+        // Use authenticated session to update settings (more secure than passing cookies)
+        const userSettingsRes = await fetch(`${baseUrl}/api/userSettings`, {
+          headers: {
+            Cookie: req.headers.cookie || "",
+            'X-User-Email': userEmail, // Additional verification header
+          },
+          signal: AbortSignal.timeout(15000) // 15 second timeout per attempt
+        });
+        
+        if (!userSettingsRes.ok) {
+          throw new Error(`Failed to fetch user settings: ${userSettingsRes.status} ${userSettingsRes.statusText}`);
+        }
+        
         const userSettings = await userSettingsRes.json();
         console.log('Current calendar sources for authenticated user:', userSettings.calendarSources?.length || 0);
         
@@ -216,13 +228,43 @@ export default async function handler(
             ...userSettings,
             calendarSources: updatedSources,
           }),
+          signal: AbortSignal.timeout(15000) // 15 second timeout per attempt
         });
         
-        if (updateRes.ok) {
-          console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources for authenticated user');
+        if (!updateRes.ok) {
+          const errorText = await updateRes.text();
+          throw new Error(`Failed to update user settings: ${updateRes.status} ${errorText}`);
+        }
+        
+        console.log('✅ Successfully added', newGoogleSources.length, 'Google Calendar sources for authenticated user');
+        
+        // Enhanced verification logging
+        console.log('🔍 Sources that should be saved:', newGoogleSources.map((s: CalendarSource) => ({
+          id: s.id,
+          name: s.name,
+          type: s.type,
+          sourceId: s.sourceId,
+          enabled: s.isEnabled
+        })));
+        
+        // Verify the save by fetching settings again
+        const verifyRes = await fetch(`${baseUrl}/api/userSettings`, {
+          headers: {
+            Cookie: req.headers.cookie || "",
+            'X-User-Email': userEmail, // Additional verification header
+          },
+          signal: AbortSignal.timeout(10000) // 10 second timeout for verification
+        });
+        
+        if (verifyRes.ok) {
+          const verifiedSettings = await verifyRes.json();
+          console.log('✅ Verified calendar sources saved for authenticated user:', verifiedSettings.calendarSources?.length || 0);
           
-          // Enhanced verification logging
-          console.log('🔍 Sources that should be saved:', newGoogleSources.map((s: CalendarSource) => ({
+          // Double-check that Google sources are present
+          const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
+          console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
+          
+          console.log('🔍 Actual sources in database:', googleSourcesInDb.map((s: CalendarSource) => ({
             id: s.id,
             name: s.name,
             type: s.type,
@@ -230,50 +272,54 @@ export default async function handler(
             enabled: s.isEnabled
           })));
           
-          // Verify the save by fetching settings again
-          const verifyRes = await fetch(`${baseUrl}/api/userSettings`, {
-            headers: {
-              Cookie: req.headers.cookie || "",
-              'X-User-Email': userEmail, // Additional verification header
-            },
-          });
-          
-          if (verifyRes.ok) {
-            const verifiedSettings = await verifyRes.json();
-            console.log('✅ Verified calendar sources saved for authenticated user:', verifiedSettings.calendarSources?.length || 0);
+          if (googleSourcesInDb.length !== newGoogleSources.length) {
+            console.error('❌ Mismatch in saved Google calendar sources for authenticated user!', {
+              expected: newGoogleSources.length,
+              actual: googleSourcesInDb.length,
+              user: userEmail,
+              expectedSources: newGoogleSources.map((s: CalendarSource) => s.name),
+              actualSources: googleSourcesInDb.map((s: CalendarSource) => s.name)
+            });
             
-            // Double-check that Google sources are present
-            const googleSourcesInDb = verifiedSettings.calendarSources?.filter((source: any) => source.type === 'google') || [];
-            console.log('✅ Google sources in database for authenticated user:', googleSourcesInDb.length);
-            
-            console.log('🔍 Actual sources in database:', googleSourcesInDb.map((s: CalendarSource) => ({
-              id: s.id,
-              name: s.name,
-              type: s.type,
-              sourceId: s.sourceId,
-              enabled: s.isEnabled
-            })));
-            
-            if (googleSourcesInDb.length !== newGoogleSources.length) {
-              console.error('❌ Mismatch in saved Google calendar sources for authenticated user!', {
-                expected: newGoogleSources.length,
-                actual: googleSourcesInDb.length,
-                user: userEmail,
-                expectedSources: newGoogleSources.map((s: CalendarSource) => s.name),
-                actualSources: googleSourcesInDb.map((s: CalendarSource) => s.name)
-              });
-            }
+            // Don't fail the OAuth flow, but log the issue for monitoring
+            console.log('⚠️ Calendar sources mismatch, but OAuth will continue. User can use "Refresh Sources" to fix this.');
           } else {
-            console.error('❌ Failed to verify settings save for authenticated user');
+            console.log('✅ Calendar sources verification successful - all sources saved correctly!');
           }
+          
+          updateSuccess = true;
+          break; // Success, exit retry loop
+          
         } else {
-          const errorText = await updateRes.text();
-          console.error('❌ Failed to update user settings for authenticated user:', updateRes.status, errorText);
+          console.error('❌ Failed to verify settings save for authenticated user, but update may have succeeded');
+          updateSuccess = true; // Assume success if update worked but verification failed
+          break;
         }
-      } else {
-        const errorText = await userSettingsRes.text();
-        console.error('❌ Failed to fetch user settings for authenticated user:', userSettingsRes.status, errorText);
+        
+      } catch (error) {
+        console.error(`❌ Attempt ${attempt}/${maxRetries} failed:`, error);
+        
+        if (attempt === maxRetries) {
+          console.error('❌ All attempts failed to update calendar sources');
+          // Don't fail the OAuth flow - user can manually refresh sources later
+          console.log('⚠️ OAuth will continue without calendar sources. User can use "Refresh Sources" button to fix this.');
+        } else {
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          console.log(`⏳ Waiting ${attempt} second(s) before retry...`);
+        }
       }
+    }
+    
+    // Log completion stats for monitoring
+    console.log('📊 OAuth completion stats:', {
+      oauthCompleted: true,
+      userEmail,
+      sourcesAttempted: newGoogleSources.length,
+      updateSuccess,
+      attempts: updateSuccess ? attempt : maxRetries,
+      timestamp: new Date().toISOString()
+    });
     } catch (settingsError) {
       console.error("❌ Error updating calendar settings for authenticated user:", settingsError);
       // Don't fail the whole flow if settings update fails
