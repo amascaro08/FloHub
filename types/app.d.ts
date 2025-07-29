@@ -76,6 +76,29 @@ export type Note = {
   aiSummary?: string; // Optional: AI-generated summary of the meeting
 };
 
+// Enhanced MeetingNote type for dedicated meeting notes table
+export type MeetingNote = {
+  id: string;
+  title?: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  eventId?: string;
+  eventTitle?: string;
+  isAdhoc: boolean;
+  actions?: Action[];
+  agenda?: string;
+  aiSummary?: string;
+  meetingSeriesId?: string; // For linking related meetings (e.g., weekly standups)
+  parentMeetingId?: string; // For follow-up meetings
+  meetingDate?: string;
+  attendees?: string[]; // List of attendee names/emails
+  meetingType: 'regular' | 'standup' | 'review' | 'planning' | 'retrospective' | 'other';
+  status: 'scheduled' | 'completed' | 'cancelled';
+  source: 'manual' | 'calendar' | 'import';
+};
+
 // Define a type for tasks
 export interface Task {
   id:        string;

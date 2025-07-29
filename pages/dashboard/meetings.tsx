@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Head from "next/head";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import type { Note, UserSettings, Action } from "@/types/app";
@@ -11,6 +12,17 @@ import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
 import { useUser } from "@/lib/hooks/useUser";
+import { 
+  PlusIcon, 
+  MagnifyingGlassIcon,
+  TagIcon,
+  CalendarDaysIcon,
+  UserGroupIcon,
+  DocumentTextIcon,
+  ClockIcon,
+  SparklesIcon,
+  LinkIcon
+} from '@heroicons/react/24/solid';
 
 // Define the response type for fetching meeting notes
 type GetMeetingNotesResponse = {
@@ -45,8 +57,28 @@ export default function MeetingsPage() {
   const status = user ? "authenticated" : "unauthenticated";
   const router = useRouter();
 
-  if (!user) {
-    return <div>Loading...</div>;
+  // Handle loading state
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-grey-tint">Loading your meetings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle unauthenticated state
+  if (status !== 'authenticated' || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <p className="text-grey-tint">Please sign in to access your meetings.</p>
+        </div>
+      </div>
+    );
   }
 
   const shouldFetch = status === "authenticated";
@@ -111,60 +143,25 @@ export default function MeetingsPage() {
     return calendarEvents.filter(event => event.source === 'work');
   }, [calendarEvents]);
 
-  // Log the fetched data and errors for debugging
-  useEffect(() => {
-    console.log("=== MEETINGS PAGE DEBUG ===");
-    console.log("Fetched user settings:", userSettings);
-    console.log("User settings error:", settingsError);
-    console.log("PowerAutomate URL configured:", userSettings?.powerAutomateUrl);
-    console.log("Calendar sources:", userSettings?.calendarSources);
-    console.log("Calendar loading state:", calendarLoading);
-    console.log("Fetched calendar events (raw):", calendarEvents);
-    console.log("Calendar events type:", typeof calendarEvents, "isArray:", Array.isArray(calendarEvents));
-    console.log("Calendar events error:", calendarError);
-    console.log("Filtered work calendar events:", workCalendarEvents);
-    
-    // Debug: Show all events with their source property
-    if (calendarEvents && Array.isArray(calendarEvents) && calendarEvents.length > 0) {
-      console.log("All calendar events with sources:");
-      calendarEvents.forEach((event, index) => {
-        console.log(`Event ${index + 1}:`, {
-          id: event.id,
-          summary: event.summary,
-          source: event.source,
-          calendarName: event.calendarName,
-          tags: event.tags
-        });
-      });
-      
-      const workEvents = calendarEvents.filter(event => event.source === 'work');
-      const personalEvents = calendarEvents.filter(event => event.source === 'personal');
-      const noSourceEvents = calendarEvents.filter(event => !event.source);
-      
-      console.log(`Work events count: ${workEvents.length}`);
-      console.log(`Personal events count: ${personalEvents.length}`);
-      console.log(`Events without source: ${noSourceEvents.length}`);
-      
-      if (workEvents.length === 0 && calendarEvents.length > 0) {
-        console.warn("⚠️ No work events found! All events have source:", calendarEvents.map(e => e.source));
-      }
-    } else if (calendarLoading) {
-      console.log("📅 Calendar events are still loading...");
-    } else {
-      console.log("No calendar events fetched");
-    }
-    
-    console.log("Fetched meeting notes:", meetingNotesResponse);
-    console.log("Meeting notes error:", meetingNotesError);
-    console.log("=== END DEBUG ===");
-  }, [userSettings, settingsError, calendarEvents, calendarError, workCalendarEvents, meetingNotesResponse, meetingNotesError, calendarLoading]);
-
   const [searchContent, setSearchContent] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [activeTab, setActiveTab] = useState<"recent" | "series" | "actions" | "upcoming">("recent");
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Combine unique tags from meeting notes and global tags from settings
   const allAvailableTags = useMemo(() => {
@@ -203,6 +200,37 @@ export default function MeetingsPage() {
     return filteredMeetingNotes.find(note => note.id === selectedNoteId) || null;
   }, [selectedNoteId, filteredMeetingNotes]);
 
+  // Calculate stats for tabs
+  const meetingNotes = meetingNotesResponse?.meetingNotes || [];
+  const totalActions = meetingNotes.reduce((acc, note) => acc + (note.actions?.length || 0), 0);
+  const pendingActions = meetingNotes.reduce((acc, note) => 
+    acc + (note.actions?.filter(action => action.status === 'todo')?.length || 0), 0);
+  const upcomingMeetings = workCalendarEvents.filter(event => 
+    new Date(event.start.dateTime || event.start.date) > new Date()).length;
+
+  // Group meetings by series for series tab
+  const meetingSeries = useMemo(() => {
+    const series: Record<string, Note[]> = {};
+    meetingNotes.forEach(note => {
+      if (note.eventTitle) {
+        // Simple series detection based on event title patterns
+        const seriesKey = note.eventTitle.replace(/\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4}|#\d+/g, '').trim();
+        if (!series[seriesKey]) {
+          series[seriesKey] = [];
+        }
+        series[seriesKey].push(note);
+      }
+    });
+    return Object.entries(series).filter(([, notes]) => notes.length > 1);
+  }, [meetingNotes]);
+
+  const tabs = [
+    { id: 'recent', label: 'Recent', icon: ClockIcon, count: meetingNotes.length },
+    { id: 'series', label: 'Series', icon: LinkIcon, count: meetingSeries.length },
+    { id: 'actions', label: 'Actions', icon: DocumentTextIcon, count: pendingActions },
+    { id: 'upcoming', label: 'Upcoming', icon: CalendarDaysIcon, count: upcomingMeetings }
+  ];
+
   const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => {
     setIsSaving(true);
     try {
@@ -227,21 +255,8 @@ export default function MeetingsPage() {
   };
 
   const handleUpdateMeetingNote = async (noteId: string, updatedTitle: string, updatedContent: string, updatedTags: string[], updatedEventId?: string, updatedEventTitle?: string, updatedIsAdhoc?: boolean, updatedActions?: Action[], updatedAgenda?: string): Promise<void> => {
-    console.log("meetings.tsx - handleUpdateMeetingNote called with:", {
-      noteId,
-      updatedTitle,
-      updatedContent,
-      updatedTags,
-      updatedEventId,
-      updatedEventTitle,
-      updatedIsAdhoc,
-      updatedActions,
-      updatedAgenda
-    });
-    
     setIsSaving(true);
     try {
-      console.log("meetings.tsx - Sending update request to API");
       const requestBody = {
         id: noteId,
         title: updatedTitle,
@@ -253,7 +268,6 @@ export default function MeetingsPage() {
         actions: updatedActions,
         agenda: updatedAgenda,
       };
-      console.log("meetings.tsx - Request body:", requestBody);
       
       const response = await fetch(`/api/meetings/update`, {
         method: "PUT",
@@ -261,12 +275,8 @@ export default function MeetingsPage() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log("meetings.tsx - Update response status:", response.status);
-      
       if (response.ok) {
-        console.log("meetings.tsx - Update successful, mutating data");
         await mutate(undefined, { revalidate: true });
-        console.log("meetings.tsx - Data revalidation completed");
       } else {
         const errorData = await response.json();
         console.error("Failed to update meeting note:", errorData.error);
@@ -306,234 +316,350 @@ export default function MeetingsPage() {
   const handleDeleteSelectedMeetingNotes = async (noteIds: string[]) => {
     setIsSaving(true);
     try {
-      await Promise.all(noteIds.map(id =>
-        fetch(`/api/meetings/delete`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: id }),
-        })
-      ));
-      mutate();
-      setSelectedNoteId(null);
+      const response = await fetch(`/api/meetings/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: noteIds }),
+      });
+
+      if (response.ok) {
+        mutate();
+        setSelectedNoteId(null);
+        setSelectedNotes([]);
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to delete meeting notes:", errorData.error);
+      }
     } catch (error) {
-      console.error("Error deleting selected meeting notes:", error);
+      console.error("Error deleting meeting notes:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Show loading state if needed
-  if (!user && status === 'unauthenticated') {
+  // Show loading state if data is still loading
+  if ((!meetingNotesResponse && !meetingNotesError) || (!userSettings && !settingsError && shouldFetch)) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div>
-        <p className="ml-3 text-[var(--neutral-600)]">Loading meeting notes...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-full mx-auto mb-4"></div>
+          <p className="text-grey-tint">Loading your meetings...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  // Show error state if meeting notes failed to load
+  if (meetingNotesError || settingsError) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--neutral-100)] flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-          </svg>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <p className="text-grey-tint">Error loading your meetings. Please try again.</p>
         </div>
-        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Sign in required</h3>
-        <p className="text-[var(--neutral-600)]">Please sign in to access your meeting notes.</p>
-      </div>
-    );
-  }
-
-  // Show error state if notes, calendar events, or settings failed to load
-  if (meetingNotesError || calendarError || settingsError) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Error loading data</h3>
-        <p className="text-[var(--neutral-600)]">There was an error loading your meeting notes. Please try refreshing the page.</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="mt-4 bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
-        >
-          Refresh Page
-        </button>
-      </div>
-    );
-  }
-
-  // Show message if powerAutomateUrl is not configured
-  if (!userSettings?.powerAutomateUrl) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-[var(--neutral-900)] mb-2">Configuration needed</h3>
-        <p className="text-[var(--neutral-600)] mb-4">Please configure your Power Automate URL in settings to access work calendar events.</p>
-        <button 
-          onClick={() => router.push('/dashboard/settings')} 
-          className="bg-[var(--primary-color)] text-white px-4 py-2 rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
-        >
-          Go to Settings
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface)] dark:bg-gray-900">
-      {/* Header Section */}
-      <div className="bg-white dark:bg-gray-800 border-b border-[var(--neutral-200)] dark:border-gray-700 px-6 py-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--neutral-900)] dark:text-white flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mr-3 text-[var(--primary-color)]" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-              </svg>
-              Meeting Notes
-            </h1>
-            <p className="text-[var(--neutral-600)] dark:text-gray-300 mt-1">Capture meetings, track actions, and stay organized</p>
+    <>
+      <Head>
+        <title>Meetings | FlowHub</title>
+        <meta name="description" content="Capture meetings, track actions, and build context with FlowHub's intelligent meeting manager" />
+      </Head>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
+              <UserGroupIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-heading font-bold text-dark-base dark:text-soft-white">
+                Meetings
+              </h1>
+              <p className="text-sm text-grey-tint">
+                {meetingNotes.length > 0 ? 
+                  `${meetingNotes.length} meeting notes, ${pendingActions} pending actions` : 
+                  'Start capturing your meeting insights'
+                }
+              </p>
+            </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={calendarLoading}
+            className="btn-primary flex items-center space-x-2 shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">New Meeting Note</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
+          {tabs.map((tab) => (
             <button
-              className="btn-primary flex items-center justify-center"
-              onClick={() => setShowModal(true)}
-              title={calendarLoading ? "Loading calendar events..." : "Create new meeting note"}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
+              }`}
             >
-              {calendarLoading ? (
-                <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              )}
-              New Meeting Note
-              {calendarLoading && (
-                <span className="ml-2 text-xs opacity-80">(Loading...)</span>
+              <tab.icon className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">
+                {tab.id === 'recent' ? 'Rec' : tab.id === 'series' ? 'Ser' : tab.id === 'actions' ? 'Act' : 'Up'}
+              </span>
+              {tab.count !== null && tab.count > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full text-xs font-medium">
+                  {tab.count}
+                </span>
               )}
             </button>
-          </div>
+          ))}
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="mt-6 flex flex-col lg:flex-row gap-4">
+        <div className="mb-6 flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--neutral-400)]" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-            </svg>
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              className="input-modern pl-10"
+              className="input-modern pl-10 text-sm"
               placeholder="Search meeting notes by title, content, or event..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
             />
           </div>
           <div className="flex gap-3">
-            <select
-              className="input-modern min-w-[150px]"
-              value={filterTag}
-              onChange={(e) => setFilterTag(e.target.value)}
-            >
-              <option value="">All Tags</option>
-              {allAvailableTags.map(tag => (
-                <option key={tag} value={tag}>{tag}</option>
-              ))}
-            </select>
-            <div className="flex rounded-lg overflow-hidden border border-[var(--neutral-300)]">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-2 text-sm font-medium transition-colors ${
-                  viewMode === 'list' 
-                    ? 'bg-[var(--primary-color)] text-white' 
-                    : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--neutral-50)]'
-                }`}
+            <div className="relative">
+              <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                className="input-modern pl-10 min-w-[150px] text-sm"
+                value={filterTag}
+                onChange={(e) => setFilterTag(e.target.value)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-3 py-2 text-sm font-medium transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-[var(--primary-color)] text-white' 
-                    : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--neutral-50)]'
-                }`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
+                <option value="">All Tags</option>
+                {allAvailableTags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-180px)]">
-        {/* Left Column: Meeting Note List */}
-        <div className={`w-full lg:w-96 border-r lg:border-r border-b lg:border-b-0 border-[var(--neutral-200)] dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto ${selectedNote ? 'hidden lg:block' : ''}`}>
-          <div className="p-4 lg:p-6">
-            <MeetingNoteList
-              notes={filteredMeetingNotes}
-              selectedNoteId={selectedNoteId}
-              onSelectNote={setSelectedNoteId}
-              onDeleteNotes={handleDeleteSelectedMeetingNotes}
-              isSaving={isSaving}
-              viewMode={viewMode}
-            />
-          </div>
-        </div>
-
-        {/* Right Column: Meeting Note Detail */}
-        <div className="flex-1 bg-[var(--surface)] dark:bg-gray-900 overflow-y-auto">
-          {selectedNote ? (
-            <div className="p-4 lg:p-6">
-              {/* Mobile Back Button */}
-              <div className="lg:hidden mb-4">
-                <button
-                  onClick={() => setSelectedNoteId(null)}
-                  className="flex items-center text-[var(--primary-color)] hover:text-[var(--primary-hover)] transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Meeting Notes
-                </button>
-              </div>
-              
-              <MeetingNoteDetail
-                note={selectedNote}
-                onSave={handleUpdateMeetingNote}
-                onDelete={handleDeleteMeetingNote}
-                isSaving={isSaving}
-                existingTags={allAvailableTags}
-                calendarEvents={calendarEvents || []}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full min-h-[400px] p-6">
-              <div className="text-center">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[var(--neutral-100)] dark:bg-gray-700 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[var(--neutral-400)] dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                  </svg>
+        {/* Content based on active tab */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Meeting Note List or Tab Content */}
+          <div className={`lg:col-span-1 ${selectedNote && !isMobile ? '' : 'lg:col-span-3'} space-y-6`}>
+            {activeTab === 'recent' && (
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Recent Meetings</h2>
+                  <p className="text-sm text-grey-tint mt-1">Your latest meeting notes and insights</p>
                 </div>
-                <h3 className="text-lg font-medium text-[var(--neutral-900)] dark:text-white mb-2">Select a meeting note</h3>
-                <p className="text-[var(--neutral-600)] dark:text-gray-300 mb-6">Choose a meeting note from the list to view and edit its details</p>
+                <div className="p-4">
+                  <MeetingNoteList
+                    notes={filteredMeetingNotes}
+                    selectedNoteId={selectedNoteId}
+                    onSelectNote={setSelectedNoteId}
+                    onDeleteNotes={handleDeleteSelectedMeetingNotes}
+                    isSaving={isSaving}
+                    viewMode="list"
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'series' && (
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Meeting Series</h2>
+                  <p className="text-sm text-grey-tint mt-1">Related meetings grouped for context</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  {meetingSeries.length === 0 ? (
+                    <div className="text-center py-8">
+                      <LinkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Series Found</h3>
+                      <p className="text-gray-500 dark:text-gray-400">Related meetings will appear here when detected</p>
+                    </div>
+                  ) : (
+                    meetingSeries.map(([seriesTitle, notes]) => (
+                      <div key={seriesTitle} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <h3 className="font-medium text-dark-base dark:text-soft-white mb-2">{seriesTitle}</h3>
+                        <p className="text-sm text-grey-tint mb-3">{notes.length} meetings</p>
+                        <div className="flex flex-wrap gap-2">
+                          {notes.slice(0, 3).map(note => (
+                            <button
+                              key={note.id}
+                              onClick={() => setSelectedNoteId(note.id)}
+                              className="text-xs px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                            >
+                              {new Date(note.createdAt).toLocaleDateString()}
+                            </button>
+                          ))}
+                          {notes.length > 3 && (
+                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+                              +{notes.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'actions' && (
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Action Items</h2>
+                  <p className="text-sm text-grey-tint mt-1">Tasks and decisions from your meetings</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  {meetingNotes.filter(note => note.actions && note.actions.length > 0).length === 0 ? (
+                    <div className="text-center py-8">
+                      <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Actions Yet</h3>
+                      <p className="text-gray-500 dark:text-gray-400">Action items from meetings will appear here</p>
+                    </div>
+                  ) : (
+                    meetingNotes
+                      .filter(note => note.actions && note.actions.length > 0)
+                      .map(note => (
+                        <div key={note.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-medium text-dark-base dark:text-soft-white">{note.eventTitle || note.title || 'Untitled Meeting'}</h3>
+                            <button
+                              onClick={() => setSelectedNoteId(note.id)}
+                              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm"
+                            >
+                              View Note
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {note.actions?.map(action => (
+                              <div key={action.id} className={`flex items-center space-x-3 p-2 rounded-lg ${
+                                action.status === 'done' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'
+                              }`}>
+                                <div className={`w-4 h-4 rounded-full flex-shrink-0 ${
+                                  action.status === 'done' ? 'bg-green-500' : 'bg-yellow-500'
+                                }`}></div>
+                                <div className="flex-1">
+                                  <p className="text-sm text-dark-base dark:text-soft-white">{action.description}</p>
+                                  <p className="text-xs text-grey-tint">Assigned to: {action.assignedTo}</p>
+                                </div>
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  action.status === 'done' 
+                                    ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                                    : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+                                }`}>
+                                  {action.status === 'done' ? 'Done' : 'Pending'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'upcoming' && (
+              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-heading font-semibold text-dark-base dark:text-soft-white">Upcoming Meetings</h2>
+                  <p className="text-sm text-grey-tint mt-1">Your scheduled meetings from calendar</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  {calendarLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-grey-tint">Loading upcoming meetings...</p>
+                    </div>
+                  ) : workCalendarEvents.filter(event => new Date(event.start.dateTime || event.start.date) > new Date()).length === 0 ? (
+                    <div className="text-center py-8">
+                      <CalendarDaysIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Upcoming Meetings</h3>
+                      <p className="text-gray-500 dark:text-gray-400">Your scheduled meetings will appear here</p>
+                    </div>
+                  ) : (
+                    workCalendarEvents
+                      .filter(event => new Date(event.start.dateTime || event.start.date) > new Date())
+                      .slice(0, 10)
+                      .map(event => (
+                        <div key={event.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-dark-base dark:text-soft-white">{event.summary}</h3>
+                            <button
+                              onClick={() => setShowModal(true)}
+                              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm"
+                            >
+                              Take Notes
+                            </button>
+                          </div>
+                          <p className="text-sm text-grey-tint">
+                            {new Date(event.start.dateTime || event.start.date).toLocaleDateString()} at{' '}
+                            {new Date(event.start.dateTime || event.start.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Meeting Note Detail */}
+          {selectedNote && (
+            <div className={`lg:col-span-2 ${isMobile ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900' : ''}`}>
+              {isMobile && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setSelectedNoteId(null)}
+                    className="flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Meetings
+                  </button>
+                </div>
+              )}
+              
+              <div className={`${isMobile ? 'p-4' : ''}`}>
+                <MeetingNoteDetail
+                  note={selectedNote}
+                  onSave={handleUpdateMeetingNote}
+                  onDelete={handleDeleteMeetingNote}
+                  isSaving={isSaving}
+                  existingTags={allAvailableTags}
+                  calendarEvents={calendarEvents || []}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Empty State when no note is selected */}
+        {!selectedNote && activeTab === 'recent' && filteredMeetingNotes.length === 0 && (
+          <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                  <UserGroupIcon className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+                </div>
+                <h3 className="text-lg font-medium text-dark-base dark:text-soft-white mb-2">No meetings yet</h3>
+                <p className="text-grey-tint mb-6">Start capturing insights from your meetings to build valuable context</p>
                 <button
                   className="btn-primary"
                   onClick={() => setShowModal(true)}
@@ -542,20 +668,20 @@ export default function MeetingsPage() {
                 </button>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* Add Meeting Note Modal */}
-      <AddMeetingNoteModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleSaveMeetingNote}
-        isSaving={isSaving}
-        existingTags={allAvailableTags}
-        workCalendarEvents={workCalendarEvents}
-        calendarLoading={calendarLoading}
-      />
-    </div>
+        {/* Add Meeting Note Modal */}
+        <AddMeetingNoteModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveMeetingNote}
+          isSaving={isSaving}
+          existingTags={allAvailableTags}
+          workCalendarEvents={workCalendarEvents}
+          calendarLoading={calendarLoading}
+        />
+      </div>
+    </>
   );
 }
