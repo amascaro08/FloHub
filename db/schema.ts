@@ -109,6 +109,7 @@ export const userSettings = pgTable("user_settings", {
   powerAutomateUrl: varchar("power_automate_url", { length: 255 }),
   globalTags: text("global_tags").array(),
   activeWidgets: text("active_widgets").array(),
+  hiddenWidgets: text("hidden_widgets").array(),
   calendarSources: jsonb("calendar_sources"),
   timezone: varchar("timezone", { length: 50 }),
   tags: text("tags").array(),

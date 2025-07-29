@@ -22,7 +22,9 @@ import {
   Calendar,
   Clock,
   FileText,
-  BookOpen
+  BookOpen,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Widget skeleton for loading state
@@ -112,6 +114,7 @@ export default function MobileDashboard() {
 
   // user logic (Stack Auth: user object replaces user)
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(defaultWidgetOrder);
+  const [hiddenWidgets, setHiddenWidgets] = useState<WidgetType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleWidgets, setVisibleWidgets] = useState<WidgetType[]>([]);
   const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
@@ -130,6 +133,12 @@ export default function MobileDashboard() {
             ) as WidgetType[];
             setActiveWidgets(validWidgets);
           }
+          if (userSettings.hiddenWidgets) {
+            const validHiddenWidgets = userSettings.hiddenWidgets.filter(
+              widget => Object.keys(widgetComponents).includes(widget)
+            ) as WidgetType[];
+            setHiddenWidgets(validHiddenWidgets);
+          }
         } else {
           console.error("[MobileDashboard] Failed to fetch user settings, using defaults.");
         }
@@ -146,6 +155,13 @@ export default function MobileDashboard() {
   useEffect(() => {
     fetchUserSettings();
   }, [user?.primaryEmail, isClient]);
+
+  // Save widget visibility when hiddenWidgets changes
+  useEffect(() => {
+    if (!isLoading && user?.primaryEmail) {
+      saveWidgetVisibility();
+    }
+  }, [hiddenWidgets, user?.primaryEmail, isLoading]);
 
   // Listen for widget settings changes from WidgetToggle
   useEffect(() => {
@@ -177,6 +193,34 @@ export default function MobileDashboard() {
     }
   };
 
+  // Save widget visibility settings
+  const saveWidgetVisibility = async () => {
+    if (isClient && user?.primaryEmail) {
+      try {
+        await fetch('/api/userSettings/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.primaryEmail,
+            hiddenWidgets: hiddenWidgets
+          }),
+        });
+      } catch (error) {
+        console.error("[MobileDashboard] Error saving widget visibility:", error);
+      }
+    }
+  };
+
+  // Toggle widget visibility
+  const toggleWidgetVisibility = (widgetId: WidgetType) => {
+    setHiddenWidgets(prev => {
+      const newHidden = prev.includes(widgetId) 
+        ? prev.filter(id => id !== widgetId)
+        : [...prev, widgetId];
+      return newHidden;
+    });
+  };
+
   // Widget reordering functions
   const moveWidgetUp = (widgetId: WidgetType) => {
     setActiveWidgets(prev => {
@@ -204,6 +248,9 @@ export default function MobileDashboard() {
   useEffect(() => {
     if (isLoading) return;
 
+    // Filter out hidden widgets
+    const visibleActiveWidgets = activeWidgets.filter(widget => !hiddenWidgets.includes(widget));
+
     let timer: NodeJS.Timeout;
     let timer2: NodeJS.Timeout;
     let timer3: NodeJS.Timeout;
@@ -211,29 +258,29 @@ export default function MobileDashboard() {
 
     const loadNextWidgets = () => {
       setVisibleWidgets(prev => {
-        if (prev.length >= activeWidgets.length) return prev;
-        return activeWidgets.slice(0, prev.length + 1);
+        if (prev.length >= visibleActiveWidgets.length) return prev;
+        return visibleActiveWidgets.slice(0, prev.length + 1);
       });
     };
 
     // Load first widget immediately
     timer = setTimeout(() => {
-      setVisibleWidgets(activeWidgets.slice(0, 1));
+      setVisibleWidgets(visibleActiveWidgets.slice(0, 1));
     }, 100);
 
     // Load second widget after a short delay
     timer2 = setTimeout(() => {
       setVisibleWidgets(prev => {
-        if (prev.length >= activeWidgets.length) return prev;
-        return activeWidgets.slice(0, 2);
+        if (prev.length >= visibleActiveWidgets.length) return prev;
+        return visibleActiveWidgets.slice(0, 2);
       });
     }, 300);
 
     // Load remaining widgets progressively
     timer3 = setTimeout(() => {
       setVisibleWidgets(prev => {
-        if (prev.length >= activeWidgets.length) return prev;
-        const combinedWidgets = [...prev, ...activeWidgets.slice(2)];
+        if (prev.length >= visibleActiveWidgets.length) return prev;
+        const combinedWidgets = [...prev, ...visibleActiveWidgets.slice(2)];
         // Remove duplicates and ensure quicknote is always last
         if (combinedWidgets.includes("quicknote" as WidgetType)) {
           return combinedWidgets.filter((value, index, self) =>
@@ -264,7 +311,7 @@ export default function MobileDashboard() {
       if (quicknoteTimer) clearTimeout(quicknoteTimer);
       if (observer) observer.disconnect();
     };
-  }, [isLoading, activeWidgets, isClient]);
+  }, [isLoading, activeWidgets, hiddenWidgets, isClient]);
 
   // Calculate calendar date range for shared context
   const now = new Date();
@@ -358,58 +405,107 @@ export default function MobileDashboard() {
                 </button>
               </div>
             ) : (
-              visibleWidgets.map((widgetId, index) => (
-                <div key={widgetId} className="glass p-4 rounded-2xl mobile-widget">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-                        {getWidgetIcon(widgetId)}
+              <>
+                {visibleWidgets.map((widgetId, index) => (
+                  <div key={widgetId} className="glass p-4 rounded-2xl mobile-widget">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+                          {getWidgetIcon(widgetId)}
+                        </div>
+                        <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
+                          {widgetId === "ataglance" ? "Your Day at a Glance" : 
+                           widgetId === "habit-tracker" ? "Habit Tracker" :
+                           widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
+                        </h2>
                       </div>
-                      <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
-                        {widgetId === "ataglance" ? "Your Day at a Glance" : 
-                         widgetId === "habit-tracker" ? "Habit Tracker" :
-                         widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
-                      </h2>
+                      
+                      {!isLocked && (
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => toggleWidgetVisibility(widgetId)}
+                            className="p-1 rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint"
+                            aria-label="Hide widget"
+                            title="Hide widget"
+                          >
+                            <EyeOff className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => moveWidgetUp(widgetId)}
+                            disabled={index === 0}
+                            className={`p-1 rounded-lg transition-all duration-200 ${
+                              index === 0 
+                                ? 'opacity-30 text-grey-tint' 
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
+                            }`}
+                            aria-label="Move widget up"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => moveWidgetDown(widgetId)}
+                            disabled={index === visibleWidgets.length - 1}
+                            className={`p-1 rounded-lg transition-all duration-200 ${
+                              index === visibleWidgets.length - 1 
+                                ? 'opacity-30 text-grey-tint' 
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
+                            }`}
+                            aria-label="Move widget down"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     
-                    {!isLocked && (
-                      <div className="flex items-center space-x-1">
-                        <button
-                          onClick={() => moveWidgetUp(widgetId)}
-                          disabled={index === 0}
-                          className={`p-1 rounded-lg transition-all duration-200 ${
-                            index === 0 
-                              ? 'opacity-30 text-grey-tint' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
-                          }`}
-                          aria-label="Move widget up"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => moveWidgetDown(widgetId)}
-                          disabled={index === activeWidgets.length - 1}
-                          className={`p-1 rounded-lg transition-all duration-200 ${
-                            index === activeWidgets.length - 1 
-                              ? 'opacity-30 text-grey-tint' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-grey-tint'
-                          }`}
-                          aria-label="Move widget down"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
+                    <div className="flex-1 overflow-auto">
+                      {widgetComponents[widgetId]}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Hidden widgets section - only show if there are hidden widgets and dashboard is unlocked */}
+                {hiddenWidgets.length > 0 && !isLocked && (
+                  <div className="glass p-4 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl">
+                        <EyeOff className="w-5 h-5 text-gray-500" />
                       </div>
-                    )}
+                      <h3 className="text-lg font-heading font-semibold text-gray-600 dark:text-gray-400">
+                        Hidden Widgets
+                      </h3>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {hiddenWidgets.map((widgetId) => (
+                        <div key={widgetId} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-1 bg-gray-100 dark:bg-gray-600 rounded-lg">
+                              {getWidgetIcon(widgetId)}
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {widgetId === "ataglance" ? "Your Day at a Glance" : 
+                               widgetId === "habit-tracker" ? "Habit Tracker" :
+                               widgetId.charAt(0).toUpperCase() + widgetId.slice(1)}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => toggleWidgetVisibility(widgetId)}
+                            className="p-1 rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                            aria-label="Show widget"
+                            title="Show widget"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  
-                  <div className="flex-1 overflow-auto">
-                    {widgetComponents[widgetId]}
-                  </div>
-                </div>
-              ))
+                )}
+              </>
             )}
             
-            {visibleWidgets.length < activeWidgets.length && (
+            {visibleWidgets.length < activeWidgets.filter(w => !hiddenWidgets.includes(w)).length && (
               <div className="glass p-4 rounded-2xl animate-pulse">
                 <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3 mb-3"></div>
                 <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>

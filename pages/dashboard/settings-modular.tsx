@@ -45,8 +45,8 @@ const SettingsModularPage = () => {
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState('');
 
 
-  // Use user.email as userId
-  const userId = user?.email;
+  // Use user.primaryEmail as userId
+  const userId = user?.primaryEmail;
 
   // Fetch user settings
   const { data: userSettings, error } = useSWR<UserSettings>(
@@ -107,7 +107,7 @@ const SettingsModularPage = () => {
         console.log("Settings updated successfully!");
         
         // Clear calendar cache if sources changed
-        if (calendarSourcesChanged && user?.email) {
+        if (calendarSourcesChanged && user?.primaryEmail) {
           console.log("Calendar sources changed, clearing caches...");
           try {
             const { clearCalendarCaches } = await import('@/lib/calendarUtils');
