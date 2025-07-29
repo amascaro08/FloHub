@@ -226,9 +226,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 100 },
-        md: { cols: 8, rowHeight: 80 },
-        sm: { cols: 6, rowHeight: 60 }
+        lg: { cols: 12, rowHeight: 180 },
+        md: { cols: 8, rowHeight: 160 },
+        sm: { cols: 6, rowHeight: 140 }
       }
     }
   },

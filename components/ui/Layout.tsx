@@ -11,7 +11,6 @@ import WeatherWidget from './WeatherWidget';
 import ThemeToggle from './ThemeToggle'
 import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
-import WidgetToggle from './WidgetToggle';
 import LogoutButton from './LogoutButton';
 
 const defaultNav = [
@@ -427,9 +426,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </main>
       </div>
-
-      {/* Widget Toggle - appears on dashboard pages only */}
-      {router.pathname === '/dashboard' && <WidgetToggle isLocked={false} />}
 
       {/* Chat Side Modal */}
       <ChatSideModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
