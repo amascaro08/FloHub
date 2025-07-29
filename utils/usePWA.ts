@@ -14,10 +14,17 @@ export function usePWA() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
     // Check if app is running in standalone mode (installed)
     setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
+
+    // Check if banner was previously dismissed
+    const dismissed = localStorage.getItem('pwa-banner-dismissed');
+    if (dismissed === 'true') {
+      setIsDismissed(true);
+    }
 
     // Listen for online/offline status
     const handleOnline = () => setIsOnline(true);
@@ -30,7 +37,10 @@ export function usePWA() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
+      // Only show as installable if not dismissed and not already standalone
+      if (!dismissed && !window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstallable(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -59,6 +69,22 @@ export function usePWA() {
     }
   };
 
+  const dismissInstallPrompt = () => {
+    console.log('User dismissed the PWA install banner');
+    setIsInstallable(false);
+    setIsDismissed(true);
+    localStorage.setItem('pwa-banner-dismissed', 'true');
+  };
+
+  const resetDismissed = () => {
+    setIsDismissed(false);
+    localStorage.removeItem('pwa-banner-dismissed');
+    // Re-check if installable
+    if (deferredPrompt && !isStandalone) {
+      setIsInstallable(true);
+    }
+  };
+
   const checkForUpdates = () => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((registration) => {
@@ -70,10 +96,13 @@ export function usePWA() {
   };
 
   return {
-    isInstallable,
+    isInstallable: isInstallable && !isDismissed && !isStandalone,
     isOnline,
     isStandalone,
+    isDismissed,
     installApp,
+    dismissInstallPrompt,
+    resetDismissed,
     checkForUpdates,
   };
 }
