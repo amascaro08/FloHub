@@ -150,7 +150,7 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
         githubIssueUrl: issue.data.html_url
       });
 
-      // Try a simpler insertion first
+      // Insert feedback using the correct schema
       await db.execute(sql`
         INSERT INTO feedback (user_email, title, description, status)
         VALUES (${user.email}, ${title}, ${feedbackText}, 'open')
@@ -158,7 +158,7 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
 
       console.log("Basic insertion successful, now updating with GitHub info...");
 
-      // Get the ID of the just-inserted record and update it with GitHub info
+      // Update with GitHub info
       await db.execute(sql`
         UPDATE feedback 
         SET github_issue_number = ${issue.data.number}, github_issue_url = ${issue.data.html_url}

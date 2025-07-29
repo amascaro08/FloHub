@@ -261,11 +261,11 @@ export const analytics = pgTable("analytics", {
 // FEEDBACK TABLE
 export const feedback = pgTable("feedback", {
   id: serial("id").notNull().primaryKey(),
-  userId: varchar("user_id", { length: 255 }), // Legacy field - kept for backward compatibility
-  userEmail: varchar("user_email", { length: 255 }), // New field - consistent with other tables
-  title: text("title").notNull(),
+  userId: varchar("user_id"), // UUID in database, but varchar works for compatibility
+  userEmail: varchar("user_email", { length: 255 }),
+  title: text("title"), // Nullable in actual database
   description: text("description"),
-  status: text("status").notNull().default("open"),
+  status: text("status").default("open"),
   githubIssueNumber: integer("github_issue_number"),
   githubIssueUrl: text("github_issue_url"),
   completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
