@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull, or, ne } from "drizzle-orm";
 import type { Note } from "@/types/app"; // Import shared Note type
 
 export type GetNotesResponse = { // Export the type
@@ -33,7 +33,19 @@ export default async function handler(
 
   try {
     // 2) Fetch notes for the authenticated user from the database
-    const notesData = await db.select().from(notes).where(eq(notes.user_email, userId)).orderBy(desc(notes.createdAt));
+    // EXCLUDE meeting notes (those with eventId or isAdhoc = true)
+    const notesData = await db
+      .select()
+      .from(notes)
+      .where(
+        and(
+          eq(notes.user_email, userId),
+          // Exclude meeting notes: no eventId AND (isAdhoc is null OR isAdhoc is false)
+          isNull(notes.eventId),
+          or(isNull(notes.isAdhoc), eq(notes.isAdhoc, false))
+        )
+      )
+      .orderBy(desc(notes.createdAt));
 
     const notesResult: Note[] = notesData.map((row) => ({
       id: String(row.id),

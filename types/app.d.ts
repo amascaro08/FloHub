@@ -58,6 +58,9 @@ export type Action = {
   assignedTo: string; // e.g., "Me", "Other Person Name"
   status: "todo" | "done"; // Simple status
   createdAt: string; // Timestamp for when the action was added
+  taskId?: string; // Optional: Link to task if assigned to "Me"
+  dueDate?: string; // Optional: Due date for the action
+  completedAt?: string; // Optional: When the action was completed
 };
 
 export type Note = {
@@ -74,6 +77,32 @@ export type Note = {
   actions?: Action[]; // Optional: Array of actions associated with the meeting note
   agenda?: string; // Optional: Meeting agenda
   aiSummary?: string; // Optional: AI-generated summary of the meeting
+  // Manual linking fields
+  linkedMeetingIds?: string[]; // Manually linked meeting note IDs for context building
+  meetingSeries?: string; // Custom series name for grouping
+};
+
+// Enhanced MeetingNote type for dedicated meeting notes table
+export type MeetingNote = {
+  id: string;
+  title?: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  eventId?: string;
+  eventTitle?: string;
+  isAdhoc: boolean;
+  actions?: Action[];
+  agenda?: string;
+  aiSummary?: string;
+  meetingSeriesId?: string; // For linking related meetings (e.g., weekly standups)
+  parentMeetingId?: string; // For follow-up meetings
+  meetingDate?: string;
+  attendees?: string[]; // List of attendee names/emails
+  meetingType: 'regular' | 'standup' | 'review' | 'planning' | 'retrospective' | 'other';
+  status: 'scheduled' | 'completed' | 'cancelled';
+  source: 'manual' | 'calendar' | 'import';
 };
 
 // Define a type for tasks
