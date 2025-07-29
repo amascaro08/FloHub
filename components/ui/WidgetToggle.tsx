@@ -37,6 +37,12 @@ const availableWidgets: WidgetConfig[] = [
     description: "Track and manage your daily habits",
     component: "HabitTrackerWidget",
   },
+  {
+    id: "journal",
+    name: "Journal",
+    description: "Quick journal entries that append to daily journal",
+    component: "JournalWidget",
+  },
 ];
 
 interface WidgetToggleProps {

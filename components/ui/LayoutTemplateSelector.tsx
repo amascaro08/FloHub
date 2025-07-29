@@ -56,7 +56,7 @@ const availableWidgets = [
   { id: 'quicknote', name: 'Quick Notes', icon: '📝' },
   { id: 'habit-tracker', name: 'Habits', icon: '🎯' },
   { id: 'weather', name: 'Weather', icon: '🌤️' },
-  { id: 'analytics', name: 'Analytics', icon: '📊' },
+  { id: 'journal', name: 'Journal', icon: '📔' },
 ];
 
 const layoutTemplates: LayoutTemplateConfig[] = [
