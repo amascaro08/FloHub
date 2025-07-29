@@ -410,7 +410,7 @@ export default function JournalPage() {
                     <span className="text-2xl mr-3">😊</span>
                     Mood
                   </h3>
-                  <MoodTracker onSave={handleSaveMood} timezone={timezone} />
+                  <MoodTracker onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
                 </div>
 
                 {/* Activities */}
