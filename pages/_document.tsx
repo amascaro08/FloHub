@@ -19,10 +19,15 @@ export default function Document() {
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
         
         <link rel="manifest" href="/manifest.json" />
+        
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.ico" />
         <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         
         {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-icon-152x152.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-icon-180x180.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/icons/apple-icon-167x167.png" />
