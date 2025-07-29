@@ -138,7 +138,7 @@ export default async function handler(
       if (status === "backlog") {
         await db.insert(backlog).values({ 
           originalId: id, 
-          text: existingFeedback.description || existingFeedback.title, 
+          text: existingFeedback.description || existingFeedback.title || 'No description provided', 
           createdAt: new Date(), 
           userId: userEmail 
         });
