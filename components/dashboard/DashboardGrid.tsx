@@ -225,9 +225,9 @@ const layoutTemplates: LayoutTemplateConfig[] = [
       rows: 4,
       cols: 12,
       responsive: {
-        lg: { cols: 12, rowHeight: 50 },
-        md: { cols: 8, rowHeight: 45 },
-        sm: { cols: 6, rowHeight: 40 }
+        lg: { cols: 12, rowHeight: 180 },
+        md: { cols: 8, rowHeight: 160 },
+        sm: { cols: 6, rowHeight: 140 }
       }
     }
   }
@@ -465,69 +465,113 @@ const DashboardGrid: React.FC = () => {
 
           {/* Dashboard Grid */}
           {filledSlots.length > 0 ? (
-            <div className="relative w-full min-h-[720px] lg:h-[720px] mx-1">
-              {filledSlots.map((slot) => {
-                const widgetType = slotAssignments[slot.id] as WidgetType;
-                
-                // Calculate positions based on 12-column grid with responsive behavior
-                const containerWidth = 100; // Use percentage
-                const colWidth = containerWidth / 12; // Each column is ~8.33%
-                
-                // Responsive positioning
-                const isSmallScreen = false; // Will be handled by CSS classes
-                
-                const left = `${slot.position.col * colWidth}%`;
-                const width = `${slot.position.colSpan * colWidth}%`;
-                
-                // Dynamic height calculation based on row span
-                const baseRowHeight = 180; // 180px per row (increased for better space)
-                const containerHeight = 720; // Updated container height
-                const height = `${slot.position.rowSpan * baseRowHeight}px`;
-                const top = `${slot.position.row * baseRowHeight}px`;
-                
-                // Debug logging removed for production
-                
-                return (
-                  <div 
-                    key={slot.id} 
-                    className="lg:absolute relative glass p-3 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col overflow-hidden mb-3 lg:mb-0 w-full lg:w-auto h-auto lg:h-auto min-h-[300px]"
-                    style={{
-                      // Desktop positioning (only applies on lg+ screens due to lg:absolute)
-                      left: left,
-                      top: top,
-                      width: `calc(${width} - 8px)`,
-                      height: `calc(${height} - 8px)`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                      <div className="flex items-center space-x-2 min-w-0 flex-1">
-                        <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
-                          {getWidgetIcon(widgetType)}
+            <div className="w-full">
+              {/* Desktop Grid Layout (lg and above) */}
+              <div className="hidden lg:block relative w-full h-[720px] min-h-[600px]">
+                {filledSlots.map((slot) => {
+                  const widgetType = slotAssignments[slot.id] as WidgetType;
+                  
+                  // Calculate positions based on 12-column grid
+                  const containerWidth = 100; // Use percentage
+                  const colWidth = containerWidth / 12; // Each column is ~8.33%
+                  
+                  const left = `${slot.position.col * colWidth}%`;
+                  const width = `${slot.position.colSpan * colWidth}%`;
+                  
+                  // Dynamic height calculation based on row span
+                  const baseRowHeight = 180; // 180px per row
+                  const height = `${slot.position.rowSpan * baseRowHeight}px`;
+                  const top = `${slot.position.row * baseRowHeight}px`;
+                  
+                  return (
+                    <div 
+                      key={slot.id} 
+                      className="absolute glass p-3 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col overflow-hidden"
+                      style={{
+                        left: left,
+                        top: top,
+                        width: `calc(${width} - 16px)`,
+                        height: `calc(${height} - 16px)`,
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
+                            {getWidgetIcon(widgetType)}
+                          </div>
+                          <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white truncate">
+                            {widgetType === "ataglance" ? "Your Day at a Glance" : 
+                             widgetType === "habit-tracker" ? "Habit Tracker" :
+                             widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}
+                          </h2>
                         </div>
-                        <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white truncate">
-                          {widgetType === "ataglance" ? "Your Day at a Glance" : 
-                           widgetType === "habit-tracker" ? "Habit Tracker" :
-                           widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}
-                        </h2>
+                        
+                        <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                          <span className="text-xs text-grey-tint hidden sm:inline">{slot.label}</span>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
-                        <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                        <span className="text-xs text-grey-tint hidden sm:inline">{slot.label}</span>
+                      <div className="widget-content flex-1 overflow-hidden">
+                        <ErrorBoundary>
+                          <div className="h-full overflow-y-auto overflow-x-hidden">
+                            {createWidgetComponent(widgetType, slot)}
+                          </div>
+                        </ErrorBoundary>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Mobile/Tablet Stacked Layout (below lg) */}
+              <div className="lg:hidden space-y-6">
+                {filledSlots
+                  .sort((a, b) => {
+                    // Sort by row first, then by column for proper stacking
+                    if (a.position.row !== b.position.row) {
+                      return a.position.row - b.position.row;
+                    }
+                    return a.position.col - b.position.col;
+                  })
+                  .map((slot) => {
+                    const widgetType = slotAssignments[slot.id] as WidgetType;
                     
-                    <div className="widget-content flex-1 overflow-hidden">
-                      <ErrorBoundary>
-                        <div className="h-full overflow-y-auto overflow-x-hidden">
-                          {createWidgetComponent(widgetType, slot)}
-                        </div>
-                      </ErrorBoundary>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                                         return (
+                       <div 
+                         key={slot.id} 
+                         className="w-full glass p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col min-h-[400px]"
+                       >
+                         <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                           <div className="flex items-center space-x-2 min-w-0 flex-1">
+                             <div className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex-shrink-0">
+                               {getWidgetIcon(widgetType)}
+                             </div>
+                             <h2 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white truncate">
+                               {widgetType === "ataglance" ? "Your Day at a Glance" : 
+                                widgetType === "habit-tracker" ? "Habit Tracker" :
+                                widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}
+                             </h2>
+                           </div>
+                           
+                           <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                             <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                             <span className="text-xs text-grey-tint">{slot.label}</span>
+                           </div>
+                         </div>
+                         
+                         <div className="widget-content flex-1 overflow-hidden">
+                           <ErrorBoundary>
+                             <div className="h-full overflow-y-auto overflow-x-hidden">
+                               {createWidgetComponent(widgetType, slot)}
+                             </div>
+                           </ErrorBoundary>
+                         </div>
+                       </div>
+                     );
+                   })}
+               </div>
+             </div>
           ) : (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
