@@ -54,16 +54,31 @@ export function createSecureCookie(
 
   // Determine if this is a PWA request
   const userAgent = req.headers['user-agent'] || '';
-  const isPWA = userAgent.includes('standalone') || req.headers['sec-fetch-site'] === 'none';
+  const isPWA = userAgent.includes('standalone') || 
+                req.headers['sec-fetch-site'] === 'none' ||
+                userAgent.includes('Mobile/') && userAgent.includes('Safari/') && !userAgent.includes('Chrome/'); // iOS PWA detection
+  
+  // PWA gets longer cookie expiry for better persistence
+  const finalMaxAge = isPWA ? Math.max(maxAge, 90 * 24 * 60 * 60) : maxAge; // Minimum 90 days for PWA
   
   const cookieOptions = {
     httpOnly,
     secure,
     sameSite: isPWA ? 'none' as const : sameSite,
-    maxAge,
+    maxAge: finalMaxAge,
     path,
     domain: getCookieDomain(req),
   };
+
+  // Log cookie settings in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Setting cookie for ${isPWA ? 'PWA' : 'browser'}:`, {
+      name,
+      maxAge: finalMaxAge,
+      sameSite: cookieOptions.sameSite,
+      domain: cookieOptions.domain,
+    });
+  }
 
   return serialize(name, value, cookieOptions);
 }

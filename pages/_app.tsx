@@ -7,14 +7,12 @@ import MainLayout from '@/components/ui/MainLayout';
 import PageTransition from '@/components/ui/PageTransition';
 import ProgressBar from '@/components/ui/ProgressBar';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
+import AuthStateHydrator from '@/components/ui/AuthStateHydrator';
 import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
 const App = ({ Component, pageProps }: AppProps) => {
   // Check if the component requires authentication
   const requiresAuth = (Component as any).auth !== false;
-
-  // Initialize auth persistence only for authenticated pages
-  useAuthPersistence(requiresAuth);
 
   useEffect(() => {
     // Temporarily disable service worker registration to test connectivity issues
@@ -62,11 +60,13 @@ const App = ({ Component, pageProps }: AppProps) => {
       </Head>
       <ChatProvider>
         <ProgressBar />
-        <PageTransition>
-          <MainLayout requiresAuth={requiresAuth}>
-            <Component {...pageProps} />
-          </MainLayout>
-        </PageTransition>
+        <AuthStateHydrator requiresAuth={requiresAuth}>
+          <PageTransition>
+            <MainLayout requiresAuth={requiresAuth}>
+              <Component {...pageProps} />
+            </MainLayout>
+          </PageTransition>
+        </AuthStateHydrator>
         <PWAInstallPrompt />
       </ChatProvider>
     </>

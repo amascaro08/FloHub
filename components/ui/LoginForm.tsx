@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { markAuthenticated } = useAuthPersistence(false); // Don't enable auto-refresh on login page
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -42,6 +44,9 @@ export default function LoginForm() {
       if (res.ok) {
         const data = await res.json();
         console.log('Login successful:', data.isPWA ? 'PWA mode' : 'Browser mode');
+        
+        // Mark user as authenticated in client-side storage
+        markAuthenticated(rememberMe);
         
         // Force a small delay to ensure cookie is set properly in PWA
         if (data.isPWA) {
