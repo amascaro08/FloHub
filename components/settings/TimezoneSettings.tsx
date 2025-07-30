@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserSettings } from '../../types/app';
-import { GlobeAltIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { GlobeAltIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import AccountDeletion from './AccountDeletion';
 
 interface TimezoneSettingsProps {
   settings: UserSettings;
@@ -11,6 +12,7 @@ const TimezoneSettings: React.FC<TimezoneSettingsProps> = ({
   settings,
   onSettingsChange
 }) => {
+  const [showAccountDeletion, setShowAccountDeletion] = useState(false);
   const timezones = [
     { value: "UTC", label: "UTC (Coordinated Universal Time)", offset: "+00:00" },
     { value: "Pacific/Honolulu", label: "Hawaii (HST)", offset: "-10:00" },
@@ -144,6 +146,42 @@ const TimezoneSettings: React.FC<TimezoneSettingsProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Account Management */}
+      <div className="bg-[var(--surface)] rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+        <h3 className="text-lg font-medium text-[var(--fg)] mb-6">Account Management</h3>
+        
+        <div className="space-y-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">
+                  Delete Account
+                </h4>
+                <p className="text-sm text-red-700 dark:text-red-400 mb-4">
+                  Permanently delete your account and all associated data. This action cannot be undone and will remove all your calendar events, notes, tasks, journal entries, and personal settings.
+                </p>
+                <button
+                  onClick={() => setShowAccountDeletion(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Delete My Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Account Deletion Modal */}
+      {showAccountDeletion && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AccountDeletion onCancel={() => setShowAccountDeletion(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
