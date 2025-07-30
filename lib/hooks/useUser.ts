@@ -1,6 +1,7 @@
 import useSWR from 'swr';
 import { useRef, useCallback } from 'react';
 import { clearUserData } from '@/lib/auth';
+import { useAuthPersistence } from './useAuthPersistence';
 
 const fetcher = async (url: string) => {
   const response = await fetch(url, { 
@@ -27,6 +28,7 @@ const fetcher = async (url: string) => {
 export function useUser() {
   const retryCountRef = useRef(0);
   const maxRetries = 2;
+  const { clearAuthentication, isAuthenticated, isPWA } = useAuthPersistence(true);
   
   const { data, error, mutate } = useSWR('/api/auth/session', fetcher, {
     revalidateOnFocus: false,
@@ -88,6 +90,9 @@ export function useUser() {
       // Get current user email before logout
       const currentUserEmail = data?.primaryEmail || data?.email;
       
+      // Clear client-side authentication state immediately
+      clearAuthentication();
+      
       // Call logout API
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -133,7 +138,7 @@ export function useUser() {
         window.location.href = '/login';
       }
     }
-  }, [data, mutate]);
+  }, [data, mutate, clearAuthentication]);
 
   return {
     user: data,
@@ -141,5 +146,7 @@ export function useUser() {
     isError: error,
     mutate: revalidate, // Use our wrapped revalidation function
     logout, // Add logout function
+    isAuthenticated, // Client-side auth state
+    isPWA, // PWA detection
   };
 }

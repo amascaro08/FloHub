@@ -47,11 +47,48 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
+  const url = new URL(event.request.url);
+  
+  // Handle authentication API routes with network-first strategy
+  if (url.pathname.startsWith('/api/auth/')) {
+    event.respondWith(
+      fetch(event.request.clone(), {
+        credentials: 'include',
+        headers: {
+          ...event.request.headers,
+          'Cache-Control': 'no-cache'
+        }
+      }).then(response => {
+        // For successful auth responses, ensure cookies are handled properly
+        if (response.ok && url.pathname.includes('/session')) {
+          // Cache session response for offline access
+          const responseToCache = response.clone();
+          caches.open('auth-cache-v1').then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return response;
+      }).catch(() => {
+        // For offline scenarios, try to return cached auth session
+        if (url.pathname.includes('/session')) {
+          return caches.match(event.request);
+        }
+        // Return network error for other auth endpoints
+        return new Response(JSON.stringify({ error: 'Network unavailable' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    return;
+  }
+  
+  // Only handle GET requests for non-auth routes
   if (event.request.method !== 'GET') {
     return;
   }
   
+  // Cache-first strategy for other resources
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -60,7 +97,16 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         
-        return fetch(event.request).catch(() => {
+        return fetch(event.request).then(response => {
+          // Cache successful responses
+          if (response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        }).catch(() => {
           // If network fails, return offline page for navigation requests
           if (event.request.mode === 'navigate') {
             return caches.match('/offline.html');
