@@ -237,11 +237,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <aside
         className={`
           bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
-          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-64' : 'fixed inset-y-0 left-0 -translate-x-full w-64'}
-          md:static md:translate-x-0 md:shadow-none
+          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-4/5 sm:w-3/5' : 'fixed inset-y-0 left-0 -translate-x-full w-4/5 sm:w-3/5'}
+          md:static md:translate-x-0 md:shadow-none md:w-64
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
-          max-h-screen
+          h-screen
         `}
       >
         {/* Header */}
@@ -266,8 +266,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         
-        {/* Main navigation - height-responsive */}
-        <nav className="flex-1 overflow-y-auto min-h-0 flex flex-col justify-start sidebar-nav">
+        {/* Main navigation - mobile no scroll, desktop with scroll */}
+        <nav className="flex-1 md:overflow-y-auto md:min-h-0 flex flex-col justify-start sidebar-nav">
           <div className="space-y-1 p-3 md:p-4">
             {navigationItems.map((item) => (
               <Link
