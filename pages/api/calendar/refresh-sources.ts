@@ -148,7 +148,7 @@ export default async function handler(
         widgets: [],
         calendarSettings: { calendars: [] },
         notificationSettings: { subscribed: false },
-        timezone: 'UTC',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         floCatSettings: { enabledCapabilities: [] },
         layouts: {},
         layoutTemplate: 'primary-secondary',

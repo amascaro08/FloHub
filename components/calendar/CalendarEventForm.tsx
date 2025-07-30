@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { CalendarEvent } from '@/types/calendar';
+import { UserSettings } from '@/types/app';
+import { useUser } from '@/lib/hooks/useUser';
+import useSWR from 'swr';
 
 interface CalendarEventFormProps {
   event?: CalendarEvent | null;
@@ -17,6 +20,12 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
   onSubmit,
   availableCalendars = []
 }) => {
+  const { user } = useUser();
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  const { data: userSettings } = useSWR<UserSettings>(
+    user ? "/api/userSettings" : null,
+    fetcher
+  );
   const [formData, setFormData] = useState({
     summary: '',
     description: '',
@@ -108,7 +117,7 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         summary: formData.summary.trim(),
         description: formData.description.trim(),
         location: formData.location.trim(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Add user's timezone
+        timeZone: userSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone, // Add user's timezone
         timezoneOffset: new Date().getTimezoneOffset() // Add timezone offset in minutes
       };
 

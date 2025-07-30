@@ -81,7 +81,7 @@ export default async function handler(
       layoutTemplate: newSettings.layoutTemplate || undefined,
       slotAssignments: newSettings.slotAssignments || undefined,
       calendarSources: finalCalendarSources,
-      timezone: newSettings.timezone || 'UTC',
+      timezone: newSettings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
     };
 
