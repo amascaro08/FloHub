@@ -42,19 +42,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     return false;
   });
 
-  // Add state to track if we're on a tablet device
-  const [isTablet, setIsTablet] = useState(false);
 
-  useEffect(() => {
-    const checkIsTablet = () => {
-      setIsTablet(window.innerWidth >= 769 && window.innerWidth <= 1024);
-    };
-    
-    checkIsTablet();
-    window.addEventListener('resize', checkIsTablet);
-    
-    return () => window.removeEventListener('resize', checkIsTablet);
-  }, []);
 
   // Sidebar preferences state
   const [sidebarPrefs, setSidebarPrefs] = useState<SidebarPreferences>({
@@ -254,7 +242,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-full max-w-sm' : 'fixed inset-y-0 left-0 -translate-x-full w-full max-w-sm'}
           md:static md:translate-x-0 md:shadow-none
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
-          ${desktopSidebarCollapsed && isTablet ? 'sidebar-collapsed-tablet' : ''}
+          ${desktopSidebarCollapsed ? 'sidebar-collapsed' : ''}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
           h-screen
         `}

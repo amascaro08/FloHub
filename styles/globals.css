@@ -169,41 +169,42 @@
   }
 }
 
-/* Tablet devices (iPad) - handle sidebar collapse properly */
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* Ensure collapsed sidebar actually shrinks on tablets */
-  .sidebar-collapsed-tablet {
-    width: 5rem !important; /* 80px - same as desktop w-20 */
+/* Universal collapsed sidebar styles - works on all devices with md breakpoint and above */
+@media (min-width: 768px) {
+  /* Ensure collapsed sidebar properly centers content and maintains correct width */
+  .sidebar-collapsed {
+    width: 5rem !important; /* 80px - force override Tailwind md:w-20 for consistency */
   }
   
-  /* Optimize sidebar item sizes for tablet */
-  :root {
-    --sidebar-item-padding: 0.625rem;
-    --sidebar-item-font-size: 0.9375rem;
-    --sidebar-icon-size: 1.125rem;
-    --sidebar-nav-spacing: 0.1875rem;
-    --sidebar-nav-padding: 0.75rem;
-  }
-  
-  /* Ensure collapsed sidebar items are properly centered on tablets */
-  .sidebar-collapsed-tablet .sidebar-item-responsive {
+  /* Ensure collapsed sidebar items are properly centered */
+  .sidebar-collapsed .sidebar-item-responsive {
     justify-content: center !important;
     padding: 0.75rem 0.5rem !important;
   }
   
   /* Adjust collapsed sidebar navigation spacing */
-  .sidebar-collapsed-tablet .sidebar-nav > div {
+  .sidebar-collapsed .sidebar-nav > div {
     padding: 0.5rem !important;
   }
   
-  /* Hide text in collapsed state on tablets */
-  .sidebar-collapsed-tablet .sidebar-text-responsive {
+  /* Hide text in collapsed state */
+  .sidebar-collapsed .sidebar-text-responsive {
     display: none !important;
   }
   
-  /* Center icons in collapsed state on tablets */
-  .sidebar-collapsed-tablet .sidebar-icon-responsive {
+  /* Center icons in collapsed state and remove right margin */
+  .sidebar-collapsed .sidebar-icon-responsive {
     margin-right: 0 !important;
+  }
+  
+  /* Ensure bottom section items are also centered when collapsed */
+  .sidebar-collapsed .sidebar-bottom-section {
+    padding: 0.5rem !important;
+  }
+  
+  /* Center user avatar when collapsed */
+  .sidebar-collapsed .sidebar-avatar {
+    margin: 0 auto !important;
   }
 }
 
