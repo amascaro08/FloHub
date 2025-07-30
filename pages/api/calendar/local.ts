@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
-import { calendarEvents } from "@/db/schema";
+import { calendarEvents, userSettings } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { CalendarEvent } from "@/types/calendar";
 
@@ -40,6 +40,19 @@ export default async function handler(
     const user = await getUserById(decoded.userId);
     if (!user?.email) {
       return res.status(401).json({ error: "User not found" });
+    }
+
+    // Get user's timezone from settings
+    let userTimezone;
+    try {
+      const userSettingsData = await db.query.userSettings.findFirst({
+        where: eq(userSettings.user_email, user.email),
+        columns: { timezone: true },
+      });
+      userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (error) {
+      console.warn("[API] Failed to fetch user timezone, using browser default");
+      userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     }
 
     if (req.method === "GET") {
@@ -136,12 +149,12 @@ export default async function handler(
       // Prepare the start and end time objects
       const startObj = {
         dateTime: start,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: userTimezone,
       };
 
       const endObj = end ? {
         dateTime: end,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: userTimezone,
       } : undefined;
 
       try {
@@ -201,12 +214,12 @@ export default async function handler(
       // Prepare the updated data
       const startObj = {
         dateTime: start,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: userTimezone,
       };
 
       const endObj = end ? {
         dateTime: end,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: userTimezone,
       } : undefined;
 
       try {

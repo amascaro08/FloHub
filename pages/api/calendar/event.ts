@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
+import { db } from "@/lib/drizzle";
+import { userSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 // Remove unused imports
 // import { parseISO } from 'date-fns';
 // import { zonedTimeToUtc } from 'date-fns-tz';
@@ -57,6 +60,21 @@ export default async function handler(
     // Simple test - just echo back the data to see if we can receive it
     const { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source } = req.body;
     console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source });
+
+    // Get user's timezone from settings
+    let userTimezone = timeZone;
+    if (!userTimezone) {
+      try {
+        const userSettingsData = await db.query.userSettings.findFirst({
+          where: eq(userSettings.user_email, user.email),
+          columns: { timezone: true },
+        });
+        userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (error) {
+        console.warn("[API] Failed to fetch user timezone, using browser default");
+        userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
+    }
     
     // Test: Just return the received data to see if the request is working
     if (req.headers['x-test-mode'] === 'true') {
@@ -671,14 +689,14 @@ export default async function handler(
     if (start) {
       payload.start = {
         dateTime: start, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        timeZone: userTimezone, // Use user's timezone
       };
     }
 
     if (end) {
       payload.end = {
         dateTime: end, // Send raw datetime-local string
-        timeZone: timeZone || 'UTC', // Use provided timezone or default to UTC
+        timeZone: userTimezone, // Use user's timezone
       };
     }
 

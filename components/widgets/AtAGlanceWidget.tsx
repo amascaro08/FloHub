@@ -18,6 +18,7 @@ import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import useSWR from 'swr';
 import type { CalendarEvent, Task, Note } from '../../types/calendar';
 import type { Habit, HabitCompletion } from '../../types/habit-tracker';
+import type { UserSettings } from '../../types/app';
 
 // Function to generate dashboard widget with FloCat suggestions
 function generateDashboardWidget(
@@ -460,6 +461,12 @@ const AtAGlanceWidget = () => {
   const [error, setError] = useState<string | null>(null);
   const [widgetData, setWidgetData] = useState<any>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  // Fetch user settings to get timezone
+  const { data: userSettings } = useSWR<UserSettings>(
+    user ? "/api/userSettings" : null,
+    fetcher
+  );
   
   // Check if we're on the client side
   const isClient = typeof window !== 'undefined';
@@ -481,7 +488,7 @@ const AtAGlanceWidget = () => {
       setError(null);
 
       const now = new Date();
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const userTimezone = userSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       // Create all fetch promises with individual timeout protection (excluding calendar events)
       const fetchPromises = [

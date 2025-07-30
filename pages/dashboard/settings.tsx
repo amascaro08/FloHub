@@ -26,7 +26,7 @@ const SettingsPage = () => {
     defaultView: "today",
     customRange: { start: "", end: "" },
     globalTags: [],
-    timezone: "UTC",
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     tags: [],
     widgets: [],
     calendarSources: [],
