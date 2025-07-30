@@ -19,6 +19,7 @@ export type CalendarEvent = {
   description?: string; // Add description field
   calendarName?: string; // Add calendar name
   tags?: string[]; // Add tags
+  color?: string; // Add color field
 };
 
 type ErrorRes = { error: string; details?: any };
@@ -431,10 +432,11 @@ export default async function handler(
             summary: item.summary || "No Title",
             start: item.start || { dateTime: "", timeZone: "" },
             end: item.end || { dateTime: "", timeZone: "" },
-            source: eventSource,
+            source: item.extendedProperties?.private?.source || eventSource,
             description: item.description || "",
             calendarName: sourceName,
-            tags,
+            tags: item.extendedProperties?.private?.tags ? JSON.parse(item.extendedProperties.private.tags) : tags,
+            color: item.extendedProperties?.private?.color || undefined,
           }));
           console.log(`Successfully fetched ${body.items.length} events for ${id}`);
           return events;

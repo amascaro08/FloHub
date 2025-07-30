@@ -34,7 +34,8 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
     calendarId: '',
     source: 'personal' as 'personal' | 'work',
     tags: [] as string[],
-    location: ''
+    location: '',
+    color: '#3b82f6' // Default blue color
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,8 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         calendarId: event.calendarId || '',
         source: event.source || 'personal',
         tags: event.tags || [],
-        location: event.location || ''
+        location: event.location || '',
+        color: event.color || '#3b82f6'
       });
     } else {
       // Default to current time for new events
@@ -81,7 +83,8 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
         calendarId: availableCalendars && availableCalendars.length > 0 ? availableCalendars[0].id : 'flohub_local',
         source: 'personal',
         tags: [],
-        location: ''
+        location: '',
+        color: '#3b82f6'
       });
     }
   }, [event, availableCalendars]);
@@ -291,6 +294,52 @@ export const CalendarEventForm: React.FC<CalendarEventFormProps> = ({
                   <span className="text-gray-700 dark:text-gray-300">Work</span>
                 </label>
               </div>
+            </div>
+
+            {/* Event Color */}
+            <div>
+              <label htmlFor="color" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Event Color
+              </label>
+              <div className="flex items-center space-x-4">
+                <input
+                  type="color"
+                  id="color"
+                  value={formData.color}
+                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  className="w-12 h-12 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer"
+                />
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="#3b82f6"
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  {/* Preset color options */}
+                  {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280'].map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, color }))}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        formData.color === color 
+                          ? 'border-gray-800 dark:border-white scale-110' 
+                          : 'border-gray-300 dark:border-gray-600 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Choose a color to help visually organize your events
+              </p>
             </div>
 
             {/* Location */}

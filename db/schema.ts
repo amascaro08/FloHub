@@ -204,6 +204,7 @@ export const calendarEvents = pgTable("calendarEvents", {
   calendarId: varchar("calendar_id", { length: 255 }).default("flohub_local"),
   source: varchar("source", { length: 50 }).default("personal"), // "personal" | "work"
   tags: text("tags").array(),
+  color: varchar("color", { length: 7 }), // Hex color code (e.g., "#ff0000")
   isRecurring: boolean("is_recurring").default(false),
   seriesMasterId: text("series_master_id"),
   instanceIndex: integer("instance_index"),

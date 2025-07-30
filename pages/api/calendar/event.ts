@@ -58,8 +58,8 @@ export default async function handler(
     console.log("[API] Raw request body:", JSON.stringify(req.body, null, 2));
     
     // Simple test - just echo back the data to see if we can receive it
-    const { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source } = req.body;
-    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source });
+    const { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source, color } = req.body;
+    console.log("[API] Creating event with data:", { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source, color });
 
     // Get user's timezone from settings
     let userTimezone = timeZone;
@@ -76,13 +76,13 @@ export default async function handler(
       }
     }
     
-    // Test: Just return the received data to see if the request is working
-    if (req.headers['x-test-mode'] === 'true') {
-      return res.status(200).json({ 
-        message: "Test mode - request received successfully",
-        receivedData: { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source }
-      });
-    }
+          // Test: Just return the received data to see if the request is working
+      if (req.headers['x-test-mode'] === 'true') {
+        return res.status(200).json({ 
+          message: "Test mode - request received successfully",
+          receivedData: { calendarId, summary, start, end, timeZone, timezoneOffset, description, tags, source, color }
+        });
+      }
     
     if (!calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for create:", { calendarId, summary, start, end });
@@ -108,7 +108,8 @@ export default async function handler(
             start,
             end,
             source,
-            tags
+            tags,
+            color
           }),
         });
 
@@ -251,7 +252,7 @@ export default async function handler(
       description: description || "",
     };
     
-    // Add extended properties for tags and source if provided
+    // Add extended properties for tags, source, and color if provided
     if (tags && tags.length > 0) {
       payload.extendedProperties = payload.extendedProperties || {};
       payload.extendedProperties.private = payload.extendedProperties.private || {};
@@ -262,6 +263,12 @@ export default async function handler(
       payload.extendedProperties = payload.extendedProperties || {};
       payload.extendedProperties.private = payload.extendedProperties.private || {};
       payload.extendedProperties.private.source = source;
+    }
+
+    if (color) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.color = color;
     }
 
     if (start) {
@@ -503,7 +510,7 @@ export default async function handler(
   }
 
   if ((req.method as string) === "PUT") {
-    const { calendarId, summary, start, end, timeZone, description, tags, source } = req.body;
+    const { calendarId, summary, start, end, timeZone, description, tags, source, color } = req.body;
     const { id } = req.query; // Get eventId from query parameters
 
     if (!id || !calendarId || !summary || !start || !end) {
@@ -545,7 +552,8 @@ export default async function handler(
             start,
             end,
             source,
-            tags
+            tags,
+            color
           }),
         });
 
@@ -688,7 +696,7 @@ export default async function handler(
       description: description || "",
     };
     
-    // Add extended properties for tags and source if provided
+    // Add extended properties for tags, source, and color if provided
     if (tags && tags.length > 0) {
       payload.extendedProperties = payload.extendedProperties || {};
       payload.extendedProperties.private = payload.extendedProperties.private || {};
@@ -699,6 +707,12 @@ export default async function handler(
       payload.extendedProperties = payload.extendedProperties || {};
       payload.extendedProperties.private = payload.extendedProperties.private || {};
       payload.extendedProperties.private.source = source;
+    }
+
+    if (color) {
+      payload.extendedProperties = payload.extendedProperties || {};
+      payload.extendedProperties.private = payload.extendedProperties.private || {};
+      payload.extendedProperties.private.color = color;
     }
 
     if (start) {

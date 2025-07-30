@@ -119,6 +119,7 @@ export default async function handler(
               source: (event.source as "personal" | "work") || "personal",
               calendarName: "FloHub Local",
               tags: event.tags || [],
+              color: event.color || undefined,
               isRecurring: event.isRecurring || false,
               seriesMasterId: event.seriesMasterId || undefined,
               instanceIndex: event.instanceIndex || undefined,
@@ -137,7 +138,7 @@ export default async function handler(
     }
 
     if (req.method === "POST") {
-      const { summary, description, location, start, end, source, tags } = req.body;
+      const { summary, description, location, start, end, source, tags, color } = req.body;
 
       if (!summary || !start) {
         return res.status(400).json({ error: "Summary and start time are required" });
@@ -170,6 +171,7 @@ export default async function handler(
           calendarId: 'flohub_local',
           source: source || 'personal',
           tags: tags || [],
+          color: color || null,
           isRecurring: false,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -191,6 +193,7 @@ export default async function handler(
           source: source || "personal",
           calendarName: "FloHub Local",
           tags: tags || [],
+          color: color || undefined,
           isRecurring: false,
           created: new Date().toISOString(),
           updated: new Date().toISOString(),
@@ -205,7 +208,7 @@ export default async function handler(
 
     if (req.method === "PUT") {
       const { id } = req.query;
-      const { summary, description, location, start, end, source, tags } = req.body;
+      const { summary, description, location, start, end, source, tags, color } = req.body;
 
       if (!id || !summary || !start) {
         return res.status(400).json({ error: "ID, summary and start time are required" });
@@ -232,6 +235,7 @@ export default async function handler(
           end: endObj,
           source: source || 'personal',
           tags: tags || [],
+          color: color || null,
           updatedAt: new Date(),
         };
 
@@ -256,6 +260,7 @@ export default async function handler(
           source: source || "personal",
           calendarName: "FloHub Local",
           tags: tags || [],
+          color: color || undefined,
           isRecurring: false,
           updated: new Date().toISOString(),
         };
