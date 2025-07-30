@@ -12,6 +12,7 @@ type CreateNoteRequest = {
   eventId?: string; // Optional: ID of the associated calendar event
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
+  source?: string; // Optional: Source of the note (e.g., "quicknote", "notespage")
 };
 
 type CreateNoteResponse = {
@@ -41,7 +42,7 @@ export default async function handler(
   const userId = user.email;
 
   // 2) Validate input
-  const { title, content, tags, eventId, eventTitle, isAdhoc } = req.body as CreateNoteRequest; // Include new fields
+  const { title, content, tags, eventId, eventTitle, isAdhoc, source } = req.body as CreateNoteRequest; // Include new fields
   if (typeof content !== "string") {
     return res.status(400).json({ error: "Note content must be a string" });
   }
@@ -65,6 +66,7 @@ export default async function handler(
       eventId: eventId ?? null,
       eventTitle: eventTitle ?? null,
       isAdhoc: isAdhoc ?? false,
+      source: source ?? null,
     }).returning();
     return res.status(201).json({ success: true, noteId: String(newNote.id) });
 

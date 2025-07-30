@@ -14,6 +14,7 @@ type UpdateNoteRequest = {
   eventId?: string; // Optional: ID of the associated calendar event
   eventTitle?: string; // Optional: Title of the associated calendar event
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
+  source?: string; // Optional: Source of the note (e.g., "quicknote", "notespage")
 };
 
 type UpdateNoteResponse = {
@@ -42,13 +43,13 @@ export default async function handler(
   const userId = user.email;
 
   // 2) Validate input
-  const { id, title, content, tags, eventId, eventTitle, isAdhoc } = req.body as UpdateNoteRequest; // Include new fields
+  const { id, title, content, tags, eventId, eventTitle, isAdhoc, source } = req.body as UpdateNoteRequest; // Include new fields
   if (typeof id !== "string" || id.trim() === "") {
     return res.status(400).json({ error: "Note ID is required" });
   }
 
   // Ensure at least one update field is provided
-  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined) {
+  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && source === undefined) {
       return res.status(400).json({ error: "No update fields provided" });
   }
 
@@ -97,6 +98,9 @@ export default async function handler(
     }
     if (isAdhoc !== undefined) { // Allow setting isAdhoc to true or false
         updateData.isAdhoc = isAdhoc;
+    }
+    if (source !== undefined) { // Allow setting source
+        updateData.source = source;
     }
     // Optionally update a 'updatedAt' timestamp
     // updateData.updatedAt = new Date();
