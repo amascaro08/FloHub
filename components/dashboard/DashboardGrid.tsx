@@ -21,12 +21,13 @@ const SmartAtAGlanceWidget = lazy(() => import("@/components/widgets/SmartAtAGla
 const QuickNoteWidget = lazy(() => import("@/components/widgets/QuickNoteWidget"));
 const HabitTrackerWidget = lazy(() => import("@/components/widgets/HabitTrackerWidget"));
 const JournalWidget = lazy(() => import("@/components/widgets/JournalWidget"));
+const WeatherDashboardWidget = lazy(() => import("@/components/widgets/WeatherDashboardWidget"));
 
 // User hooks
 import { useUser } from "@/lib/hooks/useUser";
 import { UserSettings } from "@/types/app";
 
-type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker" | "journal";
+type WidgetType = "tasks" | "calendar" | "ataglance" | "quicknote" | "habit-tracker" | "journal" | "weather";
 
 interface WidgetSlotAssignment {
   [slotId: string]: string | null; // widget type or null
@@ -373,6 +374,8 @@ const DashboardGrid: React.FC = () => {
         return <Suspense fallback={<WidgetSkeleton type="generic" />}><HabitTrackerWidget {...widgetProps} /></Suspense>;
       case "journal":
         return <Suspense fallback={<WidgetSkeleton type="generic" />}><JournalWidget {...widgetProps} /></Suspense>;
+      case "weather":
+        return <Suspense fallback={<WidgetSkeleton type="generic" />}><WeatherDashboardWidget {...widgetProps} /></Suspense>;
       default:
         return <div>Unknown widget</div>;
     }
@@ -393,6 +396,8 @@ const DashboardGrid: React.FC = () => {
         return <Sparkles className="w-5 h-5" />;
       case "journal":
         return <BookOpen className="w-5 h-5" />;
+      case "weather":
+        return <span className="text-lg">🌤️</span>;
       default:
         return <Grid3X3 className="w-5 h-5" />;
     }

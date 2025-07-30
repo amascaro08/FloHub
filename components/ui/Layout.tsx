@@ -7,7 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ChatSideModal from './ChatSideModal';
 import ChatToggleButton from './ChatToggleButton';
-import WeatherWidget from './WeatherWidget';
+
 import ThemeToggle from './ThemeToggle'
 import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
@@ -417,7 +417,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <WeatherWidget />
+            
             <ChatToggleButton onClick={toggleChat} />
           </div>
         </header>
