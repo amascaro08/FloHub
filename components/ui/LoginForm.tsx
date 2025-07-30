@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 export default function LoginForm() {
@@ -13,6 +13,15 @@ export default function LoginForm() {
 
   // Get redirect URL from query parameters - check both 'redirect' and 'returnUrl'
   const redirectUrl = (router.query.redirect as string) || (router.query.returnUrl as string) || '/dashboard';
+
+  // Handle account deletion confirmation message
+  useEffect(() => {
+    if (router.query.message === 'account-deleted') {
+      setSuccess('Your account has been successfully deleted. Thank you for using FloHub.');
+      // Clear the query parameter
+      router.replace('/login', undefined, { shallow: true });
+    }
+  }, [router.query.message, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
