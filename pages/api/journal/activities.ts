@@ -73,5 +73,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
   
+  // Handle DELETE request - clear activities data for specific date
+  if (req.method === 'DELETE') {
+    const { date } = req.query;
+    
+    if (!date || typeof date !== 'string') {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+    
+    try {
+      await db.delete(journalActivities)
+        .where(and(eq(journalActivities.user_email, user_email), eq(journalActivities.date, date)));
+      
+      return res.status(200).json({ success: true, message: 'Activities data cleared' });
+    } catch (error) {
+      console.error('Error clearing activities data:', error);
+      return res.status(500).json({ error: 'Failed to clear activities data' });
+    }
+  }
+  
   return res.status(405).json({ error: 'Method not allowed' });
 }

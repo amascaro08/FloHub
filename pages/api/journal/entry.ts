@@ -75,5 +75,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
   
+  // Handle DELETE request - clear journal entry for specific date
+  if (req.method === 'DELETE') {
+    const { date } = req.query;
+    
+    if (!date || typeof date !== 'string') {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+    
+    try {
+      await db.delete(journalEntries)
+        .where(and(eq(journalEntries.user_email, user_email), eq(journalEntries.date, date)));
+      
+      return res.status(200).json({ success: true, message: 'Journal entry cleared' });
+    } catch (error) {
+      console.error('Error clearing journal entry:', error);
+      return res.status(500).json({ error: 'Failed to clear journal entry' });
+    }
+  }
+  
   return res.status(405).json({ error: 'Method not allowed' });
 }
