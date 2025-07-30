@@ -178,6 +178,19 @@
     --sidebar-nav-spacing: 0.1875rem;
     --sidebar-nav-padding: 0.75rem 1rem;
   }
+  
+  /* Mobile sidebar specific styles */
+  .sidebar-nav {
+    overflow-y: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100% !important;
+  }
+  
+  .sidebar-nav > div {
+    flex-shrink: 0;
+  }
 }
 
 /* Very small mobile devices */
