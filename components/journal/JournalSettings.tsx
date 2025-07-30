@@ -3,6 +3,7 @@ import { useUser } from "@/lib/hooks/useUser";
 
 interface JournalSettingsProps {
   onClose: () => void;
+  onJournalCleared?: () => void;
 }
 
 interface JournalSettingsData {
@@ -19,7 +20,7 @@ interface JournalSettingsData {
   weeklyReflections: boolean;
 }
 
-const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
+const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCleared }) => {
   const [settings, setSettings] = useState<JournalSettingsData>({
     reminderEnabled: false,
     reminderTime: '20:00',
@@ -136,6 +137,11 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
         // Show success message
         setSaveConfirmation(true);
         setTimeout(() => setSaveConfirmation(false), 5000);
+        
+        // Notify parent component to refresh
+        if (onJournalCleared) {
+          onJournalCleared();
+        }
       }
     } catch (error) {
       console.error('Error clearing journal data:', error);

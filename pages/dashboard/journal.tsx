@@ -71,6 +71,7 @@ export default function JournalPage() {
   const [showImport, setShowImport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [clearSuccess, setClearSuccess] = useState(false);
   const [showClearEntryModal, setShowClearEntryModal] = useState(false);
   const [clearingEntry, setClearingEntry] = useState(false);
   const [clearEntryStep, setClearEntryStep] = useState(1);
@@ -176,6 +177,28 @@ export default function JournalPage() {
     setShowImport(false);
   };
 
+  // Handle journal cleared from settings
+  const handleJournalCleared = () => {
+    // Clear all local cache
+    invalidateCache();
+    
+    // Reset to today's date
+    setSelectedDate(today);
+    setIsEditing(true);
+    
+    // Show clear success message
+    setClearSuccess(true);
+    setTimeout(() => setClearSuccess(false), 3000);
+    
+    // Force multiple refreshes to ensure everything updates
+    setRefreshTrigger(prev => prev + 1);
+    setTimeout(() => setRefreshTrigger(prev => prev + 1), 100);
+    setTimeout(() => setRefreshTrigger(prev => prev + 1), 500);
+    
+    // Switch back to today tab
+    setActiveTab('today');
+  };
+
   // Function to invalidate cache for better performance
   const invalidateCache = () => {
     if (typeof window !== 'undefined') {
@@ -214,21 +237,36 @@ export default function JournalPage() {
         // Clear cache to ensure fresh data is loaded
         invalidateCache();
         
-        // Trigger refresh for all components
-        setRefreshTrigger(prev => prev + 1);
+        // Clear any localStorage data for this date
+        if (typeof window !== 'undefined') {
+          const dateKey = selectedDate;
+          // Clear all journal data for this specific date from localStorage
+          Object.keys(localStorage).forEach(key => {
+            if (key.includes(user.primaryEmail) && key.includes(dateKey)) {
+              localStorage.removeItem(key);
+            }
+          });
+        }
         
-        // Close modal and reset step
+        // Close modal and reset step first
         setShowClearEntryModal(false);
         setClearEntryStep(1);
         
-        // Show success message
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        // Show clear success message
+        setClearSuccess(true);
+        setTimeout(() => setClearSuccess(false), 3000);
         
-        // Force additional refresh after a short delay
+        // Force immediate refresh of all components
+        setRefreshTrigger(prev => prev + 1);
+        
+        // Force additional refreshes to ensure all components update
         setTimeout(() => {
           setRefreshTrigger(prev => prev + 1);
-        }, 1000);
+        }, 100);
+        
+        setTimeout(() => {
+          setRefreshTrigger(prev => prev + 1);
+        }, 500);
       }
     } catch (error) {
       console.error('Error clearing journal entry:', error);
@@ -492,6 +530,7 @@ export default function JournalPage() {
                 {componentsLoaded.main ? (
                   isSelectedToday || isEditing ? (
                     <TodayEntry
+                      key={`today-entry-${selectedDate}-${refreshTrigger}`}
                       onSave={handleSaveEntry}
                       date={selectedDate}
                       timezone={timezone}
@@ -500,6 +539,7 @@ export default function JournalPage() {
                     />
                   ) : (
                     <JournalEntryViewer
+                      key={`entry-viewer-${selectedDate}-${refreshTrigger}`}
                       date={selectedDate}
                       onEdit={() => setIsEditing(true)}
                       timezone={timezone}
@@ -526,7 +566,7 @@ export default function JournalPage() {
                       <span className="text-2xl mr-3">😊</span>
                       Mood
                     </h3>
-                    <MoodTracker onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
+                    <MoodTracker key={`mood-${selectedDate}-${refreshTrigger}`} onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
                   </div>
 
                   {/* Activities */}
@@ -536,6 +576,7 @@ export default function JournalPage() {
                       Activities
                     </h3>
                     <ActivityTracker
+                      key={`activities-${selectedDate}-${refreshTrigger}`}
                       onSave={handleSaveActivities}
                       date={selectedDate}
                       timezone={timezone}
@@ -549,6 +590,7 @@ export default function JournalPage() {
                       Sleep
                     </h3>
                     <SleepTracker
+                      key={`sleep-${selectedDate}-${refreshTrigger}`}
                       onSave={handleSaveSleep}
                       timezone={timezone}
                       date={selectedDate}
@@ -650,7 +692,7 @@ export default function JournalPage() {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">
-              <JournalSettings onClose={() => setActiveTab('today')} />
+              <JournalSettings onClose={() => setActiveTab('today')} onJournalCleared={handleJournalCleared} />
             </div>
           )}
 
@@ -778,6 +820,18 @@ export default function JournalPage() {
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
               <span className="font-medium">All journal data saved successfully! ✨</span>
+            </div>
+          </div>
+        )}
+
+        {/* Clear Success Message */}
+        {clearSuccess && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl shadow-xl border border-red-300 animate-fade-in-out z-50">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">Journal data cleared successfully! 🗑️</span>
             </div>
           </div>
         )}
