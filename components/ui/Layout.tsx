@@ -241,11 +241,17 @@ const Layout = ({ children }: { children: ReactNode }) => {
           bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
           ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-full max-w-sm' : 'fixed inset-y-0 left-0 -translate-x-full w-full max-w-sm'}
           md:static md:translate-x-0 md:shadow-none
-          ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           ${desktopSidebarCollapsed ? 'sidebar-collapsed' : ''}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
           h-screen
         `}
+        style={{
+          width: typeof window !== 'undefined' && window.innerWidth >= 768 
+            ? desktopSidebarCollapsed 
+              ? 'var(--sidebar-collapsed-width)' 
+              : 'var(--sidebar-expanded-width)'
+            : undefined
+        }}
       >
         {/* Header */}
         <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} flex-shrink-0`}>
