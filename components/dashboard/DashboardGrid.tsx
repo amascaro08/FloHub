@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, useMemo } from 'react';
 // Removed react-grid-layout in favor of custom CSS positioning
-import { Settings, Plus, CheckSquare, Calendar, Clock, FileText, Sparkles, Grid3X3, BookOpen } from 'lucide-react';
+import { Settings, Plus, CheckSquare, Calendar, Clock, FileText, Sparkles, Grid3X3, BookOpen, Target } from 'lucide-react';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import LayoutTemplateSelector, { LayoutTemplate } from '../ui/LayoutTemplateSelector';
 
@@ -229,6 +229,105 @@ const layoutTemplates: LayoutTemplateConfig[] = [
         lg: { cols: 12, rowHeight: 0 }, // Dynamic height calculation
         md: { cols: 8, rowHeight: 0 },
         sm: { cols: 6, rowHeight: 0 }
+      }
+    }
+  },
+  {
+    id: 'equal-grid-4',
+    name: 'Equal Grid (4)',
+    description: 'Four equal-sized widgets',
+    icon: <Grid3X3 className="w-5 h-5" />,
+    category: 'Simple',
+    slots: [
+      {
+        id: 'top-left',
+        size: 'medium',
+        position: { row: 0, col: 0, rowSpan: 2, colSpan: 6 },
+        label: 'Top Left',
+        suggestedWidgets: ['tasks']
+      },
+      {
+        id: 'top-right',
+        size: 'medium',
+        position: { row: 0, col: 6, rowSpan: 2, colSpan: 6 },
+        label: 'Top Right',
+        suggestedWidgets: ['calendar']
+      },
+      {
+        id: 'bottom-left',
+        size: 'medium',
+        position: { row: 2, col: 0, rowSpan: 2, colSpan: 6 },
+        label: 'Bottom Left',
+        suggestedWidgets: ['ataglance']
+      },
+      {
+        id: 'bottom-right',
+        size: 'medium',
+        position: { row: 2, col: 6, rowSpan: 2, colSpan: 6 },
+        label: 'Bottom Right',
+        suggestedWidgets: ['habit-tracker']
+      }
+    ],
+    gridConfig: {
+      rows: 4,
+      cols: 12,
+      responsive: {
+        lg: { cols: 12, rowHeight: 100 },
+        md: { cols: 8, rowHeight: 80 },
+        sm: { cols: 6, rowHeight: 60 }
+      }
+    }
+  },
+  {
+    id: 'command-center',
+    name: 'Command Center',
+    description: 'Central focus with surrounding info panels',
+    icon: <Target className="w-5 h-5" />,
+    category: 'Advanced',
+    slots: [
+      {
+        id: 'center',
+        size: 'hero',
+        position: { row: 1, col: 3, rowSpan: 2, colSpan: 6 },
+        label: 'Command Center',
+        suggestedWidgets: ['calendar', 'tasks']
+      },
+      {
+        id: 'top',
+        size: 'small',
+        position: { row: 0, col: 3, rowSpan: 1, colSpan: 6 },
+        label: 'Status Bar',
+        suggestedWidgets: ['ataglance']
+      },
+      {
+        id: 'left',
+        size: 'small',
+        position: { row: 1, col: 0, rowSpan: 2, colSpan: 3 },
+        label: 'Quick Actions',
+        suggestedWidgets: ['quicknote']
+      },
+      {
+        id: 'right',
+        size: 'small',
+        position: { row: 1, col: 9, rowSpan: 2, colSpan: 3 },
+        label: 'Tracking',
+        suggestedWidgets: ['habit-tracker']
+      },
+      {
+        id: 'bottom',
+        size: 'small',
+        position: { row: 3, col: 3, rowSpan: 1, colSpan: 6 },
+        label: 'Updates',
+        suggestedWidgets: ['weather']
+      }
+    ],
+    gridConfig: {
+      rows: 4,
+      cols: 12,
+      responsive: {
+        lg: { cols: 12, rowHeight: 80 },
+        md: { cols: 8, rowHeight: 60 },
+        sm: { cols: 6, rowHeight: 50 }
       }
     }
   }
