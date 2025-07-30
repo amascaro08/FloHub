@@ -46,74 +46,70 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
         // Determine how many days to look back based on timeRange
         const daysToLookBack = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90;
         
-        // Load mood data from the specified time range
-        const moodEntries: MoodData[] = [];
+        // Generate date range
         const today = new Date();
-        const activityMoodMap: {[key: string]: {count: number, totalScore: number}} = {};
+        const dateRange: string[] = [];
         
         for (let i = daysToLookBack - 1; i >= 0; i--) {
           const date = new Date(today);
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
+          dateRange.push(dateStr);
+        }
+        
+        // Use batch APIs for better performance
+        const [moodsResponse, activitiesResponse] = await Promise.allSettled([
+          axios.post('/api/journal/moods/batch', { dates: dateRange }, { withCredentials: true }),
+          axios.post('/api/journal/activities/batch', { dates: dateRange }, { withCredentials: true })
+        ]);
+        
+        // Process responses
+        const moodsData = moodsResponse.status === 'fulfilled' ? moodsResponse.value.data.moods : {};
+        const activitiesData = activitiesResponse.status === 'fulfilled' ? activitiesResponse.value.data.activities : {};
+        
+        // Build mood entries array
+        const moodEntries: MoodData[] = [];
+        const activityMoodMap: {[key: string]: {count: number, totalScore: number}} = {};
+        
+        dateRange.forEach(dateStr => {
+          const moodInfo = moodsData[dateStr];
           
-          try {
-            // Try to load mood for this date
-            const moodResponse = await axios.get(`/api/journal/mood?date=${dateStr}`);
+          if (moodInfo && moodInfo.emoji && moodInfo.label) {
+            const entry: MoodData = {
+              date: dateStr,
+              emoji: moodInfo.emoji,
+              label: moodInfo.label
+            };
             
-            // Check if we have actual mood data (not empty defaults)
-            if (moodResponse.data && moodResponse.data.emoji && moodResponse.data.label) {
-              const entry: MoodData = {
-                date: dateStr,
-                emoji: moodResponse.data.emoji,
-                label: moodResponse.data.label
+            // Add activities if available
+            const dayActivities = activitiesData[dateStr];
+            if (dayActivities && Array.isArray(dayActivities) && dayActivities.length > 0) {
+              entry.activities = dayActivities;
+              
+              // Calculate mood score (1-5)
+              const moodScores: {[key: string]: number} = {
+                'Rad': 5,
+                'Good': 4,
+                'Meh': 3,
+                'Bad': 2,
+                'Awful': 1
               };
               
-              // Try to load activities for this date
-              try {
-                const activitiesResponse = await axios.get(`/api/journal/activities?date=${dateStr}`);
-                
-                if (activitiesResponse.data &&
-                    activitiesResponse.data.activities &&
-                    Array.isArray(activitiesResponse.data.activities) &&
-                    activitiesResponse.data.activities.length > 0) {
-                  entry.activities = activitiesResponse.data.activities;
-                  
-                  // Calculate mood score (1-5)
-                  const moodScores: {[key: string]: number} = {
-                    'Rad': 5,
-                    'Good': 4,
-                    'Meh': 3,
-                    'Bad': 2,
-                    'Awful': 1
-                  };
-                  
-                  const moodScore = moodScores[moodResponse.data.label] || 3;
-                  
-                  // Update activity correlations
-                  activitiesResponse.data.activities.forEach((activity: string) => {
-                    if (!activityMoodMap[activity]) {
-                      activityMoodMap[activity] = { count: 0, totalScore: 0 };
-                    }
-                    
-                    activityMoodMap[activity].count += 1;
-                    activityMoodMap[activity].totalScore += moodScore;
-                  });
-                }
-              } catch (error) {
-                console.error(`Error fetching activities for ${dateStr}:`, error);
-              }
+              const moodScore = moodScores[moodInfo.label] || 3;
               
-              moodEntries.push(entry);
-            } else {
-              // Add placeholder for days without mood data
-              moodEntries.push({
-                date: dateStr,
-                emoji: '',
-                label: ''
+              // Update activity correlations
+              dayActivities.forEach((activity: string) => {
+                if (!activityMoodMap[activity]) {
+                  activityMoodMap[activity] = { count: 0, totalScore: 0 };
+                }
+                
+                activityMoodMap[activity].count += 1;
+                activityMoodMap[activity].totalScore += moodScore;
               });
             }
-          } catch (error) {
-            console.error(`Error fetching mood for ${dateStr}:`, error);
+            
+            moodEntries.push(entry);
+          } else {
             // Add placeholder for days without mood data
             moodEntries.push({
               date: dateStr,
@@ -121,7 +117,7 @@ const MoodStatistics: React.FC<MoodStatisticsProps> = ({ timezone, refreshTrigge
               label: ''
             });
           }
-        }
+        });
         
         setMoodData(moodEntries);
         

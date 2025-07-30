@@ -22,6 +22,9 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 import JournalImport from "@/components/journal/JournalImport";
 import FloCatInsights from "@/components/journal/FloCatInsights";
+import SleepInsights from "@/components/journal/SleepInsights";
+import ActivityPatterns from "@/components/journal/ActivityPatterns";
+import Trends from "@/components/journal/Trends";
 import { 
   PlusIcon, 
   BookOpenIcon,
@@ -577,44 +580,17 @@ export default function JournalPage() {
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">😴</span>
-                    Sleep Insights
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">😴</div>
-                    <p className="text-grey-tint text-sm">
-                      Sleep insights will appear here as you track your sleep in the journal.
-                    </p>
-                  </div>
+                  <SleepInsights refreshTrigger={refreshTrigger} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">🎯</span>
-                    Activity Patterns
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📊</div>
-                    <p className="text-grey-tint text-sm">
-                      Activity patterns will appear here as you track more activities in your journal entries.
-                    </p>
-                  </div>
+                  <ActivityPatterns refreshTrigger={refreshTrigger} />
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">📈</span>
-                    Trends
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📈</div>
-                    <p className="text-grey-tint text-sm">
-                      Mood and activity trends will be analyzed and displayed here based on your journal data.
-                    </p>
-                  </div>
+                  <Trends refreshTrigger={refreshTrigger} />
                 </div>
               </div>
             </div>
