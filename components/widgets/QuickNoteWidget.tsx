@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
-import type { WidgetProps } from '@/types/app';
+import type { WidgetProps, Note } from '@/types/app';
 import { 
   Plus, 
   Save, 
@@ -14,50 +14,74 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw
 } from 'lucide-react';
+import useSWR from 'swr';
+import { 
+  syncQuickNotesToDatabase, 
+  saveQuickNoteToDatabase, 
+  updateQuickNoteInDatabase, 
+  deleteQuickNoteFromDatabase 
+} from '@/lib/quickNotesSync';
 
-interface QuickNote {
+// Legacy interface for localStorage notes
+interface LegacyQuickNote {
   id: string;
   content: string;
   timestamp: string;
   tags?: string[];
 }
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = false, isHero = false } = {}) => {
   const { user } = useUser();
-  const [notes, setNotes] = useState<QuickNote[]>([]);
   const [currentNote, setCurrentNote] = useState('');
-  const [editingNote, setEditingNote] = useState<QuickNote | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(true);
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load notes from localStorage
-  useEffect(() => {
-    if (user?.email) {
-      const savedNotes = localStorage.getItem(`quickNotes_${user.email}`);
-      if (savedNotes) {
-        try {
-          setNotes(JSON.parse(savedNotes));
-        } catch (error) {
-          console.error('Error loading quick notes:', error);
-        }
-      }
-      setIsLoading(false);
-    }
-  }, [user?.email]);
+  // Fetch quick notes from API
+  const { data: notesResponse, error, mutate } = useSWR(
+    user?.email ? '/api/notes' : null,
+    fetcher
+  );
 
-  // Save notes to localStorage
-  const saveNotes = (newNotes: QuickNote[]) => {
-    if (user?.email) {
-      localStorage.setItem(`quickNotes_${user.email}`, JSON.stringify(newNotes));
-      setNotes(newNotes);
-    }
-  };
+  // Filter only quick notes
+  const quickNotes = notesResponse?.notes?.filter((note: Note) => note.source === 'quicknote') || [];
+
+  // Sync localStorage notes to database on mount
+  useEffect(() => {
+    const syncLocalStorageNotes = async () => {
+      if (!user?.email) return;
+      
+      setSyncStatus('syncing');
+      try {
+        const result = await syncQuickNotesToDatabase(user.email);
+        if (result.success && result.synced && result.synced > 0) {
+          console.log(`Synced ${result.synced} notes from localStorage to database`);
+          // Refresh the notes list after sync
+          mutate();
+          setSyncStatus('synced');
+          setTimeout(() => setSyncStatus('idle'), 3000);
+        } else {
+          setSyncStatus('idle');
+        }
+      } catch (error) {
+        console.error('Error syncing localStorage notes:', error);
+        setSyncStatus('error');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      }
+    };
+
+    syncLocalStorageNotes();
+  }, [user?.email, mutate]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -67,44 +91,64 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
     }
   }, [currentNote]);
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     if (!currentNote.trim()) return;
 
-    if (editingNote) {
-      // Update existing note
-      const updatedNotes = notes.map(note =>
-        note.id === editingNote.id
-          ? { ...note, content: currentNote.trim(), tags: selectedTags }
-          : note
-      );
-      saveNotes(updatedNotes);
-      setEditingNote(null);
-    } else {
-      // Create new note
-      const newNote: QuickNote = {
-        id: Date.now().toString(),
-        content: currentNote.trim(),
-        timestamp: new Date().toISOString(),
-        tags: selectedTags
-      };
-      saveNotes([newNote, ...notes]);
-    }
+    setIsSaving(true);
+    try {
+      if (editingNote) {
+        // Update existing note
+        const result = await updateQuickNoteInDatabase(editingNote.id, currentNote.trim(), selectedTags);
+        if (result.success) {
+          mutate(); // Refresh the notes list
+          setEditingNote(null);
+        } else {
+          console.error('Failed to update note:', result.error);
+        }
+      } else {
+        // Create new note
+        const result = await saveQuickNoteToDatabase(currentNote.trim(), selectedTags);
+        if (result.success) {
+          mutate(); // Refresh the notes list
+        } else {
+          console.error('Failed to save note:', result.error);
+        }
+      }
 
-    setCurrentNote('');
-    setSelectedTags([]);
-    setShowNoteForm(false);
+      setCurrentNote('');
+      setSelectedTags([]);
+      setShowNoteForm(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleEditNote = (note: QuickNote) => {
+  const handleEditNote = (note: Note) => {
     setEditingNote(note);
-    setCurrentNote(note.content);
+    // Extract text content from HTML
+    const div = document.createElement('div');
+    div.innerHTML = note.content;
+    setCurrentNote(div.textContent || div.innerText || '');
     setSelectedTags(note.tags || []);
     setShowNoteForm(true);
   };
 
-  const handleDeleteNote = (noteId: string) => {
-    const updatedNotes = notes.filter(note => note.id !== noteId);
-    saveNotes(updatedNotes);
+  const handleDeleteNote = async (noteId: string) => {
+    setIsSaving(true);
+    try {
+      const result = await deleteQuickNoteFromDatabase(noteId);
+      if (result.success) {
+        mutate(); // Refresh the notes list
+      } else {
+        console.error('Failed to delete note:', result.error);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -122,16 +166,22 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
   };
 
   // Quick add note (for compact mode)
-  const quickAddNote = () => {
+  const quickAddNote = async () => {
     const note = prompt("Quick note:");
     if (note && note.trim()) {
-      const newNote: QuickNote = {
-        id: Date.now().toString(),
-        content: note.trim(),
-        timestamp: new Date().toISOString(),
-        tags: []
-      };
-      saveNotes([newNote, ...notes]);
+      setIsSaving(true);
+      try {
+        const result = await saveQuickNoteToDatabase(note.trim(), []);
+        if (result.success) {
+          mutate(); // Refresh the notes list
+        } else {
+          console.error('Failed to save quick note:', result.error);
+        }
+      } catch (error) {
+        console.error('Error saving quick note:', error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -160,8 +210,13 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
 
   // Truncate note content for preview
   const truncateContent = (content: string, limit: number = 80) => {
-    if (content.length <= limit) return content;
-    return content.slice(0, limit) + '...';
+    // Extract text content from HTML
+    const div = document.createElement('div');
+    div.innerHTML = content;
+    const textContent = div.textContent || div.innerText || '';
+    
+    if (textContent.length <= limit) return textContent;
+    return textContent.slice(0, limit) + '...';
   };
 
   if (!user) {
@@ -175,7 +230,7 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
     );
   }
 
-  if (isLoading) {
+  if (!notesResponse && !error) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -190,6 +245,22 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
 
   return (
     <div className={`${isCompact ? 'space-y-2' : 'space-y-4'} h-full flex flex-col`}>
+      {/* Sync status indicator */}
+      {syncStatus !== 'idle' && (
+        <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+          syncStatus === 'syncing' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' :
+          syncStatus === 'synced' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' :
+          'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+        }`}>
+          {syncStatus === 'syncing' && <RefreshCw className="w-4 h-4 animate-spin" />}
+          <span>
+            {syncStatus === 'syncing' && 'Syncing notes...'}
+            {syncStatus === 'synced' && 'Notes synced successfully!'}
+            {syncStatus === 'error' && 'Error syncing notes'}
+          </span>
+        </div>
+      )}
+
       {/* Add/Edit Note Form - Responsive design */}
       {(!isCompact || showNoteForm) && (
         <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} flex-shrink-0`}>
@@ -238,12 +309,18 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleSaveNote}
-                disabled={!currentNote.trim()}
+                disabled={!currentNote.trim() || isSaving}
                 className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-1 text-sm"
               >
-                {editingNote ? <Edit3 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                {isSaving ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : editingNote ? (
+                  <Edit3 className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 <span className={`${isCompact ? 'hidden' : 'inline'}`}>
-                  {editingNote ? 'Update' : 'Save'}
+                  {isSaving ? 'Saving...' : editingNote ? 'Update' : 'Save'}
                 </span>
               </button>
               
@@ -278,22 +355,23 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
           </button>
           <button
             onClick={quickAddNote}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
+            disabled={isSaving}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-sm disabled:opacity-50"
           >
-            Quick
+            {isSaving ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Quick'}
           </button>
         </div>
       )}
 
       {/* Notes List - Optimized for mobile */}
       <div className={`${isCompact ? 'space-y-2' : 'space-y-3'} flex-1 overflow-y-auto min-h-0`}>
-        {notes.length > 0 && (
+        {quickNotes.length > 0 && (
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-dark-base dark:text-soft-white flex items-center space-x-2">
               <FileText className="w-4 h-4 text-primary-500" />
-              <span>{isCompact ? `Notes (${notes.length})` : `Recent Notes (${notes.length})`}</span>
+              <span>{isCompact ? `Notes (${quickNotes.length})` : `Recent Notes (${quickNotes.length})`}</span>
             </h3>
-            {notes.length > getNoteDisplayLimit() && (
+            {quickNotes.length > getNoteDisplayLimit() && (
               <button
                 onClick={() => setShowAllNotes(!showAllNotes)}
                 className="text-xs text-primary-500 hover:text-primary-600 transition-colors"
@@ -305,7 +383,7 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
         )}
 
         <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-          {(showAllNotes ? notes : notes.slice(0, getNoteDisplayLimit())).map((note) => (
+          {(showAllNotes ? quickNotes : quickNotes.slice(0, getNoteDisplayLimit())).map((note: Note) => (
             <div
               key={note.id}
               className={`${
@@ -318,7 +396,7 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
                   <div className="mb-2">
                     {isCompact || (note.content.length <= 80) || expandedNote === note.id ? (
                       <p className={`${isCompact ? 'text-xs' : 'text-sm'} text-dark-base dark:text-soft-white whitespace-pre-wrap leading-relaxed`}>
-                        {isCompact ? truncateContent(note.content, 60) : note.content}
+                        {isCompact ? truncateContent(note.content, 60) : truncateContent(note.content, 200)}
                       </p>
                     ) : (
                       <div>
@@ -347,7 +425,7 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
                   <div className="flex items-center flex-wrap gap-2">
                     <span className={`${isCompact ? 'text-xs' : 'text-xs'} text-grey-tint flex items-center space-x-1`}>
                       <Clock className="w-3 h-3" />
-                      <span>{formatTimestamp(note.timestamp)}</span>
+                      <span>{formatTimestamp(note.createdAt)}</span>
                     </span>
                     
                     {/* Tags - Show fewer on mobile */}
@@ -379,13 +457,15 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
                 } transition-opacity`}>
                   <button
                     onClick={() => handleEditNote(note)}
-                    className="p-1 text-gray-400 hover:text-primary-500 transition-colors rounded"
+                    disabled={isSaving}
+                    className="p-1 text-gray-400 hover:text-primary-500 transition-colors rounded disabled:opacity-50"
                   >
                     <Edit3 className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
                   </button>
                   <button
                     onClick={() => handleDeleteNote(note.id)}
-                    className="p-1 text-gray-400 hover:text-accent-500 transition-colors rounded"
+                    disabled={isSaving}
+                    className="p-1 text-gray-400 hover:text-accent-500 transition-colors rounded disabled:opacity-50"
                   >
                     <Trash2 className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} />
                   </button>
@@ -396,20 +476,32 @@ const QuickNoteWidget: React.FC<WidgetProps> = ({ size = 'medium', colSpan = 4, 
         </div>
 
         {/* Show remaining notes count */}
-        {!showAllNotes && notes.length > getNoteDisplayLimit() && (
+        {!showAllNotes && quickNotes.length > getNoteDisplayLimit() && (
           <p className="text-xs text-grey-tint text-center">
-            +{notes.length - getNoteDisplayLimit()} more notes
+            +{quickNotes.length - getNoteDisplayLimit()} more notes
           </p>
         )}
 
         {/* Empty State */}
-        {notes.length === 0 && (
+        {quickNotes.length === 0 && !error && (
           <div className="text-center py-8">
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <FileText className="w-6 h-6 text-primary-500" />
             </div>
             <p className="text-grey-tint font-body text-sm">
               No notes yet. Write your first quick note above!
+            </p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-red-500" />
+            </div>
+            <p className="text-red-600 dark:text-red-400 font-body text-sm">
+              Error loading notes. Please try again.
             </p>
           </div>
         )}
