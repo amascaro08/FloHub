@@ -39,6 +39,10 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'general' | 'privacy' | 'data' | 'tracking'>('general');
+  const [showClearJournalModal, setShowClearJournalModal] = useState<boolean>(false);
+  const [clearJournalStep, setClearJournalStep] = useState<number>(1);
+  const [clearingJournal, setClearingJournal] = useState<boolean>(false);
+  const [confirmationText, setConfirmationText] = useState<string>('');
   
   const { user } = useUser();
 
@@ -96,6 +100,47 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
       localStorage.setItem(`journal_settings_${user.primaryEmail}`, JSON.stringify(settings));
       setSaveConfirmation(true);
       setTimeout(() => setSaveConfirmation(false), 3000);
+    }
+  };
+
+  // Clear all journal data function
+  const handleClearAllJournal = async () => {
+    if (!user?.primaryEmail || confirmationText !== 'DELETE MY JOURNAL') return;
+    
+    setClearingJournal(true);
+    
+    try {
+      const response = await fetch('/api/journal/clear-all', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // Clear local storage as well
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.includes(`journal_`) && key.includes(user.primaryEmail)) {
+              localStorage.removeItem(key);
+            }
+          });
+        }
+        
+        // Close modal and reset states
+        setShowClearJournalModal(false);
+        setClearJournalStep(1);
+        setConfirmationText('');
+        
+        // Show success message
+        setSaveConfirmation(true);
+        setTimeout(() => setSaveConfirmation(false), 5000);
+      }
+    } catch (error) {
+      console.error('Error clearing journal data:', error);
+    } finally {
+      setClearingJournal(false);
     }
   };
 
@@ -600,6 +645,33 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
                 </div>
               </div>
             </div>
+            
+            {/* Clear All Data Section */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-2xl p-6 border-2 border-red-200 dark:border-red-800">
+              <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center">
+                <span className="text-2xl mr-3">⚠️</span>
+                Danger Zone
+              </h3>
+              <p className="text-sm text-red-700 dark:text-red-300 mb-6">
+                Permanently delete all your journal data. This action cannot be undone.
+              </p>
+              
+              <div className="text-center">
+                <button
+                  onClick={() => setShowClearJournalModal(true)}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-500/25"
+                >
+                  <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Clear Entire Journal
+                </button>
+                
+                <p className="text-xs text-red-600 dark:text-red-400 mt-3">
+                  This will delete all entries, moods, activities, sleep data, and settings
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -633,6 +705,108 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose }) => {
           </div>
         </div>
       </div>
+      
+      {/* Clear Journal Confirmation Modal */}
+      {showClearJournalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-700">
+            <div className="p-6">
+              {clearJournalStep === 1 && (
+                <>
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Clear Entire Journal?</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Are you absolutely sure you want to permanently delete your entire journal?
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    This will permanently delete:
+                  </p>
+                  <ul className="text-sm text-gray-600 dark:text-gray-300 mb-6 space-y-1 ml-4">
+                    <li>• All journal entries (all dates)</li>
+                    <li>• All mood tracking data</li>
+                    <li>• All activity records</li>
+                    <li>• All sleep tracking data</li>
+                    <li>• Journal settings and preferences</li>
+                  </ul>
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-6">
+                    <p className="text-sm text-red-800 dark:text-red-300 font-medium">
+                      ⚠️ This action cannot be undone. All your journal data will be lost forever.
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowClearJournalModal(false)}
+                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => setClearJournalStep(2)}
+                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {clearJournalStep === 2 && (
+                <>
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Final Confirmation</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    <strong>This action cannot be undone!</strong>
+                  </p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    To confirm deletion, please type <strong>DELETE MY JOURNAL</strong> below:
+                  </p>
+                  <input
+                    type="text"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    placeholder="Type DELETE MY JOURNAL"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-6 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setClearJournalStep(1)}
+                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      onClick={handleClearAllJournal}
+                      disabled={clearingJournal || confirmationText !== 'DELETE MY JOURNAL'}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    >
+                      {clearingJournal ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                          Clearing...
+                        </>
+                      ) : (
+                        'Delete Everything'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

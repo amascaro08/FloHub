@@ -71,6 +71,9 @@ export default function JournalPage() {
   const [showImport, setShowImport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showClearEntryModal, setShowClearEntryModal] = useState(false);
+  const [clearingEntry, setClearingEntry] = useState(false);
+  const [clearEntryStep, setClearEntryStep] = useState(1);
   const [componentsLoaded, setComponentsLoaded] = useState({
     main: false,
     wellbeing: false,
@@ -194,6 +197,43 @@ export default function JournalPage() {
         const targetCacheKey = `journal_calendar_${targetYear}_${targetMonthNum}_${user.primaryEmail}`;
         localStorage.removeItem(targetCacheKey);
       }
+    }
+  };
+
+  // Function to clear all journal data for a specific date
+  const clearEntryData = async () => {
+    if (!user?.primaryEmail) return;
+    
+    setClearingEntry(true);
+    
+    try {
+      // Call the clear-entry API endpoint
+      const response = await axios.delete(`/api/journal/clear-entry?date=${selectedDate}`);
+      
+      if (response.data.success) {
+        // Clear cache to ensure fresh data is loaded
+        invalidateCache();
+        
+        // Trigger refresh for all components
+        setRefreshTrigger(prev => prev + 1);
+        
+        // Close modal and reset step
+        setShowClearEntryModal(false);
+        setClearEntryStep(1);
+        
+        // Show success message
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+        
+        // Force additional refresh after a short delay
+        setTimeout(() => {
+          setRefreshTrigger(prev => prev + 1);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error clearing journal entry:', error);
+    } finally {
+      setClearingEntry(false);
     }
   };
 
@@ -433,6 +473,17 @@ export default function JournalPage() {
                         Today
                       </button>
                     )}
+                    
+                    <button
+                      onClick={() => setShowClearEntryModal(true)}
+                      className="px-3 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center"
+                      title="Clear all data for this date"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Clear
+                    </button>
                   </div>
                 </div>
               </div>
@@ -625,6 +676,98 @@ export default function JournalPage() {
             onClose={() => setShowImport(false)}
             onSuccess={handleImportSuccess}
           />
+        )}
+
+        {/* Clear Entry Confirmation Modal */}
+        {showClearEntryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-700">
+              <div className="p-6">
+                {clearEntryStep === 1 && (
+                  <>
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-3">
+                        <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Clear Journal Entry?</h3>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                      Are you sure you want to clear all journal data for{' '}
+                      <span className="font-semibold">
+                        {formatDate(selectedDate, timezone, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </span>?
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                      This will permanently delete:
+                    </p>
+                    <ul className="text-sm text-gray-600 dark:text-gray-300 mb-6 space-y-1 ml-4">
+                      <li>• Journal entry content</li>
+                      <li>• Mood tracking data</li>
+                      <li>• Activity records</li>
+                      <li>• Sleep tracking data</li>
+                    </ul>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setShowClearEntryModal(false)}
+                        className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => setClearEntryStep(2)}
+                        className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {clearEntryStep === 2 && (
+                  <>
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-3">
+                        <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Final Confirmation</h3>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">
+                      <strong>This action cannot be undone!</strong>
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                      All data for this date will be permanently deleted from your journal.
+                    </p>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setClearEntryStep(1)}
+                        className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Go Back
+                      </button>
+                      <button
+                        onClick={clearEntryData}
+                        disabled={clearingEntry}
+                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                      >
+                        {clearingEntry ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                            Clearing...
+                          </>
+                        ) : (
+                          'Clear All Data'
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Success Message */}
