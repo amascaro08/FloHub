@@ -289,9 +289,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     ? 'text-primary-600 dark:text-primary-400' 
                     : 'text-primary-500 group-hover:text-primary-600'
                 } ${
-                  !desktopSidebarCollapsed && 'mr-3'
+                  (!desktopSidebarCollapsed || mobileSidebarOpen) && 'mr-3'
                 }`} />
-                {!desktopSidebarCollapsed && (
+                {(!desktopSidebarCollapsed || mobileSidebarOpen) && (
                   <span className={`font-medium transition-colors sidebar-text-responsive ${
                     router.pathname === item.href 
                       ? 'text-primary-700 dark:text-primary-300' 
@@ -308,7 +308,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         {/* User account section - bottom third */}
         <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
           {/* User account indicator */}
-          {!desktopSidebarCollapsed && user && (
+          {(!desktopSidebarCollapsed || mobileSidebarOpen) && user && (
             <div className="border-b border-neutral-200 dark:border-neutral-700 sidebar-bottom-section">
               <div className="flex items-center space-x-3 sidebar-item-responsive">
                 <div className="bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 sidebar-avatar">
@@ -327,7 +327,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           )}
           
           {/* Collapsed user indicator */}
-          {desktopSidebarCollapsed && user && (
+          {desktopSidebarCollapsed && !mobileSidebarOpen && user && (
             <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-center">
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
@@ -355,9 +355,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
                   ? 'text-primary-600 dark:text-primary-400' 
                   : 'text-neutral-500 group-hover:text-neutral-600'
               } ${
-                !desktopSidebarCollapsed && 'mr-3'
+                (!desktopSidebarCollapsed || mobileSidebarOpen) && 'mr-3'
               }`} />
-              {!desktopSidebarCollapsed && (
+              {(!desktopSidebarCollapsed || mobileSidebarOpen) && (
                 <span className={`font-medium transition-colors sidebar-text-responsive ${
                   router.pathname === '/dashboard/settings' 
                     ? 'text-primary-700 dark:text-primary-300' 
@@ -374,9 +374,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
               } group`}
             >
               <LogOut className={`text-red-500 group-hover:text-red-600 transition-colors sidebar-icon-responsive ${
-                !desktopSidebarCollapsed && 'mr-3'
+                (!desktopSidebarCollapsed || mobileSidebarOpen) && 'mr-3'
               }`} />
-              {!desktopSidebarCollapsed && (
+              {(!desktopSidebarCollapsed || mobileSidebarOpen) && (
                 <span className="font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors sidebar-text-responsive">
                   Sign Out
                 </span>
