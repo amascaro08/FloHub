@@ -54,10 +54,91 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
     console.log('FloCatInsights: Starting data analysis...');
     
     try {
-      // Simplified approach - just get default insights for now to ensure component works
-      const defaultInsights = getDefaultInsights();
-      setInsights(defaultInsights);
-      console.log('FloCatInsights: Set default insights');
+      // Check cache first
+      const cacheKey = `journal_insights_${user.primaryEmail}`;
+      let cachedData = null;
+      
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const parsedCache = JSON.parse(cached);
+            if (parsedCache.timestamp && (Date.now() - parsedCache.timestamp < 5 * 60 * 1000)) { // 5 minute cache
+              cachedData = parsedCache.data;
+            }
+          } catch (e) {
+            console.error('Error parsing cached insights data:', e);
+          }
+        }
+      }
+      
+      if (cachedData && refreshTrigger === 0) {
+        console.log('FloCatInsights: Using cached data');
+        setInsights(cachedData);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Fetch data for the last 30 days for better insights
+      const endDate = getCurrentDate(timezone);
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - 30);
+      
+      const dateRange: string[] = [];
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= new Date(endDate)) {
+        dateRange.push(currentDate.toISOString().split('T')[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`FloCatInsights: Fetching data for ${dateRange.length} days`);
+      
+      // Fetch all data using batch APIs for better performance
+      const [entriesResponse, moodsResponse, activitiesResponse, sleepResponse] = await Promise.allSettled([
+        axios.post('/api/journal/entries/batch', { dates: dateRange }, { withCredentials: true }),
+        axios.post('/api/journal/moods/batch', { dates: dateRange }, { withCredentials: true }),
+        axios.post('/api/journal/activities/batch', { dates: dateRange }, { withCredentials: true }),
+        axios.post('/api/journal/sleep/batch', { dates: dateRange }, { withCredentials: true })
+      ]);
+      
+      // Process the responses
+      const entriesData = entriesResponse.status === 'fulfilled' ? entriesResponse.value.data.entries : {};
+      const moodsData = moodsResponse.status === 'fulfilled' ? moodsResponse.value.data.moods : {};
+      const activitiesData = activitiesResponse.status === 'fulfilled' ? activitiesResponse.value.data.activities : {};
+      const sleepData = sleepResponse.status === 'fulfilled' ? sleepResponse.value.data.sleep : {};
+      
+      // Combine all data into the format expected by generateInsights
+      const journalData: JournalData[] = dateRange.map(date => ({
+        date,
+        hasEntry: entriesData[date] || false,
+        mood: moodsData[date] ? {
+          emoji: moodsData[date].emoji,
+          label: moodsData[date].label,
+          score: getMoodScore(moodsData[date].label)
+        } : undefined,
+        activities: activitiesData[date] || undefined,
+        sleep: sleepData[date] ? {
+          quality: sleepData[date].quality,
+          hours: sleepData[date].hours
+        } : undefined
+      }));
+      
+      console.log(`FloCatInsights: Processed data for ${journalData.length} days`);
+      
+      // Generate insights from the data
+      const generatedInsights = generateInsights(journalData);
+      setInsights(generatedInsights);
+      
+      // Cache the results
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          timestamp: Date.now(),
+          data: generatedInsights
+        }));
+      }
+      
+      console.log('FloCatInsights: Generated insights successfully');
       
     } catch (error) {
       console.error('Error analyzing journal data:', error);
@@ -66,6 +147,14 @@ const FloCatInsights: React.FC<FloCatInsightsProps> = ({ refreshTrigger, timezon
       setIsLoading(false);
       console.log('FloCatInsights: Finished loading');
     }
+  };
+
+  // Helper function to convert mood label to score
+  const getMoodScore = (label: string): number => {
+    const moodScores: {[key: string]: number} = {
+      'Rad': 5, 'Good': 4, 'Meh': 3, 'Bad': 2, 'Awful': 1
+    };
+    return moodScores[label] || 3;
   };
 
   const generateInsights = (data: JournalData[]): Insight[] => {

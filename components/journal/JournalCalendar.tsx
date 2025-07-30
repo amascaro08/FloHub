@@ -43,7 +43,6 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
       if (!user?.primaryEmail) return;
       
       setIsLoading(true);
-      setCalendarDays([]);
       
       try {
         const days: DayData[] = [];
@@ -128,36 +127,50 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
           currentMonthDates.push(updatedDays[i].date);
         }
         
-        // Check localStorage cache first
+        // Check localStorage cache first with improved cache management
         const cachedData: {[key: string]: any} = {};
+        let cacheNeedsUpdate = false;
+        
         if (typeof window !== 'undefined') {
           const cacheKey = `journal_calendar_${year}_${month}_${user.primaryEmail}`;
           const cachedJSON = localStorage.getItem(cacheKey);
           if (cachedJSON) {
             try {
               const cached = JSON.parse(cachedJSON);
-              if (cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000)) { // 5 minute cache
+              // Reduce cache time to 2 minutes for fresher data, but extend if no refreshTrigger
+              const cacheTimeLimit = refreshTrigger > 0 ? 1000 : 2 * 60 * 1000; // 1 second if refresh triggered, else 2 minutes
+              if (cached.timestamp && (Date.now() - cached.timestamp < cacheTimeLimit)) {
                 Object.assign(cachedData, cached.data);
+              } else {
+                cacheNeedsUpdate = true;
               }
             } catch (e) {
               console.error('Error parsing cached calendar data:', e);
+              cacheNeedsUpdate = true;
             }
+          } else {
+            cacheNeedsUpdate = true;
           }
         }
         
-        // Filter out dates that are already in the cache
-        const datesToFetch = currentMonthDates.filter(date => !cachedData[date]);
+        // Filter out dates that are already in the cache (unless cache needs update)
+        const datesToFetch = cacheNeedsUpdate ? currentMonthDates : currentMonthDates.filter(date => !cachedData[date]);
         
         if (datesToFetch.length > 0) {
-          // Batch API calls by fetching all entries, moods, and activities at once
+          console.log(`JournalCalendar: Fetching data for ${datesToFetch.length} dates`);
+          
+          // Use batch APIs for better performance
           try {
-            // Fetch entries for all dates at once
-            const entriesResponse = await axios.post('/api/journal/entries/batch', {
-              dates: datesToFetch
-            }, { withCredentials: true });
+            const [entriesResponse, moodsResponse, activitiesResponse, sleepResponse] = await Promise.allSettled([
+              axios.post('/api/journal/entries/batch', { dates: datesToFetch }, { withCredentials: true }),
+              axios.post('/api/journal/moods/batch', { dates: datesToFetch }, { withCredentials: true }),
+              axios.post('/api/journal/activities/batch', { dates: datesToFetch }, { withCredentials: true }),
+              axios.post('/api/journal/sleep/batch', { dates: datesToFetch }, { withCredentials: true })
+            ]);
             
-            if (entriesResponse.data && entriesResponse.data.entries) {
-              Object.entries(entriesResponse.data.entries).forEach(([date, hasContent]) => {
+            // Process entries
+            if (entriesResponse.status === 'fulfilled' && entriesResponse.value.data?.entries) {
+              Object.entries(entriesResponse.value.data.entries).forEach(([date, hasContent]) => {
                 const idx = days.findIndex(day => day.date === date);
                 if (idx !== -1) {
                   updatedDays[idx].hasEntry = !!hasContent;
@@ -168,18 +181,10 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                 }
               });
             }
-          } catch (error) {
-            console.error('Error fetching batch entries:', error);
-          }
-          
-          try {
-            // Fetch moods for all dates at once
-            const moodsResponse = await axios.post('/api/journal/moods/batch', {
-              dates: datesToFetch
-            }, { withCredentials: true });
             
-            if (moodsResponse.data && moodsResponse.data.moods) {
-              Object.entries(moodsResponse.data.moods).forEach(([date, moodData]) => {
+            // Process moods
+            if (moodsResponse.status === 'fulfilled' && moodsResponse.value.data?.moods) {
+              Object.entries(moodsResponse.value.data.moods).forEach(([date, moodData]) => {
                 const idx = days.findIndex(day => day.date === date);
                 if (idx !== -1 && moodData) {
                   const moodObj = moodData as {emoji?: string; label?: string};
@@ -193,26 +198,18 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
                       label: moodObj.label,
                       score: moodScores[moodObj.label] || 3
                     };
+                    
+                    // Update cache
+                    if (!cachedData[date]) cachedData[date] = {};
+                    cachedData[date].mood = updatedDays[idx].mood;
                   }
-                  
-                  // Update cache
-                  if (!cachedData[date]) cachedData[date] = {};
-                  cachedData[date].mood = updatedDays[idx].mood;
                 }
               });
             }
-          } catch (error) {
-            console.error('Error fetching batch moods:', error);
-          }
-          
-          try {
-            // Fetch activities for all dates at once
-            const activitiesResponse = await axios.post('/api/journal/activities/batch', {
-              dates: datesToFetch
-            }, { withCredentials: true });
             
-            if (activitiesResponse.data && activitiesResponse.data.activities) {
-              Object.entries(activitiesResponse.data.activities).forEach(([date, activitiesList]) => {
+            // Process activities
+            if (activitiesResponse.status === 'fulfilled' && activitiesResponse.value.data?.activities) {
+              Object.entries(activitiesResponse.value.data.activities).forEach(([date, activitiesList]) => {
                 const idx = days.findIndex(day => day.date === date);
                 if (idx !== -1 && Array.isArray(activitiesList) && activitiesList.length > 0) {
                   updatedDays[idx].activities = activitiesList;
@@ -224,145 +221,30 @@ const JournalCalendar: React.FC<JournalCalendarProps> = (props) => {
               });
             }
             
-            // Fetch sleep data for all dates
-            try {
-              // Fetch sleep data for all dates at once
-              const sleepPromises = datesToFetch.map(dateStr =>
-                axios.get(`/api/journal/sleep?date=${dateStr}`, { withCredentials: true })
-                  .then(response => {
-                    if (response.data && response.data.quality && response.data.hours) {
-                      const idx = days.findIndex(day => day.date === dateStr);
-                      if (idx !== -1) {
-                        updatedDays[idx].sleep = {
-                          quality: response.data.quality,
-                          hours: response.data.hours
-                        };
-                        
-                        // Update cache
-                        if (!cachedData[dateStr]) cachedData[dateStr] = {};
-                        cachedData[dateStr].sleep = updatedDays[idx].sleep;
-                      }
-                    }
-                  })
-                  .catch(error => {
-                    console.error(`Error fetching sleep for ${dateStr}:`, error);
-                  })
-              );
-              
-              await Promise.allSettled(sleepPromises);
-            } catch (error) {
-              console.error('Error fetching sleep data:', error);
+            // Process sleep data using batch API
+            if (sleepResponse.status === 'fulfilled' && sleepResponse.value.data?.sleep) {
+              Object.entries(sleepResponse.value.data.sleep).forEach(([date, sleepData]) => {
+                const idx = days.findIndex(day => day.date === date);
+                if (idx !== -1 && sleepData) {
+                  const sleepObj = sleepData as {quality?: string; hours?: number};
+                  if (sleepObj.quality && sleepObj.hours) {
+                    updatedDays[idx].sleep = {
+                      quality: sleepObj.quality,
+                      hours: sleepObj.hours
+                    };
+                    
+                    // Update cache
+                    if (!cachedData[date]) cachedData[date] = {};
+                    cachedData[date].sleep = updatedDays[idx].sleep;
+                  }
+                }
+              });
             }
           } catch (error) {
-            console.error('Error fetching batch activities:', error);
-            
-            // Fallback to individual API calls if batch fails
-            const promises: Promise<any>[] = [];
-            
-            for (let i = startIdx; i < endIdx; i++) {
-              const dateStr = updatedDays[i].date;
-              
-              if (cachedData[dateStr]) {
-                // Use cached data
-                if (cachedData[dateStr].hasEntry) updatedDays[i].hasEntry = true;
-                if (cachedData[dateStr].mood) updatedDays[i].mood = cachedData[dateStr].mood;
-                if (cachedData[dateStr].activities) updatedDays[i].activities = cachedData[dateStr].activities;
-                continue;
-              }
-              
-              // Create promises for all API calls
-              promises.push(
-                axios.get(`/api/journal/entry?date=${dateStr}`, {
-                  withCredentials: true
-                })
-                  .then(response => {
-                    if (response.data && response.data.content && response.data.content.trim() !== '') {
-                      updatedDays[i].hasEntry = true;
-                      
-                      // Update cache
-                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
-                      cachedData[dateStr].hasEntry = true;
-                    }
-                  })
-                  .catch((error) => {
-                    console.error(`Error fetching entry for ${dateStr}:`, error);
-                  })
-              );
-              
-              promises.push(
-                axios.get(`/api/journal/mood?date=${dateStr}`, {
-                  withCredentials: true
-                })
-                  .then(response => {
-                    if (response.data && response.data.emoji && response.data.label) {
-                      const moodScores: {[key: string]: number} = {
-                        'Rad': 5, 'Good': 4, 'Meh': 3, 'Bad': 2, 'Awful': 1
-                      };
-                      
-                      updatedDays[i].mood = {
-                        emoji: response.data.emoji,
-                        label: response.data.label,
-                        score: moodScores[response.data.label] || 3
-                      };
-                      
-                      // Update cache
-                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
-                      cachedData[dateStr].mood = updatedDays[i].mood;
-                    }
-                  })
-                  .catch((error) => {
-                    console.error(`Error fetching mood for ${dateStr}:`, error);
-                  })
-              );
-              
-              promises.push(
-                axios.get(`/api/journal/activities?date=${dateStr}`, {
-                  withCredentials: true
-                })
-                  .then(response => {
-                    if (response.data &&
-                        response.data.activities &&
-                        Array.isArray(response.data.activities) &&
-                        response.data.activities.length > 0) {
-                      updatedDays[i].activities = response.data.activities;
-                      
-                      // Update cache
-                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
-                      cachedData[dateStr].activities = response.data.activities;
-                    }
-                  })
-                  .catch((error) => {
-                    console.error(`Error fetching activities for ${dateStr}:`, error);
-                  })
-              );
-              
-              // Fetch sleep data
-              promises.push(
-                axios.get(`/api/journal/sleep?date=${dateStr}`, {
-                  withCredentials: true
-                })
-                  .then(response => {
-                    if (response.data && response.data.quality && response.data.hours) {
-                      updatedDays[i].sleep = {
-                        quality: response.data.quality,
-                        hours: response.data.hours
-                      };
-                      
-                      // Update cache
-                      if (!cachedData[dateStr]) cachedData[dateStr] = {};
-                      cachedData[dateStr].sleep = updatedDays[i].sleep;
-                    }
-                  })
-                  .catch((error) => {
-                    console.error(`Error fetching sleep for ${dateStr}:`, error);
-                  })
-              );
-            }
-            
-            // Wait for all promises to resolve
-            await Promise.allSettled(promises);
+            console.error('Error fetching batch calendar data:', error);
           }
         } else {
+          console.log('JournalCalendar: Using cached data');
           // Use cached data for all dates
           for (let i = startIdx; i < endIdx; i++) {
             const dateStr = updatedDays[i].date;
