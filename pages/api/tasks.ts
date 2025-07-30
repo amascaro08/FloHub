@@ -102,11 +102,16 @@ export default async function handler(
       return res.status(201).json(task);
     }
 
-    // ── PUT/PATCH: toggle done ───────────────────────────────────────
+    // ── PUT/PATCH: update task fields ───────────────────────────────────────
     if (req.method === "PATCH" || req.method === "PUT") {
-      const { id, done, source } = req.body as { id: string; done?: boolean; source?: "personal" | "work" };
-      if (!id || (typeof done === "undefined" && typeof source === "undefined")) {
-        return res.status(400).json({ error: "Invalid payload" });
+      const { id, done, source, dueDate } = req.body as { 
+        id: string; 
+        done?: boolean; 
+        source?: "personal" | "work";
+        dueDate?: string;
+      };
+      if (!id || (typeof done === "undefined" && typeof source === "undefined" && typeof dueDate === "undefined")) {
+        return res.status(400).json({ error: "Invalid payload - must provide id and at least one field to update" });
       }
       const updateData: any = {};
       if (typeof done !== "undefined") {
@@ -115,20 +120,11 @@ export default async function handler(
       if (typeof source !== "undefined") {
         updateData.source = source;
       }
-      const updateFields: string[] = [];
-      const updateValues: any[] = [];
-      let paramIndex = 1;
-
-      if (typeof done !== "undefined") {
-        updateFields.push(`done = $${paramIndex++}`);
-        updateValues.push(done);
-      }
-      if (typeof source !== "undefined") {
-        updateFields.push(`source = $${paramIndex++}`);
-        updateValues.push(source);
+      if (typeof dueDate !== "undefined") {
+        updateData.dueDate = dueDate ? new Date(dueDate) : null;
       }
 
-      if (updateFields.length > 0) {
+      if (Object.keys(updateData).length > 0) {
         await db.update(tasks).set(updateData).where(eq(tasks.id, Number(id)));
       }
       return res.status(200).json({ id, ...updateData });

@@ -327,8 +327,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
             <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
               {/* Due Date - Horizontal layout for mobile */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
-                  <Calendar className="w-3 h-3" />
+                <label className="text-xs font-medium text-grey-tint flex items-center space-x-2">
+                  <Calendar className="w-3 h-3 flex-shrink-0" />
                   <span>Due Date</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -407,8 +407,8 @@ function TaskWidget({ size = 'medium', colSpan = 4, rowSpan = 3, isCompact = fal
 
               {/* Tags - Simplified for mobile */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-grey-tint flex items-center space-x-1">
-                  <Tag className="w-3 h-3" />
+                <label className="text-xs font-medium text-grey-tint flex items-center space-x-2">
+                  <Tag className="w-3 h-3 flex-shrink-0" />
                   <span>Tags</span>
                 </label>
                 <CreatableSelect
