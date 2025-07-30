@@ -101,11 +101,12 @@ const CalendarPage = () => {
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month' | 'agenda' | 'timeline'>('month');
+  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month' | 'agenda'>('month');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const agendaRef = React.useRef<HTMLDivElement>(null);
 
   // Check if device is mobile
   useEffect(() => {
@@ -131,7 +132,7 @@ const CalendarPage = () => {
       const start = startOfWeek(currentDate);
       const end = endOfWeek(currentDate);
       return { start, end };
-    } else if (currentView === 'agenda' || currentView === 'timeline') {
+    } else if (currentView === 'agenda') {
       // For agenda view, focus on current day
       const start = startOfDay(currentDate);
       const end = addDays(start, 30);
@@ -152,13 +153,12 @@ const CalendarPage = () => {
   // Set initial view based on settings - only run once
   useEffect(() => {
     if (settings?.defaultView) {
-      const viewMapping: Record<string, 'day' | 'week' | 'month' | 'agenda' | 'timeline'> = {
+      const viewMapping: Record<string, 'day' | 'week' | 'month' | 'agenda'> = {
         'today': 'day',
         'tomorrow': 'day',
         'week': 'week',
         'month': 'month',
         'agenda': 'agenda',
-        'timeline': 'timeline',
         'custom': 'month' // Default to month for custom range
       };
       const newView = viewMapping[settings.defaultView] || 'month';
@@ -299,6 +299,36 @@ const CalendarPage = () => {
     }
   };
 
+  // Helper function to get event color classes
+  const getEventColorClasses = (event: CalendarEvent, type: 'border' | 'background' | 'text' = 'border') => {
+    if (event.color) {
+      // Use custom color
+      return {
+        style: {
+          '--event-color': event.color,
+          borderLeftColor: type === 'border' ? event.color : undefined,
+          backgroundColor: type === 'background' ? `${event.color}20` : undefined,
+          color: type === 'text' ? event.color : undefined,
+        },
+        className: type === 'border' ? 'border-l-2' : type === 'background' ? 'bg-opacity-20' : '',
+      };
+    } else {
+      // Fallback to source-based colors
+      const colorClass = event.source === 'work'
+        ? (type === 'border' ? 'border-l-2 border-primary-500' : 
+           type === 'background' ? 'bg-primary-50 dark:bg-primary-900/20' : 
+           'text-primary-900 dark:text-primary-100')
+        : (type === 'border' ? 'border-l-2 border-accent-500' : 
+           type === 'background' ? 'bg-accent-50 dark:bg-accent-900/20' : 
+           'text-accent-900 dark:text-accent-100');
+      
+      return {
+        style: {},
+        className: colorClass,
+      };
+    }
+  };
+
   const goToPrevious = () => {
     if (currentView === 'month') {
       setCurrentDate(prev => subMonths(prev, 1));
@@ -306,7 +336,7 @@ const CalendarPage = () => {
       setCurrentDate(prev => subWeeks(prev, 1));
     } else if (currentView === 'day') {
       setCurrentDate(prev => addDays(prev, -1));
-    } else if (currentView === 'agenda' || currentView === 'timeline') {
+    } else if (currentView === 'agenda') {
       setCurrentDate(prev => addDays(prev, -30));
     }
   };
@@ -318,7 +348,7 @@ const CalendarPage = () => {
       setCurrentDate(prev => addWeeks(prev, 1));
     } else if (currentView === 'day') {
       setCurrentDate(prev => addDays(prev, 1));
-    } else if (currentView === 'agenda' || currentView === 'timeline') {
+    } else if (currentView === 'agenda') {
       setCurrentDate(prev => addDays(prev, 30));
     }
   };
@@ -356,18 +386,23 @@ const CalendarPage = () => {
     }
   };
 
-  // Helper function to get events for a specific hour
-  const getEventsForHour = useCallback((hour: Date) => {
+  // Helper function to get events for a specific time slot (30 minutes)
+  const getEventsForSlot = useCallback((slot: Date) => {
     try {
       if (!Array.isArray(events)) return [];
+      
+      const slotEnd = addHours(slot, 0.5); // 30 minutes later
       
       return events.filter(event => {
         try {
           if (!event || !event.start) return false;
           const eventStart = getEventDate(event);
-          return isSameHour(eventStart, hour);
+          const eventEnd = event.end ? safeParseDate(event.end) : eventStart;
+          
+          // Check if event overlaps with this 30-minute slot
+          return (eventStart < slotEnd && eventEnd >= slot);
         } catch (error) {
-          console.warn('Error filtering event for hour:', event, error);
+          console.warn('Error filtering event for slot:', event, error);
           return false;
         }
       }).sort((a, b) => {
@@ -376,29 +411,48 @@ const CalendarPage = () => {
           const bDate = getEventDate(b);
           return aDate.getTime() - bDate.getTime();
         } catch (error) {
-          console.warn('Error sorting events by hour:', a, b, error);
+          console.warn('Error sorting events by slot:', a, b, error);
           return 0;
         }
       });
     } catch (error) {
-      console.warn('Error in getEventsForHour:', error);
+      console.warn('Error in getEventsForSlot:', error);
       return [];
     }
   }, [events]);
 
-  // Generate hours for agenda view
-  const agendaHours = useMemo(() => {
-    const hours: Date[] = [];
+  // Generate half-hour slots for agenda view
+  const agendaSlots = useMemo(() => {
+    const slots: Date[] = [];
     const baseDate = isToday(currentDate) ? new Date() : currentDate;
-    const startHour = startOfDay(baseDate);
+    const startTime = startOfDay(baseDate);
     
-    for (let i = 0; i < 24; i++) {
-      const hour = addHours(startHour, i);
-      hours.push(hour);
+    // Generate 48 half-hour slots (24 hours * 2)
+    for (let i = 0; i < 48; i++) {
+      const slot = addHours(startTime, i * 0.5);
+      slots.push(slot);
     }
     
-    return hours;
+    return slots;
   }, [currentDate]);
+
+  // Autoscroll to current hour when agenda view is opened
+  useEffect(() => {
+    if (currentView === 'agenda' && agendaRef.current && isToday(currentDate)) {
+      setTimeout(() => {
+        const currentHour = new Date().getHours();
+        const currentSlotIndex = currentHour * 2; // Two slots per hour
+        const currentSlotElement = agendaRef.current?.querySelector(`[data-slot-index="${currentSlotIndex}"]`);
+        
+        if (currentSlotElement) {
+          currentSlotElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }, 100); // Small delay to ensure DOM is ready
+    }
+  }, [currentView, currentDate]);
 
   const getEventsForCurrentView = () => {
     try {
@@ -666,8 +720,7 @@ const CalendarPage = () => {
     { id: 'day', label: 'Day', icon: CalendarIcon },
     { id: 'week', label: 'Week', icon: ViewColumnsIcon },
     { id: 'month', label: 'Month', icon: CalendarDaysIcon },
-    { id: 'agenda', label: 'Agenda', icon: ListBulletIcon },
-    { id: 'timeline', label: 'Timeline', icon: ChartBarIcon }
+    { id: 'agenda', label: 'Agenda', icon: ListBulletIcon }
   ];
 
   return (
@@ -751,7 +804,7 @@ const CalendarPage = () => {
               <tab.icon className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">{tab.label}</span>
               <span className="sm:hidden">
-                {tab.id === 'day' ? 'Day' : tab.id === 'week' ? 'Wk' : tab.id === 'month' ? 'Mo' : tab.id === 'agenda' ? 'Ag' : 'TL'}
+                {tab.id === 'day' ? 'Day' : tab.id === 'week' ? 'Wk' : tab.id === 'month' ? 'Mo' : 'Ag'}
               </span>
             </button>
           ))}
@@ -775,7 +828,7 @@ const CalendarPage = () => {
                   ? format(currentDate, 'MMMM d, yyyy')
                   : currentView === 'week'
                   ? `Week of ${format(startOfWeek(currentDate), 'MMM d')} - ${format(endOfWeek(currentDate), 'MMM d, yyyy')}`
-                  : currentView === 'agenda' || currentView === 'timeline'
+                  : currentView === 'agenda'
                   ? `${format(currentDate, 'MMM d')} - ${format(addDays(currentDate, 30), 'MMM d, yyyy')}`
                   : format(currentDate, 'MMMM yyyy')
                 }
@@ -848,15 +901,15 @@ const CalendarPage = () => {
                         {dayEvents.slice(0, isMobile ? 2 : 3).map(event => {
                           if (!event || !event.id) return null; // Safety check
                           
-                          const colorClass = event.source === 'work'
-                            ? 'border-l-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100'
-                            : 'border-l-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-900 dark:text-accent-100';
+                          const borderStyle = getEventColorClasses(event, 'border');
+                          const bgStyle = getEventColorClasses(event, 'background');
                           
                           return (
                             <div
                               key={event.id}
                               onClick={() => setSelectedEvent(event)}
-                              className={`text-xs p-2 rounded cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                              className={`text-xs p-2 rounded cursor-pointer transition-transform hover:scale-[1.02] ${borderStyle.className} ${bgStyle.className}`}
+                              style={{ ...borderStyle.style, ...bgStyle.style }}
                             >
                               <div className="font-medium truncate">
                                 {event.summary || event.title || "No Title"}
@@ -918,15 +971,16 @@ const CalendarPage = () => {
                       ) : (
                         <div className="space-y-2">
                           {dayEvents.map(event => {
-                            const colorClass = event.source === 'work'
-                              ? 'border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                              : 'border-l-4 border-accent-500 bg-accent-50 dark:bg-accent-900/20';
+                            const borderStyle = getEventColorClasses(event, 'border');
+                            const bgStyle = getEventColorClasses(event, 'background');
+                            const combinedBorder = borderStyle.className.replace('border-l-2', 'border-l-4');
                             
                             return (
                               <div
                                 key={event.id}
                                 onClick={() => setSelectedEvent(event)}
-                                className={`p-4 rounded-xl cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                                className={`p-4 rounded-xl cursor-pointer transition-transform hover:scale-[1.02] ${combinedBorder} ${bgStyle.className}`}
+                                style={{ ...borderStyle.style, ...bgStyle.style, borderLeftWidth: '4px' }}
                               >
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
@@ -999,15 +1053,16 @@ const CalendarPage = () => {
                   </div>
                 ) : (
                   getEventsForDay(currentDate).map(event => {
-                    const colorClass = event.source === 'work'
-                      ? 'border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-l-4 border-accent-500 bg-accent-50 dark:bg-accent-900/20';
+                    const borderStyle = getEventColorClasses(event, 'border');
+                    const bgStyle = getEventColorClasses(event, 'background');
+                    const combinedBorder = borderStyle.className.replace('border-l-2', 'border-l-4');
                     
                     return (
                       <div
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className={`p-6 rounded-2xl cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                        className={`p-6 rounded-2xl cursor-pointer transition-transform hover:scale-[1.02] ${combinedBorder} ${bgStyle.className}`}
+                        style={{ ...borderStyle.style, ...bgStyle.style, borderLeftWidth: '4px' }}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -1077,72 +1132,75 @@ const CalendarPage = () => {
                 <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">
                   {isToday(currentDate) ? "Today's Schedule" : `Schedule for ${format(currentDate, 'EEEE, MMM d, yyyy')}`}
                 </h3>
-                <p className="text-grey-tint mt-1">Hourly breakdown with events</p>
+                <p className="text-grey-tint mt-1">30-minute intervals with events</p>
               </div>
               
-              <div className="space-y-2">
-                {agendaHours.map((hour, index) => {
-                  const hourEvents = getEventsForHour(hour);
-                  const isPastHour = isToday(currentDate) && hour < new Date();
-                  const isCurrentHour = isToday(currentDate) && isSameHour(hour, new Date());
+              <div ref={agendaRef} className="space-y-1 max-h-[600px] overflow-y-auto">
+                {agendaSlots.map((slot, index) => {
+                  const slotEvents = getEventsForSlot(slot);
+                  const isPastSlot = isToday(currentDate) && slot < new Date();
+                  const isCurrentSlot = isToday(currentDate) && 
+                    slot <= new Date() && 
+                    addHours(slot, 0.5) > new Date();
                   
                   return (
                     <div 
-                      key={hour.toISOString()} 
+                      key={slot.toISOString()}
+                      data-slot-index={index}
                       className={`border-l-4 rounded-lg transition-all duration-200 ${
-                        isCurrentHour 
+                        isCurrentSlot 
                           ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-lg' 
-                          : isPastHour
+                          : isPastSlot
                           ? 'border-gray-300 bg-gray-50 dark:bg-gray-800/50 opacity-75'
                           : 'border-gray-200 dark:border-gray-700 bg-soft-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                       }`}
                     >
-                      <div className="p-4">
+                      <div className="p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-3">
-                            <span className={`text-lg font-mono font-bold ${
-                              isCurrentHour 
+                            <span className={`text-base font-mono font-semibold ${
+                              isCurrentSlot 
                                 ? 'text-primary-600 dark:text-primary-400' 
-                                : isPastHour
+                                : isPastSlot
                                 ? 'text-gray-400 dark:text-gray-500'
                                 : 'text-dark-base dark:text-soft-white'
                             }`}>
-                              {format(hour, 'h:mm a')}
+                              {format(slot, 'h:mm a')}
                             </span>
-                            {isCurrentHour && (
+                            {isCurrentSlot && (
                               <span className="px-2 py-1 bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 text-xs font-medium rounded-full">
-                                Current Hour
+                                Current
                               </span>
                             )}
                           </div>
-                          {hourEvents.length > 0 && (
+                          {slotEvents.length > 0 && (
                             <span className="text-sm text-grey-tint bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                              {hourEvents.length} event{hourEvents.length === 1 ? '' : 's'}
+                              {slotEvents.length} event{slotEvents.length === 1 ? '' : 's'}
                             </span>
                           )}
                         </div>
                         
-                        {hourEvents.length === 0 ? (
-                          <p className="text-grey-tint text-sm italic pl-6">No events scheduled</p>
+                        {slotEvents.length === 0 ? (
+                          <div className="h-4"></div> // Small spacer for empty slots
                         ) : (
-                          <div className="space-y-2 pl-6">
-                            {hourEvents.map(event => {
-                              const colorClass = event.source === 'work'
-                                ? 'border-l-2 border-primary-500 bg-primary-50/50 dark:bg-primary-900/10'
-                                : 'border-l-2 border-accent-500 bg-accent-50/50 dark:bg-accent-900/10';
+                          <div className="space-y-2 pl-4">
+                            {slotEvents.map(event => {
+                              const borderStyle = getEventColorClasses(event, 'border');
+                              const bgStyle = getEventColorClasses(event, 'background');
                               
                               return (
                                 <div
                                   key={event.id}
                                   onClick={() => setSelectedEvent(event)}
-                                  className={`p-3 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${colorClass}`}
+                                  className={`p-2 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${borderStyle.className} ${bgStyle.className}`}
+                                  style={{ ...borderStyle.style, ...bgStyle.style }}
                                 >
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1">
-                                      <div className="font-medium text-dark-base dark:text-soft-white">
+                                      <div className="font-medium text-dark-base dark:text-soft-white text-sm">
                                         {event.summary || event.title || "No Title"}
                                       </div>
-                                      <div className="text-sm text-grey-tint mt-1 flex items-center">
+                                      <div className="text-xs text-grey-tint mt-1 flex items-center">
                                         <ClockIcon className="w-3 h-3 mr-1" />
                                         {formatTime(event.start)}
                                         {event.end && <span> - {formatTime(event.end)}</span>}
@@ -1150,7 +1208,7 @@ const CalendarPage = () => {
                                           <>
                                             <span className="mx-2">•</span>
                                             <MapPinIcon className="w-3 h-3 mr-1" />
-                                            <span className="truncate max-w-[150px]">{event.location}</span>
+                                            <span className="truncate max-w-[120px]">{event.location}</span>
                                           </>
                                         )}
                                       </div>
@@ -1176,114 +1234,7 @@ const CalendarPage = () => {
             </div>
           )}
 
-          {/* Timeline View */}
-          {currentView === 'timeline' && (
-            <div className="p-6">
-              <div className="mb-6">
-                <h3 className="text-xl font-heading font-semibold text-dark-base dark:text-soft-white">
-                  Timeline View
-                </h3>
-                <p className="text-grey-tint mt-1">Chronological event timeline</p>
-              </div>
-              
-              <div className="relative">
-                {/* Timeline line */}
-                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary-500 to-accent-500"></div>
-                
-                <div className="space-y-6">
-                  {events
-                    .filter(event => {
-                      const eventDate = getEventDate(event);
-                      const rangeStart = startOfDay(currentDate);
-                      const rangeEnd = addDays(rangeStart, 30);
-                      return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
-                    })
-                    .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime())
-                    .length === 0 ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                        <ChartBarIcon className="w-8 h-8 text-grey-tint" />
-                      </div>
-                      <p className="text-grey-tint">No events in timeline</p>
-                    </div>
-                  ) : (
-                    events
-                      .filter(event => {
-                        const eventDate = getEventDate(event);
-                        const rangeStart = startOfDay(currentDate);
-                        const rangeEnd = addDays(rangeStart, 30);
-                        return isWithinInterval(eventDate, { start: rangeStart, end: rangeEnd });
-                      })
-                      .sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime())
-                      .map((event, index) => {
-                        const colorClass = event.source === 'work'
-                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                          : 'border-accent-500 bg-accent-50 dark:bg-accent-900/20';
-                        const dotColor = event.source === 'work' ? 'bg-primary-500' : 'bg-accent-500';
-                        
-                        return (
-                          <div key={event.id} className="relative flex items-start">
-                            {/* Timeline dot */}
-                            <div className={`absolute left-5 w-3 h-3 ${dotColor} rounded-full border-2 border-soft-white dark:border-gray-800 z-10`}></div>
-                            
-                            {/* Event content */}
-                            <div className="ml-12 flex-1">
-                              <div
-                                onClick={() => setSelectedEvent(event)}
-                                className={`p-6 rounded-2xl border-l-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg ${colorClass}`}
-                              >
-                                <div className="flex justify-between items-start mb-2">
-                                  <h4 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white">
-                                    {event.summary || event.title || "No Title"}
-                                  </h4>
-                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    event.source === 'work'
-                                      ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
-                                      : 'bg-accent-100 text-accent-800 dark:bg-accent-900 dark:text-accent-200'
-                                  }`}>
-                                    {event.source === 'work' ? 'Work' : 'Personal'}
-                                  </span>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <div className="text-sm text-grey-tint flex items-center">
-                                    <CalendarIcon className="w-4 h-4 mr-2" />
-                                    {format(getEventDate(event), 'EEEE, MMM d, yyyy')}
-                                  </div>
-                                  
-                                  {event.start && (
-                                    <div className="text-sm text-grey-tint flex items-center">
-                                      <ClockIcon className="w-4 h-4 mr-2" />
-                                      {formatTime(event.start)}
-                                      {event.end && <span> - {formatTime(event.end)}</span>}
-                                    </div>
-                                  )}
-                                  
-                                  {event.location && (
-                                    <div className="text-sm text-grey-tint flex items-center">
-                                      <MapPinIcon className="w-4 h-4 mr-2" />
-                                      {event.location}
-                                    </div>
-                                  )}
-                                  
-                                  {event.description && !containsHTML(event.description) && (
-                                    <div className="text-sm text-grey-tint mt-2">
-                                      {event.description.length > 150 
-                                        ? `${event.description.substring(0, 150)}...` 
-                                        : event.description}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Floating Action Button (Mobile) */}
@@ -1339,9 +1290,12 @@ const CalendarPage = () => {
               {/* Event details */}
               <div className="space-y-4 text-grey-tint">
                 {/* Color indicator */}
-                <div className={`w-full h-2 rounded-full mb-4 ${
-                  selectedEvent.source === 'work' ? 'bg-primary-500' : 'bg-accent-500'
-                }`}></div>
+                <div 
+                  className="w-full h-2 rounded-full mb-4" 
+                  style={{ 
+                    backgroundColor: selectedEvent.color || (selectedEvent.source === 'work' ? '#3b82f6' : '#10b981') 
+                  }}
+                ></div>
                 
                 {/* Time details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
