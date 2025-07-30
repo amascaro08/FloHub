@@ -237,7 +237,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <aside
         className={`
           bg-[var(--surface)] shadow-glass z-30 transform transition-all duration-300 ease-in-out
-          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-4/5 sm:w-3/5' : 'fixed inset-y-0 left-0 -translate-x-full w-4/5 sm:w-3/5'}
+          ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-full max-w-sm' : 'fixed inset-y-0 left-0 -translate-x-full w-full max-w-sm'}
           md:static md:translate-x-0 md:shadow-none md:w-64
           ${desktopSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
           border-r border-neutral-200 dark:border-neutral-700 flex flex-col
@@ -268,13 +268,13 @@ const Layout = ({ children }: { children: ReactNode }) => {
         
         {/* Main navigation - mobile no scroll, desktop with scroll */}
         <nav className="flex-1 md:overflow-y-auto md:min-h-0 flex flex-col justify-start sidebar-nav">
-          <div className="space-y-1 p-3 md:p-4">
+          <div className="space-y-1 flex-1">
             {navigationItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
-                  desktopSidebarCollapsed ? 'justify-center' : ''
+                  desktopSidebarCollapsed ? 'justify-center' : 'justify-start'
                 } group ${
                   router.pathname === item.href 
                     ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
@@ -306,7 +306,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </nav>
 
         {/* User account section - bottom third */}
-        <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0">
+        <div className="border-t border-neutral-200 dark:border-neutral-700 flex-shrink-0 mt-auto">
           {/* User account indicator */}
           {(!desktopSidebarCollapsed || mobileSidebarOpen) && user && (
             <div className="border-b border-neutral-200 dark:border-neutral-700 sidebar-bottom-section">
@@ -340,7 +340,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <Link
               href="/dashboard/settings"
               className={`flex items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
-                desktopSidebarCollapsed ? 'justify-center' : ''
+                desktopSidebarCollapsed ? 'justify-center' : 'justify-start'
               } group ${
                 router.pathname === '/dashboard/settings' 
                   ? 'bg-primary-50 text-primary-700 border border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800' 
@@ -370,7 +370,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
             <LogoutButton
               className={`flex items-center w-full text-left rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all sidebar-item-responsive ${
-                desktopSidebarCollapsed ? 'justify-center' : ''
+                desktopSidebarCollapsed ? 'justify-center' : 'justify-start'
               } group`}
             >
               <LogOut className={`text-red-500 group-hover:text-red-600 transition-colors sidebar-icon-responsive ${
