@@ -259,10 +259,10 @@ export default function TasksPage() {
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 flex-shrink-0" />
             <input
               type="text"
-              className="input-modern pl-10 text-sm"
+              className="input-modern pl-11 text-sm"
               placeholder="Search tasks..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -305,15 +305,12 @@ export default function TasksPage() {
                   </div>
                   
                   <div>
-                    <div className="relative">
-                      <CalendarDaysIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        type="date"
-                        className="input-modern pl-10"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                      />
-                    </div>
+                    <input
+                      type="date"
+                      className="input-modern"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                    />
                   </div>
                   
                   <div>
