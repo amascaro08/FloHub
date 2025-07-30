@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
+import axios from 'axios';
 
 interface JournalSummaryProps {
   refreshTrigger?: number; // Trigger to refresh the summary 
@@ -9,167 +10,230 @@ interface MoodData {
   date: string;
   emoji: string;
   label: string;
+  tags?: string[];
+}
+
+interface JournalEntry {
+  date: string;
+  hasContent: boolean;
 }
 
 const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) => {
   const [moodData, setMoodData] = useState<MoodData[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [topThemes, setTopThemes] = useState<{theme: string, count: number}[]>([]);
   const [floCatsSummary, setFloCatsSummary] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
- const { user, isLoading } = useUser();
-  const userData = user ? user : null;
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { user } = useUser();
 
   if (!user) {
-    return <div>Loading...</div>; // Or any other fallback UI
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && user?.primaryEmail) {
-      // Load mood data from the last 30 days
-      const moodEntries: MoodData[] = [];
-      const today = new Date();
-      const allTags: Record<string, number> = {};
-      
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+    const fetchJournalData = async () => {
+      if (!user?.primaryEmail) return;
+
+      setIsLoading(true);
+      try {
+        // Generate date range for last 30 days
+        const dateRange: string[] = [];
+        const today = new Date();
         
-        // Try to load mood for this date
-        const savedMood = localStorage.getItem(`journal_mood_${user.primaryEmail}_${dateStr}`);
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          dateRange.push(date.toISOString().split('T')[0]);
+        }
+
+        // Fetch data using batch APIs
+        const [entriesResponse, moodsResponse] = await Promise.allSettled([
+          axios.post('/api/journal/entries/batch', { dates: dateRange }, { withCredentials: true }),
+          axios.post('/api/journal/moods/batch', { dates: dateRange }, { withCredentials: true })
+        ]);
+
+        // Process entries data
+        const entriesData = entriesResponse.status === 'fulfilled' ? entriesResponse.value.data.entries : {};
+        const journalEntryList: JournalEntry[] = [];
         
-        if (savedMood) {
-          try {
-            const parsed = JSON.parse(savedMood);
+        Object.entries(entriesData).forEach(([date, hasContent]) => {
+          if (hasContent) {
+            journalEntryList.push({ date, hasContent: true });
+          }
+        });
+        
+        setJournalEntries(journalEntryList);
+
+        // Process moods data
+        const moodsData = moodsResponse.status === 'fulfilled' ? moodsResponse.value.data.moods : {};
+        const moodEntries: MoodData[] = [];
+        const allTags: Record<string, number> = {};
+
+        Object.entries(moodsData).forEach(([date, moodInfo]) => {
+          if (moodInfo && (moodInfo as any).emoji && (moodInfo as any).label) {
+            const mood = moodInfo as any;
             moodEntries.push({
-              date: dateStr,
-              emoji: parsed.emoji,
-              label: parsed.label
+              date,
+              emoji: mood.emoji,
+              label: mood.label,
+              tags: mood.tags || []
             });
-            
+
             // Count tags for themes
-            if (parsed.tags && Array.isArray(parsed.tags)) {
-              parsed.tags.forEach((tag: string) => {
+            if (mood.tags && Array.isArray(mood.tags)) {
+              mood.tags.forEach((tag: string) => {
                 allTags[tag] = (allTags[tag] || 0) + 1;
               });
             }
-          } catch (e) {
-            console.error('Error parsing saved mood:', e);
           }
-        }
+        });
+
+        setMoodData(moodEntries);
+
+        // Get top themes
+        const themes = Object.entries(allTags)
+          .map(([theme, count]) => ({ theme, count: count as number }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        setTopThemes(themes);
+        
+        // Generate FloCats summary
+        setFloCatsSummary(generateFloCatsSummary(moodEntries, journalEntryList, themes));
+      } catch (error) {
+        console.error('Error fetching journal data:', error);
+        setFloCatsSummary("Unable to load journal summary. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
-      
-      setMoodData(moodEntries);
-      
-      // Get top themes
-      const themes = Object.entries(allTags)
-        .map(([theme, count]) => ({ theme, count: count as number }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-      
-      setTopThemes(themes);
-      
-      // Generate a more specific FloCats summary based on mood data and themes
-      const generateFloCatsSummary = () => {
-        // If no mood data, return a default message
-        if (moodData.length === 0) return "Start journaling to get FloCats insights about your entries.";
-        
-        // Count mood frequencies
-        const moodCounts: Record<string, number> = {};
-        moodData.forEach(mood => {
-          if (mood.label) {
-            moodCounts[mood.label] = (moodCounts[mood.label] || 0) + 1;
-          }
-        });
-        
-        // Find most common mood
-        let mostCommonMood = "neutral";
-        let maxCount = 0;
-        Object.entries(moodCounts).forEach(([mood, count]) => {
-          if (count > maxCount) {
-            mostCommonMood = mood;
-            maxCount = count;
-          }
-        });
-        
-        // Calculate mood trend
-        const moodScores: {[key: string]: number} = {
-          'Rad': 5,
-          'Good': 4,
-          'Meh': 3,
-          'Bad': 2,
-          'Awful': 1
-        };
-        
-        const recentMoods = moodData
-          .filter(m => m.label)
-          .map(m => moodScores[m.label] || 3);
-        
-        let trendDescription = "";
-        let trendAdvice = "";
-        if (recentMoods.length >= 3) {
-          // Calculate if trend is improving or declining
-          const firstHalf = recentMoods.slice(0, Math.floor(recentMoods.length / 2));
-          const secondHalf = recentMoods.slice(Math.floor(recentMoods.length / 2));
-          
-          const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length;
-          const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length;
-          
-          if (secondAvg - firstAvg > 0.5) {
-            trendDescription = "Your mood has been improving recently. ";
-            trendAdvice = "Take note of what positive changes you've made and continue building on them. ";
-          } else if (firstAvg - secondAvg > 0.5) {
-            trendDescription = "Your mood has been declining recently. ";
-            trendAdvice = "Consider what factors might be affecting your wellbeing and what small changes could help. ";
-          } else {
-            trendDescription = "Your mood has been relatively stable. ";
-            trendAdvice = "Consider introducing small positive changes to enhance your wellbeing. ";
-          }
-        }
-        
-        // Calculate mood variability
-        let variabilityAdvice = "";
-        if (recentMoods.length >= 5) {
-          const moodVariations: number[] = [];
-          for (let i = 1; i < recentMoods.length; i++) {
-            moodVariations.push(Math.abs(recentMoods[i] - recentMoods[i-1]));
-          }
-          
-          const avgVariation = moodVariations.reduce((sum, val) => sum + val, 0) / moodVariations.length;
-          
-          if (avgVariation > 1.5) {
-            variabilityAdvice = "Your mood shows significant day-to-day variations. Establishing consistent routines might help stabilize your emotional wellbeing. ";
-          }
-        }
-        
-        // Build personalized summary using mood data and themes
-        let summary = `Based on your journal entries, your mood has been predominantly ${mostCommonMood.toLowerCase()} this month. ${trendDescription}${variabilityAdvice}`;
-        
-        // Add theme insights if available
-        if (topThemes.length > 0) {
-          summary += `Your entries frequently mention ${topThemes[0].theme}`;
-          if (topThemes.length > 1) {
-            summary += ` and ${topThemes[1].theme}`;
-          }
-          summary += ", which seem to be important in your life right now. ";
-        }
-        
-        // Add personalized advice based on mood
-        if (mostCommonMood === "Awful" || mostCommonMood === "Bad") {
-          summary += `${trendAdvice}Consider activities that have previously improved your mood, like connecting with friends or spending time outdoors. Small acts of self-care can make a significant difference in how you feel day-to-day.`;
-        } else if (mostCommonMood === "Rad" || mostCommonMood === "Good") {
-          summary += `${trendAdvice}Keep up with the positive activities and relationships that are contributing to your wellbeing. Consider sharing your positive experiences with others to amplify their effect.`;
-        } else {
-          summary += `${trendAdvice}Try to identify patterns in your activities and how they affect your mood to find what brings you joy. Even small positive changes to your daily routine can have a cumulative positive effect on your wellbeing.`;
-        }
-        
-        return summary;
-      };
-      
-      setFloCatsSummary(generateFloCatsSummary());
-    }
+    };
+
+    fetchJournalData();
   }, [user, refreshTrigger]);
 
+  const generateFloCatsSummary = (moods: MoodData[], entries: JournalEntry[], themes: {theme: string, count: number}[]): string => {
+    // If no data, return encouraging message
+    if (moods.length === 0 && entries.length === 0) {
+      return "Start journaling to get FloCats insights about your entries! Track your moods and write about your day to see personalized patterns and advice.";
+    }
+
+    let summary = "";
+    
+    // Journal activity summary
+    const journalDays = entries.length;
+    const totalPossibleDays = 30;
+    const journalConsistency = (journalDays / totalPossibleDays) * 100;
+    
+    if (journalDays > 0) {
+      summary += `You've been journaling for ${journalDays} days this month`;
+      if (journalConsistency >= 80) {
+        summary += " - excellent consistency! ";
+      } else if (journalConsistency >= 50) {
+        summary += " - good progress! ";
+      } else {
+        summary += ". Consider setting a daily reminder to build the habit. ";
+      }
+    }
+
+    // Mood analysis
+    if (moods.length > 0) {
+      // Count mood frequencies
+      const moodCounts: Record<string, number> = {};
+      moods.forEach(mood => {
+        if (mood.label) {
+          moodCounts[mood.label] = (moodCounts[mood.label] || 0) + 1;
+        }
+      });
+
+      // Find most common mood
+      let mostCommonMood = "neutral";
+      let maxCount = 0;
+      Object.entries(moodCounts).forEach(([mood, count]) => {
+        if (count > maxCount) {
+          mostCommonMood = mood;
+          maxCount = count;
+        }
+      });
+
+      summary += `Your mood has been predominantly ${mostCommonMood.toLowerCase()} recently. `;
+
+      // Calculate mood trend
+      const moodScores: {[key: string]: number} = {
+        'Rad': 5, 'Good': 4, 'Meh': 3, 'Bad': 2, 'Awful': 1
+      };
+
+      const recentMoods = moods
+        .filter(m => m.label)
+        .map(m => moodScores[m.label] || 3);
+
+      if (recentMoods.length >= 5) {
+        const recentAvg = recentMoods.slice(-7).reduce((sum, val) => sum + val, 0) / Math.min(7, recentMoods.length);
+        const olderAvg = recentMoods.slice(0, -7).reduce((sum, val) => sum + val, 0) / Math.max(1, recentMoods.length - 7);
+
+        if (recentAvg - olderAvg > 0.3) {
+          summary += "Your mood has been improving lately - keep up whatever positive changes you've made! ";
+        } else if (olderAvg - recentAvg > 0.3) {
+          summary += "Your mood seems to have dipped recently. Consider what factors might be affecting your wellbeing. ";
+        } else {
+          summary += "Your mood has been relatively stable. ";
+        }
+      }
+
+      // Add theme insights
+      if (themes.length > 0) {
+        summary += `Looking at your mood tags, ${themes[0].theme}`;
+        if (themes.length > 1) {
+          summary += ` and ${themes[1].theme}`;
+        }
+        summary += ` seem to be significant themes in your life right now. `;
+      }
+
+      // Personalized advice based on dominant mood
+      if (mostCommonMood === "Awful" || mostCommonMood === "Bad") {
+        summary += "Consider activities that have previously improved your mood, and don't hesitate to reach out for support when needed.";
+      } else if (mostCommonMood === "Rad" || mostCommonMood === "Good") {
+        summary += "You're doing great! Consider noting what specific activities or situations contribute to these positive feelings.";
+      } else {
+        summary += "Try identifying patterns between your activities and mood to discover what brings you the most joy and fulfillment.";
+      }
+    } else if (entries.length > 0) {
+      summary += "You've been consistent with journaling! Consider adding mood tracking to gain deeper insights into your emotional patterns and wellbeing trends.";
+    }
+
+    return summary;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Journal Summary</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Overview of your journal entries</p>
+          </div>
+          <div className="flex items-center">
+            <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Loading...</span>
+          </div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
@@ -178,20 +242,30 @@ const JournalSummary: React.FC<JournalSummaryProps> = ({ refreshTrigger = 0 }) =
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Journal Summary</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">Overview of your journal entries</p>
         </div>
-        {isGenerating && (
-          <div className="flex items-center">
-            <div className="animate-spin h-4 w-4 border-2 border-teal-500 rounded-full border-t-transparent mr-2"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Updating...</span>
-          </div>
-        )}
       </div>
       
       <div className="mb-6">
-        <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">Summary</h3>
+        <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">FloCat's Insights</h3>
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-600">
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-            {floCatsSummary || "Start journaling to get FloCats insights about your entries."}
+            {floCatsSummary}
           </p>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-gray-900 dark:text-white">
+            {journalEntries.length}
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-300">Days Journaled</div>
+        </div>
+        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-gray-900 dark:text-white">
+            {moodData.length}
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-300">Moods Tracked</div>
         </div>
       </div>
       

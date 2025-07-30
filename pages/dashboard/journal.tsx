@@ -22,6 +22,9 @@ import JournalSettings from "@/components/journal/JournalSettings";
 import SleepTracker from "@/components/journal/SleepTracker";
 import JournalImport from "@/components/journal/JournalImport";
 import FloCatInsights from "@/components/journal/FloCatInsights";
+import SleepInsights from "@/components/journal/SleepInsights";
+import ActivityPatterns from "@/components/journal/ActivityPatterns";
+import Trends from "@/components/journal/Trends";
 import { 
   PlusIcon, 
   BookOpenIcon,
@@ -36,7 +39,7 @@ export default function JournalPage() {
   const router = useRouter();
 
   // Handle loading state
-  if (status === 'unauthenticated') {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse text-center">
@@ -68,6 +71,11 @@ export default function JournalPage() {
   const [showImport, setShowImport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState({
+    main: false,
+    wellbeing: false,
+    onThisDay: false
+  });
   
   // Fetch user settings to get timezone
   const { data: userSettings } = useSWR(
@@ -93,6 +101,24 @@ export default function JournalPage() {
       }
     }
   }, [timezone]);
+
+  // Progressive loading - load main component first
+  useEffect(() => {
+    if (timezone && selectedDate) {
+      // Mark main component as ready to load
+      setComponentsLoaded(prev => ({ ...prev, main: true }));
+      
+      // Load wellbeing section after a short delay
+      setTimeout(() => {
+        setComponentsLoaded(prev => ({ ...prev, wellbeing: true }));
+      }, 100);
+      
+      // Load "On This Day" section last
+      setTimeout(() => {
+        setComponentsLoaded(prev => ({ ...prev, onThisDay: true }));
+      }, 300);
+    }
+  }, [timezone, selectedDate]);
 
   // Check if device is mobile
   useEffect(() => {
@@ -145,6 +171,30 @@ export default function JournalPage() {
   const handleImportSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
     setShowImport(false);
+  };
+
+  // Function to invalidate cache for better performance
+  const invalidateCache = () => {
+    if (typeof window !== 'undefined') {
+      // Clear journal calendar cache for current month
+      const currentMonth = new Date();
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      const cacheKey = `journal_calendar_${year}_${month}_${user.primaryEmail}`;
+      localStorage.removeItem(cacheKey);
+      
+      // Clear insights cache if it exists
+      localStorage.removeItem(`journal_insights_${user.primaryEmail}`);
+      
+      // Clear other month caches that might be affected
+      for (let i = -1; i <= 1; i++) {
+        const targetMonth = new Date(year, month + i);
+        const targetYear = targetMonth.getFullYear();
+        const targetMonthNum = targetMonth.getMonth();
+        const targetCacheKey = `journal_calendar_${targetYear}_${targetMonthNum}_${user.primaryEmail}`;
+        localStorage.removeItem(targetCacheKey);
+      }
+    }
   };
 
   // Function to save all journal data for the selected date
@@ -210,17 +260,20 @@ export default function JournalPage() {
         });
       }
       
+      // Clear cache to ensure fresh data is loaded
+      invalidateCache();
+      
       // Show success message
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
       
-      // Trigger refresh for all components including calendar
+      // Trigger refresh for all components including calendar and insights
       setRefreshTrigger(prev => prev + 1);
       
-      // Force calendar refresh after a short delay to ensure data is saved
+      // Force additional refresh after a short delay to ensure all data is saved and refreshed
       setTimeout(() => {
         setRefreshTrigger(prev => prev + 1);
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error('Error saving journal data:', error);
     } finally {
@@ -385,65 +438,101 @@ export default function JournalPage() {
               </div>
               {/* Main Entry */}
               <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 overflow-hidden">
-                {isSelectedToday || isEditing ? (
-                  <TodayEntry
-                    onSave={handleSaveEntry}
-                    date={selectedDate}
-                    timezone={timezone}
-                    showPrompts={true}
-                    activities={selectedActivities}
-                  />
+                {componentsLoaded.main ? (
+                  isSelectedToday || isEditing ? (
+                    <TodayEntry
+                      onSave={handleSaveEntry}
+                      date={selectedDate}
+                      timezone={timezone}
+                      showPrompts={true}
+                      activities={selectedActivities}
+                    />
+                  ) : (
+                    <JournalEntryViewer
+                      date={selectedDate}
+                      onEdit={() => setIsEditing(true)}
+                      timezone={timezone}
+                    />
+                  )
                 ) : (
-                  <JournalEntryViewer
-                    date={selectedDate}
-                    onEdit={() => setIsEditing(true)}
-                    timezone={timezone}
-                  />
+                  <div className="p-6 animate-pulse">
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+                    <div className="space-y-3">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+                    </div>
+                  </div>
                 )}
               </div>
 
               {/* Wellbeing Tracking */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Mood */}
-                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">😊</span>
-                    Mood
-                  </h3>
-                  <MoodTracker onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
-                </div>
+              {componentsLoaded.wellbeing ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Mood */}
+                  <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                    <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
+                      <span className="text-2xl mr-3">😊</span>
+                      Mood
+                    </h3>
+                    <MoodTracker onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
+                  </div>
 
-                {/* Activities */}
-                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">🎯</span>
-                    Activities
-                  </h3>
-                  <ActivityTracker
-                    onSave={handleSaveActivities}
-                    date={selectedDate}
-                    timezone={timezone}
-                  />
-                </div>
+                  {/* Activities */}
+                  <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                    <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
+                      <span className="text-2xl mr-3">🎯</span>
+                      Activities
+                    </h3>
+                    <ActivityTracker
+                      onSave={handleSaveActivities}
+                      date={selectedDate}
+                      timezone={timezone}
+                    />
+                  </div>
 
-                {/* Sleep */}
-                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">😴</span>
-                    Sleep
-                  </h3>
-                  <SleepTracker
-                    onSave={handleSaveSleep}
-                    timezone={timezone}
-                    date={selectedDate}
-                  />
+                  {/* Sleep */}
+                  <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                    <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
+                      <span className="text-2xl mr-3">😴</span>
+                      Sleep
+                    </h3>
+                    <SleepTracker
+                      onSave={handleSaveSleep}
+                      timezone={timezone}
+                      date={selectedDate}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl p-6 animate-pulse">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+                      <div className="space-y-3">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* On This Day */}
-              <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
-              </div>
+              {componentsLoaded.onThisDay ? (
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
+                  <OnThisDay onViewEntry={handleSelectDate} timezone={timezone} />
+                </div>
+              ) : (
+                <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl p-6 animate-pulse">
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/5"></div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -491,44 +580,17 @@ export default function JournalPage() {
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">😴</span>
-                    Sleep Insights
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">😴</div>
-                    <p className="text-grey-tint text-sm">
-                      Sleep insights will appear here as you track your sleep in the journal.
-                    </p>
-                  </div>
+                  <SleepInsights refreshTrigger={refreshTrigger} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">🎯</span>
-                    Activity Patterns
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📊</div>
-                    <p className="text-grey-tint text-sm">
-                      Activity patterns will appear here as you track more activities in your journal entries.
-                    </p>
-                  </div>
+                  <ActivityPatterns refreshTrigger={refreshTrigger} />
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <h3 className="text-lg font-heading font-semibold text-dark-base dark:text-soft-white mb-4 flex items-center">
-                    <span className="text-2xl mr-3">📈</span>
-                    Trends
-                  </h3>
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📈</div>
-                    <p className="text-grey-tint text-sm">
-                      Mood and activity trends will be analyzed and displayed here based on your journal data.
-                    </p>
-                  </div>
+                  <Trends refreshTrigger={refreshTrigger} />
                 </div>
               </div>
             </div>
