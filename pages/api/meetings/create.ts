@@ -6,6 +6,7 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes, tasks } from "@/db/schema";
 import OpenAI from "openai"; // Import OpenAI
+import { prepareContentForStorage } from "@/lib/contentSecurity";
 
 import type { Action } from "@/types/app"; // Import Action type
 
@@ -58,9 +59,11 @@ export default async function handler(
 
 
   try {
-    // 3) Save the meeting note to the database
+    // 3) Encrypt sensitive content before saving to database
+    const encryptedContent = prepareContentForStorage(content);
+    const encryptedTitle = title ? prepareContentForStorage(title) : "";
+    const encryptedAgenda = agenda ? prepareContentForStorage(agenda) : null;
 
-    // Example placeholder for Firebase (adjust based on your actual Firebase setup)
     // Generate AI summary if agenda and content are provided
     let aiSummary = undefined;
     if (agenda && content) {
@@ -112,16 +115,16 @@ export default async function handler(
     const now = Date.now();
     const [newNote] = await db.insert(notes).values({
       user_email: userId,
-      title: title || "",
-      content,
+      title: encryptedTitle,
+      content: encryptedContent,
       tags: tags || [],
       createdAt: new Date(now),
       eventId: eventId || null,
       eventTitle: eventTitle || null,
       isAdhoc: isAdhoc !== undefined ? isAdhoc : null,
       actions: actions || [],
-      agenda: agenda || null,
-      aiSummary: aiSummary || null,
+      agenda: encryptedAgenda,
+      aiSummary: aiSummary ? prepareContentForStorage(aiSummary) : null,
     }).returning();
     const noteId = newNote.id;
 

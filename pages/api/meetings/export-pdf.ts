@@ -4,6 +4,7 @@ import { notes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/user";
+import { retrieveContentFromStorage } from '@/lib/contentSecurity';
 import PdfPrinter from 'pdfmake';
 const vfsFonts = require('pdfmake/build/vfs_fonts');
 import { Action } from '@/types/app';
@@ -75,8 +76,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const content: any[] = [];
 
+    // Decrypt sensitive content fields
+    const decryptedTitle = retrieveContentFromStorage(meetingNote.title || "");
+    const decryptedContent = retrieveContentFromStorage(meetingNote.content || "");
+    const decryptedAgenda = retrieveContentFromStorage(meetingNote.agenda || "");
+    const decryptedAiSummary = retrieveContentFromStorage(meetingNote.aiSummary || "");
+
     // Add Title
-    content.push({ text: meetingNote.title || 'Untitled Meeting Note', style: 'title' });
+    content.push({ text: decryptedTitle || 'Untitled Meeting Note', style: 'title' });
 
     // Add Event Details if available
     if (meetingNote.eventTitle) {
@@ -94,21 +101,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Add Agenda
-    if (meetingNote.agenda) {
+    if (decryptedAgenda) {
       content.push({ text: '\nAgenda:', style: 'heading' });
-      content.push({ text: meetingNote.agenda, style: 'body' });
+      content.push({ text: decryptedAgenda, style: 'body' });
     }
 
     // Add Content/Minutes
-    if (meetingNote.content) {
+    if (decryptedContent) {
       content.push({ text: '\nMeeting Minutes:', style: 'heading' });
-      content.push({ text: meetingNote.content.replace(/<[^>]*>/g, ''), style: 'body' });
+      content.push({ text: decryptedContent.replace(/<[^>]*>/g, ''), style: 'body' });
     }
 
     // Add AI Summary
-    if (meetingNote.aiSummary) {
+    if (decryptedAiSummary) {
       content.push({ text: '\nAI Summary:', style: 'heading' });
-      content.push({ text: meetingNote.aiSummary, style: 'body' });
+      content.push({ text: decryptedAiSummary, style: 'body' });
     }
 
     // Add Actions
