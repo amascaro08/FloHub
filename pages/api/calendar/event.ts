@@ -422,7 +422,7 @@ export default async function handler(
       });
 
       console.log("[API] Google API response status:", apiRes.status);
-      console.log("[API] Google API response headers:", Object.fromEntries(apiRes.headers.entries()));
+      console.log("[API] Google API response headers:", apiRes.headers);
       
       if (!apiRes.ok) {
         let errorText = '';
@@ -509,6 +509,21 @@ export default async function handler(
     if (!id || !calendarId || !summary || !start || !end) {
       console.error("[API] Missing required fields for update:", { id, calendarId, summary, start, end });
       return res.status(400).json({ error: "Missing required fields for update" });
+    }
+
+    // Get user's timezone from settings
+    let userTimezone = timeZone;
+    if (!userTimezone) {
+      try {
+        const userSettingsData = await db.query.userSettings.findFirst({
+          where: eq(userSettings.user_email, user.email),
+          columns: { timezone: true },
+        });
+        userTimezone = userSettingsData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (error) {
+        console.warn("[API] Failed to fetch user timezone, using browser default");
+        userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
     }
     
     // Check if this is a FloHub local calendar
