@@ -381,7 +381,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ListBulletIcon className="w-4 h-4" />
           </button>
           
-                                <button
+          <button
             onClick={() => editor?.chain().focus().toggleOrderedList().run()}
             className={`p-2 rounded-lg transition-all ${
               editor?.isActive('orderedList')
@@ -419,6 +419,43 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
             </svg>
+          </button>
+        </div>
+        
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        
+        {/* Insert options - moved from slash commands to toolbar */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => editor?.chain().focus().insertTable({ 
+              rows: 3, 
+              cols: 3, 
+              withHeaderRow: true 
+            }).run()}
+            className="p-2 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+            title="Insert Table"
+          >
+            <TableCellsIcon className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            className={`p-2 rounded-lg transition-all ${
+              editor?.isActive('codeBlock')
+                ? 'bg-[#00C9A7] text-white shadow-sm'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
+            title="Code Block"
+          >
+            <CodeBracketIcon className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+            className="p-2 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+            title="Insert Divider"
+          >
+            <MinusIcon className="w-4 h-4" />
           </button>
         </div>
         
@@ -877,7 +914,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label {
           flex: 0 0 auto;
-          margin-right: 0.5rem;
+          margin-right: 0.75rem;
+          margin-top: 0.125rem;
           user-select: none;
           display: flex;
           align-items: center;
@@ -932,6 +970,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor .ProseMirror li[data-type="taskItem"] > div {
           flex: 1 1 auto;
           min-width: 0;
+          line-height: 1.5;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
