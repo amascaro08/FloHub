@@ -1,5 +1,6 @@
 -- Add all journal settings columns to user_settings table
 -- This will ensure journal settings persist properly instead of reverting back
+-- Based on existing user_settings schema with user_email as primary key
 
 -- Journal reminder settings
 ALTER TABLE user_settings 
@@ -69,9 +70,9 @@ CHECK (
   )
 );
 
--- Add indexes for performance
-CREATE INDEX idx_user_settings_journal_reminder ON user_settings(email, journal_reminder_enabled);
-CREATE INDEX idx_user_settings_journal_features ON user_settings(email, journal_mood_tracking, journal_activity_tracking, journal_sleep_tracking);
+-- Add indexes for performance (using user_email which is the actual column name)
+CREATE INDEX idx_user_settings_journal_reminder ON user_settings(user_email, journal_reminder_enabled);
+CREATE INDEX idx_user_settings_journal_features ON user_settings(user_email, journal_mood_tracking, journal_activity_tracking, journal_sleep_tracking);
 
 -- Add comments to document the columns
 COMMENT ON COLUMN user_settings.journal_reminder_enabled IS 'Whether daily journal reminders are enabled';
