@@ -24,7 +24,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
 
   // Refs for managing timeouts and preventing memory leaks
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const savePromiseRef = useRef<Promise<void> | null>(null);
+  const savePromiseRef = useRef<Promise<any> | null>(null);
 
   if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
