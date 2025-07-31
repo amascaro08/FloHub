@@ -11,6 +11,7 @@ import { parseISO } from 'date-fns';
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
+import MeetingSeriesView from "@/components/meetings/MeetingSeriesView";
 import { useUser } from "@/lib/hooks/useUser";
 import { 
   PlusIcon, 
@@ -361,6 +362,7 @@ export default function MeetingsPage() {
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [showLinkingModal, setShowLinkingModal] = useState(false);
   const [addToSeriesName, setAddToSeriesName] = useState<string>("");
+  const [viewingSeriesName, setViewingSeriesName] = useState<string | null>(null);
 
   // Check if device is mobile
   useEffect(() => {
@@ -652,7 +654,16 @@ export default function MeetingsPage() {
      }
    };
 
-     const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
+     const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
+    setViewingSeriesName(seriesTitle);
+  };
+
+  const handleAddMeetingToSeries = (seriesName: string) => {
+    setAddToSeriesName(seriesName);
+    setShowModal(true);
+  };
+
+  const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
     try {
       const response = await fetch("/api/meetings/series", {
         method: "POST",
@@ -714,6 +725,18 @@ export default function MeetingsPage() {
       </Head>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Series View */}
+        {viewingSeriesName && (
+          <MeetingSeriesView
+            seriesName={viewingSeriesName}
+            onAddMeeting={handleAddMeetingToSeries}
+            onClose={() => setViewingSeriesName(null)}
+          />
+        )}
+
+        {/* Main meetings view - only show when not viewing a series */}
+        {!viewingSeriesName && (
+          <>
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -853,18 +876,31 @@ export default function MeetingsPage() {
                      </div>
                    ) : (
                      meetingSeries.map(([seriesTitle, notes]) => (
-                       <div key={seriesTitle} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                       <div 
+                         key={seriesTitle} 
+                         className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                         onClick={() => handleViewSeries(seriesTitle, notes)}
+                       >
                          <div className="flex items-start justify-between mb-3">
-                           <div>
-                             <h3 className="font-medium text-dark-base dark:text-soft-white mb-1">{seriesTitle}</h3>
+                           <div className="flex-1">
+                             <h3 className="font-medium text-dark-base dark:text-soft-white mb-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{seriesTitle}</h3>
                              <p className="text-sm text-grey-tint">{notes.length} meetings • Last updated {new Date(Math.max(...notes.map(n => new Date(n.createdAt).getTime()))).toLocaleDateString()}</p>
                            </div>
-                           <button
-                             onClick={() => handleViewSeries(seriesTitle, notes)}
-                             className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                           >
-                             View All
-                           </button>
+                           <div className="flex items-center space-x-2">
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleAddMeetingToSeries(seriesTitle);
+                               }}
+                               className="text-xs px-2 py-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                               title="Add meeting to this series"
+                             >
+                               + Add
+                             </button>
+                             <span className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded">
+                               View →
+                             </span>
+                           </div>
                          </div>
                          
                          {/* Meeting Timeline */}
@@ -1098,7 +1134,10 @@ export default function MeetingsPage() {
         {/* Add Meeting Note Modal */}
         <AddMeetingNoteModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            setAddToSeriesName("");
+          }}
           onSave={handleSaveMeetingNote}
           isSaving={isSaving}
           existingTags={allAvailableTags}
@@ -1116,6 +1155,8 @@ export default function MeetingsPage() {
             meetingNotes={meetingNotes}
             onSave={handleCreateMeetingSeries}
           />
+        )}
+        </>
         )}
       </div>
     </>

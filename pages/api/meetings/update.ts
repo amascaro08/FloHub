@@ -280,7 +280,7 @@ export default async function handler(
       if (isAdhoc !== undefined) updateData.isAdhoc = isAdhoc;
       if (actions !== undefined) updateData.actions = actions;
       if (agenda !== undefined) updateData.agenda = agenda ? prepareContentForStorage(agenda) : "";
-      if (meetingSeries !== undefined) updateData.meetingSeries = meetingSeries;
+      if (meetingSeries !== undefined) updateData.meetingSeries = meetingSeries ? prepareContentForStorage(meetingSeries) : null;
       if (linkedMeetingIds !== undefined) updateData.linkedMeetingIds = linkedMeetingIds;
       if (aiSummary) updateData.aiSummary = prepareContentForStorage(aiSummary);
       updateData.updatedAt = new Date();
@@ -321,7 +321,7 @@ export default async function handler(
           actions: updatedNoteData.actions,
           agenda: retrieveContentFromStorage(updatedNoteData.agenda || ""),
           aiSummary: retrieveContentFromStorage(updatedNoteData.aiSummary || ""),
-          meetingSeries: updatedNoteData.meetingSeries,
+          meetingSeries: updatedNoteData.meetingSeries ? retrieveContentFromStorage(updatedNoteData.meetingSeries) : undefined,
           linkedMeetingIds: updatedNoteData.linkedMeetingIds,
           createdAt: Number(updatedNoteData.createdAt),
           updatedAt: updatedNoteData.updatedAt ? new Date(updatedNoteData.updatedAt).getTime() : 0

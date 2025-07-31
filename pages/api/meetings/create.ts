@@ -64,6 +64,7 @@ export default async function handler(
     const encryptedContent = prepareContentForStorage(content);
     const encryptedTitle = title ? prepareContentForStorage(title) : "";
     const encryptedAgenda = agenda ? prepareContentForStorage(agenda) : null;
+    const encryptedMeetingSeries = meetingSeries ? prepareContentForStorage(meetingSeries) : null;
 
     // Generate AI summary if agenda and content are provided
     let aiSummary = undefined;
@@ -126,7 +127,7 @@ export default async function handler(
       actions: actions || [],
       agenda: encryptedAgenda,
       aiSummary: aiSummary ? prepareContentForStorage(aiSummary) : null,
-      meetingSeries: meetingSeries || null,
+      meetingSeries: encryptedMeetingSeries,
     }).returning();
     const noteId = newNote.id;
 

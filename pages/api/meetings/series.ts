@@ -4,7 +4,7 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { notes } from "@/db/schema";
 import { and, eq, or, inArray, isNotNull, desc } from "drizzle-orm";
-import { retrieveContentFromStorage } from "@/lib/contentSecurity";
+import { retrieveContentFromStorage, prepareContentForStorage } from "@/lib/contentSecurity";
 import type { Note, Action } from "@/types/app";
 
 export type CreateMeetingSeriesRequest = {
@@ -102,10 +102,10 @@ async function createMeetingSeries(
     return res.status(404).json({ error: "Some meetings not found" });
   }
 
-  // Update all meetings with the series name
+  // Update all meetings with the series name (encrypted)
   await db
     .update(notes)
-    .set({ meetingSeries: seriesName })
+    .set({ meetingSeries: prepareContentForStorage(seriesName) })
     .where(
       and(
         eq(notes.user_email, userId),
@@ -196,7 +196,7 @@ async function generateSeriesContext(userId: string, seriesName: string) {
     .where(
       and(
         eq(notes.user_email, userId),
-        eq(notes.meetingSeries, seriesName)
+        eq(notes.meetingSeries, prepareContentForStorage(seriesName))
       )
     )
     .orderBy(desc(notes.createdAt));
@@ -232,7 +232,7 @@ async function buildSeriesContext(meetingRows: any[], seriesName: string) {
     actions: (row.actions as Action[]) || [],
     agenda: retrieveContentFromStorage(row.agenda || ""),
     aiSummary: retrieveContentFromStorage(row.aiSummary || ""),
-    meetingSeries: row.meetingSeries || undefined,
+    meetingSeries: row.meetingSeries ? retrieveContentFromStorage(row.meetingSeries) : undefined,
     linkedMeetingIds: (row.linkedMeetingIds as string[]) || undefined,
   }));
 
