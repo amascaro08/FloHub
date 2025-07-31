@@ -244,7 +244,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     
     // Also add click event listener for immediate feedback
     const handleClick = (event: Event) => {
-      const target = event.target as HTMLElement;
+      const target = event.target as HTMLInputElement;
       if (target && target.type === 'checkbox' && target.closest('li[data-type="taskItem"]')) {
         setTimeout(handleUpdate, 50); // Small delay to ensure checkbox state is updated
       }
