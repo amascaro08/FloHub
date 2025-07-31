@@ -15,8 +15,6 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone, date }) => 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
-  const [moodData, setMoodData] = useState<{date: string, emoji: string, label: string}[]>([]);
-  const [showInsights, setShowInsights] = useState<boolean>(false);
  const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
@@ -52,49 +50,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone, date }) => 
           setSelectedTags([]);
         }
         
-        // Load mood data from the last 7 days for the trend
-        const moodEntries: {date: string, emoji: string, label: string}[] = [];
-        const currentDate = new Date();
-        
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date(currentDate);
-          date.setDate(date.getDate() - i);
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-          
-          try {
-            const response = await axios.get(`/api/journal/mood?date=${dateStr}`, {
-              withCredentials: true
-            });
-            // Check if we have actual mood data (not empty defaults)
-            if (response.data && response.data.emoji && response.data.label) {
-              moodEntries.push({
-                date: dateStr,
-                emoji: response.data.emoji,
-                label: response.data.label
-              });
-            } else {
-              // Add placeholder for days without mood data
-              moodEntries.push({
-                date: dateStr,
-                emoji: '·',
-                label: ''
-              });
-            }
-          } catch (error) {
-            // Add placeholder for days without mood data
-            moodEntries.push({
-              date: dateStr,
-              emoji: '·',
-              label: ''
-            });
-          }
-        }
-        
-        setMoodData(moodEntries);
+
       }
     };
     
@@ -263,36 +219,15 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone, date }) => 
     }
   };
   
-  // Helper function to get mood trend description
-  const getMoodTrend = () => {
-    if (moodData.filter(m => m.label).length < 3) return "Not enough data";
-    
-    const labels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
-    const recentMoods = moodData.filter(m => m.label).map(m => labels.indexOf(m.label));
-    
-    if (recentMoods.length === 0) return "Not enough data";
-    
-    const avgMood = recentMoods.reduce((sum, val) => sum + val, 0) / recentMoods.length;
-    
-    if (avgMood < 1.5) return "Trending downward";
-    if (avgMood < 2.5) return "Stable";
-    if (avgMood < 3.5) return "Slightly improving";
-    return "Trending upward";
-  };
+
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Mood Tracker</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">How are you feeling?</p>
         </div>
-        <button
-          onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-        >
-          {showInsights ? 'Hide Insights' : 'Insights'}
-        </button>
       </div>
       
       <div className="flex justify-between items-center mb-4">
@@ -373,39 +308,7 @@ const MoodTracker: React.FC<MoodTrackerProps> = ({ onSave, timezone, date }) => 
         </div>
       </div>
       
-      {/* Mood Trend Section - Only shown when insights are toggled */}
-      {showInsights && (
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Mood Trend</h3>
-            <span className="text-sm font-medium text-teal-600 dark:text-teal-400">{getMoodTrend()}</span>
-          </div>
-          
-          {/* Simple mood line graph */}
-          <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Last 7 days</span>
-            </div>
-            
-            <div className="h-16 flex items-end">
-              {moodData.map((mood, index) => {
-                const labels = ['Sad', 'Down', 'Okay', 'Good', 'Great'];
-                const height = mood.label ? ((labels.indexOf(mood.label) + 1) / 5) * 100 : 0;
-                
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center">
-                    <div
-                      className={`w-2 rounded-t-sm transition-all ${mood.label ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-600'}`}
-                      style={{ height: `${height}%` }}
-                    ></div>
-                    <span className="text-xs mt-1">{mood.emoji}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+
       
       {saveConfirmation && (
         <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">

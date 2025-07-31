@@ -6,6 +6,11 @@ interface JournalSettingsProps {
   onJournalCleared?: () => void;
 }
 
+interface CustomActivity {
+  name: string;
+  icon: string;
+}
+
 interface JournalSettingsData {
   reminderEnabled: boolean;
   reminderTime: string;
@@ -18,6 +23,7 @@ interface JournalSettingsData {
   activityTracking: boolean;
   sleepTracking: boolean;
   weeklyReflections: boolean;
+  customActivities: CustomActivity[];
 }
 
 const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCleared }) => {
@@ -32,20 +38,51 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     moodTracking: true,
     activityTracking: true,
     sleepTracking: true,
-    weeklyReflections: false
+    weeklyReflections: false,
+    customActivities: []
   });
   
   const [pinConfirm, setPinConfirm] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'privacy' | 'data' | 'tracking'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'tracking' | 'activities' | 'privacy' | 'data'>('general');
   const [showClearJournalModal, setShowClearJournalModal] = useState<boolean>(false);
   const [clearJournalStep, setClearJournalStep] = useState<number>(1);
   const [clearingJournal, setClearingJournal] = useState<boolean>(false);
   const [confirmationText, setConfirmationText] = useState<string>('');
+  const [newActivityName, setNewActivityName] = useState<string>('');
+  const [newActivityIcon, setNewActivityIcon] = useState<string>('📌');
+  const [showActivityForm, setShowActivityForm] = useState<boolean>(false);
   
   const { user } = useUser();
+
+  // Default activities that come with the app
+  const defaultActivities: CustomActivity[] = [
+    { name: 'Work', icon: '💼' },
+    { name: 'Exercise', icon: '🏋️' },
+    { name: 'Social', icon: '👥' },
+    { name: 'Reading', icon: '📚' },
+    { name: 'Gaming', icon: '🎮' },
+    { name: 'Family', icon: '👨‍👩‍👧‍👦' },
+    { name: 'Shopping', icon: '🛒' },
+    { name: 'Cooking', icon: '🍳' },
+    { name: 'Cleaning', icon: '🧹' },
+    { name: 'TV', icon: '📺' },
+    { name: 'Movies', icon: '🎬' },
+    { name: 'Music', icon: '🎵' },
+    { name: 'Outdoors', icon: '🌳' },
+    { name: 'Travel', icon: '✈️' },
+    { name: 'Relaxing', icon: '🛌' },
+    { name: 'Hobbies', icon: '🎨' },
+    { name: 'Study', icon: '📝' },
+    { name: 'Meditation', icon: '🧘' },
+    { name: 'Art', icon: '🖼️' },
+    { name: 'Writing', icon: '✍️' }
+  ];
+
+  // Common emoji options for custom activities
+  const emojiOptions = ['📌', '🎯', '⭐', '💡', '🚀', '🎨', '🔥', '💎', '🌟', '⚡', '🎪', '🎭', '🎸', '🎲', '🎊', '🎁', '🌈', '☀️', '🌙', '⭕', '💫', '🔮', '🎈', '🎀'];
 
   if (!user) {
     return (
@@ -150,6 +187,45 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     }
   };
 
+  // Add a new custom activity
+  const handleAddActivity = () => {
+    if (!newActivityName.trim()) return;
+    
+    const newActivity: CustomActivity = {
+      name: newActivityName.trim(),
+      icon: newActivityIcon
+    };
+    
+    // Check if activity already exists
+    const allActivities = [...defaultActivities, ...settings.customActivities];
+    if (allActivities.some(activity => activity.name.toLowerCase() === newActivity.name.toLowerCase())) {
+      return; // Activity already exists
+    }
+    
+    setSettings({
+      ...settings,
+      customActivities: [...settings.customActivities, newActivity]
+    });
+    
+    setNewActivityName('');
+    setNewActivityIcon('📌');
+    setShowActivityForm(false);
+  };
+
+  // Remove a custom activity
+  const handleRemoveActivity = (activityName: string) => {
+    setSettings({
+      ...settings,
+      customActivities: settings.customActivities.filter(activity => activity.name !== activityName)
+    });
+  };
+
+  // Remove a default activity (by adding it to a disabled list)
+  const handleRemoveDefaultActivity = (activityName: string) => {
+    // For now, we'll implement this by filtering in the ActivityTracker component
+    // This could be extended later with a disabledDefaultActivities array
+  };
+
   // Export data function
   const handleExportData = async () => {
     if (!user?.primaryEmail) return;
@@ -228,6 +304,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   const tabs = [
     { id: 'general', label: 'General', icon: '⚙️' },
     { id: 'tracking', label: 'Tracking', icon: '📊' },
+    { id: 'activities', label: 'Activities', icon: '🎯' },
     { id: 'privacy', label: 'Privacy', icon: '🔒' },
     { id: 'data', label: 'Data', icon: '💾' }
   ];
@@ -478,6 +555,164 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/20 dark:peer-focus:ring-blue-300/40 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
                   </label>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Activities Tab */}
+        {activeTab === 'activities' && (
+          <div className="space-y-6 import-step">
+            <div className="bg-gradient-to-br from-teal-50 to-green-50 dark:from-teal-900/20 dark:to-green-900/20 rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <span className="text-2xl mr-3">🎯</span>
+                Activity Management
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Customize the activities that appear in your journal entries. You can add new activities with custom icons or remove existing ones.
+              </p>
+              
+              {/* Default Activities Section */}
+              <div className="mb-8">
+                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 flex items-center">
+                  <span className="text-lg mr-2">📋</span>
+                  Default Activities
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {defaultActivities.map((activity) => (
+                    <div
+                      key={`default-${activity.name}`}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                    >
+                      <div className="flex items-center flex-1">
+                        <span className="text-lg mr-2">{activity.icon}</span>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                          {activity.name}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Activities Section */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center">
+                    <span className="text-lg mr-2">✨</span>
+                    Custom Activities ({settings.customActivities.length})
+                  </h4>
+                  <button
+                    onClick={() => setShowActivityForm(!showActivityForm)}
+                    className="px-4 py-2 rounded-lg bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Activity
+                  </button>
+                </div>
+
+                {/* Add Activity Form */}
+                {showActivityForm && (
+                  <div className="bg-white dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600 mb-4">
+                    <h5 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                      Add New Activity
+                    </h5>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Activity Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newActivityName}
+                          onChange={(e) => setNewActivityName(e.target.value)}
+                          placeholder="Enter activity name..."
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Icon
+                        </label>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="text-2xl p-2 bg-slate-100 dark:bg-slate-600 rounded-lg">
+                            {newActivityIcon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="grid grid-cols-8 gap-2">
+                              {emojiOptions.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => setNewActivityIcon(emoji)}
+                                  className={`p-2 rounded-lg text-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors ${
+                                    newActivityIcon === emoji ? 'bg-teal-100 dark:bg-teal-900/30 ring-2 ring-teal-500' : ''
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => {
+                            setShowActivityForm(false);
+                            setNewActivityName('');
+                            setNewActivityIcon('📌');
+                          }}
+                          className="flex-1 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddActivity}
+                          disabled={!newActivityName.trim()}
+                          className="flex-1 px-4 py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Add Activity
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom Activities List */}
+                {settings.customActivities.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {settings.customActivities.map((activity) => (
+                      <div
+                        key={`custom-${activity.name}`}
+                        className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors group"
+                      >
+                        <div className="flex items-center flex-1">
+                          <span className="text-lg mr-2">{activity.icon}</span>
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                            {activity.name}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveActivity(activity.name)}
+                          className="ml-2 p-1 rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                          title={`Remove ${activity.name}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600">
+                    <div className="text-3xl mb-2">🎯</div>
+                    <p className="text-slate-500 dark:text-slate-400">No custom activities yet</p>
+                    <p className="text-sm text-slate-400 dark:text-slate-500">Click "Add Activity" to create your first custom activity</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

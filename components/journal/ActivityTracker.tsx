@@ -3,6 +3,11 @@ import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
 import axios from 'axios';
 
+interface CustomActivity {
+  name: string;
+  icon: string;
+}
+
 interface ActivityTrackerProps {
   onSave: (activities: string[]) => void;
   date?: string;
@@ -11,11 +16,8 @@ interface ActivityTrackerProps {
 
 const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezone }) => {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [customActivity, setCustomActivity] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
-  const [userActivities, setUserActivities] = useState<string[]>([]);
-  const [showInsights, setShowInsights] = useState<boolean>(false);
-  const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
+  const [customActivities, setCustomActivities] = useState<CustomActivity[]>([]);
  const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
@@ -25,7 +27,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Default activities
   // Default activities with icons 
-  const defaultActivities = [
+  const defaultActivities: CustomActivity[] = [
     { name: 'Work', icon: '💼' },
     { name: 'Exercise', icon: '🏋️' },
     { name: 'Social', icon: '👥' },
@@ -51,21 +53,23 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Get the current date in YYYY-MM-DD format or use provided date
   const entryDate = date || getCurrentDate(timezone);
 
-  // Load saved activities and user's custom activities from API
+    // Load saved activities and user's custom activities from settings
   useEffect(() => {
     const fetchActivitiesData = async () => {
       if (user?.primaryEmail) {
-        // Load user's custom activities
+        // Load custom activities from journal settings
         try {
-          const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
-          const savedCustomActivities = localStorage.getItem(customActivitiesKey);
+          const settingsKey = `journal_settings_${user.primaryEmail}`;
+          const savedSettings = localStorage.getItem(settingsKey);
           
-          if (savedCustomActivities) {
-            const parsed = JSON.parse(savedCustomActivities);
-            setUserActivities(parsed);
+          if (savedSettings) {
+            const parsed = JSON.parse(savedSettings);
+            if (parsed.customActivities && Array.isArray(parsed.customActivities)) {
+              setCustomActivities(parsed.customActivities);
+            }
           }
         } catch (e) {
-          console.error('Error parsing saved custom activities:', e);
+          console.error('Error parsing saved journal settings:', e);
         }
         
         // Load activities for the specific date
@@ -81,42 +85,6 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           // Set default empty state
           setSelectedActivities([]);
         }
-        
-        // Calculate activity statistics
-        const calculateActivityStats = async () => {
-          const stats: {[key: string]: number} = {};
-          const last30Days: string[] = [];
-          
-          // Get dates for the last 30 days
-          const today = new Date();
-          for (let i = 0; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            last30Days.push(dateStr);
-          }
-          
-          // Count activities for each day
-          for (const dateStr of last30Days) {
-            try {
-              const response = await axios.get(`/api/journal/activities?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (response.data && response.data.activities && response.data.activities.length > 0) {
-                response.data.activities.forEach((activity: string) => {
-                  stats[activity] = (stats[activity] || 0) + 1;
-                });
-              }
-            } catch (error) {
-              // If activities don't exist for this date, continue to the next date
-              continue;
-            }
-          }
-          
-          setActivityStats(stats);
-        };
-        
-        calculateActivityStats();
       }
     };
     
@@ -141,45 +109,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       onSave(selectedActivities);
     }
-    // Recalculate activity stats after saving
-    setTimeout(() => {
-      const calculateActivityStats = () => {
-        if (user?.primaryEmail) {
-          const stats: {[key: string]: number} = {};
-          const last30Days: string[] = [];
-          
-          // Get dates for the last 30 days
-          const today = new Date();
-          for (let i = 0; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            last30Days.push(dateStr);
-          }
-          
-          // Count activities for each day
-          last30Days.forEach(dateStr => {
-            const key = getDateStorageKey('journal_activities', user.primaryEmail || '', timezone || '', dateStr);
-            const savedActivities = localStorage.getItem(key);
-            
-            if (savedActivities) {
-              try {
-                const activities = JSON.parse(savedActivities);
-                activities.forEach((activity: string) => {
-                  stats[activity] = (stats[activity] || 0) + 1;
-                });
-              } catch (e) {
-                console.error('Error parsing saved activities:', e);
-              }
-            }
-          });
-          
-          setActivityStats(stats);
-        }
-      };
-      
-      calculateActivityStats();
-    }, 500);
+
   };
 
   const toggleActivity = (activity: string) => {
@@ -329,27 +259,15 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     }
   };
 
-  // Get top activities based on frequency
-  const getTopActivities = () => {
-    return Object.entries(activityStats)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([activity, count]) => ({ activity, count }));
-  };
+
   
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Activities</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">What did you do today?</p>
         </div>
-        <button
-          onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-        >
-          {showInsights ? 'Hide Insights' : 'Insights'}
-        </button>
       </div>
       
       <div className="mb-6">
@@ -439,42 +357,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         </div>
       )}
       
-      {/* Activity Insights */}
-      {showInsights && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Activity Insights (Last 30 Days)
-          </h3>
-          <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-            {getTopActivities().length > 0 ? (
-              <div className="space-y-2">
-                {getTopActivities().map(({ activity, count }) => (
-                  <div key={`stat-${activity}`} className="flex items-center">
-                    <span className="mr-2">{getActivityIcon(activity)}</span>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{activity}</span>
-                    <div className="ml-2 flex-grow">
-                      <div className="h-2 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-teal-500 rounded-full"
-                          style={{ width: `${Math.min(100, (count / 30) * 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{count} days</span>
-                  </div>
-                ))}
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  These are your most frequent activities. Consider how they affect your mood and wellbeing.
-                </p>
-              </div>
-            ) : (
-              <p className="text-slate-500 dark:text-slate-400 text-sm italic">
-                Track your activities for a few days to see insights
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+
       
       {saveConfirmation && (
         <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">
