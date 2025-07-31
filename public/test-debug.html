@@ -2,16 +2,24 @@
 <html>
 <head>
     <title>Notification Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #output { margin-top: 20px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
 </head>
 <body>
-    <h1>Notification Debug Test</h1>
+    <h1>🔍 Notification Debug Test</h1>
+    <p>This will test your notification subscription directly with the debug API.</p>
+    
     <button id="testBtn">Test Direct Notification</button>
     <div id="output"></div>
 
     <script>
         document.getElementById('testBtn').addEventListener('click', async () => {
             const output = document.getElementById('output');
-            output.innerHTML = 'Testing...';
+            output.innerHTML = '<p>🔍 Testing...</p>';
 
             try {
                 // Check if service worker is available
@@ -26,10 +34,12 @@
                 const subscription = await registration.pushManager.getSubscription();
                 
                 if (!subscription) {
-                    throw new Error('No push subscription found');
+                    throw new Error('No push subscription found. Please enable notifications first.');
                 }
 
                 console.log('Subscription:', subscription.toJSON());
+                
+                output.innerHTML = '<p>📡 Sending to debug API...</p>';
 
                 // Send to debug API
                 const response = await fetch('/api/debug-notification', {
@@ -42,13 +52,24 @@
 
                 const result = await response.json();
                 
-                output.innerHTML = `
-                    <h3>Result:</h3>
-                    <pre>${JSON.stringify(result, null, 2)}</pre>
-                `;
+                if (response.ok) {
+                    output.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    output.innerHTML = `
+                        <h3>❌ Failed</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
 
             } catch (error) {
-                output.innerHTML = `<h3>Error:</h3><pre>${error.message}</pre>`;
+                output.innerHTML = `
+                    <h3>💥 Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+                console.error('Debug test error:', error);
             }
         });
     </script>
