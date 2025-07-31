@@ -23,7 +23,6 @@ type NoteListProps = {
   onToggleSelectNote: (noteId: string, isSelected: boolean) => void;
   onDeleteSelected: () => void;
   groupBy?: GroupingOption;
-  onGroupByChange?: (groupBy: GroupingOption) => void;
 };
 
 // Helper function to get week key
@@ -52,8 +51,7 @@ export default function NoteList({
   selectedNotes, 
   onToggleSelectNote, 
   onDeleteSelected,
-  groupBy = 'month',
-  onGroupByChange
+  groupBy = 'month'
 }: NoteListProps) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
@@ -158,41 +156,7 @@ export default function NoteList({
   const groupedRegularNotes = groupNotes(regularNotes);
   const sortedGroups = sortGroupedNotes(groupedRegularNotes);
 
-  const renderGroupingSelector = () => {
-    if (!onGroupByChange) return null;
 
-    const groupingOptions = [
-      { value: 'month' as GroupingOption, label: 'Month Created', icon: CalendarDaysIcon },
-      { value: 'date' as GroupingOption, label: 'Date Created', icon: CalendarIcon },
-      { value: 'tag' as GroupingOption, label: 'Tag Grouping', icon: HashtagIcon },
-      { value: 'week' as GroupingOption, label: 'Week Created', icon: CalendarDaysIcon },
-      { value: 'none' as GroupingOption, label: 'No Grouping', icon: ListBulletIcon },
-    ];
-
-    return (
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Group by:
-        </label>
-        <div className="grid grid-cols-1 gap-2">
-          {groupingOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => onGroupByChange(option.value)}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                groupBy === option.value
-                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-neutral-200 dark:border-neutral-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-              }`}
-            >
-              <option.icon className="w-4 h-4" />
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   if (notes.length === 0) {
     return (
@@ -208,8 +172,7 @@ export default function NoteList({
 
   return (
     <div className="space-y-4">
-      {/* Grouping Selector */}
-      {renderGroupingSelector()}
+      {/* Grouping Selector removed - now handled by dropdown in main page */}
 
       {/* Delete Selected Button */}
       {selectedNotes.length > 0 && (

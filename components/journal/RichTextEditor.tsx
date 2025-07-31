@@ -329,9 +329,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
         </div>
         
-        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2 hidden sm:block"></div>
         
-        {/* Headings */}
+        {/* Headings - Show only H1 and H2 on mobile */}
         <div className="flex items-center space-x-1">
           <button
             onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -357,9 +357,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             H2
           </button>
           
+          {/* H3 hidden on mobile to save space */}
           <button
             onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all hidden sm:block ${
               editor?.isActive('heading', { level: 3 })
                 ? 'bg-[#00C9A7] text-white shadow-sm'
                 : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
@@ -370,7 +371,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
         </div>
         
-        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2 hidden sm:block"></div>
         
         {/* Lists and formatting */}
         <div className="flex items-center space-x-1">
@@ -412,9 +413,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <CheckIcon className="w-4 h-4" />
           </button>
           
+          {/* Quote hidden on mobile to save space */}
           <button
             onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-            className={`p-2 rounded-lg transition-all ${
+            className={`p-2 rounded-lg transition-all hidden sm:block ${
               editor?.isActive('blockquote')
                 ? 'bg-[#00C9A7] text-white shadow-sm'
                 : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
@@ -427,10 +429,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
         </div>
         
-        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        {/* Divider for desktop only */}
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
         
-        {/* Insert options - moved from slash commands to toolbar */}
-        <div className="flex items-center space-x-1">
+        {/* Insert options - Hidden on small screens, visible on medium+ */}
+        <div className="hidden md:flex items-center space-x-1">
           <button
             onClick={() => editor?.chain().focus().insertTable({ 
               rows: 3, 
@@ -464,12 +467,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
         </div>
         
-        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        {/* Divider for desktop only */}
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2 hidden md:block"></div>
         
         {/* Table controls */}
         {editor?.isActive('table') && (
           <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">
-            <span className="text-xs font-medium text-blue-700 dark:text-blue-300 mr-2">Table:</span>
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300 mr-2 hidden sm:inline">Table:</span>
             
             <button
               onClick={() => editor?.chain().focus().addColumnBefore().run()}
@@ -491,9 +495,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </svg>
             </button>
             
+            {/* Row controls hidden on mobile */}
             <button
               onClick={() => editor?.chain().focus().addRowBefore().run()}
-              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all hidden sm:block"
               title="Add Row Before"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -503,7 +508,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             
             <button
               onClick={() => editor?.chain().focus().addRowAfter().run()}
-              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all"
+              className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 transition-all hidden sm:block"
               title="Add Row After"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -511,27 +516,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </svg>
             </button>
             
-            <div className="h-4 w-px bg-blue-300 dark:bg-blue-600 mx-1"></div>
-            
-            <button
-              onClick={() => editor?.chain().focus().deleteColumn().run()}
-              className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-all"
-              title="Delete Column"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
-              </svg>
-            </button>
-            
-            <button
-              onClick={() => editor?.chain().focus().deleteRow().run()}
-              className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-all"
-              title="Delete Row"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h14zm-10 8V8H5v6h4zm2 0h4V8h-4v6zm6 0h4V8h-4v6z"/>
-              </svg>
-            </button>
+            <div className="h-4 w-px bg-blue-300 dark:bg-blue-600 mx-1 hidden sm:block"></div>
             
             <button
               onClick={() => editor?.chain().focus().deleteTable().run()}
@@ -545,9 +530,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         )}
         
-        {/* Utility */}
+        {/* Utility - Compact on mobile */}
         <div className="flex items-center space-x-1 ml-auto">
-          <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400 px-2 hidden md:inline">
             Type "/" for commands
           </span>
           
