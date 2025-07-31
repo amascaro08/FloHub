@@ -149,6 +149,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       TaskList,
       TaskItem.configure({
         nested: true,
+        HTMLAttributes: {
+          class: 'task-item',
+        },
       }),
     ],
     content: content,
@@ -210,6 +213,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       editor.commands.setContent(content);
     }
   }, [content, editor]);
+
+
 
   // Handle slash command detection
   useEffect(() => {
@@ -381,7 +386,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ListBulletIcon className="w-4 h-4" />
           </button>
           
-                                <button
+          <button
             onClick={() => editor?.chain().focus().toggleOrderedList().run()}
             className={`p-2 rounded-lg transition-all ${
               editor?.isActive('orderedList')
@@ -419,6 +424,43 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
             </svg>
+          </button>
+        </div>
+        
+        <div className="h-8 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
+        
+        {/* Insert options - moved from slash commands to toolbar */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => editor?.chain().focus().insertTable({ 
+              rows: 3, 
+              cols: 3, 
+              withHeaderRow: true 
+            }).run()}
+            className="p-2 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+            title="Insert Table"
+          >
+            <TableCellsIcon className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            className={`p-2 rounded-lg transition-all ${
+              editor?.isActive('codeBlock')
+                ? 'bg-[#00C9A7] text-white shadow-sm'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
+            title="Code Block"
+          >
+            <CodeBracketIcon className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+            className="p-2 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+            title="Insert Divider"
+          >
+            <MinusIcon className="w-4 h-4" />
           </button>
         </div>
         
@@ -862,91 +904,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           outline: none;
         }
         
-        /* Task List Styles */
-        .prose-editor .ProseMirror ul[data-type="taskList"] {
-          list-style: none;
-          padding-left: 0;
+
+        
+        /* Task list fix - restored from working debug version */
+        .prose-editor ul li:has(input[type="checkbox"]) {
+          display: flex !important;
+          align-items: flex-start !important;
+          list-style: none !important;
+          padding-left: 0 !important;
         }
         
-        .prose-editor .ProseMirror li[data-type="taskItem"] {
-          display: flex;
-          align-items: flex-start;
-          margin: 0.5rem 0;
-          list-style: none;
+        .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"] {
+          margin-right: 12px !important;
+          margin-top: 18px !important;
+          flex-shrink: 0 !important;
         }
         
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label {
-          flex: 0 0 auto;
-          margin-right: 0.5rem;
-          user-select: none;
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
-          appearance: none;
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgb(148 163 184);
-          border-radius: 4px;
-          margin: 0;
-          cursor: pointer;
-          position: relative;
-          transition: all 0.15s ease;
-          background: white;
-        }
-        
-        .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
-          background: rgb(51 65 85);
-          border-color: rgb(100 116 139);
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
-          border-color: #00C9A7;
-          background-color: rgb(236 254 255);
-        }
-        
-        .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
-          border-color: #00C9A7;
-          background-color: rgb(20 83 75);
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked {
-          background-color: #00C9A7;
-          border-color: #00C9A7;
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked:after {
-          content: '';
-          position: absolute;
-          top: 1px;
-          left: 5px;
-          width: 6px;
-          height: 10px;
-          border: solid white;
-          border-width: 0 2px 2px 0;
-          transform: rotate(45deg);
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] > div {
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
-          text-decoration: line-through;
-          opacity: 0.6;
-          color: rgb(107 114 128);
-        }
-        
-        .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
-          color: rgb(156 163 175);
-        }
-        
-        .prose-editor .ProseMirror li[data-type="taskItem"] ul[data-type="taskList"] {
-          margin-left: 1.5rem;
-          margin-top: 0.5rem;
+        /* Strikethrough for checked items */
+        .prose-editor ul li:has(input[type="checkbox"]:checked) {
+          text-decoration: line-through !important;
+          opacity: 0.6 !important;
+          color: #666 !important;
         }
         
         /* Mobile touch scrolling improvements */
