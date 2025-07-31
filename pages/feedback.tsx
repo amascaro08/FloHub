@@ -156,12 +156,13 @@ const FeedbackPage: NextPage = () => {
   // Handle feedback selection from list
   const handleFeedbackSelect = (feedback: any) => {
     setSelectedFeedback(feedback);
-    setActiveTab('submit'); // Show details in main area
+    // Don't change the tab, keep user on 'history' tab
   };
 
   // Handle back to list
   const handleBackToList = () => {
     setSelectedFeedback(null);
+    setActiveTab('history'); // Ensure we're on the history tab
   };
 
   return (
@@ -199,50 +200,49 @@ const FeedbackPage: NextPage = () => {
 
       {/* Tab Navigation */}
       <div className="mb-8">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-8">
+        {selectedFeedback ? (
+          <div className="flex items-center mb-6">
+            <button
+              onClick={handleBackToList}
+              className="flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium text-sm transition-colors"
+            >
+              ← Back to Your Feedback
+            </button>
+          </div>
+        ) : (
+          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
             <button
               onClick={() => {
                 setActiveTab('submit');
                 setSelectedFeedback(null);
               }}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'submit' && !selectedFeedback
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                activeTab === 'submit'
+                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <PlusIcon className="w-4 h-4" />
-                Submit Feedback
-              </div>
+              <PlusIcon className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Submit Feedback</span>
+              <span className="sm:hidden">Submit</span>
             </button>
             <button
               onClick={() => {
                 setActiveTab('history');
                 setSelectedFeedback(null);
               }}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'history' && !selectedFeedback
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                activeTab === 'history'
+                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <ClipboardDocumentListIcon className="w-4 h-4" />
-                Your Feedback
-              </div>
+              <ClipboardDocumentListIcon className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Your Feedback</span>
+              <span className="sm:hidden">History</span>
             </button>
-            {selectedFeedback && (
-              <button
-                onClick={handleBackToList}
-                className="py-3 px-1 border-b-2 border-primary-500 text-primary-600 dark:text-primary-400 font-medium text-sm"
-              >
-                ← Back to List
-              </button>
-            )}
-          </nav>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Success Message */}
