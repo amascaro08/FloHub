@@ -15,13 +15,16 @@ const App = ({ Component, pageProps }: AppProps) => {
   const requiresAuth = (Component as any).auth !== false;
 
   useEffect(() => {
-    // Temporarily disable service worker registration to test connectivity issues
-    /*
+    // Register service worker for push notifications and PWA functionality
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-          console.log('SW registered: ', registration);
+          console.log('Registering service worker...');
+          const registration = await navigator.serviceWorker.register('/sw.js', { 
+            scope: '/',
+            updateViaCache: 'none' // Ensure fresh service worker loading
+          });
+          console.log('SW registered successfully: ', registration);
           
           // Handle updates
           registration.addEventListener('updatefound', () => {
@@ -40,10 +43,12 @@ const App = ({ Component, pageProps }: AppProps) => {
         } catch (err) {
           console.error('SW registration failed: ', err);
         }
+      } else {
+        console.warn('Service workers not supported in this browser');
       }
     };
+    
     registerSW();
-    */
   }, []);
 
   return (

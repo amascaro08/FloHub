@@ -66,23 +66,38 @@ export const getNotificationPermission = (): NotificationPermission => {
 /**
  * Wait for service worker to be ready with timeout
  */
-const waitForServiceWorker = async (timeoutMs: number = 10000): Promise<ServiceWorkerRegistration> => {
-  return new Promise((resolve, reject) => {
+const waitForServiceWorker = async (timeoutMs: number = 15000): Promise<ServiceWorkerRegistration> => {
+  return new Promise(async (resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error('Service worker registration timeout'));
     }, timeoutMs);
 
-    if (navigator.serviceWorker.controller) {
-      clearTimeout(timeout);
-      navigator.serviceWorker.ready.then(resolve).catch(reject);
-    } else {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+    try {
+      // First, check if there's already a registration
+      const existingRegistration = await navigator.serviceWorker.getRegistration();
+      if (existingRegistration) {
+        console.log('Found existing service worker registration');
         clearTimeout(timeout);
-        navigator.serviceWorker.ready.then(resolve).catch(reject);
-      });
-      
-      // Also try ready immediately in case it's already available
-      navigator.serviceWorker.ready.then(resolve).catch(reject);
+        return resolve(existingRegistration);
+      }
+
+      // If we have a controller, use it
+      if (navigator.serviceWorker.controller) {
+        console.log('Service worker controller found');
+        clearTimeout(timeout);
+        const registration = await navigator.serviceWorker.ready;
+        return resolve(registration);
+      }
+
+      // Wait for service worker to be ready
+      console.log('Waiting for service worker to be ready...');
+      const registration = await navigator.serviceWorker.ready;
+      clearTimeout(timeout);
+      resolve(registration);
+
+    } catch (error) {
+      clearTimeout(timeout);
+      reject(error);
     }
   });
 };
