@@ -94,6 +94,7 @@ export default async function handler(
           journalSleepTracking: true,
           journalWeeklyReflections: false,
           journalCustomActivities: [],
+          journalDisabledActivities: [],
         };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
@@ -137,6 +138,7 @@ export default async function handler(
         journalSleepTracking: data.journalSleepTracking ?? true,
         journalWeeklyReflections: data.journalWeeklyReflections ?? false,
         journalCustomActivities: (data.journalCustomActivities as any) || [],
+        journalDisabledActivities: (data.journalDisabledActivities as any) || [],
       };
 
       console.log("User settings loaded for", user_email, settings);
@@ -209,6 +211,7 @@ export default async function handler(
         journalSleepTracking: result.journalSleepTracking ?? true,
         journalWeeklyReflections: result.journalWeeklyReflections ?? false,
         journalCustomActivities: (result.journalCustomActivities as any) || [],
+        journalDisabledActivities: (result.journalDisabledActivities as any) || [],
       };
 
       console.log("User settings updated for", user_email, updatedSettings);

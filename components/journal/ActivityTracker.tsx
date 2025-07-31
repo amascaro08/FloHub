@@ -62,6 +62,14 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Get custom activities from user settings
   const customActivities = userSettings?.journalCustomActivities || [];
+  
+  // Get disabled activities from user settings
+  const disabledActivities = userSettings?.journalDisabledActivities || [];
+  
+  // Filter out disabled default activities
+  const enabledDefaultActivities = defaultActivities.filter(
+    (activity: CustomActivity) => !disabledActivities.includes(activity.name)
+  );
 
   // Load saved activities for the specific date
   useEffect(() => {
@@ -162,9 +170,13 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Get icon for an activity
   const getActivityIcon = (activity: string) => {
-    // Check default activities first
-    const defaultActivity = defaultActivities.find((a: CustomActivity) => a.name === activity);
+    // Check enabled default activities first
+    const defaultActivity = enabledDefaultActivities.find((a: CustomActivity) => a.name === activity);
     if (defaultActivity) return defaultActivity.icon;
+    
+    // Check all default activities (for historical data)
+    const allDefaultActivity = defaultActivities.find((a: CustomActivity) => a.name === activity);
+    if (allDefaultActivity) return allDefaultActivity.icon;
     
     // Check custom activities
     const customActivity = customActivities.find((a: CustomActivity) => a.name === activity);
@@ -189,7 +201,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
-          {defaultActivities.map((activity: CustomActivity) => (
+          {enabledDefaultActivities.map((activity: CustomActivity) => (
             <button
               key={activity.name}
               onClick={() => toggleActivity(activity.name)}

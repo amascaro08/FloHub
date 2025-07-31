@@ -43,6 +43,10 @@ ADD COLUMN journal_weekly_reflections BOOLEAN DEFAULT FALSE;
 ALTER TABLE user_settings 
 ADD COLUMN journal_custom_activities JSONB DEFAULT '[]'::jsonb;
 
+-- Disabled default activities (activities user wants to hide)
+ALTER TABLE user_settings 
+ADD COLUMN journal_disabled_activities JSONB DEFAULT '[]'::jsonb;
+
 -- Add check constraints
 ALTER TABLE user_settings 
 ADD CONSTRAINT check_journal_export_format 
@@ -70,6 +74,22 @@ CHECK (
   )
 );
 
+ALTER TABLE user_settings 
+ADD CONSTRAINT check_journal_disabled_activities_structure 
+CHECK (
+  journal_disabled_activities IS NULL OR 
+  (
+    jsonb_typeof(journal_disabled_activities) = 'array' AND
+    (
+      jsonb_array_length(journal_disabled_activities) = 0 OR
+      (
+        SELECT bool_and(jsonb_typeof(elem) = 'string')
+        FROM jsonb_array_elements(journal_disabled_activities) AS elem
+      )
+    )
+  )
+);
+
 -- Add indexes for performance (using user_email which is the actual column name)
 CREATE INDEX idx_user_settings_journal_reminder ON user_settings(user_email, journal_reminder_enabled);
 CREATE INDEX idx_user_settings_journal_features ON user_settings(user_email, journal_mood_tracking, journal_activity_tracking, journal_sleep_tracking);
@@ -87,6 +107,7 @@ COMMENT ON COLUMN user_settings.journal_activity_tracking IS 'Whether activity t
 COMMENT ON COLUMN user_settings.journal_sleep_tracking IS 'Whether sleep tracking is enabled';
 COMMENT ON COLUMN user_settings.journal_weekly_reflections IS 'Whether weekly reflection prompts are enabled';
 COMMENT ON COLUMN user_settings.journal_custom_activities IS 'JSON array of user-defined custom activities with name and icon properties';
+COMMENT ON COLUMN user_settings.journal_disabled_activities IS 'JSON array of default activity names that user has disabled/hidden';
 
 -- Example of the JSON structure for custom activities:
 -- [
@@ -95,3 +116,6 @@ COMMENT ON COLUMN user_settings.journal_custom_activities IS 'JSON array of user
 --   {"name": "Gardening", "icon": "🌱"},
 --   {"name": "Photography", "icon": "📸"}
 -- ]
+
+-- Example of the JSON structure for disabled activities:
+-- ["Work", "Gaming", "TV"]

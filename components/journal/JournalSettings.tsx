@@ -21,6 +21,7 @@ interface JournalSettingsData {
   sleepTracking: boolean;
   weeklyReflections: boolean;
   customActivities: CustomActivity[];
+  disabledActivities: string[];
 }
 
 const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCleared }) => {
@@ -36,7 +37,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     activityTracking: true,
     sleepTracking: true,
     weeklyReflections: false,
-    customActivities: []
+    customActivities: [],
+    disabledActivities: []
   });
   
   const [pinConfirm, setPinConfirm] = useState<string>('');
@@ -119,6 +121,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
         sleepTracking: userSettings.journalSleepTracking ?? true,
         weeklyReflections: userSettings.journalWeeklyReflections || false,
         customActivities: userSettings.journalCustomActivities || [],
+        disabledActivities: userSettings.journalDisabledActivities || [],
       });
     }
   }, [userSettings, user]);
@@ -165,6 +168,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
           journalSleepTracking: settings.sleepTracking,
           journalWeeklyReflections: settings.weeklyReflections,
           journalCustomActivities: settings.customActivities,
+          journalDisabledActivities: settings.disabledActivities,
         };
 
         const response = await fetch('/api/userSettings', {
@@ -268,10 +272,23 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     });
   };
 
-  // Remove a default activity (by adding it to a disabled list)
-  const handleRemoveDefaultActivity = (activityName: string) => {
-    // For now, we'll implement this by filtering in the ActivityTracker component
-    // This could be extended later with a disabledDefaultActivities array
+  // Remove/Hide a default activity (by adding it to a disabled list)
+  const handleToggleDefaultActivity = (activityName: string) => {
+    const isCurrentlyDisabled = settings.disabledActivities.includes(activityName);
+    
+    if (isCurrentlyDisabled) {
+      // Re-enable the activity
+      setSettings({
+        ...settings,
+        disabledActivities: settings.disabledActivities.filter(name => name !== activityName)
+      });
+    } else {
+      // Disable the activity
+      setSettings({
+        ...settings,
+        disabledActivities: [...settings.disabledActivities, activityName]
+      });
+    }
   };
 
   // Export data function
@@ -625,22 +642,49 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
                 <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 flex items-center">
                   <span className="text-lg mr-2">📋</span>
                   Default Activities
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">(Click to enable/disable)</span>
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {defaultActivities.map((activity) => (
-                    <div
-                      key={`default-${activity.name}`}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                    >
-                      <div className="flex items-center flex-1">
-                        <span className="text-lg mr-2">{activity.icon}</span>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
-                          {activity.name}
-                        </span>
+                  {defaultActivities.map((activity) => {
+                    const isDisabled = settings.disabledActivities.includes(activity.name);
+                    return (
+                      <div
+                        key={`default-${activity.name}`}
+                        className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${
+                          isDisabled 
+                            ? 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50' 
+                            : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                        }`}
+                        onClick={() => handleToggleDefaultActivity(activity.name)}
+                      >
+                        <div className="flex items-center flex-1">
+                          <span className={`text-lg mr-2 ${isDisabled ? 'grayscale' : ''}`}>{activity.icon}</span>
+                          <span className={`text-sm font-medium truncate ${
+                            isDisabled 
+                              ? 'text-gray-500 dark:text-gray-400 line-through' 
+                              : 'text-slate-700 dark:text-slate-300'
+                          }`}>
+                            {activity.name}
+                          </span>
+                        </div>
+                        <div className={`ml-2 transition-opacity ${isDisabled ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          {isDisabled ? (
+                            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  Disabled activities won't appear in your journal entry form. You can re-enable them anytime.
+                </p>
               </div>
 
               {/* Custom Activities Section */}

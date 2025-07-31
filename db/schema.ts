@@ -133,6 +133,7 @@ export const userSettings = pgTable("user_settings", {
   journalSleepTracking: boolean("journal_sleep_tracking").default(true),
   journalWeeklyReflections: boolean("journal_weekly_reflections").default(false),
   journalCustomActivities: jsonb("journal_custom_activities").default('[]'),
+  journalDisabledActivities: jsonb("journal_disabled_activities").default('[]'),
 });
 
 // NOTES TABLE

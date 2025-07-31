@@ -49,6 +49,7 @@ export type UserSettings = {
   journalSleepTracking?: boolean;
   journalWeeklyReflections?: boolean;
   journalCustomActivities?: CustomActivity[];
+  journalDisabledActivities?: string[];
 };
 
 // Define a type for calendar sources
