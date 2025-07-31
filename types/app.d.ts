@@ -144,3 +144,6 @@ export interface WidgetProps {
   isCompact?: boolean;
   isHero?: boolean;
 }
+
+// Notes grouping options
+export type GroupingOption = 'month' | 'date' | 'tag' | 'week' | 'none';

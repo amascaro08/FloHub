@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import NoteList from "@/components/notes/NoteList";
 import NoteDetail from "@/components/notes/NoteDetail";
 import type { GetNotesResponse } from "../api/notes/index";
-import type { Note, UserSettings } from "@/types/app";
+import type { Note, UserSettings, GroupingOption } from "@/types/app";
 import { 
   PlusIcon, 
   MagnifyingGlassIcon,
@@ -80,6 +80,7 @@ export default function NotesPage() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupingOption>('month');
 
   // Check if device is mobile
   useEffect(() => {
@@ -388,6 +389,8 @@ export default function NotesPage() {
                 selectedNotes={selectedNotes}
                 onToggleSelectNote={handleToggleSelectNote}
                 onDeleteSelected={handleDeleteSelected}
+                groupBy={groupBy}
+                onGroupByChange={setGroupBy}
               />
               
               {selectedNotes.length > 0 && (
