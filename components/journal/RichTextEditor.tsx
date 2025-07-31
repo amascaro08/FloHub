@@ -222,7 +222,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       // Find all task items and update their classes based on checkbox state
       const taskItems = editor.view.dom.querySelectorAll('li[data-type="taskItem"]');
       taskItems.forEach((item) => {
-        const checkbox = item.querySelector('input[type="checkbox"]');
+        const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
         if (checkbox) {
           if (checkbox.checked) {
             item.classList.add('task-item-checked');
