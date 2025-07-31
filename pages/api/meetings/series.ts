@@ -269,7 +269,7 @@ async function buildSeriesContext(meetingRows: any[], seriesName: string) {
   });
 
   // Remove duplicates and limit
-  const uniqueTopics = [...new Set(keyTopics)].slice(0, 10);
+  const uniqueTopics = Array.from(new Set(keyTopics)).slice(0, 10);
 
   // Generate context summary
   const contextSummary = generateContextSummary(meetings, pendingActions);
