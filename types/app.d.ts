@@ -50,6 +50,8 @@ export type UserSettings = {
   journalWeeklyReflections?: boolean;
   journalCustomActivities?: CustomActivity[];
   journalDisabledActivities?: string[];
+  // Notes Settings
+  notesGrouping?: GroupingOption;
 };
 
 // Define a type for calendar sources

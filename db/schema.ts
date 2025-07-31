@@ -134,6 +134,8 @@ export const userSettings = pgTable("user_settings", {
   journalWeeklyReflections: boolean("journal_weekly_reflections").default(false),
   journalCustomActivities: jsonb("journal_custom_activities").default('[]'),
   journalDisabledActivities: jsonb("journal_disabled_activities").default('[]'),
+  // Notes Settings
+  notesGrouping: varchar("notes_grouping", { length: 10 }).default('month'),
 });
 
 // NOTES TABLE
