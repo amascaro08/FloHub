@@ -26,7 +26,7 @@ const SettingsPage = () => {
     defaultView: "today",
     customRange: { start: "", end: "" },
     globalTags: [],
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: undefined, // Don't set initial timezone - let API response populate it
     tags: [],
     widgets: [],
     calendarSources: [],
@@ -44,6 +44,7 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [newPersonalityKeyword, setNewPersonalityKeyword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Define tabs with icons and improved structure
   const tabs = [
@@ -94,9 +95,18 @@ const SettingsPage = () => {
 
   useEffect(() => {
     if (user?.primaryEmail) {
+      setIsLoading(true);
       fetch(`/api/userSettings?userId=${user.primaryEmail}`)
         .then((res) => res.json())
-        .then((data) => setSettings(data));
+        .then((data) => {
+          console.log('Settings loaded:', data);
+          setSettings(data);
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error loading settings:', error);
+          setIsLoading(false);
+        });
     }
   }, [user]);
 
@@ -148,6 +158,15 @@ const SettingsPage = () => {
   };
 
   const renderTabContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>
+          <span className="ml-3 text-neutral-600 dark:text-neutral-400">Loading settings...</span>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case "general":
         return <TimezoneSettings settings={settings} onSettingsChange={handleSettingsChange} />;
