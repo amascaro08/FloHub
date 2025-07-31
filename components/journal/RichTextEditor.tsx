@@ -219,31 +219,46 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (!editor) return;
 
     const handleUpdate = () => {
-      // Find all task items and update their classes based on checkbox state
-      const taskItems = editor.view.dom.querySelectorAll('li[data-type="taskItem"]');
-      taskItems.forEach((item) => {
-        const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
-        if (checkbox) {
-          if (checkbox.checked) {
-            item.classList.add('task-item-checked');
-            item.setAttribute('data-checked', 'true');
-          } else {
-            item.classList.remove('task-item-checked');
-            item.setAttribute('data-checked', 'false');
+      try {
+        // Find all task items and update their classes based on checkbox state
+        const taskItems = editor.view.dom.querySelectorAll('li[data-type="taskItem"]');
+        taskItems.forEach((item) => {
+          const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
+          if (checkbox) {
+            if (checkbox.checked) {
+              item.classList.add('task-item-checked');
+              item.setAttribute('data-checked', 'true');
+            } else {
+              item.classList.remove('task-item-checked');
+              item.setAttribute('data-checked', 'false');
+            }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error('Error updating task item states:', error);
+      }
     };
 
     // Run on initial load and updates
     const timer = setTimeout(handleUpdate, 100);
+    
+    // Also add click event listener for immediate feedback
+    const handleClick = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (target && target.type === 'checkbox' && target.closest('li[data-type="taskItem"]')) {
+        setTimeout(handleUpdate, 50); // Small delay to ensure checkbox state is updated
+      }
+    };
+
     editor.on('update', handleUpdate);
     editor.on('transaction', handleUpdate);
+    editor.view.dom.addEventListener('click', handleClick);
 
     return () => {
       clearTimeout(timer);
       editor.off('update', handleUpdate);
       editor.off('transaction', handleUpdate);
+      editor.view.dom.removeEventListener('click', handleClick);
     };
   }, [editor]);
 
@@ -935,68 +950,68 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           outline: none;
         }
         
-        /* Task List Styles */
+        /* Task List Styles - Updated for TipTap's actual structure */
         .prose-editor .ProseMirror ul[data-type="taskList"] {
-          list-style: none;
-          padding-left: 0;
-          margin-left: 0;
+          list-style: none !important;
+          padding-left: 0 !important;
+          margin-left: 0 !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] {
-          display: flex;
-          align-items: flex-start;
-          margin: 0.5rem 0;
-          list-style: none;
+          display: flex !important;
+          align-items: flex-start !important;
+          margin: 0.75rem 0 !important;
+          list-style: none !important;
           position: relative;
+          padding-left: 0 !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label {
-          flex-shrink: 0;
-          margin-right: 0.75rem;
-          margin-top: 0.1rem;
+          flex: 0 0 auto !important;
+          margin-right: 0.75rem !important;
+          margin-top: 0.125rem !important;
           user-select: none;
-          display: flex;
-          align-items: flex-start;
+          display: block !important;
           cursor: pointer;
           line-height: 1;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
-          appearance: none;
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgb(148 163 184);
-          border-radius: 4px;
-          margin: 0;
+          appearance: none !important;
+          width: 18px !important;
+          height: 18px !important;
+          border: 2px solid rgb(148 163 184) !important;
+          border-radius: 4px !important;
+          margin: 0 !important;
           cursor: pointer;
           position: relative;
           transition: all 0.15s ease;
-          background: white;
-          flex-shrink: 0;
+          background: white !important;
+          display: block !important;
         }
         
         .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
-          background: rgb(51 65 85);
-          border-color: rgb(100 116 139);
+          background: rgb(51 65 85) !important;
+          border-color: rgb(100 116 139) !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
-          border-color: #00C9A7;
-          background-color: rgb(236 254 255);
+          border-color: #00C9A7 !important;
+          background-color: rgb(236 254 255) !important;
         }
         
         .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
-          border-color: #00C9A7;
-          background-color: rgb(20 83 75);
+          border-color: #00C9A7 !important;
+          background-color: rgb(20 83 75) !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked {
-          background-color: #00C9A7;
-          border-color: #00C9A7;
+          background-color: #00C9A7 !important;
+          border-color: #00C9A7 !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked:after {
-          content: '';
+          content: '' !important;
           position: absolute;
           top: 2px;
           left: 5px;
@@ -1008,37 +1023,65 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > div {
-          flex: 1;
+          flex: 1 1 auto !important;
           min-width: 0;
           line-height: 1.6;
+          margin-top: 0 !important;
         }
         
-        /* Ensure text starts at the top and stays inline */
+        /* Ensure text content aligns properly */
         .prose-editor .ProseMirror li[data-type="taskItem"] > div > p {
-          margin: 0;
+          margin: 0 !important;
           line-height: 1.6;
+          display: inline !important;
         }
         
-        /* Better strikethrough for completed tasks using multiple approaches */
+        /* Text content when not in paragraph */
+        .prose-editor .ProseMirror li[data-type="taskItem"] > div:not(:has(p)) {
+          display: inline-block !important;
+          vertical-align: top;
+        }
+        
+        /* Strikethrough for completed tasks - multiple selectors for reliability */
         .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div,
         .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div > p,
-        .prose-editor .ProseMirror li.task-item-checked > div,
-        .prose-editor .ProseMirror li.task-item-checked > div > p {
-          text-decoration: line-through;
-          opacity: 0.6;
+        .prose-editor .ProseMirror li[data-type="taskItem"].task-item-checked > div,
+        .prose-editor .ProseMirror li[data-type="taskItem"].task-item-checked > div > p {
+          text-decoration: line-through !important;
+          opacity: 0.6 !important;
           color: rgb(107 114 128) !important;
         }
         
         .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div,
         .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div > p,
-        .dark .prose-editor .ProseMirror li.task-item-checked > div,
-        .dark .prose-editor .ProseMirror li.task-item-checked > div > p {
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"].task-item-checked > div,
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"].task-item-checked > div > p {
           color: rgb(156 163 175) !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] ul[data-type="taskList"] {
           margin-left: 1.5rem;
           margin-top: 0.5rem;
+        }
+        
+        /* Override any conflicting prose styles */
+        .prose-editor .ProseMirror ul[data-type="taskList"] li {
+          list-style: none !important;
+          padding-left: 0 !important;
+          margin-left: 0 !important;
+        }
+        
+        /* Debug styles - remove these later */
+        .prose-editor .ProseMirror li[data-type="taskItem"] {
+          border: 1px solid red !important;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label {
+          border: 1px solid blue !important;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > div {
+          border: 1px solid green !important;
         }
         
         /* Mobile touch scrolling improvements */
