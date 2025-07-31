@@ -238,16 +238,42 @@ async function deleteSeries(
     });
   }
 
-  // Update all meetings in this series to remove the series name
-  await db
-    .update(notes)
-    .set({ meetingSeries: null })
+  // Find all meetings in this series first
+  const allMeetingsWithSeries = await db
+    .select()
+    .from(notes)
     .where(
       and(
         eq(notes.user_email, userId),
-        eq(notes.meetingSeries, prepareContentForStorage(seriesName))
+        isNotNull(notes.meetingSeries)
       )
     );
+    
+  const meetingsToUpdate = allMeetingsWithSeries.filter(meeting => {
+    if (!meeting.meetingSeries) return false;
+    try {
+      const decryptedSeries = retrieveContentFromStorage(meeting.meetingSeries);
+      return decryptedSeries === seriesName;
+    } catch (e) {
+      return false;
+    }
+  });
+  
+  console.log('Found meetings to remove from series:', meetingsToUpdate.length);
+  
+  // Update all meetings in this series to remove the series name
+  if (meetingsToUpdate.length > 0) {
+    const meetingIds = meetingsToUpdate.map(m => m.id);
+    await db
+      .update(notes)
+      .set({ meetingSeries: null })
+      .where(
+        and(
+          eq(notes.user_email, userId),
+          inArray(notes.id, meetingIds)
+        )
+      );
+  }
 
   return res.status(200).json({ success: true });
 }
@@ -283,18 +309,53 @@ async function generateSeriesContext(userId: string, seriesName: string) {
   const encryptedSeriesName = prepareContentForStorage(seriesName);
   console.log('Encrypted series name:', encryptedSeriesName);
   
-  const meetings = await db
+  // Let's also check what meeting_series values exist in the database
+  const allUserMeetings = await db
+    .select()
+    .from(notes)
+    .where(eq(notes.user_email, userId));
+  
+  console.log('All user meetings count:', allUserMeetings.length);
+  const meetingsWithSeries = allUserMeetings.filter(m => m.meetingSeries);
+  console.log('Meetings with series count:', meetingsWithSeries.length);
+  meetingsWithSeries.forEach((m, i) => {
+    console.log(`Meeting ${i + 1} series (encrypted):`, m.meetingSeries);
+    try {
+      const decrypted = retrieveContentFromStorage(m.meetingSeries || "");
+      console.log(`Meeting ${i + 1} series (decrypted):`, decrypted);
+    } catch (e) {
+      console.log(`Meeting ${i + 1} series (decryption failed):`, e);
+    }
+  });
+  
+  // Instead of matching encrypted values, let's get all meetings with series and filter by decrypted name
+  const allMeetingsWithSeries = await db
     .select()
     .from(notes)
     .where(
       and(
         eq(notes.user_email, userId),
-        eq(notes.meetingSeries, encryptedSeriesName)
+        isNotNull(notes.meetingSeries)
       )
     )
     .orderBy(desc(notes.createdAt));
     
-  console.log('Found meetings:', meetings.length);
+  console.log('All meetings with series:', allMeetingsWithSeries.length);
+  
+  // Filter by decrypted series name
+  const meetings = allMeetingsWithSeries.filter(meeting => {
+    if (!meeting.meetingSeries) return false;
+    try {
+      const decryptedSeries = retrieveContentFromStorage(meeting.meetingSeries);
+      console.log('Comparing:', decryptedSeries, 'with:', seriesName);
+      return decryptedSeries === seriesName;
+    } catch (e) {
+      console.log('Error decrypting series name:', e);
+      return false;
+    }
+  });
+    
+  console.log('Found meetings for series "' + seriesName + '":', meetings.length);
 
   return await buildSeriesContext(meetings, seriesName);
 }
