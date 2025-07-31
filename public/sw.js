@@ -58,7 +58,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Enhanced auth route handling
+  // Skip login requests - let them go through normally
+  if (url.pathname === '/api/auth/login') {
+    return;
+  }
+  
+  // Enhanced auth route handling for other auth endpoints
   if (url.pathname.startsWith('/api/auth/')) {
     event.respondWith(handleAuthRequest(event.request));
     return;
