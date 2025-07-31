@@ -13,10 +13,43 @@
     <h1>🔍 Notification Debug Test</h1>
     <p>This will test your notification subscription directly with the debug API.</p>
     
-    <button id="testBtn">Test Direct Notification</button>
+    <button id="checkVapidBtn">1. Check VAPID Keys</button>
+    <button id="testBtn">2. Test Direct Notification</button>
     <div id="output"></div>
 
     <script>
+        // Check VAPID keys
+        document.getElementById('checkVapidBtn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>🔍 Checking VAPID keys...</p>';
+
+            try {
+                // Get client-side VAPID key
+                const clientVapidKey = typeof process !== 'undefined' && process.env ? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY : 'UNAVAILABLE';
+                
+                // Get server VAPID info
+                const response = await fetch('/api/debug-client-vapid');
+                const data = await response.json();
+
+                output.innerHTML = `
+                    <h3>🔑 VAPID Key Comparison</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Client Side:</h4>
+                            <pre>Key: ${clientVapidKey || 'NOT_AVAILABLE'}</pre>
+                        </div>
+                        <div>
+                            <h4>Server Side:</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    </div>
+                    <p><strong>Match:</strong> ${clientVapidKey === data.server.publicKey ? '✅ YES' : '❌ NO'}</p>
+                `;
+            } catch (error) {
+                output.innerHTML = `<h3>💥 Error:</h3><pre>${error.message}</pre>`;
+            }
+        });
+
         document.getElementById('testBtn').addEventListener('click', async () => {
             const output = document.getElementById('output');
             output.innerHTML = '<p>🔍 Testing...</p>';
