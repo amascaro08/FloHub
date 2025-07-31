@@ -161,11 +161,18 @@ export default async function handler(
         where: eq(userSettings.user_email, user_email),
       });
 
+      // Prepare updates with proper timezone handling
+      const preparedUpdates = {
+        ...updates,
+        // Ensure timezone is never null due to NOT NULL constraint
+        timezone: updates.timezone || existingSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+
       let result;
       if (existingSettings) {
         // Update existing settings
         [result] = await db.update(userSettings)
-          .set(updates)
+          .set(preparedUpdates)
           .where(eq(userSettings.user_email, user_email))
           .returning();
       } else {
@@ -173,7 +180,7 @@ export default async function handler(
         [result] = await db.insert(userSettings)
           .values({
             user_email,
-            ...updates,
+            ...preparedUpdates,
           })
           .returning();
       }
