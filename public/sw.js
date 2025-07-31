@@ -2,6 +2,7 @@
 // Version-based cache busting for better update handling
 const CACHE_VERSION = 'v2025.07.31.2255'; // This will be updated automatically
 const CACHE_NAME = `flohub-${CACHE_VERSION}`;
+const AUTH_CACHE_NAME = `flohub-auth-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/offline.html',
@@ -14,14 +15,20 @@ console.log('Service Worker: Starting up...', CACHE_NAME);
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Install event');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Service Worker: Caching files');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('Service Worker: Cache installation failed', error);
-      })
+    Promise.all([
+      caches.open(CACHE_NAME)
+        .then((cache) => {
+          console.log('Service Worker: Caching files');
+          return cache.addAll(urlsToCache);
+        }),
+      caches.open(AUTH_CACHE_NAME)
+        .then((cache) => {
+          console.log('Service Worker: Auth cache created');
+          return cache;
+        })
+    ]).catch((error) => {
+      console.error('Service Worker: Cache installation failed', error);
+    })
   );
   // Skip waiting to activate immediately
   self.skipWaiting();
@@ -34,7 +41,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== AUTH_CACHE_NAME) {
             console.log('Service Worker: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
@@ -47,13 +54,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event with version-based cache busting
+// Fetch event with enhanced auth handling
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip service worker handling for authentication and API routes
+  // Enhanced auth route handling
+  if (url.pathname.startsWith('/api/auth/')) {
+    event.respondWith(handleAuthRequest(event.request));
+    return;
+  }
+  
+  // Skip service worker handling for other API routes
   if (url.pathname.startsWith('/api/')) {
-    // Let all API requests go through normally without service worker interference
     return;
   }
   
@@ -121,6 +133,50 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Enhanced auth request handling
+async function handleAuthRequest(request) {
+  const url = new URL(request.url);
+  
+  try {
+    // Network-first strategy for auth requests
+    const networkResponse = await fetch(request, {
+      credentials: 'include',
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    
+    // Cache successful auth responses for offline access
+    if (networkResponse.ok) {
+      const responseToCache = networkResponse.clone();
+      const authCache = await caches.open(AUTH_CACHE_NAME);
+      
+      // Cache session and refresh responses for offline access
+      if (url.pathname === '/api/auth/session' || url.pathname === '/api/auth/refresh') {
+        await authCache.put(request, responseToCache);
+      }
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.error('Auth request failed:', error);
+    
+    // For offline scenarios, try to return cached auth data
+    if (url.pathname === '/api/auth/session') {
+      const authCache = await caches.open(AUTH_CACHE_NAME);
+      const cachedResponse = await authCache.match(request);
+      
+      if (cachedResponse) {
+        console.log('Returning cached session data for offline access');
+        return cachedResponse;
+      }
+    }
+    
+    // Re-throw the error for other auth endpoints
+    throw error;
+  }
+}
 
 // Push event - Handle incoming push notifications
 self.addEventListener('push', (event) => {
@@ -301,6 +357,11 @@ self.addEventListener('message', (event) => {
   
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0].postMessage({ version: CACHE_NAME });
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
+    console.log('Service Worker: Clearing auth cache');
+    caches.delete(AUTH_CACHE_NAME);
   }
 });
 

@@ -42,6 +42,7 @@ export function createSecureCookie(
     httpOnly?: boolean;
     secure?: boolean;
     path?: string;
+    rememberMe?: boolean;
   } = {}
 ): string {
   const {
@@ -50,6 +51,7 @@ export function createSecureCookie(
     httpOnly = true,
     secure = process.env.NODE_ENV !== 'development',
     path = '/',
+    rememberMe = false,
   } = options;
 
   // Determine if this is a PWA request
@@ -58,8 +60,21 @@ export function createSecureCookie(
                 req.headers['sec-fetch-site'] === 'none' ||
                 userAgent.includes('Mobile/') && userAgent.includes('Safari/') && !userAgent.includes('Chrome/'); // iOS PWA detection
   
-  // PWA gets longer cookie expiry for better persistence
-  const finalMaxAge = isPWA ? Math.max(maxAge, 90 * 24 * 60 * 60) : maxAge; // Minimum 90 days for PWA
+  // Enhanced PWA cookie expiry for better persistence
+  let finalMaxAge = maxAge;
+  
+  if (isPWA) {
+    if (rememberMe) {
+      // PWA with remember me: 1 year
+      finalMaxAge = 365 * 24 * 60 * 60;
+    } else {
+      // PWA without remember me: 90 days minimum
+      finalMaxAge = Math.max(maxAge, 90 * 24 * 60 * 60);
+    }
+  } else if (rememberMe) {
+    // Browser with remember me: 30 days
+    finalMaxAge = 30 * 24 * 60 * 60;
+  }
   
   const cookieOptions = {
     httpOnly,
@@ -72,9 +87,10 @@ export function createSecureCookie(
 
   // Log cookie settings in development
   if (process.env.NODE_ENV === 'development') {
-    console.log(`Setting cookie for ${isPWA ? 'PWA' : 'browser'}:`, {
+    console.log(`Setting cookie for ${isPWA ? 'PWA' : 'browser'} (${rememberMe ? 'remember me' : 'session'}):`, {
       name,
       maxAge: finalMaxAge,
+      maxAgeDays: Math.round(finalMaxAge / (24 * 60 * 60)),
       sameSite: cookieOptions.sameSite,
       domain: cookieOptions.domain,
     });
