@@ -650,6 +650,7 @@ export default function MeetingsPage() {
 
      const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
     setViewingSeriesName(seriesTitle);
+    setSelectedNoteId(null); // Clear any selected note when viewing series
   };
 
   const handleAddMeetingToSeries = (seriesName: string) => {
@@ -787,21 +788,7 @@ export default function MeetingsPage() {
       </Head>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Series View */}
-        {viewingSeriesName && (
-          <MeetingSeriesView
-            seriesName={viewingSeriesName}
-            onAddMeeting={handleAddMeetingToSeries}
-            onAddExistingMeeting={handleAddExistingMeetingToSeries}
-            onDeleteSeries={handleDeleteSeries}
-            onClose={() => setViewingSeriesName(null)}
-            onRefresh={() => mutate()}
-          />
-        )}
-
-        {/* Main meetings view - only show when not viewing a series */}
-        {!viewingSeriesName && (
-          <>
+        {/* Main meetings view */}
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -1145,7 +1132,7 @@ export default function MeetingsPage() {
           </div>
 
           {/* Right Column: Meeting Note Detail */}
-          {selectedNote && (
+          {selectedNote && !viewingSeriesName && (
             <div className={`lg:col-span-2 ${isMobile ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900' : ''}`}>
               {isMobile && (
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -1169,6 +1156,36 @@ export default function MeetingsPage() {
                   isSaving={isSaving}
                   existingTags={allAvailableTags}
                   calendarEvents={calendarEvents || []}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Right Column: Series View */}
+          {viewingSeriesName && (
+            <div className={`lg:col-span-2 ${isMobile ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900' : ''}`}>
+              {isMobile && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setViewingSeriesName(null)}
+                    className="flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Meetings
+                  </button>
+                </div>
+              )}
+              
+              <div className={`${isMobile ? 'p-4' : ''}`}>
+                <MeetingSeriesView
+                  seriesName={viewingSeriesName}
+                  onAddMeeting={handleAddMeetingToSeries}
+                  onAddExistingMeeting={handleAddExistingMeetingToSeries}
+                  onDeleteSeries={handleDeleteSeries}
+                  onClose={() => setViewingSeriesName(null)}
+                  onRefresh={() => mutate()}
                 />
               </div>
             </div>
@@ -1234,8 +1251,6 @@ export default function MeetingsPage() {
           onSave={handleAddExistingMeetings}
           isSaving={isSaving}
         />
-        </>
-        )}
       </div>
     </>
   );
