@@ -149,8 +149,43 @@ export default async function handler(
       console.error("Update feedback error:", err);
       return res.status(500).json({ error: err.message || "Internal server error" });
     }
+  } else if (req.method === "DELETE") {
+    // Delete feedback (only if no GitHub URL or user owns it)
+    const { id } = req.body;
+    
+    if (!id) {
+      return res.status(400).json({ error: "Feedback ID is required" });
+    }
+
+    try {
+      // Check if feedback exists and belongs to user
+      const [existingFeedback] = await db.select().from(feedback).where(eq(feedback.id, id));
+      
+      if (!existingFeedback) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+
+      // Verify ownership
+      if (existingFeedback.userEmail !== userEmail) {
+        return res.status(403).json({ error: "You can only delete your own feedback" });
+      }
+
+      // Allow deletion if no GitHub URL (orphaned entry) or if explicitly allowed
+      if (!existingFeedback.githubIssueUrl) {
+        await db.delete(feedback).where(eq(feedback.id, id));
+        return res.status(200).json({ success: true, message: "Feedback deleted successfully" });
+      } else {
+        return res.status(400).json({ 
+          error: "Cannot delete feedback that is linked to a GitHub issue. Please close the GitHub issue instead.",
+          githubUrl: existingFeedback.githubIssueUrl
+        });
+      }
+    } catch (err: any) {
+      console.error("Delete feedback error:", err);
+      return res.status(500).json({ error: err.message || "Internal server error" });
+    }
   } else {
-    res.setHeader("Allow", ["GET", "POST", "PUT", "PATCH"]);
+    res.setHeader("Allow", ["GET", "POST", "PUT", "PATCH", "DELETE"]);
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 }

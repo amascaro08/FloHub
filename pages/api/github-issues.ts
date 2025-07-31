@@ -150,24 +150,13 @@ ${tags.length > 0 ? `\n## Tags\n\n${tags.map((tag: string) => `- ${tag}`).join('
         githubIssueUrl: issue.data.html_url
       });
 
-      // Insert feedback using the correct schema
+      // Insert feedback with all info in a single query to avoid update issues
       await db.execute(sql`
-        INSERT INTO feedback (user_email, title, description, status, created_at)
-        VALUES (${user.email}, ${title}, ${feedbackText}, 'open', ${new Date().toISOString()})
+        INSERT INTO feedback (user_email, title, description, status, github_issue_number, github_issue_url, created_at)
+        VALUES (${user.email}, ${title}, ${feedbackText}, 'open', ${issue.data.number}, ${issue.data.html_url}, ${new Date().toISOString()})
       `);
 
-      console.log("Basic insertion successful, now updating with GitHub info...");
-
-      // Update with GitHub info using correct column names from schema
-      await db.execute(sql`
-        UPDATE feedback 
-        SET github_issue_number = ${issue.data.number}, github_issue_url = ${issue.data.html_url}
-        WHERE user_email = ${user.email} AND title = ${title} AND status = 'open'
-        ORDER BY created_at DESC 
-        LIMIT 1
-      `);
-
-      console.log("GitHub info update successful");
+      console.log("Feedback insertion with GitHub info successful");
 
     } catch (dbError: any) {
       console.error("Database insertion error:", {

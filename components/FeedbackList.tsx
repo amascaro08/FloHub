@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { ChevronDownIcon, ChevronRightIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 interface FeedbackItem {
   id: string;
@@ -24,6 +24,7 @@ const FeedbackList: React.FC<FeedbackListProps> = ({ onSelectFeedback }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFeedback();
@@ -114,6 +115,41 @@ const FeedbackList: React.FC<FeedbackListProps> = ({ onSelectFeedback }) => {
     return 'Feedback';
   };
 
+  const handleDeleteFeedback = async (item: FeedbackItem, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    if (!confirm('Are you sure you want to delete this feedback? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingId(item.id);
+    
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ id: item.id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove from local state
+        setFeedbackItems(prev => prev.filter(f => f.id !== item.id));
+      } else {
+        alert(data.error || 'Failed to delete feedback');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      alert('An error occurred while deleting feedback');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const renderFeedbackCard = (item: FeedbackItem) => (
     <div
       key={item.id}
@@ -150,7 +186,22 @@ const FeedbackList: React.FC<FeedbackListProps> = ({ onSelectFeedback }) => {
           </div>
         </div>
         
-        <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+          {/* Show delete button only for entries without GitHub URL */}
+          {!item.githubIssueUrl && (
+            <button
+              onClick={(e) => handleDeleteFeedback(item, e)}
+              disabled={deletingId === item.id}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+              title="Delete feedback (no GitHub issue linked)"
+            >
+              {deletingId === item.id ? (
+                <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-500"></div>
+              ) : (
+                <TrashIcon className="w-4 h-4" />
+              )}
+            </button>
+          )}
           <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
