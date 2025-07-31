@@ -429,17 +429,6 @@ export default function MeetingsPage() {
     return Array.from(seriesNames);
   }, [meetingNotes]);
 
-  // Extract existing series names for the modal
-  const existingSeriesNames = useMemo(() => {
-    const seriesNames = new Set<string>();
-    meetingNotes.forEach(note => {
-      if (note.meetingSeries) {
-        seriesNames.add(note.meetingSeries);
-      }
-    });
-    return Array.from(seriesNames);
-  }, [meetingNotes]);
-
   // Group meetings by series for series tab (both manual and auto-detected)
   const meetingSeries = useMemo(() => {
     const series: Record<string, Note[]> = {};
@@ -682,7 +671,7 @@ export default function MeetingsPage() {
       const result = await response.json();
       
       // Refresh the meeting notes to show the updated series
-      mutate("/api/meetings");
+      mutate();
       
       // Show success message
       alert(`Successfully created series "${seriesName}" with ${selectedNoteIds.length} meetings!`);
@@ -1115,7 +1104,7 @@ export default function MeetingsPage() {
           existingTags={allAvailableTags}
           workCalendarEvents={todaysWorkCalendarEvents}
           calendarLoading={calendarLoading}
-          existingSeries={Array.from(new Set(meetingNotes.filter(note => note.meetingSeries).map(note => note.meetingSeries!)))}
+          existingSeries={existingSeriesNames}
           preSelectedSeries={addToSeriesName}
         />
 

@@ -19,6 +19,7 @@ type CreateMeetingNoteRequest = { // Renamed type
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
   actions?: Action[]; // Optional: Array of actions
   agenda?: string; // Optional: Meeting agenda
+  meetingSeries?: string; // Optional: Meeting series name
 };
 
 type CreateMeetingNoteResponse = { // Renamed type
@@ -48,7 +49,7 @@ export default async function handler(
   const userId = user.email;
 
   // 2) Validate input
-  const { title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda } = req.body as CreateMeetingNoteRequest; // Include new fields
+  const { title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda, meetingSeries } = req.body as CreateMeetingNoteRequest; // Include new fields
   if (typeof content !== "string" || content.trim() === "") {
     return res.status(400).json({ error: "Meeting note content is required" }); // Updated error message
   }
@@ -125,6 +126,7 @@ export default async function handler(
       actions: actions || [],
       agenda: encryptedAgenda,
       aiSummary: aiSummary ? prepareContentForStorage(aiSummary) : null,
+      meetingSeries: meetingSeries || null,
     }).returning();
     const noteId = newNote.id;
 
