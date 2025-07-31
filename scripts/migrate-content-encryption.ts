@@ -109,24 +109,27 @@ async function createBackupTables(): Promise<string> {
 
   console.log('Creating backup tables...');
   
-  const backupQueries = [
-    `CREATE TABLE IF NOT EXISTS notes_backup_${dateSuffix} AS SELECT * FROM notes;`,
-    `CREATE TABLE IF NOT EXISTS journal_entries_backup_${dateSuffix} AS SELECT * FROM journal_entries;`,
-    `CREATE TABLE IF NOT EXISTS "habitCompletions_backup_${dateSuffix}" AS SELECT * FROM "habitCompletions";`,
-    `CREATE TABLE IF NOT EXISTS "calendarEvents_backup_${dateSuffix}" AS SELECT * FROM "calendarEvents";`,
-    `CREATE TABLE IF NOT EXISTS feedback_backup_${dateSuffix} AS SELECT * FROM feedback;`,
-    `CREATE TABLE IF NOT EXISTS user_settings_backup_${dateSuffix} AS SELECT * FROM user_settings;`,
-    `CREATE TABLE IF NOT EXISTS conversations_backup_${dateSuffix} AS SELECT * FROM conversations;`,
-    `CREATE TABLE IF NOT EXISTS habits_backup_${dateSuffix} AS SELECT * FROM habits;`,
-    `CREATE TABLE IF NOT EXISTS tasks_backup_${dateSuffix} AS SELECT * FROM tasks;`,
-    `CREATE TABLE IF NOT EXISTS journal_moods_backup_${dateSuffix} AS SELECT * FROM journal_moods;`,
-    `CREATE TABLE IF NOT EXISTS journal_activities_backup_${dateSuffix} AS SELECT * FROM journal_activities;`,
-    `CREATE TABLE IF NOT EXISTS meetings_backup_${dateSuffix} AS SELECT * FROM meetings;`,
-    `CREATE TABLE IF NOT EXISTS analytics_backup_${dateSuffix} AS SELECT * FROM analytics;`,
+  // Create backup tables using dynamic SQL for Neon compatibility
+  const backupCommands = [
+    { table: 'notes', backupName: `notes_backup_${dateSuffix}` },
+    { table: 'journal_entries', backupName: `journal_entries_backup_${dateSuffix}` },
+    { table: '"habitCompletions"', backupName: `"habitCompletions_backup_${dateSuffix}"` },
+    { table: '"calendarEvents"', backupName: `"calendarEvents_backup_${dateSuffix}"` },
+    { table: 'feedback', backupName: `feedback_backup_${dateSuffix}` },
+    { table: 'user_settings', backupName: `user_settings_backup_${dateSuffix}` },
+    { table: 'conversations', backupName: `conversations_backup_${dateSuffix}` },
+    { table: 'habits', backupName: `habits_backup_${dateSuffix}` },
+    { table: 'tasks', backupName: `tasks_backup_${dateSuffix}` },
+    { table: 'journal_moods', backupName: `journal_moods_backup_${dateSuffix}` },
+    { table: 'journal_activities', backupName: `journal_activities_backup_${dateSuffix}` },
+    { table: 'meetings', backupName: `meetings_backup_${dateSuffix}` },
+    { table: 'analytics', backupName: `analytics_backup_${dateSuffix}` },
   ];
 
-  for (const query of backupQueries) {
-    await sql(query);
+  for (const cmd of backupCommands) {
+    const query = `CREATE TABLE IF NOT EXISTS ${cmd.backupName} AS SELECT * FROM ${cmd.table}`;
+    // Use raw query execution for dynamic table names
+    await sql.unsafe(query);
   }
 
   console.log('✅ Backup tables created with suffix:', dateSuffix);
