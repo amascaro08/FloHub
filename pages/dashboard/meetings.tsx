@@ -645,15 +645,6 @@ export default function MeetingsPage() {
          }
    };
 
-   const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
-     // For now, just select the most recent note in the series
-     // This could be enhanced to show a dedicated series view
-     if (notes.length > 0) {
-       const mostRecent = notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-       setSelectedNoteId(mostRecent.id);
-     }
-   };
-
      const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
     setViewingSeriesName(seriesTitle);
   };
