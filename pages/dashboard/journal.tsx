@@ -66,6 +66,7 @@ export default function JournalPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [insightsRefreshTrigger, setInsightsRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<"today" | "timeline" | "insights" | "settings">("today");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showImport, setShowImport] = useState(false);
@@ -141,26 +142,35 @@ export default function JournalPage() {
   // Handle saving journal entry
   const handleSaveEntry = (entry: { content: string; timestamp: string }) => {
     console.log("Saving entry:", entry);
-    setRefreshTrigger(prev => prev + 1);
+    // Refresh insights when significant content is saved
+    setTimeout(refreshInsights, 2000);
+  };
+
+  // Refresh insights and calendar without disrupting the main writing area
+  const refreshInsights = () => {
+    setInsightsRefreshTrigger(prev => prev + 1);
   };
 
   // Handle saving mood
   const handleSaveMood = (mood: { emoji: string; label: string; tags: string[] }) => {
     console.log("Saving mood:", mood);
-    setRefreshTrigger(prev => prev + 1);
+    // Refresh insights after a short delay to avoid disrupting writing
+    setTimeout(refreshInsights, 1000);
   };
   
   // Handle saving activities
   const handleSaveActivities = (activities: string[]) => {
     console.log("Saving activities:", activities);
     setSelectedActivities(activities);
-    setRefreshTrigger(prev => prev + 1);
+    // Refresh insights after a short delay to avoid disrupting writing
+    setTimeout(refreshInsights, 1000);
   };
   
   // Handle saving sleep data
   const handleSaveSleep = (sleep: { quality: string; hours: number }) => {
     console.log("Saving sleep data:", sleep);
-    setRefreshTrigger(prev => prev + 1);
+    // Refresh insights after a short delay to avoid disrupting writing
+    setTimeout(refreshInsights, 1000);
   };
 
   // Handle selecting a date from the timeline
@@ -530,7 +540,7 @@ export default function JournalPage() {
                 {componentsLoaded.main ? (
                   isSelectedToday || isEditing ? (
                     <TodayEntry
-                      key={`today-entry-${selectedDate}-${refreshTrigger}`}
+                      key={`today-entry-${selectedDate}`}
                       onSave={handleSaveEntry}
                       date={selectedDate}
                       timezone={timezone}
@@ -539,7 +549,7 @@ export default function JournalPage() {
                     />
                   ) : (
                     <JournalEntryViewer
-                      key={`entry-viewer-${selectedDate}-${refreshTrigger}`}
+                      key={`entry-viewer-${selectedDate}`}
                       date={selectedDate}
                       onEdit={() => setIsEditing(true)}
                       timezone={timezone}
@@ -566,7 +576,7 @@ export default function JournalPage() {
                       <span className="text-2xl mr-3">😊</span>
                       Mood
                     </h3>
-                    <MoodTracker key={`mood-${selectedDate}-${refreshTrigger}`} onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
+                    <MoodTracker key={`mood-${selectedDate}`} onSave={handleSaveMood} timezone={timezone} date={selectedDate} />
                   </div>
 
                   {/* Activities */}
@@ -576,7 +586,7 @@ export default function JournalPage() {
                       Activities
                     </h3>
                     <ActivityTracker
-                      key={`activities-${selectedDate}-${refreshTrigger}`}
+                      key={`activities-${selectedDate}`}
                       onSave={handleSaveActivities}
                       date={selectedDate}
                       timezone={timezone}
@@ -590,7 +600,7 @@ export default function JournalPage() {
                       Sleep
                     </h3>
                     <SleepTracker
-                      key={`sleep-${selectedDate}-${refreshTrigger}`}
+                      key={`sleep-${selectedDate}`}
                       onSave={handleSaveSleep}
                       timezone={timezone}
                       date={selectedDate}
@@ -646,10 +656,10 @@ export default function JournalPage() {
                   </div>
                 </div>
                 <JournalCalendar
-                  key={`calendar-${refreshTrigger}`}
+                  key={`calendar-${insightsRefreshTrigger}`}
                   onSelectDate={handleSelectDate}
                   timezone={timezone}
-                  refreshTrigger={refreshTrigger}
+                  refreshTrigger={insightsRefreshTrigger}
                 />
               </div>
             </div>
@@ -659,31 +669,31 @@ export default function JournalPage() {
           {activeTab === 'insights' && (
             <div className="space-y-6">
               <FloCatInsights 
-                refreshTrigger={refreshTrigger}
+                refreshTrigger={insightsRefreshTrigger}
                 timezone={timezone}
               />
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <JournalSummary refreshTrigger={refreshTrigger} />
+                  <JournalSummary refreshTrigger={insightsRefreshTrigger} />
                 </div>
                 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <MoodStatistics refreshTrigger={refreshTrigger} />
+                  <MoodStatistics refreshTrigger={insightsRefreshTrigger} />
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <SleepInsights refreshTrigger={refreshTrigger} />
+                  <SleepInsights refreshTrigger={insightsRefreshTrigger} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <ActivityPatterns refreshTrigger={refreshTrigger} />
+                  <ActivityPatterns refreshTrigger={insightsRefreshTrigger} />
                 </div>
 
                 <div className="bg-soft-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 p-6">
-                  <Trends refreshTrigger={refreshTrigger} />
+                  <Trends refreshTrigger={insightsRefreshTrigger} />
                 </div>
               </div>
             </div>
