@@ -13,7 +13,8 @@ import {
   TagIcon,
   DocumentTextIcon,
   ArchiveBoxIcon,
-  SparklesIcon
+  SparklesIcon,
+  ListBulletIcon
 } from '@heroicons/react/24/solid';
 
 // Define a type for calendar items based on the API response
@@ -410,6 +411,22 @@ export default function NotesPage() {
                   ))}
                 </select>
               </div>
+              
+              {/* Group By Dropdown - Now visible for both mobile and desktop */}
+              <div className="relative">
+                <ListBulletIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 z-10 flex-shrink-0" />
+                <select
+                  className="border border-neutral-300 rounded-2xl pl-11 pr-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-white text-sm appearance-none"
+                  value={groupBy}
+                  onChange={(e) => handleGroupByChange(e.target.value as GroupingOption)}
+                >
+                  <option value="month">Group by Month</option>
+                  <option value="date">Group by Date</option>
+                  <option value="week">Group by Week</option>
+                  <option value="tag">Group by Tag</option>
+                  <option value="none">No Grouping</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -424,7 +441,7 @@ export default function NotesPage() {
                 onToggleSelectNote={handleToggleSelectNote}
                 onDeleteSelected={handleDeleteSelected}
                 groupBy={groupBy}
-                onGroupByChange={handleGroupByChange}
+                // Remove onGroupByChange since it's now in the dropdown
               />
               
               {selectedNotes.length > 0 && (
