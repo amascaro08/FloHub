@@ -7,6 +7,7 @@ import MainLayout from '@/components/ui/MainLayout';
 import PageTransition from '@/components/ui/PageTransition';
 import ProgressBar from '@/components/ui/ProgressBar';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
+import PWAUpdateManager from '@/components/ui/PWAUpdateManager';
 import AuthStateHydrator from '@/components/ui/AuthStateHydrator';
 import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
@@ -26,19 +27,25 @@ const App = ({ Component, pageProps }: AppProps) => {
           });
           console.log('SW registered successfully: ', registration);
           
+          // Check for updates on page load
+          registration.update();
+          
           // Handle updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New content is available, show update prompt
-                  if (confirm('New version available! Reload to update?')) {
-                    window.location.reload();
-                  }
+                  // New content is available - the PWAUpdateManager will handle the UI
+                  console.log('New service worker installed and ready');
                 }
               });
             }
+          });
+
+          // Handle controller change (when new service worker takes over)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('Service worker controller changed - new version active');
           });
         } catch (err) {
           console.error('SW registration failed: ', err);
@@ -73,6 +80,7 @@ const App = ({ Component, pageProps }: AppProps) => {
           </PageTransition>
         </AuthStateHydrator>
         <PWAInstallPrompt />
+        <PWAUpdateManager />
       </ChatProvider>
     </>
   );
