@@ -33,59 +33,75 @@ export default async function handler(
     
     const newSettings: UserSettings = req.body;
     console.log('📥 Settings data received:', {
+      timezone: newSettings.timezone,
+      globalTags: newSettings.globalTags,
+      tags: newSettings.tags,
       hasCalendarSources: !!newSettings.calendarSources,
       calendarSourcesCount: newSettings.calendarSources?.length || 0,
       calendarSourceTypes: newSettings.calendarSources?.map(s => s.type) || []
     });
 
-    // Get existing settings to preserve calendar sources if needed
-    let existingCalendarSources: any[] = [];
+    // This will be handled later when we get existing settings for merge
+
+    // Get existing settings first for proper merging
+
+    // Get existing settings to preserve data and ensure proper handling
+    let existingSettings: any = {};
     try {
-      const existingData = await db.query.userSettings.findFirst({
+      const existing = await db.query.userSettings.findFirst({
         where: eq(userSettings.user_email, user_email as string),
       });
-      existingCalendarSources = (existingData?.calendarSources as any[]) || [];
-      console.log('📋 Existing calendar sources count:', existingCalendarSources.length);
+      existingSettings = existing || {};
+      console.log('📋 Existing settings loaded for merge');
     } catch (error) {
-      console.log('📋 No existing settings found, starting fresh');
+      console.log('📋 No existing settings found, using defaults');
     }
 
-    // Safeguard: Don't accidentally clear calendar sources
-    let finalCalendarSources = newSettings.calendarSources || [];
-    if (finalCalendarSources.length === 0 && existingCalendarSources.length > 0) {
-      // If we're trying to set empty sources but had existing ones, preserve the existing ones
-      // unless this is an explicit deletion (check if calendarSources was explicitly set to [])
-      if (newSettings.calendarSources === undefined) {
-        console.log('🛡️ Preserving existing calendar sources (update did not include calendarSources)');
-        finalCalendarSources = existingCalendarSources;
-      } else {
-        console.log('⚠️ Explicitly clearing calendar sources');
-      }
-    }
-
-    const settingsData: Partial<UserSettings> = {
-      defaultView: newSettings.defaultView || 'month',
-      powerAutomateUrl: newSettings.powerAutomateUrl || undefined,
-      selectedCals: newSettings.selectedCals || [],
-      globalTags: newSettings.globalTags || [],
-      activeWidgets: newSettings.activeWidgets || [],
-      hiddenWidgets: newSettings.hiddenWidgets || [],
-      floCatStyle: newSettings.floCatStyle || 'default',
-      floCatPersonality: newSettings.floCatPersonality || [],
-      preferredName: newSettings.preferredName || '',
-      tags: newSettings.tags || [],
-      widgets: newSettings.widgets || [],
-      calendarSettings: newSettings.calendarSettings || { calendars: [] },
-      notificationSettings: newSettings.notificationSettings || { subscribed: false },
-      layouts: newSettings.layouts || {},
-      layoutTemplate: newSettings.layoutTemplate || undefined,
-      slotAssignments: newSettings.slotAssignments || undefined,
-      calendarSources: finalCalendarSources,
-      timezone: newSettings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      floCatSettings: newSettings.floCatSettings || { enabledCapabilities: [] },
+    const settingsData: any = {
+      defaultView: newSettings.defaultView || existingSettings.defaultView || 'month',
+      powerAutomateUrl: newSettings.powerAutomateUrl !== undefined ? newSettings.powerAutomateUrl : existingSettings.powerAutomateUrl,
+      selectedCals: newSettings.selectedCals !== undefined ? newSettings.selectedCals : (existingSettings.selectedCals || []),
+      globalTags: newSettings.globalTags !== undefined ? newSettings.globalTags : (existingSettings.globalTags || []),
+      activeWidgets: newSettings.activeWidgets !== undefined ? newSettings.activeWidgets : (existingSettings.activeWidgets || []),
+      hiddenWidgets: newSettings.hiddenWidgets !== undefined ? newSettings.hiddenWidgets : (existingSettings.hiddenWidgets || []),
+      floCatStyle: newSettings.floCatStyle || existingSettings.floCatStyle || 'default',
+      floCatPersonality: newSettings.floCatPersonality !== undefined ? newSettings.floCatPersonality : (existingSettings.floCatPersonality || []),
+      preferredName: newSettings.preferredName !== undefined ? newSettings.preferredName : existingSettings.preferredName,
+      tags: newSettings.tags !== undefined ? newSettings.tags : (existingSettings.tags || []),
+      widgets: newSettings.widgets !== undefined ? newSettings.widgets : (existingSettings.widgets || []),
+      calendarSettings: newSettings.calendarSettings !== undefined ? newSettings.calendarSettings : (existingSettings.calendarSettings || { calendars: [] }),
+      notificationSettings: newSettings.notificationSettings !== undefined ? newSettings.notificationSettings : (existingSettings.notificationSettings || { subscribed: false }),
+      layouts: newSettings.layouts !== undefined ? newSettings.layouts : (existingSettings.layouts || {}),
+      layoutTemplate: newSettings.layoutTemplate !== undefined ? newSettings.layoutTemplate : existingSettings.layoutTemplate,
+      slotAssignments: newSettings.slotAssignments !== undefined ? newSettings.slotAssignments : existingSettings.slotAssignments,
+      calendarSources: newSettings.calendarSources !== undefined ? newSettings.calendarSources : (existingSettings.calendarSources || []),
+      // Ensure timezone is never null due to NOT NULL constraint
+      timezone: newSettings.timezone || existingSettings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      floCatSettings: newSettings.floCatSettings !== undefined ? newSettings.floCatSettings : (existingSettings.floCatSettings || { enabledCapabilities: [] }),
+      customRange: newSettings.customRange !== undefined ? newSettings.customRange : existingSettings.customRange,
+      // Journal settings
+      journalReminderEnabled: newSettings.journalReminderEnabled !== undefined ? newSettings.journalReminderEnabled : existingSettings.journalReminderEnabled,
+      journalReminderTime: newSettings.journalReminderTime !== undefined ? newSettings.journalReminderTime : existingSettings.journalReminderTime,
+      journalPinProtection: newSettings.journalPinProtection !== undefined ? newSettings.journalPinProtection : existingSettings.journalPinProtection,
+      journalPinHash: newSettings.journalPinHash !== undefined ? newSettings.journalPinHash : existingSettings.journalPinHash,
+      journalExportFormat: newSettings.journalExportFormat !== undefined ? newSettings.journalExportFormat : existingSettings.journalExportFormat,
+      journalAutoSave: newSettings.journalAutoSave !== undefined ? newSettings.journalAutoSave : existingSettings.journalAutoSave,
+      journalDailyPrompts: newSettings.journalDailyPrompts !== undefined ? newSettings.journalDailyPrompts : existingSettings.journalDailyPrompts,
+      journalMoodTracking: newSettings.journalMoodTracking !== undefined ? newSettings.journalMoodTracking : existingSettings.journalMoodTracking,
+      journalActivityTracking: newSettings.journalActivityTracking !== undefined ? newSettings.journalActivityTracking : existingSettings.journalActivityTracking,
+      journalSleepTracking: newSettings.journalSleepTracking !== undefined ? newSettings.journalSleepTracking : existingSettings.journalSleepTracking,
+      journalWeeklyReflections: newSettings.journalWeeklyReflections !== undefined ? newSettings.journalWeeklyReflections : existingSettings.journalWeeklyReflections,
+      journalCustomActivities: newSettings.journalCustomActivities !== undefined ? newSettings.journalCustomActivities : existingSettings.journalCustomActivities,
+      journalDisabledActivities: newSettings.journalDisabledActivities !== undefined ? newSettings.journalDisabledActivities : existingSettings.journalDisabledActivities,
+      notesGrouping: newSettings.notesGrouping !== undefined ? newSettings.notesGrouping : existingSettings.notesGrouping,
     };
 
-    console.log('📝 Prepared calendar sources for database:', settingsData.calendarSources?.length || 0);
+    console.log('📝 Prepared settings for database:', {
+      timezone: settingsData.timezone,
+      globalTagsLength: settingsData.globalTags?.length || 0,
+      tagsLength: settingsData.tags?.length || 0,
+      calendarSourcesLength: settingsData.calendarSources?.length || 0
+    });
 
     const result = await db
       .insert(userSettings)
@@ -108,8 +124,39 @@ export default async function handler(
     
     if (savedData) {
       const savedCalendarSources = savedData.calendarSources as any[];
-      console.log('✅ Verification: Calendar sources in database:', savedCalendarSources?.length || 0);
+      const savedGlobalTags = savedData.globalTags as string[];
+      const savedTags = savedData.tags as string[];
       
+      console.log('✅ Verification: Settings in database:', {
+        timezone: savedData.timezone,
+        globalTagsLength: savedGlobalTags?.length || 0,
+        tagsLength: savedTags?.length || 0,
+        calendarSourcesLength: savedCalendarSources?.length || 0
+      });
+      
+      // Check for mismatches
+      if (settingsData.timezone !== savedData.timezone) {
+        console.error('❌ Timezone mismatch!', {
+          expected: settingsData.timezone,
+          actual: savedData.timezone
+        });
+      }
+      if ((settingsData.globalTags?.length || 0) !== (savedGlobalTags?.length || 0)) {
+        console.error('❌ Global tags count mismatch!', {
+          expected: settingsData.globalTags?.length || 0,
+          actual: savedGlobalTags?.length || 0,
+          expectedTags: settingsData.globalTags,
+          actualTags: savedGlobalTags
+        });
+      }
+      if ((settingsData.tags?.length || 0) !== (savedTags?.length || 0)) {
+        console.error('❌ Tags count mismatch!', {
+          expected: settingsData.tags?.length || 0,
+          actual: savedTags?.length || 0,
+          expectedTags: settingsData.tags,
+          actualTags: savedTags
+        });
+      }
       if ((settingsData.calendarSources?.length || 0) !== (savedCalendarSources?.length || 0)) {
         console.error('❌ Calendar sources count mismatch!', {
           expected: settingsData.calendarSources?.length || 0,
