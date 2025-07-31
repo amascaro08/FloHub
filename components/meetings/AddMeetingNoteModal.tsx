@@ -12,11 +12,13 @@ import RichTextEditor from '../journal/RichTextEditor';
 type AddMeetingNoteModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => Promise<void>;
+  onSave: (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string; meetingSeries?: string }) => Promise<void>;
   isSaving: boolean;
   existingTags: string[];
   workCalendarEvents: CalendarEvent[];
   calendarLoading?: boolean;
+  existingSeries?: string[];
+  preSelectedSeries?: string;
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -28,7 +30,9 @@ export default function AddMeetingNoteModal({
   isSaving, 
   existingTags, 
   workCalendarEvents,
-  calendarLoading = false
+  calendarLoading = false,
+  existingSeries = [],
+  preSelectedSeries
 }: AddMeetingNoteModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -42,6 +46,7 @@ export default function AddMeetingNoteModal({
   const [assignedToType, setAssignedToType] = useState("Me");
   const [otherAssignedToName, setOtherAssignedToName] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedSeries, setSelectedSeries] = useState<string>("");
 
   const handleAddAction = async () => {
     const assignedTo = assignedToType === "Me" ? "Me" : otherAssignedToName.trim();
@@ -96,6 +101,7 @@ export default function AddMeetingNoteModal({
       isAdhoc: isAdhoc,
       actions: actions,
       agenda: agenda,
+      meetingSeries: selectedSeries || undefined,
     });
 
     // Clear form after saving
@@ -111,6 +117,7 @@ export default function AddMeetingNoteModal({
     setAssignedToType("Me");
     setOtherAssignedToName("");
     setCurrentStep(1);
+    setSelectedSeries("");
     onClose();
   };
 
@@ -127,6 +134,13 @@ export default function AddMeetingNoteModal({
     console.log("Passed-in work calendar events:", workCalendarEvents);
     console.log("Generated event options:", eventOptions);
   }, [workCalendarEvents, eventOptions]);
+
+  // Set pre-selected series when modal opens
+  useEffect(() => {
+    if (preSelectedSeries) {
+      setSelectedSeries(preSelectedSeries);
+    }
+  }, [preSelectedSeries, isOpen]);
 
   const handleTagChange = (selectedOptions: any, actionMeta: any) => {
     if (actionMeta.action === 'create-option') {
@@ -386,6 +400,32 @@ export default function AddMeetingNoteModal({
                     })}
                   />
                 </div>
+
+                {/* Meeting Series */}
+                {existingSeries.length > 0 && (
+                  <div>
+                    <label htmlFor="meeting-series" className="block text-sm font-medium text-[var(--neutral-700)] mb-2">
+                      Meeting Series (Optional)
+                    </label>
+                    <select
+                      id="meeting-series"
+                      className="input-modern"
+                      value={selectedSeries}
+                      onChange={(e) => setSelectedSeries(e.target.value)}
+                      disabled={isSaving}
+                    >
+                      <option value="">No series - standalone meeting</option>
+                      {existingSeries.map((series) => (
+                        <option key={series} value={series}>
+                          {series}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-[var(--neutral-500)] mt-1">
+                      Add this meeting to an existing series to build context across related meetings
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

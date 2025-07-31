@@ -360,6 +360,7 @@ export default function MeetingsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [showLinkingModal, setShowLinkingModal] = useState(false);
+  const [addToSeriesName, setAddToSeriesName] = useState<string>("");
 
   // Check if device is mobile
   useEffect(() => {
@@ -416,6 +417,28 @@ export default function MeetingsPage() {
     acc + (note.actions?.filter(action => action.status === 'todo')?.length || 0), 0);
   const upcomingMeetings = workCalendarEvents.filter(event => 
     getEventDate(event.start) > new Date()).length;
+
+  // Extract existing series names for the modal
+  const existingSeriesNames = useMemo(() => {
+    const seriesNames = new Set<string>();
+    meetingNotes.forEach(note => {
+      if (note.meetingSeries) {
+        seriesNames.add(note.meetingSeries);
+      }
+    });
+    return Array.from(seriesNames);
+  }, [meetingNotes]);
+
+  // Extract existing series names for the modal
+  const existingSeriesNames = useMemo(() => {
+    const seriesNames = new Set<string>();
+    meetingNotes.forEach(note => {
+      if (note.meetingSeries) {
+        seriesNames.add(note.meetingSeries);
+      }
+    });
+    return Array.from(seriesNames);
+  }, [meetingNotes]);
 
   // Group meetings by series for series tab (both manual and auto-detected)
   const meetingSeries = useMemo(() => {
@@ -474,7 +497,7 @@ export default function MeetingsPage() {
     { id: 'upcoming', label: 'Upcoming', icon: CalendarDaysIcon, count: upcomingMeetings }
   ];
 
-  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => {
+  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string; meetingSeries?: string }) => {
     setIsSaving(true);
     try {
       const response = await fetch("/api/meetings/create", {
@@ -640,17 +663,35 @@ export default function MeetingsPage() {
      }
    };
 
-   const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
-     try {
-       // For now, just close the modal and show a success message
-       // TODO: Implement actual linking once database fields are added
-       alert(`Successfully created series "${seriesName}" with ${selectedNoteIds.length} meetings. This feature will be fully functional after database migration.`);
-       setShowLinkingModal(false);
-     } catch (error) {
-       console.error('Error creating meeting series:', error);
-       throw error;
-     }
-   };
+     const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
+    try {
+      const response = await fetch("/api/meetings/series", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName,
+          meetingIds: selectedNoteIds,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create meeting series");
+      }
+      
+      const result = await response.json();
+      
+      // Refresh the meeting notes to show the updated series
+      mutate("/api/meetings");
+      
+      // Show success message
+      alert(`Successfully created series "${seriesName}" with ${selectedNoteIds.length} meetings!`);
+      setShowLinkingModal(false);
+    } catch (error) {
+      console.error('Error creating meeting series:', error);
+      throw error;
+    }
+  };
 
   // Show loading state if data is still loading
   if ((!meetingNotesResponse && !meetingNotesError) || (!userSettings && !settingsError && shouldFetch)) {
@@ -1074,6 +1115,8 @@ export default function MeetingsPage() {
           existingTags={allAvailableTags}
           workCalendarEvents={todaysWorkCalendarEvents}
           calendarLoading={calendarLoading}
+          existingSeries={Array.from(new Set(meetingNotes.filter(note => note.meetingSeries).map(note => note.meetingSeries!)))}
+          preSelectedSeries={addToSeriesName}
         />
 
         {/* Meeting Linking Modal */}

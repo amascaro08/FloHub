@@ -21,6 +21,8 @@ type UpdateMeetingNoteRequest = { // Renamed type
   isAdhoc?: boolean; // Optional: Flag to indicate if it's an ad-hoc meeting note
   actions?: Action[]; // Optional: Array of actions
   agenda?: string; // Optional: Meeting agenda
+  meetingSeries?: string; // Optional: Meeting series name
+  linkedMeetingIds?: string[]; // Optional: Linked meeting IDs
 };
 
 type UpdateMeetingNoteResponse = { // Renamed type
@@ -56,13 +58,13 @@ export default async function handler(
   const userId = user.email;
 
   // 2) Validate input
-  const { id, title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda } = req.body as UpdateMeetingNoteRequest; // Include new fields
+  const { id, title, content, tags, eventId, eventTitle, isAdhoc, actions, agenda, meetingSeries, linkedMeetingIds } = req.body as UpdateMeetingNoteRequest; // Include new fields
   if (typeof id !== "string" || id.trim() === "") {
     return res.status(400).json({ error: "Meeting Note ID is required" }); // Updated error message
   }
 
   // Ensure at least one update field is provided
-  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && actions === undefined && agenda === undefined) {
+  if (title === undefined && content === undefined && tags === undefined && eventId === undefined && eventTitle === undefined && isAdhoc === undefined && actions === undefined && agenda === undefined && meetingSeries === undefined && linkedMeetingIds === undefined) {
       return res.status(400).json({ error: "No update fields provided" });
   }
 
@@ -146,6 +148,14 @@ export default async function handler(
     if (agenda !== undefined) {
         updateFields.push(`agenda = $${paramIndex++}`);
         updateParams.push(agenda);
+    }
+    if (meetingSeries !== undefined) {
+        updateFields.push(`meeting_series = $${paramIndex++}`);
+        updateParams.push(meetingSeries);
+    }
+    if (linkedMeetingIds !== undefined) {
+        updateFields.push(`linked_meeting_ids = $${paramIndex++}`);
+        updateParams.push(linkedMeetingIds);
     }
     
     // Generate AI summary if agenda and content are provided - but do it asynchronously
@@ -270,6 +280,8 @@ export default async function handler(
       if (isAdhoc !== undefined) updateData.isAdhoc = isAdhoc;
       if (actions !== undefined) updateData.actions = actions;
       if (agenda !== undefined) updateData.agenda = agenda ? prepareContentForStorage(agenda) : "";
+      if (meetingSeries !== undefined) updateData.meetingSeries = meetingSeries;
+      if (linkedMeetingIds !== undefined) updateData.linkedMeetingIds = linkedMeetingIds;
       if (aiSummary) updateData.aiSummary = prepareContentForStorage(aiSummary);
       updateData.updatedAt = new Date();
       await db.update(notes).set(updateData).where(eq(notes.id, Number(id)));
@@ -309,6 +321,8 @@ export default async function handler(
           actions: updatedNoteData.actions,
           agenda: retrieveContentFromStorage(updatedNoteData.agenda || ""),
           aiSummary: retrieveContentFromStorage(updatedNoteData.aiSummary || ""),
+          meetingSeries: updatedNoteData.meetingSeries,
+          linkedMeetingIds: updatedNoteData.linkedMeetingIds,
           createdAt: Number(updatedNoteData.createdAt),
           updatedAt: updatedNoteData.updatedAt ? new Date(updatedNoteData.updatedAt).getTime() : 0
         }
