@@ -74,6 +74,9 @@ export default function MeetingSeriesView({
       
       const result = await response.json();
       console.log('Series data received:', result);
+      console.log('Series object:', result.series);
+      console.log('Series meetings count:', result.series?.meetings?.length);
+      console.log('Series summary:', result.series?.summary);
       setSeriesData(result.series);
     } catch (err) {
       console.error('Error fetching series:', err);
@@ -122,7 +125,8 @@ export default function MeetingSeriesView({
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg relative z-10">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[50] p-4">
+      <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-2xl relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
