@@ -125,8 +125,7 @@ export default function MeetingSeriesView({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[30] p-4">
-      <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-2xl relative p-6">
+    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -320,7 +319,6 @@ export default function MeetingSeriesView({
           ))}
         </div>
       </div>
-    </div>
     </div>
   );
 }

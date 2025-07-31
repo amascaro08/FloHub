@@ -494,81 +494,123 @@ function generateContextSummary(meetings: Note[], pendingActions: Action[]): str
 
 function analyzeMeetingPatterns(meetings: Note[], pendingActions: Action[]) {
   const insights = {
-    trend: 'consistent progress',
+    trend: '',
     keyFindings: [] as string[],
     recommendations: [] as string[]
   };
 
-  // Analyze meeting frequency
-  if (meetings.length >= 3) {
-    const sortedMeetings = meetings.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    const timeSpans = [];
-    for (let i = 1; i < sortedMeetings.length; i++) {
-      const days = Math.abs(new Date(sortedMeetings[i].createdAt).getTime() - new Date(sortedMeetings[i-1].createdAt).getTime()) / (1000 * 60 * 60 * 24);
-      timeSpans.push(days);
-    }
-    const avgDays = timeSpans.reduce((a, b) => a + b, 0) / timeSpans.length;
-    
-    if (avgDays <= 7) {
-      insights.trend = 'active development with frequent check-ins';
-    } else if (avgDays <= 14) {
-      insights.trend = 'regular bi-weekly progress';
-    } else {
-      insights.trend = 'periodic strategic reviews';
-    }
+  if (meetings.length === 0) {
+    return {
+      trend: 'no meetings to analyze',
+      keyFindings: [],
+      recommendations: ['Add meetings to this series to build context']
+    };
   }
 
-  // Analyze action completion patterns
+  // Extract actual content for contextual analysis
+  const meetingTitles = meetings.map(m => m.title || m.eventTitle || '').filter(Boolean);
+  const meetingContents = meetings.map(m => m.content || '').filter(Boolean);
+  const aiSummaries = meetings.map(m => m.aiSummary || '').filter(Boolean);
+  
+  // Combine all textual content for analysis
+  const allText = [...meetingTitles, ...meetingContents, ...aiSummaries].join(' ').toLowerCase();
+  
+  // Contextual trend analysis based on actual content
+  const progressWords = ['completed', 'finished', 'done', 'resolved', 'implemented', 'delivered', 'achieved'];
+  const challengeWords = ['delayed', 'blocked', 'issue', 'problem', 'challenge', 'concern', 'risk'];
+  const planningWords = ['plan', 'schedule', 'timeline', 'roadmap', 'next steps', 'upcoming'];
+  
+  const progressCount = progressWords.reduce((count, word) => count + (allText.match(new RegExp(word, 'g')) || []).length, 0);
+  const challengeCount = challengeWords.reduce((count, word) => count + (allText.match(new RegExp(word, 'g')) || []).length, 0);
+  const planningCount = planningWords.reduce((count, word) => count + (allText.match(new RegExp(word, 'g')) || []).length, 0);
+  
+  // Determine trend based on content analysis
+  if (progressCount > challengeCount * 2) {
+    insights.trend = 'strong forward momentum with consistent progress';
+  } else if (challengeCount > progressCount) {
+    insights.trend = 'addressing challenges and working through blockers';
+  } else if (planningCount > progressCount + challengeCount) {
+    insights.trend = 'focused on strategic planning and future direction';
+  } else {
+    insights.trend = 'balanced mix of planning, progress, and problem-solving';
+  }
+
+  // Contextual key findings based on meeting content
+  const keyTopics = extractKeyTopics(allText, meetingTitles);
+  insights.keyFindings.push(...keyTopics);
+
+  // Action analysis for contextual recommendations
   const allActions = meetings.flatMap(m => m.actions || []);
-  const completedActions = allActions.filter(a => a.status === 'done').length;
-  const totalHistoricalActions = allActions.length;
+  const completedActions = allActions.filter(a => a.status === 'done');
   
-  if (totalHistoricalActions > 0) {
-    const completionRate = completedActions / totalHistoricalActions;
-    if (completionRate < 0.5) {
-      insights.keyFindings.push('low action completion rate');
-      insights.recommendations.push('review action ownership and feasibility');
-    } else if (completionRate > 0.8) {
-      insights.keyFindings.push('high execution effectiveness');
+  if (allActions.length > 0) {
+    const completionRate = completedActions.length / allActions.length;
+    if (completionRate < 0.3) {
+      insights.recommendations.push('focus on action item follow-through');
     }
   }
 
-  // Analyze content themes
-  const allContent = meetings.map(m => `${m.title || ''} ${m.content} ${m.aiSummary || ''}`).join(' ').toLowerCase();
+  // Content-based recommendations
+  if (challengeCount > progressCount && challengeCount > 3) {
+    insights.recommendations.push('schedule dedicated time to address recurring blockers');
+  }
   
-  const themes = {
-    'project planning': /plan|roadmap|timeline|milestone|deliverable/g,
-    'issue resolution': /issue|problem|bug|fix|resolve|troubleshoot/g,
-    'team coordination': /team|collaboration|coordination|sync|alignment/g,
-    'progress review': /progress|status|update|review|completed/g,
-    'decision making': /decide|decision|approve|consensus|agreement/g,
-    'strategy': /strategy|vision|direction|goal|objective/g
-  };
+  if (pendingActions.length > 5) {
+    insights.recommendations.push('prioritize and reduce action item backlog');
+  }
 
-  const detectedThemes = [];
-  for (const [theme, pattern] of Object.entries(themes)) {
-    const matches = allContent.match(pattern);
-    if (matches && matches.length >= 3) {
-      detectedThemes.push(theme);
+  // Meeting frequency recommendations
+  const sortedMeetings = meetings.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  if (sortedMeetings.length >= 2) {
+    const latestGap = Math.abs(new Date().getTime() - new Date(sortedMeetings[sortedMeetings.length - 1].createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (latestGap > 14 && progressCount > 0) {
+      insights.recommendations.push('schedule follow-up to maintain momentum');
     }
-  }
-
-  if (detectedThemes.length > 0) {
-    insights.keyFindings.push(...detectedThemes.slice(0, 2));
-  }
-
-  // Generate recommendations based on patterns
-  if (pendingActions.length > totalHistoricalActions * 0.3) {
-    insights.recommendations.push('consolidate action items to prevent overwhelm');
-  }
-
-  if (meetings.length >= 5 && detectedThemes.includes('issue resolution')) {
-    insights.recommendations.push('consider root cause analysis to prevent recurring issues');
-  }
-
-  if (pendingActions.some(a => !a.assignedTo || a.assignedTo === '')) {
-    insights.recommendations.push('ensure all actions have clear ownership');
   }
 
   return insights;
+}
+
+function extractKeyTopics(text: string, titles: string[]): string[] {
+  const topics = [];
+  
+  // Extract specific topics from titles (these are usually most relevant)
+  const commonTitleWords = titles.join(' ').toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !['meeting', 'call', 'discussion', 'update', 'review'].includes(word));
+  
+  const titleWordCounts = commonTitleWords.reduce((acc, word) => {
+    acc[word] = (acc[word] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Get most frequent meaningful words from titles
+  const frequentTitleWords = Object.entries(titleWordCounts)
+    .filter(([word, count]) => count >= 2)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 2)
+    .map(([word]) => word);
+  
+  topics.push(...frequentTitleWords);
+
+  // Specific domain analysis
+  const domains = {
+    'onboarding': /onboard|training|setup|introduction|getting started/gi,
+    'project planning': /project|plan|timeline|milestone|roadmap/gi,
+    'technical implementation': /development|technical|implementation|code|system/gi,
+    'team alignment': /alignment|sync|coordination|team|collaboration/gi,
+    'decision making': /decision|approval|consensus|agreement|choice/gi,
+    'issue resolution': /issue|problem|bug|troubleshoot|fix/gi,
+    'progress review': /progress|status|update|review|completed/gi,
+    'strategy': /strategy|vision|direction|goal|objective|future/gi
+  };
+
+  for (const [domain, pattern] of Object.entries(domains)) {
+    if (pattern.test(text)) {
+      topics.push(domain);
+    }
+  }
+
+  // Return unique topics, prioritizing title-based ones
+  return [...new Set(topics)].slice(0, 3);
 }
