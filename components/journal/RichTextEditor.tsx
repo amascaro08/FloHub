@@ -149,6 +149,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       TaskList,
       TaskItem.configure({
         nested: true,
+        HTMLAttributes: {
+          class: 'task-item',
+        },
       }),
     ],
     content: content,
@@ -210,6 +213,39 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       editor.commands.setContent(content);
     }
   }, [content, editor]);
+
+  // Handle task list checkbox changes for strikethrough
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleUpdate = () => {
+      // Find all task items and update their classes based on checkbox state
+      const taskItems = editor.view.dom.querySelectorAll('li[data-type="taskItem"]');
+      taskItems.forEach((item) => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+          if (checkbox.checked) {
+            item.classList.add('task-item-checked');
+            item.setAttribute('data-checked', 'true');
+          } else {
+            item.classList.remove('task-item-checked');
+            item.setAttribute('data-checked', 'false');
+          }
+        }
+      });
+    };
+
+    // Run on initial load and updates
+    const timer = setTimeout(handleUpdate, 100);
+    editor.on('update', handleUpdate);
+    editor.on('transaction', handleUpdate);
+
+    return () => {
+      clearTimeout(timer);
+      editor.off('update', handleUpdate);
+      editor.off('transaction', handleUpdate);
+    };
+  }, [editor]);
 
   // Handle slash command detection
   useEffect(() => {
@@ -903,6 +939,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor .ProseMirror ul[data-type="taskList"] {
           list-style: none;
           padding-left: 0;
+          margin-left: 0;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] {
@@ -910,16 +947,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           align-items: flex-start;
           margin: 0.5rem 0;
           list-style: none;
+          position: relative;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label {
-          flex: 0 0 auto;
+          flex-shrink: 0;
           margin-right: 0.75rem;
-          margin-top: 0.125rem;
+          margin-top: 0.1rem;
           user-select: none;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           cursor: pointer;
+          line-height: 1;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
@@ -933,6 +972,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           position: relative;
           transition: all 0.15s ease;
           background: white;
+          flex-shrink: 0;
         }
         
         .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
@@ -958,7 +998,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked:after {
           content: '';
           position: absolute;
-          top: 1px;
+          top: 2px;
           left: 5px;
           width: 6px;
           height: 10px;
@@ -968,19 +1008,32 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] > div {
-          flex: 1 1 auto;
+          flex: 1;
           min-width: 0;
-          line-height: 1.5;
+          line-height: 1.6;
         }
         
-        .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
+        /* Ensure text starts at the top and stays inline */
+        .prose-editor .ProseMirror li[data-type="taskItem"] > div > p {
+          margin: 0;
+          line-height: 1.6;
+        }
+        
+        /* Better strikethrough for completed tasks using multiple approaches */
+        .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div,
+        .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div > p,
+        .prose-editor .ProseMirror li.task-item-checked > div,
+        .prose-editor .ProseMirror li.task-item-checked > div > p {
           text-decoration: line-through;
           opacity: 0.6;
-          color: rgb(107 114 128);
+          color: rgb(107 114 128) !important;
         }
         
-        .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
-          color: rgb(156 163 175);
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div,
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div > p,
+        .dark .prose-editor .ProseMirror li.task-item-checked > div,
+        .dark .prose-editor .ProseMirror li.task-item-checked > div > p {
+          color: rgb(156 163 175) !important;
         }
         
         .prose-editor .ProseMirror li[data-type="taskItem"] ul[data-type="taskList"] {
