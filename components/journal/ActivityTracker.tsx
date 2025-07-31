@@ -163,11 +163,11 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Get icon for an activity
   const getActivityIcon = (activity: string) => {
     // Check default activities first
-    const defaultActivity = defaultActivities.find(a => a.name === activity);
+    const defaultActivity = defaultActivities.find((a: CustomActivity) => a.name === activity);
     if (defaultActivity) return defaultActivity.icon;
     
     // Check custom activities
-    const customActivity = customActivities.find(a => a.name === activity);
+    const customActivity = customActivities.find((a: CustomActivity) => a.name === activity);
     if (customActivity) return customActivity.icon;
     
     // Fallback icon
