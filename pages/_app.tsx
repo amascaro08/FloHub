@@ -17,7 +17,6 @@ const App = ({ Component, pageProps }: AppProps) => {
   const requiresAuth = (Component as any).auth !== false;
 
   useEffect(() => {
-    // Temporarily disable service worker registration to fix login issues
     // Register service worker for push notifications and PWA functionality
     const registerSW = async () => {
       if ('serviceWorker' in navigator) {
@@ -57,8 +56,7 @@ const App = ({ Component, pageProps }: AppProps) => {
       }
     };
     
-    // Temporarily comment out service worker registration to test login
-    // registerSW();
+    registerSW();
   }, []);
 
   return (
