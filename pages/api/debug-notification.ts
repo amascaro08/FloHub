@@ -74,19 +74,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Subscription endpoint:', subscription.endpoint);
     console.log('Subscription keys:', Object.keys(subscription.keys || {}));
+    console.log('Full subscription object:', JSON.stringify(subscription, null, 2));
 
-    // Test notification payload
+    // Test notification payload - start with minimal payload
     const testPayload = {
-      title: 'Debug Test',
-      body: 'Testing VAPID configuration',
-      icon: '/icons/icon-192x192.png'
+      title: 'Test',
+      body: 'Hello'
     };
 
     console.log('Attempting to send test notification...');
 
+    // Test different payload and options
+    const options = {
+      TTL: 60, // Time to live in seconds
+      headers: {
+        'Urgency': 'normal'
+      }
+    };
+
+    console.log('Using options:', options);
+    console.log('Payload:', testPayload);
+
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(testPayload));
+      // Try without options first
+      console.log('Trying without options...');
+      const result = await webpush.sendNotification(subscription, JSON.stringify(testPayload));
       console.log('✅ Notification sent successfully!');
+      console.log('Send result:', result);
       
       return res.status(200).json({
         success: true,
