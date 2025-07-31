@@ -1071,17 +1071,45 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           margin-left: 0 !important;
         }
         
-        /* Debug styles - remove these later */
-        .prose-editor .ProseMirror li[data-type="taskItem"] {
-          border: 1px solid red !important;
+        /* Very basic debug styles to test if ANY CSS is working */
+        .prose-editor {
+          background: yellow !important;
         }
         
-        .prose-editor .ProseMirror li[data-type="taskItem"] > label {
-          border: 1px solid blue !important;
+        .prose-editor ul {
+          background: lightblue !important;
         }
         
-        .prose-editor .ProseMirror li[data-type="taskItem"] > div {
-          border: 1px solid green !important;
+        .prose-editor li {
+          background: lightgreen !important;
+          border: 2px solid red !important;
+        }
+        
+        .prose-editor input[type="checkbox"] {
+          background: orange !important;
+          width: 30px !important;
+          height: 30px !important;
+        }
+        
+        /* Simple task list fix - target any list with checkboxes */
+        .prose-editor ul li:has(input[type="checkbox"]) {
+          display: flex !important;
+          align-items: flex-start !important;
+          list-style: none !important;
+          padding-left: 0 !important;
+        }
+        
+        .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"] {
+          margin-right: 12px !important;
+          margin-top: 3px !important;
+          flex-shrink: 0 !important;
+        }
+        
+        /* Strikethrough for checked items */
+        .prose-editor ul li:has(input[type="checkbox"]:checked) {
+          text-decoration: line-through !important;
+          opacity: 0.6 !important;
+          color: #666 !important;
         }
         
         /* Mobile touch scrolling improvements */
