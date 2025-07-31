@@ -120,8 +120,8 @@ export default function NoteList({
                       {getNotePreview(note)}
                     </p>
                     <div className="flex items-center space-x-3 mt-2">
-                      <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-400">
-                        <ClockIcon className="w-3 h-3" />
+                      <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
+                        <ClockIcon className="w-3 h-3 flex-shrink-0" />
                         <span>{new Date(note.createdAt).toLocaleDateString()}</span>
                       </div>
                       <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">

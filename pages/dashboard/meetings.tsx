@@ -743,10 +743,10 @@ export default function MeetingsPage() {
         {/* Search and Filter Bar */}
         <div className="mb-6 flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 flex-shrink-0 z-10" />
             <input
               type="text"
-              className="input-modern pl-10 text-sm"
+              className="border border-neutral-300 rounded-2xl pl-11 pr-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-white placeholder-neutral-400 text-sm"
               placeholder="Search meeting notes by title, content, or event..."
               value={searchContent}
               onChange={(e) => setSearchContent(e.target.value)}
@@ -754,9 +754,9 @@ export default function MeetingsPage() {
           </div>
           <div className="flex gap-3">
             <div className="relative">
-              <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 flex-shrink-0 z-10" />
               <select
-                className="input-modern pl-10 min-w-[150px] text-sm"
+                className="border border-neutral-300 rounded-2xl pl-11 pr-3 py-2 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-white text-sm appearance-none"
                 value={filterTag}
                 onChange={(e) => setFilterTag(e.target.value)}
               >

@@ -119,8 +119,67 @@ export default async function handler(
       console.error("Error fetching user settings for", user_email, error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
-  } else {
-    res.setHeader("Allow", ["GET"]);
-    return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
+
+  // ── PUT/PATCH: update user settings ──────────────────────────────
+  if (req.method === "PUT" || req.method === "PATCH") {
+    try {
+      const updates = req.body as Partial<UserSettings>;
+      
+      // Check if user settings exist
+      const existingSettings = await db.query.userSettings.findFirst({
+        where: eq(userSettings.user_email, user_email),
+      });
+
+      let result;
+      if (existingSettings) {
+        // Update existing settings
+        [result] = await db.update(userSettings)
+          .set(updates)
+          .where(eq(userSettings.user_email, user_email))
+          .returning();
+      } else {
+        // Create new settings
+        [result] = await db.insert(userSettings)
+          .values({
+            user_email,
+            ...updates,
+          })
+          .returning();
+      }
+
+      // Return the updated settings in the same format as GET
+      const updatedSettings: UserSettings = {
+        selectedCals: (result.selectedCals as string[]) || [],
+        defaultView: result.defaultView as UserSettings['defaultView'] || "month",
+        customRange: (result.customRange as any) || { start: "", end: "" },
+        powerAutomateUrl: result.powerAutomateUrl || "",
+        globalTags: (result.globalTags as string[]) || [],
+        activeWidgets: (result.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        hiddenWidgets: (result.hiddenWidgets as string[]) || [],
+        floCatStyle: result.floCatStyle as UserSettings['floCatStyle'] || "default",
+        floCatPersonality: (result.floCatPersonality as string[]) || [],
+        preferredName: result.preferredName || "",
+        tags: (result.tags as string[]) || [],
+        widgets: (result.widgets as string[]) || [],
+        calendarSettings: (result.calendarSettings as any) || { calendars: [] },
+        notificationSettings: (result.notificationSettings as any) || { subscribed: false },
+        calendarSources: (result.calendarSources as any) || [],
+        timezone: result.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        floCatSettings: (result.floCatSettings as any) || { enabledCapabilities: [] },
+        layouts: (result.layouts as any) || {},
+        layoutTemplate: result.layoutTemplate || "primary-secondary",
+        slotAssignments: (result.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+      };
+
+      console.log("User settings updated for", user_email, updatedSettings);
+      return res.status(200).json(updatedSettings);
+    } catch (error) {
+      console.error("Error updating user settings for", user_email, error);
+      return res.status(500).json({ error: "Failed to update user settings" });
+    }
+  }
+
+  res.setHeader("Allow", ["GET", "PUT", "PATCH"]);
+  return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }

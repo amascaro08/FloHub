@@ -352,10 +352,10 @@ export default function NotesPage() {
           <div className="p-4 border-b border-neutral-200/50 dark:border-neutral-700/50">
             <div className="space-y-3">
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 flex-shrink-0 z-10" />
                 <input
                   type="text"
-                  className="input-modern pl-10 text-sm"
+                  className="border border-neutral-300 rounded-2xl pl-11 pr-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-white placeholder-neutral-400 text-sm"
                   placeholder="Search notes..."
                   value={searchContent}
                   onChange={(e) => setSearchContent(e.target.value)}
@@ -363,9 +363,9 @@ export default function NotesPage() {
               </div>
               
               <div className="relative">
-                <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                <TagIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 z-10 flex-shrink-0" />
                 <select
-                  className="input-modern pl-10 text-sm appearance-none"
+                  className="border border-neutral-300 rounded-2xl pl-11 pr-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 ease-in-out bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-white text-sm appearance-none"
                   value={filterTag}
                   onChange={(e) => setFilterTag(e.target.value)}
                 >
