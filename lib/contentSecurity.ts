@@ -88,6 +88,94 @@ export const decryptContent = (encryptedData: EncryptedContent | string): string
 };
 
 /**
+ * Encrypt array of strings (for tags, activities, etc.)
+ */
+export const encryptArray = (array: string[]): EncryptedContent => {
+  if (!array || array.length === 0) {
+    return {
+      data: JSON.stringify([]),
+      iv: '',
+      isEncrypted: false
+    };
+  }
+
+  try {
+    const serialized = JSON.stringify(array);
+    return encryptContent(serialized);
+  } catch (error) {
+    console.error('Array encryption failed:', error);
+    return {
+      data: JSON.stringify(array),
+      iv: '',
+      isEncrypted: false
+    };
+  }
+};
+
+/**
+ * Decrypt array of strings
+ */
+export const decryptArray = (encryptedData: EncryptedContent | string[]): string[] => {
+  // Handle legacy unencrypted arrays
+  if (Array.isArray(encryptedData)) {
+    return encryptedData;
+  }
+
+  try {
+    const decrypted = decryptContent(encryptedData as EncryptedContent);
+    if (!decrypted) return [];
+    return JSON.parse(decrypted);
+  } catch (error) {
+    console.error('Array decryption failed:', error);
+    return [];
+  }
+};
+
+/**
+ * Encrypt JSONB data (for complex objects)
+ */
+export const encryptJSONB = (data: any): EncryptedContent => {
+  if (!data) {
+    return {
+      data: JSON.stringify(null),
+      iv: '',
+      isEncrypted: false
+    };
+  }
+
+  try {
+    const serialized = JSON.stringify(data);
+    return encryptContent(serialized);
+  } catch (error) {
+    console.error('JSONB encryption failed:', error);
+    return {
+      data: JSON.stringify(data),
+      iv: '',
+      isEncrypted: false
+    };
+  }
+};
+
+/**
+ * Decrypt JSONB data
+ */
+export const decryptJSONB = (encryptedData: EncryptedContent | any): any => {
+  // Handle legacy unencrypted objects
+  if (typeof encryptedData === 'object' && !encryptedData?.isEncrypted) {
+    return encryptedData;
+  }
+
+  try {
+    const decrypted = decryptContent(encryptedData as EncryptedContent);
+    if (!decrypted) return null;
+    return JSON.parse(decrypted);
+  } catch (error) {
+    console.error('JSONB decryption failed:', error);
+    return encryptedData;
+  }
+};
+
+/**
  * Check if content is encrypted
  */
 export const isContentEncrypted = (content: any): boolean => {
@@ -128,10 +216,52 @@ export const safeDecryptContent = (content: any): string => {
 };
 
 /**
+ * Safely handle arrays that might be encrypted or plain arrays
+ */
+export const safeDecryptArray = (content: any): string[] => {
+  if (Array.isArray(content)) {
+    return content;
+  }
+  
+  if (isContentEncrypted(content)) {
+    return decryptArray(content);
+  }
+  
+  return [];
+};
+
+/**
+ * Safely handle JSONB that might be encrypted or plain objects
+ */
+export const safeDecryptJSONB = (content: any): any => {
+  if (isContentEncrypted(content)) {
+    return decryptJSONB(content);
+  }
+  
+  return content;
+};
+
+/**
  * Prepare content for database storage
  */
 export const prepareContentForStorage = (content: string): string => {
   const encrypted = encryptContent(content);
+  return JSON.stringify(encrypted);
+};
+
+/**
+ * Prepare array for database storage
+ */
+export const prepareArrayForStorage = (array: string[]): string => {
+  const encrypted = encryptArray(array);
+  return JSON.stringify(encrypted);
+};
+
+/**
+ * Prepare JSONB for database storage
+ */
+export const prepareJSONBForStorage = (data: any): string => {
+  const encrypted = encryptJSONB(data);
   return JSON.stringify(encrypted);
 };
 
@@ -149,6 +279,48 @@ export const retrieveContentFromStorage = (storedContent: string): string => {
   } catch {
     // If parsing fails, treat as legacy plain text
     return storedContent;
+  }
+};
+
+/**
+ * Retrieve array from database storage
+ */
+export const retrieveArrayFromStorage = (storedArray: string): string[] => {
+  if (!storedArray) {
+    return [];
+  }
+  
+  try {
+    const parsed = JSON.parse(storedArray);
+    return safeDecryptArray(parsed);
+  } catch {
+    // If parsing fails, treat as legacy plain array
+    try {
+      return JSON.parse(storedArray);
+    } catch {
+      return [];
+    }
+  }
+};
+
+/**
+ * Retrieve JSONB from database storage
+ */
+export const retrieveJSONBFromStorage = (storedData: string): any => {
+  if (!storedData) {
+    return null;
+  }
+  
+  try {
+    const parsed = JSON.parse(storedData);
+    return safeDecryptJSONB(parsed);
+  } catch {
+    // If parsing fails, treat as legacy plain object
+    try {
+      return JSON.parse(storedData);
+    } catch {
+      return null;
+    }
   }
 };
 
@@ -184,4 +356,114 @@ export const migrateContentToEncrypted = (plainTextContent: string): string => {
   
   // Encrypt the plain text content
   return prepareContentForStorage(plainTextContent);
+};
+
+/**
+ * Migration utility to convert existing plain array to encrypted
+ */
+export const migrateArrayToEncrypted = (plainArray: string[] | string): string => {
+  if (!plainArray) {
+    return JSON.stringify([]);
+  }
+  
+  // If it's already a string, check if it's encrypted
+  if (typeof plainArray === 'string') {
+    try {
+      const parsed = JSON.parse(plainArray);
+      if (isContentEncrypted(parsed)) {
+        return plainArray; // Already encrypted
+      }
+      // If it's a valid array, encrypt it
+      if (Array.isArray(parsed)) {
+        return prepareArrayForStorage(parsed);
+      }
+    } catch {
+      // Not valid JSON, return empty array
+      return prepareArrayForStorage([]);
+    }
+  }
+  
+  // If it's an array, encrypt it
+  if (Array.isArray(plainArray)) {
+    return prepareArrayForStorage(plainArray);
+  }
+  
+  return prepareArrayForStorage([]);
+};
+
+/**
+ * Migration utility to convert existing plain JSONB to encrypted
+ */
+export const migrateJSONBToEncrypted = (plainData: any): string => {
+  if (!plainData) {
+    return JSON.stringify(null);
+  }
+  
+  // If it's already a string, check if it's encrypted
+  if (typeof plainData === 'string') {
+    try {
+      const parsed = JSON.parse(plainData);
+      if (isContentEncrypted(parsed)) {
+        return plainData; // Already encrypted
+      }
+      // Encrypt the parsed data
+      return prepareJSONBForStorage(parsed);
+    } catch {
+      // Not valid JSON, return null
+      return prepareJSONBForStorage(null);
+    }
+  }
+  
+  // If it's an object, encrypt it
+  return prepareJSONBForStorage(plainData);
+};
+
+/**
+ * Utility to encrypt user settings fields
+ */
+export const encryptUserSettingsFields = (settings: any) => {
+  const encrypted = { ...settings };
+  
+  if (settings.preferredName) {
+    encrypted.preferredName = prepareContentForStorage(settings.preferredName);
+  }
+  
+  if (settings.globalTags) {
+    encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
+  }
+  
+  if (settings.tags) {
+    encrypted.tags = prepareArrayForStorage(settings.tags);
+  }
+  
+  if (settings.journalCustomActivities) {
+    encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
+  }
+  
+  return encrypted;
+};
+
+/**
+ * Utility to decrypt user settings fields
+ */
+export const decryptUserSettingsFields = (settings: any) => {
+  const decrypted = { ...settings };
+  
+  if (settings.preferredName) {
+    decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
+  }
+  
+  if (settings.globalTags) {
+    decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
+  }
+  
+  if (settings.tags) {
+    decrypted.tags = retrieveArrayFromStorage(settings.tags);
+  }
+  
+  if (settings.journalCustomActivities) {
+    decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
+  }
+  
+  return decrypted;
 };
