@@ -9,6 +9,7 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import PWAInstallPrompt from '@/components/ui/PWAInstallPrompt';
 import PWAUpdateManager from '@/components/ui/PWAUpdateManager';
 import AuthStateHydrator from '@/components/ui/AuthStateHydrator';
+import PWAReinstallationHandler from '@/components/ui/PWAReinstallationHandler';
 import { useAuthPersistence } from '@/lib/hooks/useAuthPersistence';
 
 const App = ({ Component, pageProps }: AppProps) => {
@@ -72,13 +73,15 @@ const App = ({ Component, pageProps }: AppProps) => {
       </Head>
       <ChatProvider>
         <ProgressBar />
-        <AuthStateHydrator requiresAuth={requiresAuth}>
-          <PageTransition>
-            <MainLayout requiresAuth={requiresAuth}>
-              <Component {...pageProps} />
-            </MainLayout>
-          </PageTransition>
-        </AuthStateHydrator>
+        <PWAReinstallationHandler>
+          <AuthStateHydrator requiresAuth={requiresAuth}>
+            <PageTransition>
+              <MainLayout requiresAuth={requiresAuth}>
+                <Component {...pageProps} />
+              </MainLayout>
+            </PageTransition>
+          </AuthStateHydrator>
+        </PWAReinstallationHandler>
         <PWAInstallPrompt />
         <PWAUpdateManager />
       </ChatProvider>

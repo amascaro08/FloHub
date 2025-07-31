@@ -57,10 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create JWT token
     const token = signToken({ userId: user.id, email: user.email });
 
-    // Set cookie with proper domain handling using the new utility
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
+    // Set cookie with enhanced persistence settings
     const authCookie = createSecureCookie(req, 'auth-token', token, {
-      maxAge,
+      rememberMe,
       sameSite: 'lax',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production'
