@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notification Debug Test</title>
+</head>
+<body>
+    <h1>Notification Debug Test</h1>
+    <button id="testBtn">Test Direct Notification</button>
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Testing...';
+
+            try {
+                // Check if service worker is available
+                if (!('serviceWorker' in navigator)) {
+                    throw new Error('Service Worker not supported');
+                }
+
+                // Get service worker registration
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Get current subscription
+                const subscription = await registration.pushManager.getSubscription();
+                
+                if (!subscription) {
+                    throw new Error('No push subscription found');
+                }
+
+                console.log('Subscription:', subscription.toJSON());
+
+                // Send to debug API
+                const response = await fetch('/api/debug-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(subscription.toJSON())
+                });
+
+                const result = await response.json();
+                
+                output.innerHTML = `
+                    <h3>Result:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                output.innerHTML = `<h3>Error:</h3><pre>${error.message}</pre>`;
+            }
+        });
+    </script>
+</body>
+</html>
