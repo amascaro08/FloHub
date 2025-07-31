@@ -22,7 +22,10 @@
     "migrate-content-encryption:dry-run": "tsx scripts/migrate-content-encryption.ts --dry-run",
     "notifications:clean-subscriptions": "node scripts/clean-subscriptions.js",
     "delete-user-accounts": "tsx scripts/delete-user-accounts.ts",
-    "fix-google-calendar": "tsx scripts/fix-google-calendar-integration.ts"
+    "fix-google-calendar": "tsx scripts/fix-google-calendar-integration.ts",
+    "pwa:update-version": "node scripts/update-pwa-version.js",
+    "build:pwa": "npm run pwa:update-version && next build",
+    "pwa:test": "node scripts/test-pwa-update.js"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.10.0",

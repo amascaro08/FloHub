@@ -1,12 +1,14 @@
 // Service Worker for FlowHub Push Notifications
-const CACHE_NAME = 'flohub-v1';
+// Version-based cache busting for better update handling
+const CACHE_VERSION = 'v2025.07.31.2255'; // This will be updated automatically
+const CACHE_NAME = `flohub-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/offline.html',
   '/dashboard',
 ];
 
-console.log('Service Worker: Starting up...');
+console.log('Service Worker: Starting up...', CACHE_NAME);
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -45,7 +47,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event
+// Fetch event with version-based cache busting
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
@@ -57,6 +59,38 @@ self.addEventListener('fetch', (event) => {
   
   // Only handle GET requests for non-auth routes
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Add version parameter to force cache updates for HTML pages
+  if (event.request.mode === 'navigate') {
+    const versionedUrl = new URL(event.request.url);
+    versionedUrl.searchParams.set('v', CACHE_VERSION);
+    
+    event.respondWith(
+      fetch(versionedUrl.toString())
+        .then(response => {
+          // Cache successful responses
+          if (response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cached version
+          return caches.match(event.request)
+            .then((response) => {
+              if (response) {
+                return response;
+              }
+              // If no cached version, return offline page
+              return caches.match('/offline.html');
+            });
+        })
+    );
     return;
   }
   
