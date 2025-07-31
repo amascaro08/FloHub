@@ -2,6 +2,12 @@
 
 // Define shared application types here
 
+// Define a type for custom activities
+export type CustomActivity = {
+  name: string;
+  icon: string;
+};
+
 // Define a type for user settings
 export type UserSettings = {
   selectedCals?: string[];
@@ -30,6 +36,19 @@ export type UserSettings = {
   layouts?: { [key: string]: any };
   layoutTemplate?: string;
   slotAssignments?: { [slotId: string]: string | null };
+  // Journal Settings
+  journalReminderEnabled?: boolean;
+  journalReminderTime?: string;
+  journalPinProtection?: boolean;
+  journalPinHash?: string;
+  journalExportFormat?: 'json' | 'csv';
+  journalAutoSave?: boolean;
+  journalDailyPrompts?: boolean;
+  journalMoodTracking?: boolean;
+  journalActivityTracking?: boolean;
+  journalSleepTracking?: boolean;
+  journalWeeklyReflections?: boolean;
+  journalCustomActivities?: CustomActivity[];
 };
 
 // Define a type for calendar sources

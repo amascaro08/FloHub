@@ -120,6 +120,19 @@ export const userSettings = pgTable("user_settings", {
   layouts: jsonb("layouts"),
   layoutTemplate: varchar("layout_template", { length: 50 }),
   slotAssignments: jsonb("slot_assignments"),
+  // Journal Settings
+  journalReminderEnabled: boolean("journal_reminder_enabled").default(false),
+  journalReminderTime: varchar("journal_reminder_time", { length: 8 }).default('20:00'),
+  journalPinProtection: boolean("journal_pin_protection").default(false),
+  journalPinHash: varchar("journal_pin_hash", { length: 255 }),
+  journalExportFormat: varchar("journal_export_format", { length: 10 }).default('json'),
+  journalAutoSave: boolean("journal_auto_save").default(true),
+  journalDailyPrompts: boolean("journal_daily_prompts").default(true),
+  journalMoodTracking: boolean("journal_mood_tracking").default(true),
+  journalActivityTracking: boolean("journal_activity_tracking").default(true),
+  journalSleepTracking: boolean("journal_sleep_tracking").default(true),
+  journalWeeklyReflections: boolean("journal_weekly_reflections").default(false),
+  journalCustomActivities: jsonb("journal_custom_activities").default('[]'),
 });
 
 // NOTES TABLE

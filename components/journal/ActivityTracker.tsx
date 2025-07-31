@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import { CustomActivity } from '@/types/app';
+import useSWR from 'swr';
 import axios from 'axios';
-
-interface CustomActivity {
-  name: string;
-  icon: string;
-}
 
 interface ActivityTrackerProps {
   onSave: (activities: string[]) => void;
@@ -17,8 +14,18 @@ interface ActivityTrackerProps {
 const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezone }) => {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
-  const [customActivities, setCustomActivities] = useState<CustomActivity[]>([]);
- const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
+
+  // Fetch user settings to get custom activities
+  const { data: userSettings } = useSWR(
+    user ? '/api/userSettings' : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    { revalidateOnFocus: false }
+  );
   const userData = user ? user : null;
 
   if (!user) {
@@ -50,29 +57,16 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     { name: 'Writing', icon: '✍️' }
   ];
   
-  // Get the current date in YYYY-MM-DD format or use provided date
+    // Get the current date in YYYY-MM-DD format or use provided date
   const entryDate = date || getCurrentDate(timezone);
+  
+  // Get custom activities from user settings
+  const customActivities = userSettings?.journalCustomActivities || [];
 
-    // Load saved activities and user's custom activities from settings
+  // Load saved activities for the specific date
   useEffect(() => {
     const fetchActivitiesData = async () => {
       if (user?.primaryEmail) {
-        // Load custom activities from journal settings
-        try {
-          const settingsKey = `journal_settings_${user.primaryEmail}`;
-          const savedSettings = localStorage.getItem(settingsKey);
-          
-          if (savedSettings) {
-            const parsed = JSON.parse(savedSettings);
-            if (parsed.customActivities && Array.isArray(parsed.customActivities)) {
-              setCustomActivities(parsed.customActivities);
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing saved journal settings:', e);
-        }
-        
-        // Load activities for the specific date
         try {
           const response = await axios.get(`/api/journal/activities?date=${entryDate}`, {
             withCredentials: true
@@ -168,96 +162,19 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Get icon for an activity
   const getActivityIcon = (activity: string) => {
+    // Check default activities first
     const defaultActivity = defaultActivities.find(a => a.name === activity);
-    return defaultActivity ? defaultActivity.icon : '📌';
+    if (defaultActivity) return defaultActivity.icon;
+    
+    // Check custom activities
+    const customActivity = customActivities.find(a => a.name === activity);
+    if (customActivity) return customActivity.icon;
+    
+    // Fallback icon
+    return '📌';
   };
 
-  const addCustomActivity = () => {
-    if (customActivity.trim() && !defaultActivities.map(a => a.name).includes(customActivity.trim()) && !userActivities.includes(customActivity.trim())) {
-      // Add to user's custom activities
-      const newUserActivities = [...userActivities, customActivity.trim()];
-      setUserActivities(newUserActivities);
-      
-      // Save custom activities to localStorage
-      if (user?.primaryEmail) {
-        const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
-        localStorage.setItem(customActivitiesKey, JSON.stringify(newUserActivities));
-      }
-      
-      // Create a new array with unique activities
-      const uniqueActivities = Array.from(new Set(selectedActivities));
-      
-      // Add to selected activities if not already included
-      let newActivities = uniqueActivities;
-      if (!uniqueActivities.includes(customActivity.trim())) {
-        newActivities = [...uniqueActivities, customActivity.trim()];
-      }
-      
-      // Update state with the new unique activities
-      setSelectedActivities(newActivities);
-      
-      setCustomActivity('');
-      
-      // Auto-save when custom activity is added
-      setTimeout(async () => {
-        if (user?.primaryEmail) {
-          try {
-            // Save selected activities for this date
-            await axios.post('/api/journal/activities', {
-              date: entryDate,
-              activities: newActivities
-            }, {
-              withCredentials: true
-            });
-            
-            // Show save confirmation
-            setSaveConfirmation(true);
-            
-            // Hide confirmation after 3 seconds
-            setTimeout(() => {
-              setSaveConfirmation(false);
-            }, 3000);
-            
-            onSave(newActivities);
-          } catch (error) {
-            console.error('Error saving activities data:', error);
-          }
-        }
-      }, 100);
-    } else if (customActivity.trim() && !selectedActivities.includes(customActivity.trim())) {
-      // If activity already exists but isn't selected, select it
-      const newActivities = [...selectedActivities, customActivity.trim()];
-      setSelectedActivities(newActivities);
-      setCustomActivity('');
-      
-      // Auto-save when existing activity is selected
-      setTimeout(async () => {
-        if (user?.primaryEmail) {
-          try {
-            // Save selected activities for this date
-            await axios.post('/api/journal/activities', {
-              date: entryDate,
-              activities: newActivities
-            }, {
-              withCredentials: true
-            });
-            
-            // Show save confirmation
-            setSaveConfirmation(true);
-            
-            // Hide confirmation after 3 seconds
-            setTimeout(() => {
-              setSaveConfirmation(false);
-            }, 3000);
-            
-            onSave(newActivities);
-          } catch (error) {
-            console.error('Error saving activities data:', error);
-          }
-        }
-      }, 100);
-    }
-  };
+
 
 
   
@@ -287,43 +204,28 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             </button>
           ))}
           
-          {userActivities.map(activity => (
+          {customActivities.map(activity => (
             <button
-              key={`custom-${activity}`}
-              onClick={() => toggleActivity(activity)}
+              key={`custom-${activity.name}`}
+              onClick={() => toggleActivity(activity.name)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center activity-tag ${
-                selectedActivities.includes(activity)
+                selectedActivities.includes(activity.name)
                   ? 'bg-purple-600 text-white scale-105 shadow-sm'
                   : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800'
               }`}
             >
-              <span className="mr-1">📌</span>
-              {activity}
+              <span className="mr-1">{activity.icon}</span>
+              {activity.name}
             </button>
           ))}
         </div>
         
-        <div className="flex">
-          <input
-            type="text"
-            value={customActivity}
-            onChange={(e) => setCustomActivity(e.target.value)}
-            placeholder="Add custom activity..."
-            className="flex-grow p-2 rounded-l-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addCustomActivity();
-              }
-            }}
-          />
-          <button
-            onClick={addCustomActivity}
-            className="px-3 py-2 rounded-r-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors font-medium"
-          >
-            Add
-          </button>
-        </div>
+        {customActivities.length === 0 && (
+          <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+            <p>No custom activities yet.</p>
+            <p>Go to Journal Settings → Activities to add custom activities.</p>
+          </div>
+        )}
       </div>
       
       {selectedActivities.length > 0 && (

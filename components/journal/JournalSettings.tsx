@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
+import { UserSettings, CustomActivity } from '@/types/app';
+import useSWR, { mutate } from 'swr';
 
 interface JournalSettingsProps {
   onClose: () => void;
   onJournalCleared?: () => void;
-}
-
-interface CustomActivity {
-  name: string;
-  icon: string;
 }
 
 interface JournalSettingsData {
@@ -57,6 +54,17 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   
   const { user } = useUser();
 
+  // Fetch user settings from database
+  const { data: userSettings, error: userSettingsError } = useSWR<UserSettings>(
+    user ? '/api/userSettings' : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    { revalidateOnFocus: false }
+  );
+
   // Default activities that come with the app
   const defaultActivities: CustomActivity[] = [
     { name: 'Work', icon: '💼' },
@@ -95,24 +103,25 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     );
   }
 
-  // Load settings from localStorage when component mounts
+  // Load settings from database when userSettings are loaded
   useEffect(() => {
-    if (user?.primaryEmail) {
-      const savedSettings = localStorage.getItem(`journal_settings_${user.primaryEmail}`);
-      if (savedSettings) {
-        try {
-          const parsedSettings = JSON.parse(savedSettings);
-          // Merge with default settings to ensure new settings have default values
-          setSettings({
-            ...settings,
-            ...parsedSettings
-          });
-        } catch (error) {
-          console.error('Error parsing saved settings:', error);
-        }
-      }
+    if (userSettings && user?.primaryEmail) {
+      setSettings({
+        reminderEnabled: userSettings.journalReminderEnabled || false,
+        reminderTime: userSettings.journalReminderTime || '20:00',
+        pinProtection: userSettings.journalPinProtection || false,
+        pin: '', // Don't load the actual PIN hash
+        exportFormat: userSettings.journalExportFormat || 'json',
+        autoSave: userSettings.journalAutoSave ?? true,
+        dailyPrompts: userSettings.journalDailyPrompts ?? true,
+        moodTracking: userSettings.journalMoodTracking ?? true,
+        activityTracking: userSettings.journalActivityTracking ?? true,
+        sleepTracking: userSettings.journalSleepTracking ?? true,
+        weeklyReflections: userSettings.journalWeeklyReflections || false,
+        customActivities: userSettings.journalCustomActivities || [],
+      });
     }
-  }, [user]);
+  }, [userSettings, user]);
 
   // Handle PIN validation
   const validatePin = () => {
@@ -128,16 +137,55 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     return true;
   };
 
-  // Save settings
-  const handleSaveSettings = () => {
+  // Save settings to database
+  const handleSaveSettings = async () => {
     if (settings.pinProtection && !validatePin()) {
       return;
     }
 
     if (user?.primaryEmail) {
-      localStorage.setItem(`journal_settings_${user.primaryEmail}`, JSON.stringify(settings));
-      setSaveConfirmation(true);
-      setTimeout(() => setSaveConfirmation(false), 3000);
+      try {
+        // Hash the PIN if PIN protection is enabled
+        let pinHash = undefined;
+        if (settings.pinProtection && settings.pin) {
+          // Simple hash for demonstration - in production use proper bcrypt
+          pinHash = btoa(settings.pin); // Base64 encoding as simple hash
+        }
+
+        const journalSettingsUpdate = {
+          journalReminderEnabled: settings.reminderEnabled,
+          journalReminderTime: settings.reminderTime,
+          journalPinProtection: settings.pinProtection,
+          journalPinHash: pinHash,
+          journalExportFormat: settings.exportFormat,
+          journalAutoSave: settings.autoSave,
+          journalDailyPrompts: settings.dailyPrompts,
+          journalMoodTracking: settings.moodTracking,
+          journalActivityTracking: settings.activityTracking,
+          journalSleepTracking: settings.sleepTracking,
+          journalWeeklyReflections: settings.weeklyReflections,
+          journalCustomActivities: settings.customActivities,
+        };
+
+        const response = await fetch('/api/userSettings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(journalSettingsUpdate),
+        });
+
+        if (response.ok) {
+          // Revalidate the user settings cache
+          await mutate('/api/userSettings');
+          setSaveConfirmation(true);
+          setTimeout(() => setSaveConfirmation(false), 3000);
+        } else {
+          console.error('Failed to save journal settings');
+        }
+      } catch (error) {
+        console.error('Error saving journal settings:', error);
+      }
     }
   };
 

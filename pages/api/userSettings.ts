@@ -81,6 +81,19 @@ export default async function handler(
             primary: "calendar",
             secondary: "ataglance"
           },
+          // Journal settings defaults
+          journalReminderEnabled: false,
+          journalReminderTime: '20:00',
+          journalPinProtection: false,
+          journalPinHash: undefined,
+          journalExportFormat: 'json',
+          journalAutoSave: true,
+          journalDailyPrompts: true,
+          journalMoodTracking: true,
+          journalActivityTracking: true,
+          journalSleepTracking: true,
+          journalWeeklyReflections: false,
+          journalCustomActivities: [],
         };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
@@ -111,6 +124,19 @@ export default async function handler(
         layouts: (data.layouts as any) || {},
         layoutTemplate: data.layoutTemplate || "primary-secondary",
         slotAssignments: (data.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        // Journal settings
+        journalReminderEnabled: data.journalReminderEnabled ?? false,
+        journalReminderTime: data.journalReminderTime || '20:00',
+        journalPinProtection: data.journalPinProtection ?? false,
+        journalPinHash: data.journalPinHash || undefined,
+        journalExportFormat: (data.journalExportFormat as 'json' | 'csv') || 'json',
+        journalAutoSave: data.journalAutoSave ?? true,
+        journalDailyPrompts: data.journalDailyPrompts ?? true,
+        journalMoodTracking: data.journalMoodTracking ?? true,
+        journalActivityTracking: data.journalActivityTracking ?? true,
+        journalSleepTracking: data.journalSleepTracking ?? true,
+        journalWeeklyReflections: data.journalWeeklyReflections ?? false,
+        journalCustomActivities: (data.journalCustomActivities as any) || [],
       };
 
       console.log("User settings loaded for", user_email, settings);
@@ -170,6 +196,19 @@ export default async function handler(
         layouts: (result.layouts as any) || {},
         layoutTemplate: result.layoutTemplate || "primary-secondary",
         slotAssignments: (result.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        // Journal settings
+        journalReminderEnabled: result.journalReminderEnabled ?? false,
+        journalReminderTime: result.journalReminderTime || '20:00',
+        journalPinProtection: result.journalPinProtection ?? false,
+        journalPinHash: result.journalPinHash || undefined,
+        journalExportFormat: (result.journalExportFormat as 'json' | 'csv') || 'json',
+        journalAutoSave: result.journalAutoSave ?? true,
+        journalDailyPrompts: result.journalDailyPrompts ?? true,
+        journalMoodTracking: result.journalMoodTracking ?? true,
+        journalActivityTracking: result.journalActivityTracking ?? true,
+        journalSleepTracking: result.journalSleepTracking ?? true,
+        journalWeeklyReflections: result.journalWeeklyReflections ?? false,
+        journalCustomActivities: (result.journalCustomActivities as any) || [],
       };
 
       console.log("User settings updated for", user_email, updatedSettings);
