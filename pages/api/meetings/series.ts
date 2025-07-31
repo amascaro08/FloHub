@@ -462,21 +462,113 @@ function generateContextSummary(meetings: Note[], pendingActions: Action[]): str
     `from ${new Date(meetings[0].createdAt).toLocaleDateString()} to ${new Date(meetings[meetings.length - 1].createdAt).toLocaleDateString()}` 
     : '';
 
-  let summary = `This series contains ${totalMeetings} meeting${totalMeetings !== 1 ? 's' : ''} ${dateRange}.`;
+  // Analyze meeting patterns and extract insights
+  const insights = analyzeMeetingPatterns(meetings, pendingActions);
+  
+  let summary = `This ${totalMeetings}-meeting series ${dateRange} shows ${insights.trend}. `;
   
   if (totalActions > 0) {
-    summary += ` There are ${totalActions} outstanding action item${totalActions !== 1 ? 's' : ''} requiring attention.`;
+    const urgentActions = pendingActions.filter(action => 
+      action.dueDate && new Date(action.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    );
+    
+    if (urgentActions.length > 0) {
+      summary += `⚠️ ${urgentActions.length} action${urgentActions.length !== 1 ? 's' : ''} require immediate attention. `;
+    }
+    
+    summary += `${totalActions} total outstanding action${totalActions !== 1 ? 's' : ''} pending completion. `;
   }
 
-  // Add key themes if available
-  const allSummaries = meetings
-    .filter(m => m.aiSummary)
-    .map(m => m.aiSummary!)
-    .join(' ');
-  
-  if (allSummaries) {
-    summary += ` The meetings have covered various topics and discussions as documented in the individual meeting summaries.`;
+  // Add specific insights
+  if (insights.keyFindings.length > 0) {
+    summary += `Key focus areas: ${insights.keyFindings.join(', ')}. `;
+  }
+
+  // Add actionable next steps
+  if (insights.recommendations.length > 0) {
+    summary += `Next steps: ${insights.recommendations.join(', ')}.`;
   }
 
   return summary;
+}
+
+function analyzeMeetingPatterns(meetings: Note[], pendingActions: Action[]) {
+  const insights = {
+    trend: 'consistent progress',
+    keyFindings: [] as string[],
+    recommendations: [] as string[]
+  };
+
+  // Analyze meeting frequency
+  if (meetings.length >= 3) {
+    const sortedMeetings = meetings.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const timeSpans = [];
+    for (let i = 1; i < sortedMeetings.length; i++) {
+      const days = Math.abs(new Date(sortedMeetings[i].createdAt).getTime() - new Date(sortedMeetings[i-1].createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      timeSpans.push(days);
+    }
+    const avgDays = timeSpans.reduce((a, b) => a + b, 0) / timeSpans.length;
+    
+    if (avgDays <= 7) {
+      insights.trend = 'active development with frequent check-ins';
+    } else if (avgDays <= 14) {
+      insights.trend = 'regular bi-weekly progress';
+    } else {
+      insights.trend = 'periodic strategic reviews';
+    }
+  }
+
+  // Analyze action completion patterns
+  const allActions = meetings.flatMap(m => m.actions || []);
+  const completedActions = allActions.filter(a => a.status === 'done').length;
+  const totalHistoricalActions = allActions.length;
+  
+  if (totalHistoricalActions > 0) {
+    const completionRate = completedActions / totalHistoricalActions;
+    if (completionRate < 0.5) {
+      insights.keyFindings.push('low action completion rate');
+      insights.recommendations.push('review action ownership and feasibility');
+    } else if (completionRate > 0.8) {
+      insights.keyFindings.push('high execution effectiveness');
+    }
+  }
+
+  // Analyze content themes
+  const allContent = meetings.map(m => `${m.title || ''} ${m.content} ${m.aiSummary || ''}`).join(' ').toLowerCase();
+  
+  const themes = {
+    'project planning': /plan|roadmap|timeline|milestone|deliverable/g,
+    'issue resolution': /issue|problem|bug|fix|resolve|troubleshoot/g,
+    'team coordination': /team|collaboration|coordination|sync|alignment/g,
+    'progress review': /progress|status|update|review|completed/g,
+    'decision making': /decide|decision|approve|consensus|agreement/g,
+    'strategy': /strategy|vision|direction|goal|objective/g
+  };
+
+  const detectedThemes = [];
+  for (const [theme, pattern] of Object.entries(themes)) {
+    const matches = allContent.match(pattern);
+    if (matches && matches.length >= 3) {
+      detectedThemes.push(theme);
+    }
+  }
+
+  if (detectedThemes.length > 0) {
+    insights.keyFindings.push(...detectedThemes.slice(0, 2));
+  }
+
+  // Generate recommendations based on patterns
+  if (pendingActions.length > totalHistoricalActions * 0.3) {
+    insights.recommendations.push('consolidate action items to prevent overwhelm');
+  }
+
+  if (meetings.length >= 5 && detectedThemes.includes('issue resolution')) {
+    insights.recommendations.push('consider root cause analysis to prevent recurring issues');
+  }
+
+  if (pendingActions.some(a => !a.assignedTo || a.assignedTo === '')) {
+    insights.recommendations.push('ensure all actions have clear ownership');
+  }
+
+  return insights;
 }
