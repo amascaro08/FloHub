@@ -258,12 +258,15 @@ async function getSeriesContext(
   userId: string
 ) {
   const { seriesName, meetingIds } = req.query as GetSeriesContextRequest;
+  console.log('getSeriesContext - query params:', { seriesName, meetingIds });
 
   let series;
   if (seriesName) {
+    console.log('Getting series context for name:', seriesName);
     series = await generateSeriesContext(userId, seriesName);
   } else if (meetingIds) {
     const ids = Array.isArray(meetingIds) ? meetingIds : [meetingIds];
+    console.log('Getting series context for meeting IDs:', ids);
     series = await generateLinkedMeetingsContext(userId, ids);
   } else {
     return res.status(400).json({ 
@@ -271,6 +274,7 @@ async function getSeriesContext(
     });
   }
 
+  console.log('Returning series data:', series);
   return res.status(200).json({ success: true, series });
 }
 
@@ -311,6 +315,9 @@ async function generateLinkedMeetingsContext(userId: string, meetingIds: string[
 }
 
 async function buildSeriesContext(meetingRows: any[], seriesName: string) {
+  console.log('buildSeriesContext - input rows:', meetingRows.length);
+  console.log('buildSeriesContext - seriesName:', seriesName);
+  
   const meetings: Note[] = meetingRows.map((row) => ({
     id: String(row.id),
     title: retrieveContentFromStorage(row.title || ""),
@@ -365,7 +372,7 @@ async function buildSeriesContext(meetingRows: any[], seriesName: string) {
   // Generate context summary
   const contextSummary = generateContextSummary(meetings, pendingActions);
 
-  return {
+  const result = {
     name: seriesName,
     meetings,
     summary: {
@@ -380,6 +387,10 @@ async function buildSeriesContext(meetingRows: any[], seriesName: string) {
       contextSummary,
     },
   };
+  
+  console.log('buildSeriesContext - result:', JSON.stringify(result, null, 2));
+  
+  return result;
 }
 
 function generateContextSummary(meetings: Note[], pendingActions: Action[]): string {

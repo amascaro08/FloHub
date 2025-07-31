@@ -691,6 +691,7 @@ export default function MeetingsPage() {
 
   const handleDeleteSeries = async (seriesName: string) => {
     try {
+      console.log('Deleting series:', seriesName);
       const response = await fetch("/api/meetings/series", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -699,10 +700,16 @@ export default function MeetingsPage() {
         }),
       });
       
+      console.log('Delete response status:', response.status);
+      
       if (!response.ok) {
         const error = await response.json();
+        console.error('Delete error:', error);
         throw new Error(error.error || "Failed to delete series");
       }
+      
+      const result = await response.json();
+      console.log('Delete result:', result);
       
       // Refresh the meeting notes and close the series view
       mutate();
@@ -710,9 +717,11 @@ export default function MeetingsPage() {
       
       // Show success message
       alert(`Successfully removed the series "${seriesName}". Meetings are now unlinked but not deleted.`);
+      return true;
     } catch (error) {
       console.error('Error deleting series:', error);
       alert('Failed to delete series. Please try again.');
+      return false;
     }
   };
 
@@ -786,6 +795,7 @@ export default function MeetingsPage() {
             onAddExistingMeeting={handleAddExistingMeetingToSeries}
             onDeleteSeries={handleDeleteSeries}
             onClose={() => setViewingSeriesName(null)}
+            onRefresh={() => mutate()}
           />
         )}
 

@@ -33,6 +33,7 @@ interface MeetingSeriesViewProps {
   onAddExistingMeeting?: (seriesName: string) => void;
   onDeleteSeries?: (seriesName: string) => void;
   onClose?: () => void;
+  onRefresh?: () => void;
 }
 
 export default function MeetingSeriesView({ 
@@ -40,7 +41,8 @@ export default function MeetingSeriesView({
   onAddMeeting, 
   onAddExistingMeeting,
   onDeleteSeries,
-  onClose 
+  onClose,
+  onRefresh
 }: MeetingSeriesViewProps) {
   const [seriesData, setSeriesData] = useState<MeetingSeriesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,14 @@ export default function MeetingSeriesView({
   useEffect(() => {
     fetchSeriesContext();
   }, [seriesName]);
+
+  // Add a refresh function that can be called externally
+  const refreshData = () => {
+    fetchSeriesContext();
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
 
   const fetchSeriesContext = async () => {
     try {
@@ -112,7 +122,7 @@ export default function MeetingSeriesView({
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg relative z-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -142,9 +152,12 @@ export default function MeetingSeriesView({
           )}
           {onDeleteSeries && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (confirm(`Are you sure you want to remove the series "${seriesName}"? This will not delete the meetings, just unlink them from the series.`)) {
-                  onDeleteSeries(seriesName);
+                  if (onDeleteSeries) {
+                    await onDeleteSeries(seriesName);
+                    refreshData();
+                  }
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
