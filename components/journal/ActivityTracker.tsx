@@ -189,7 +189,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
-          {defaultActivities.map(activity => (
+          {defaultActivities.map((activity: CustomActivity) => (
             <button
               key={activity.name}
               onClick={() => toggleActivity(activity.name)}
@@ -204,7 +204,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             </button>
           ))}
           
-          {customActivities.map(activity => (
+          {customActivities.map((activity: CustomActivity) => (
             <button
               key={`custom-${activity.name}`}
               onClick={() => toggleActivity(activity.name)}
@@ -236,7 +236,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
             <div className="flex flex-wrap gap-2">
               {/* Use Array.from(new Set()) to ensure unique activities are displayed */}
-              {Array.from(new Set(selectedActivities)).map(activity => (
+              {Array.from(new Set(selectedActivities)).map((activity: string) => (
                 <div
                   key={`selected-${activity}`}
                   className="px-3 py-1 rounded-full text-sm bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 flex items-center"
