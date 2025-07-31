@@ -180,6 +180,7 @@ export default async function handler(
               break;
             case 401:
               errorMessage = 'Unauthorized - Invalid VAPID keys';
+              shouldRemoveSubscription = true;
               break;
             case 404:
               errorMessage = 'Subscription not found - Browser may have unsubscribed';
@@ -197,6 +198,10 @@ export default async function handler(
               break;
             case 500:
               errorMessage = 'Push service internal error - Try again later';
+              break;
+            case 403:
+              errorMessage = 'Forbidden - Invalid VAPID keys';
+              shouldRemoveSubscription = true;
               break;
             default:
               errorMessage = `Push service error (${error.statusCode}): ${error.message}`;
