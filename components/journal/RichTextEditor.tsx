@@ -906,101 +906,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
 
         
-        /* Clean task list styling */
-        
-        /* Task list layout - text inline with checkboxes */
+        /* Task list fix - restored from working debug version */
         .prose-editor ul li:has(input[type="checkbox"]) {
           display: flex !important;
           align-items: flex-start !important;
-          justify-content: flex-start !important;
           list-style: none !important;
           padding-left: 0 !important;
-          margin: 0.5rem 0 !important;
-          text-align: left !important;
         }
         
-        /* Remove list styling from parent ul when it contains task items */
-        .prose-editor ul:has(li input[type="checkbox"]) {
-          list-style: none !important;
-          padding-left: 0 !important;
-          margin-left: 0 !important;
-        }
-        
-        /* Checkbox styling */
         .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"] {
-          appearance: none !important;
-          width: 18px !important;
-          height: 18px !important;
-          border: 2px solid rgb(148 163 184) !important;
-          border-radius: 4px !important;
-          margin-right: 0.75rem !important;
-          margin-top: 0.125rem !important;
+          margin-right: 12px !important;
+          margin-top: 3px !important;
           flex-shrink: 0 !important;
-          cursor: pointer !important;
-          position: relative !important;
-          transition: all 0.15s ease !important;
-          background: white !important;
         }
         
-        /* Dark mode checkbox */
-        .dark .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"] {
-          background: rgb(51 65 85) !important;
-          border-color: rgb(100 116 139) !important;
-        }
-        
-        /* Checkbox hover states */
-        .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"]:hover {
-          border-color: #00C9A7 !important;
-          background-color: rgb(236 254 255) !important;
-        }
-        
-        .dark .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"]:hover {
-          border-color: #00C9A7 !important;
-          background-color: rgb(20 83 75) !important;
-        }
-        
-        /* Checked checkbox styling */
-        .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"]:checked {
-          background-color: #00C9A7 !important;
-          border-color: #00C9A7 !important;
-        }
-        
-        /* Checkmark icon */
-        .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"]:checked:after {
-          content: '' !important;
-          position: absolute;
-          top: 2px;
-          left: 5px;
-          width: 6px;
-          height: 10px;
-          border: solid white;
-          border-width: 0 2px 2px 0;
-          transform: rotate(45deg);
-        }
-        
-        /* Text content styling */
-        .prose-editor ul li:has(input[type="checkbox"]) > * {
-          flex: 1 1 auto !important;
-          line-height: 1.6 !important;
-          margin: 0 !important;
-          text-align: left !important;
-        }
-        
-        /* Ensure text content doesn't get centered by other styles */
-        .prose-editor ul li:has(input[type="checkbox"]) > *:not(input) {
-          align-self: flex-start !important;
-          width: 100% !important;
-        }
-        
-        /* Strikethrough for completed tasks */
+        /* Strikethrough for checked items */
         .prose-editor ul li:has(input[type="checkbox"]:checked) {
           text-decoration: line-through !important;
           opacity: 0.6 !important;
-          color: rgb(107 114 128) !important;
-        }
-        
-        .dark .prose-editor ul li:has(input[type="checkbox"]:checked) {
-          color: rgb(156 163 175) !important;
+          color: #666 !important;
         }
         
         /* Mobile touch scrolling improvements */
