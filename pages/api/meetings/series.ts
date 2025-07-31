@@ -16,6 +16,15 @@ export type LinkMeetingsRequest = {
   meetingIds: string[];
 };
 
+export type AddToSeriesRequest = {
+  seriesName: string;
+  meetingIds: string[];
+};
+
+export type DeleteSeriesRequest = {
+  seriesName: string;
+};
+
 export type GetSeriesContextRequest = {
   seriesName?: string;
   meetingIds?: string[];
@@ -62,10 +71,14 @@ export default async function handler(
         return await createMeetingSeries(req, res, userId);
       case "PUT":
         return await linkMeetings(req, res, userId);
+      case "PATCH":
+        return await addToExistingSeries(req, res, userId);
+      case "DELETE":
+        return await deleteSeries(req, res, userId);
       case "GET":
         return await getSeriesContext(req, res, userId);
       default:
-        res.setHeader("Allow", "POST, PUT, GET");
+        res.setHeader("Allow", "POST, PUT, PATCH, DELETE, GET");
         return res.status(405).json({ error: "Method Not Allowed" });
     }
   } catch (err: any) {
@@ -167,6 +180,78 @@ async function linkMeetings(
   return res.status(200).json({ success: true, series });
 }
 
+async function addToExistingSeries(
+  req: NextApiRequest,
+  res: NextApiResponse<MeetingSeriesResponse>,
+  userId: string
+) {
+  const { seriesName, meetingIds } = req.body as AddToSeriesRequest;
+
+  if (!seriesName || !meetingIds || meetingIds.length === 0) {
+    return res.status(400).json({ 
+      error: "Series name and at least 1 meeting ID are required" 
+    });
+  }
+
+  // Verify all meetings belong to the user
+  const meetings = await db
+    .select()
+    .from(notes)
+    .where(
+      and(
+        eq(notes.user_email, userId),
+        inArray(notes.id, meetingIds.map(id => Number(id)))
+      )
+    );
+
+  if (meetings.length !== meetingIds.length) {
+    return res.status(404).json({ error: "Some meetings not found" });
+  }
+
+  // Update all meetings with the series name (encrypted)
+  await db
+    .update(notes)
+    .set({ meetingSeries: prepareContentForStorage(seriesName) })
+    .where(
+      and(
+        eq(notes.user_email, userId),
+        inArray(notes.id, meetingIds.map(id => Number(id)))
+      )
+    );
+
+  // Get the updated series context
+  const series = await generateSeriesContext(userId, seriesName);
+
+  return res.status(200).json({ success: true, series });
+}
+
+async function deleteSeries(
+  req: NextApiRequest,
+  res: NextApiResponse<MeetingSeriesResponse>,
+  userId: string
+) {
+  const { seriesName } = req.body as DeleteSeriesRequest;
+
+  if (!seriesName) {
+    return res.status(400).json({ 
+      error: "Series name is required" 
+    });
+  }
+
+  // Update all meetings in this series to remove the series name
+  await db
+    .update(notes)
+    .set({ meetingSeries: null })
+    .where(
+      and(
+        eq(notes.user_email, userId),
+        eq(notes.meetingSeries, prepareContentForStorage(seriesName))
+      )
+    );
+
+  return res.status(200).json({ success: true });
+}
+
 async function getSeriesContext(
   req: NextApiRequest,
   res: NextApiResponse<MeetingSeriesResponse>,
@@ -190,16 +275,22 @@ async function getSeriesContext(
 }
 
 async function generateSeriesContext(userId: string, seriesName: string) {
+  console.log('generateSeriesContext - userId:', userId, 'seriesName:', seriesName);
+  const encryptedSeriesName = prepareContentForStorage(seriesName);
+  console.log('Encrypted series name:', encryptedSeriesName);
+  
   const meetings = await db
     .select()
     .from(notes)
     .where(
       and(
         eq(notes.user_email, userId),
-        eq(notes.meetingSeries, prepareContentForStorage(seriesName))
+        eq(notes.meetingSeries, encryptedSeriesName)
       )
     )
     .orderBy(desc(notes.createdAt));
+    
+  console.log('Found meetings:', meetings.length);
 
   return await buildSeriesContext(meetings, seriesName);
 }

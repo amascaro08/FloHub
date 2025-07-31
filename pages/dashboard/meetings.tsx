@@ -12,6 +12,7 @@ import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
 import MeetingSeriesView from "@/components/meetings/MeetingSeriesView";
+import AddToSeriesModal from "@/components/meetings/AddToSeriesModal";
 import { useUser } from "@/lib/hooks/useUser";
 import { 
   PlusIcon, 
@@ -363,6 +364,8 @@ export default function MeetingsPage() {
   const [showLinkingModal, setShowLinkingModal] = useState(false);
   const [addToSeriesName, setAddToSeriesName] = useState<string>("");
   const [viewingSeriesName, setViewingSeriesName] = useState<string | null>(null);
+  const [showAddToSeriesModal, setShowAddToSeriesModal] = useState(false);
+  const [addExistingToSeriesName, setAddExistingToSeriesName] = useState<string>("");
 
   // Check if device is mobile
   useEffect(() => {
@@ -654,6 +657,65 @@ export default function MeetingsPage() {
     setShowModal(true);
   };
 
+  const handleAddExistingMeetingToSeries = (seriesName: string) => {
+    setAddExistingToSeriesName(seriesName);
+    setShowAddToSeriesModal(true);
+  };
+
+  const handleAddExistingMeetings = async (meetingIds: string[]) => {
+    try {
+      const response = await fetch("/api/meetings/series", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName: addExistingToSeriesName,
+          meetingIds: meetingIds,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to add meetings to series");
+      }
+      
+      // Refresh the meeting notes
+      mutate();
+      
+      // Show success message
+      alert(`Successfully added ${meetingIds.length} meeting${meetingIds.length !== 1 ? 's' : ''} to "${addExistingToSeriesName}"!`);
+    } catch (error) {
+      console.error('Error adding meetings to series:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteSeries = async (seriesName: string) => {
+    try {
+      const response = await fetch("/api/meetings/series", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName: seriesName,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete series");
+      }
+      
+      // Refresh the meeting notes and close the series view
+      mutate();
+      setViewingSeriesName(null);
+      
+      // Show success message
+      alert(`Successfully removed the series "${seriesName}". Meetings are now unlinked but not deleted.`);
+    } catch (error) {
+      console.error('Error deleting series:', error);
+      alert('Failed to delete series. Please try again.');
+    }
+  };
+
   const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
     try {
       const response = await fetch("/api/meetings/series", {
@@ -721,6 +783,8 @@ export default function MeetingsPage() {
           <MeetingSeriesView
             seriesName={viewingSeriesName}
             onAddMeeting={handleAddMeetingToSeries}
+            onAddExistingMeeting={handleAddExistingMeetingToSeries}
+            onDeleteSeries={handleDeleteSeries}
             onClose={() => setViewingSeriesName(null)}
           />
         )}
@@ -1147,6 +1211,19 @@ export default function MeetingsPage() {
             onSave={handleCreateMeetingSeries}
           />
         )}
+
+        {/* Add To Series Modal */}
+        <AddToSeriesModal
+          isOpen={showAddToSeriesModal}
+          onClose={() => {
+            setShowAddToSeriesModal(false);
+            setAddExistingToSeriesName("");
+          }}
+          seriesName={addExistingToSeriesName}
+          availableMeetings={meetingNotes}
+          onSave={handleAddExistingMeetings}
+          isSaving={isSaving}
+        />
         </>
         )}
       </div>

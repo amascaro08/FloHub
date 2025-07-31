@@ -30,12 +30,16 @@ type MeetingSeriesData = {
 interface MeetingSeriesViewProps {
   seriesName: string;
   onAddMeeting?: (seriesName: string) => void;
+  onAddExistingMeeting?: (seriesName: string) => void;
+  onDeleteSeries?: (seriesName: string) => void;
   onClose?: () => void;
 }
 
 export default function MeetingSeriesView({ 
   seriesName, 
   onAddMeeting, 
+  onAddExistingMeeting,
+  onDeleteSeries,
   onClose 
 }: MeetingSeriesViewProps) {
   const [seriesData, setSeriesData] = useState<MeetingSeriesData | null>(null);
@@ -49,15 +53,20 @@ export default function MeetingSeriesView({
   const fetchSeriesContext = async () => {
     try {
       setLoading(true);
+      console.log('Fetching series context for:', seriesName);
       const response = await fetch(`/api/meetings/series?seriesName=${encodeURIComponent(seriesName)}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch series context');
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch series context');
       }
       
       const result = await response.json();
+      console.log('Series data received:', result);
       setSeriesData(result.series);
     } catch (err) {
+      console.error('Error fetching series:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -119,7 +128,28 @@ export default function MeetingSeriesView({
               className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <PlusIcon className="w-4 h-4" />
-              <span>Add Meeting</span>
+              <span>New Meeting</span>
+            </button>
+          )}
+          {onAddExistingMeeting && (
+            <button
+              onClick={() => onAddExistingMeeting(seriesName)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <LinkIcon className="w-4 h-4" />
+              <span>Add Existing</span>
+            </button>
+          )}
+          {onDeleteSeries && (
+            <button
+              onClick={() => {
+                if (confirm(`Are you sure you want to remove the series "${seriesName}"? This will not delete the meetings, just unlink them from the series.`)) {
+                  onDeleteSeries(seriesName);
+                }
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Delete Series
             </button>
           )}
           {onClose && (
@@ -151,7 +181,10 @@ export default function MeetingSeriesView({
             <span className="font-semibold text-green-800 dark:text-green-200">Date Range</span>
           </div>
           <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-            {formatDate(seriesData.summary.dateRange.earliest)} - {formatDate(seriesData.summary.dateRange.latest)}
+            {seriesData.summary.dateRange.earliest && seriesData.summary.dateRange.latest 
+              ? `${formatDate(seriesData.summary.dateRange.earliest)} - ${formatDate(seriesData.summary.dateRange.latest)}`
+              : 'No date range available'
+            }
           </p>
         </div>
 
