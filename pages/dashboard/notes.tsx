@@ -62,7 +62,7 @@ export default function NotesPage() {
   );
 
   // Fetch user settings to get global tags
-  const { data: userSettings, error: settingsError } = useSWR<UserSettings>(
+  const { data: userSettings, error: settingsError, mutate: mutateUserSettings } = useSWR<UserSettings>(
     shouldFetch ? "/api/userSettings" : null,
     fetcher
   );
@@ -81,6 +81,40 @@ export default function NotesPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupingOption>('month');
+
+  // Load user's grouping preference from settings
+  useEffect(() => {
+    if (userSettings?.notesGrouping) {
+      setGroupBy(userSettings.notesGrouping);
+    }
+  }, [userSettings]);
+
+  // Function to update grouping preference and save to database
+  const handleGroupByChange = async (newGroupBy: GroupingOption) => {
+    setGroupBy(newGroupBy);
+    
+    // Save to database
+    try {
+      const response = await fetch('/api/userSettings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notesGrouping: newGroupBy,
+        }),
+      });
+
+             if (response.ok) {
+         // Revalidate the user settings cache
+         mutateUserSettings();
+       } else {
+        console.error('Failed to save notes grouping preference');
+      }
+    } catch (error) {
+      console.error('Error saving notes grouping preference:', error);
+    }
+  };
 
   // Check if device is mobile
   useEffect(() => {
@@ -390,7 +424,7 @@ export default function NotesPage() {
                 onToggleSelectNote={handleToggleSelectNote}
                 onDeleteSelected={handleDeleteSelected}
                 groupBy={groupBy}
-                onGroupByChange={setGroupBy}
+                onGroupByChange={handleGroupByChange}
               />
               
               {selectedNotes.length > 0 && (
