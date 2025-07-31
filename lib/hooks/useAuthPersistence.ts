@@ -64,7 +64,7 @@ function isPWAReinstallation(): boolean {
   const currentInstallTime = getPWAInstallTime();
   
   // If we have a stored install time that's different from current, it's a reinstallation
-  return storedInstallTime && parseInt(storedInstallTime) !== currentInstallTime;
+  return !!(storedInstallTime && parseInt(storedInstallTime) !== currentInstallTime);
 }
 
 // Get stored auth state
