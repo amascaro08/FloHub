@@ -612,5 +612,5 @@ function extractKeyTopics(text: string, titles: string[]): string[] {
   }
 
   // Return unique topics, prioritizing title-based ones
-  return [...new Set(topics)].slice(0, 3);
+  return Array.from(new Set(topics)).slice(0, 3);
 }
