@@ -916,7 +916,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         .prose-editor ul li:has(input[type="checkbox"]) input[type="checkbox"] {
           margin-right: 12px !important;
-          margin-top: 3px !important;
+          margin-top: 1px !important;
           flex-shrink: 0 !important;
         }
         
