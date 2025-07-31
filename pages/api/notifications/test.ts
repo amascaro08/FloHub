@@ -22,16 +22,7 @@ const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ||
   'UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTWKSKHw';
 
-try {
-  webpush.setVapidDetails(
-    'mailto:' + vapidMailto,
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-  console.log('Web-push configured with VAPID keys');
-} catch (error) {
-  console.error('Error configuring web-push:', error);
-}
+// VAPID configuration will be done inside the handler function
 
 export default async function handler(
   req: NextApiRequest,
@@ -43,6 +34,31 @@ export default async function handler(
   }
 
   try {
+    // Configure web-push with fresh VAPID keys
+    console.log('Configuring web-push with VAPID keys...');
+    try {
+      webpush.setVapidDetails(
+        'mailto:' + vapidMailto,
+        vapidPublicKey,
+        vapidPrivateKey
+      );
+      console.log('✅ Web-push configured successfully');
+      console.log('Public key length:', vapidPublicKey.length);
+      console.log('Private key length:', vapidPrivateKey.length);
+    } catch (vapidError: any) {
+      console.error('❌ VAPID configuration failed:', vapidError);
+      return res.status(500).json({ 
+        success: false, 
+        message: `VAPID configuration failed: ${vapidError.message}`,
+        debug: {
+          publicKeyLength: vapidPublicKey.length,
+          privateKeyLength: vapidPrivateKey.length,
+          hasPublicKey: !!vapidPublicKey,
+          hasPrivateKey: !!vapidPrivateKey
+        }
+      });
+    }
+
     // Check if database is available
     if (!process.env.NEON_DATABASE_URL || process.env.NEON_DATABASE_URL === 'your-neon-database-url-here') {
       return res.status(500).json({ 
@@ -180,6 +196,7 @@ export default async function handler(
               break;
             case 401:
               errorMessage = 'Unauthorized - Invalid VAPID keys';
+              shouldRemoveSubscription = true;
               break;
             case 404:
               errorMessage = 'Subscription not found - Browser may have unsubscribed';
@@ -197,6 +214,10 @@ export default async function handler(
               break;
             case 500:
               errorMessage = 'Push service internal error - Try again later';
+              break;
+            case 403:
+              errorMessage = 'Forbidden - Invalid VAPID keys';
+              shouldRemoveSubscription = true;
               break;
             default:
               errorMessage = `Push service error (${error.statusCode}): ${error.message}`;

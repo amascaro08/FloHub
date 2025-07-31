@@ -10,6 +10,7 @@ import {
   sendTestNotification
 } from '@/lib/notifications';
 import NotificationDebug from './NotificationDebug';
+import VapidDebugComponent from './VapidDebugComponent';
 
 type NotificationState = {
   isSupported: boolean;
@@ -144,11 +145,16 @@ const NotificationManager: React.FC = () => {
       
       // Subscribe to push notifications
       console.log('NotificationManager: Subscribing to push notifications...');
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-        'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       
-      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-        console.warn('NotificationManager: Using fallback VAPID key - this should not happen in production');
+      if (!vapidPublicKey) {
+        console.error('NotificationManager: VAPID public key not configured');
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'VAPID public key not configured. Please check environment variables.'
+        }));
+        return;
       }
       
       const subscription = await subscribeToPushNotifications(vapidPublicKey);
@@ -388,6 +394,9 @@ const NotificationManager: React.FC = () => {
       {showDebug && (
         <div className="mt-4 border-t pt-4">
           <NotificationDebug />
+          <div className="mt-4">
+            <VapidDebugComponent />
+          </div>
         </div>
       )}
     </div>

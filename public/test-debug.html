@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notification Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #output { margin-top: 20px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Notification Debug Test</h1>
+    <p>This will test your notification subscription directly with the debug API.</p>
+    
+    <button id="checkVapidBtn">1. Check VAPID Keys</button>
+    <button id="testBtn">2. Test Direct Notification</button>
+    <div id="output"></div>
+
+    <script>
+        // Check VAPID keys
+        document.getElementById('checkVapidBtn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>🔍 Checking VAPID keys...</p>';
+
+            try {
+                // Get client-side VAPID key - this won't work in static HTML
+                // We need to check what the actual React app sees
+                const clientVapidKey = 'STATIC_HTML_CANNOT_ACCESS_ENV';
+                
+                // Get server VAPID info
+                const response = await fetch('/api/debug-client-vapid');
+                const data = await response.json();
+
+                output.innerHTML = `
+                    <h3>🔑 VAPID Key Comparison</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Client Side:</h4>
+                            <pre>Key: ${clientVapidKey || 'NOT_AVAILABLE'}</pre>
+                        </div>
+                        <div>
+                            <h4>Server Side:</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    </div>
+                    <p><strong>Match:</strong> ${clientVapidKey === data.server.publicKey ? '✅ YES' : '❌ NO'}</p>
+                `;
+            } catch (error) {
+                output.innerHTML = `<h3>💥 Error:</h3><pre>${error.message}</pre>`;
+            }
+        });
+
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>🔍 Testing...</p>';
+
+            try {
+                // Check if service worker is available
+                if (!('serviceWorker' in navigator)) {
+                    throw new Error('Service Worker not supported');
+                }
+
+                // Get service worker registration
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Get current subscription
+                const subscription = await registration.pushManager.getSubscription();
+                
+                if (!subscription) {
+                    throw new Error('No push subscription found. Please enable notifications first.');
+                }
+
+                console.log('Subscription:', subscription.toJSON());
+                
+                output.innerHTML = '<p>📡 Sending to debug API...</p>';
+
+                // Send to debug API
+                const response = await fetch('/api/debug-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(subscription.toJSON())
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    output.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    output.innerHTML = `
+                        <h3>❌ Failed</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+
+            } catch (error) {
+                output.innerHTML = `
+                    <h3>💥 Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+                console.error('Debug test error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

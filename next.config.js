@@ -146,11 +146,8 @@ const nextConfig = {
       },
     ];
   },
-  // Define environment variables that will be available at build time
-  env: {
-    // Default VAPID public key for development (should be replaced in production)
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
-  },
+  // Environment variables are now handled by Vercel and .env.local
+  // No hardcoded overrides needed
   webpack: (config, { isServer }) => {
     // Ensure resolve and alias objects exist
     config.resolve = config.resolve || {};
