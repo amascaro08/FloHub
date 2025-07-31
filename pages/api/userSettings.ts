@@ -139,6 +139,8 @@ export default async function handler(
         journalWeeklyReflections: data.journalWeeklyReflections ?? false,
         journalCustomActivities: (data.journalCustomActivities as any) || [],
         journalDisabledActivities: (data.journalDisabledActivities as any) || [],
+        // Notes settings
+        notesGrouping: (data.notesGrouping as any) || 'month',
       };
 
       console.log("User settings loaded for", user_email, settings);
@@ -212,6 +214,8 @@ export default async function handler(
         journalWeeklyReflections: result.journalWeeklyReflections ?? false,
         journalCustomActivities: (result.journalCustomActivities as any) || [],
         journalDisabledActivities: (result.journalDisabledActivities as any) || [],
+        // Notes settings
+        notesGrouping: (result.notesGrouping as any) || 'month',
       };
 
       console.log("User settings updated for", user_email, updatedSettings);
