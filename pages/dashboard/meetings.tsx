@@ -95,7 +95,7 @@ function MeetingLinkingModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
         <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4">
           <div className="flex items-center justify-between">

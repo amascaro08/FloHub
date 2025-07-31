@@ -125,7 +125,7 @@ export default function MeetingSeriesView({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[50] p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[30] p-4">
       <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-2xl relative p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">

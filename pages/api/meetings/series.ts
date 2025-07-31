@@ -6,6 +6,7 @@ import { notes } from "@/db/schema";
 import { and, eq, or, inArray, isNotNull, desc } from "drizzle-orm";
 import { retrieveContentFromStorage, prepareContentForStorage } from "@/lib/contentSecurity";
 import type { Note, Action } from "@/types/app";
+import OpenAI from "openai";
 
 export type CreateMeetingSeriesRequest = {
   seriesName: string;
