@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import { getCurrentDate, getDateStorageKey } from '@/lib/dateUtils';
+import { CustomActivity } from '@/types/app';
+import useSWR from 'swr';
 import axios from 'axios';
 
 interface ActivityTrackerProps {
@@ -11,12 +13,19 @@ interface ActivityTrackerProps {
 
 const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezone }) => {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [customActivity, setCustomActivity] = useState<string>('');
   const [saveConfirmation, setSaveConfirmation] = useState<boolean>(false);
-  const [userActivities, setUserActivities] = useState<string[]>([]);
-  const [showInsights, setShowInsights] = useState<boolean>(false);
-  const [activityStats, setActivityStats] = useState<{[key: string]: number}>({});
- const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser();
+
+  // Fetch user settings to get custom activities
+  const { data: userSettings } = useSWR(
+    user ? '/api/userSettings' : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    { revalidateOnFocus: false }
+  );
   const userData = user ? user : null;
 
   if (!user) {
@@ -25,7 +34,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Default activities
   // Default activities with icons 
-  const defaultActivities = [
+  const defaultActivities: CustomActivity[] = [
     { name: 'Work', icon: '💼' },
     { name: 'Exercise', icon: '🏋️' },
     { name: 'Social', icon: '👥' },
@@ -48,27 +57,24 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
     { name: 'Writing', icon: '✍️' }
   ];
   
-  // Get the current date in YYYY-MM-DD format or use provided date
+    // Get the current date in YYYY-MM-DD format or use provided date
   const entryDate = date || getCurrentDate(timezone);
+  
+  // Get custom activities from user settings
+  const customActivities = userSettings?.journalCustomActivities || [];
+  
+  // Get disabled activities from user settings
+  const disabledActivities = userSettings?.journalDisabledActivities || [];
+  
+  // Filter out disabled default activities
+  const enabledDefaultActivities = defaultActivities.filter(
+    (activity: CustomActivity) => !disabledActivities.includes(activity.name)
+  );
 
-  // Load saved activities and user's custom activities from API
+  // Load saved activities for the specific date
   useEffect(() => {
     const fetchActivitiesData = async () => {
       if (user?.primaryEmail) {
-        // Load user's custom activities
-        try {
-          const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
-          const savedCustomActivities = localStorage.getItem(customActivitiesKey);
-          
-          if (savedCustomActivities) {
-            const parsed = JSON.parse(savedCustomActivities);
-            setUserActivities(parsed);
-          }
-        } catch (e) {
-          console.error('Error parsing saved custom activities:', e);
-        }
-        
-        // Load activities for the specific date
         try {
           const response = await axios.get(`/api/journal/activities?date=${entryDate}`, {
             withCredentials: true
@@ -81,42 +87,6 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           // Set default empty state
           setSelectedActivities([]);
         }
-        
-        // Calculate activity statistics
-        const calculateActivityStats = async () => {
-          const stats: {[key: string]: number} = {};
-          const last30Days: string[] = [];
-          
-          // Get dates for the last 30 days
-          const today = new Date();
-          for (let i = 0; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            last30Days.push(dateStr);
-          }
-          
-          // Count activities for each day
-          for (const dateStr of last30Days) {
-            try {
-              const response = await axios.get(`/api/journal/activities?date=${dateStr}`, {
-                withCredentials: true
-              });
-              if (response.data && response.data.activities && response.data.activities.length > 0) {
-                response.data.activities.forEach((activity: string) => {
-                  stats[activity] = (stats[activity] || 0) + 1;
-                });
-              }
-            } catch (error) {
-              // If activities don't exist for this date, continue to the next date
-              continue;
-            }
-          }
-          
-          setActivityStats(stats);
-        };
-        
-        calculateActivityStats();
       }
     };
     
@@ -141,45 +111,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       
       onSave(selectedActivities);
     }
-    // Recalculate activity stats after saving
-    setTimeout(() => {
-      const calculateActivityStats = () => {
-        if (user?.primaryEmail) {
-          const stats: {[key: string]: number} = {};
-          const last30Days: string[] = [];
-          
-          // Get dates for the last 30 days
-          const today = new Date();
-          for (let i = 0; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            last30Days.push(dateStr);
-          }
-          
-          // Count activities for each day
-          last30Days.forEach(dateStr => {
-            const key = getDateStorageKey('journal_activities', user.primaryEmail || '', timezone || '', dateStr);
-            const savedActivities = localStorage.getItem(key);
-            
-            if (savedActivities) {
-              try {
-                const activities = JSON.parse(savedActivities);
-                activities.forEach((activity: string) => {
-                  stats[activity] = (stats[activity] || 0) + 1;
-                });
-              } catch (e) {
-                console.error('Error parsing saved activities:', e);
-              }
-            }
-          });
-          
-          setActivityStats(stats);
-        }
-      };
-      
-      calculateActivityStats();
-    }, 500);
+
   };
 
   const toggleActivity = (activity: string) => {
@@ -238,123 +170,38 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Get icon for an activity
   const getActivityIcon = (activity: string) => {
-    const defaultActivity = defaultActivities.find(a => a.name === activity);
-    return defaultActivity ? defaultActivity.icon : '📌';
+    // Check enabled default activities first
+    const defaultActivity = enabledDefaultActivities.find((a: CustomActivity) => a.name === activity);
+    if (defaultActivity) return defaultActivity.icon;
+    
+    // Check all default activities (for historical data)
+    const allDefaultActivity = defaultActivities.find((a: CustomActivity) => a.name === activity);
+    if (allDefaultActivity) return allDefaultActivity.icon;
+    
+    // Check custom activities
+    const customActivity = customActivities.find((a: CustomActivity) => a.name === activity);
+    if (customActivity) return customActivity.icon;
+    
+    // Fallback icon
+    return '📌';
   };
 
-  const addCustomActivity = () => {
-    if (customActivity.trim() && !defaultActivities.map(a => a.name).includes(customActivity.trim()) && !userActivities.includes(customActivity.trim())) {
-      // Add to user's custom activities
-      const newUserActivities = [...userActivities, customActivity.trim()];
-      setUserActivities(newUserActivities);
-      
-      // Save custom activities to localStorage
-      if (user?.primaryEmail) {
-        const customActivitiesKey = `journal_custom_activities_${user.primaryEmail}`;
-        localStorage.setItem(customActivitiesKey, JSON.stringify(newUserActivities));
-      }
-      
-      // Create a new array with unique activities
-      const uniqueActivities = Array.from(new Set(selectedActivities));
-      
-      // Add to selected activities if not already included
-      let newActivities = uniqueActivities;
-      if (!uniqueActivities.includes(customActivity.trim())) {
-        newActivities = [...uniqueActivities, customActivity.trim()];
-      }
-      
-      // Update state with the new unique activities
-      setSelectedActivities(newActivities);
-      
-      setCustomActivity('');
-      
-      // Auto-save when custom activity is added
-      setTimeout(async () => {
-        if (user?.primaryEmail) {
-          try {
-            // Save selected activities for this date
-            await axios.post('/api/journal/activities', {
-              date: entryDate,
-              activities: newActivities
-            }, {
-              withCredentials: true
-            });
-            
-            // Show save confirmation
-            setSaveConfirmation(true);
-            
-            // Hide confirmation after 3 seconds
-            setTimeout(() => {
-              setSaveConfirmation(false);
-            }, 3000);
-            
-            onSave(newActivities);
-          } catch (error) {
-            console.error('Error saving activities data:', error);
-          }
-        }
-      }, 100);
-    } else if (customActivity.trim() && !selectedActivities.includes(customActivity.trim())) {
-      // If activity already exists but isn't selected, select it
-      const newActivities = [...selectedActivities, customActivity.trim()];
-      setSelectedActivities(newActivities);
-      setCustomActivity('');
-      
-      // Auto-save when existing activity is selected
-      setTimeout(async () => {
-        if (user?.primaryEmail) {
-          try {
-            // Save selected activities for this date
-            await axios.post('/api/journal/activities', {
-              date: entryDate,
-              activities: newActivities
-            }, {
-              withCredentials: true
-            });
-            
-            // Show save confirmation
-            setSaveConfirmation(true);
-            
-            // Hide confirmation after 3 seconds
-            setTimeout(() => {
-              setSaveConfirmation(false);
-            }, 3000);
-            
-            onSave(newActivities);
-          } catch (error) {
-            console.error('Error saving activities data:', error);
-          }
-        }
-      }, 100);
-    }
-  };
 
-  // Get top activities based on frequency
-  const getTopActivities = () => {
-    return Object.entries(activityStats)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([activity, count]) => ({ activity, count }));
-  };
+
+
   
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Activities</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">What did you do today?</p>
         </div>
-        <button
-          onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-        >
-          {showInsights ? 'Hide Insights' : 'Insights'}
-        </button>
       </div>
       
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
-          {defaultActivities.map(activity => (
+          {enabledDefaultActivities.map((activity: CustomActivity) => (
             <button
               key={activity.name}
               onClick={() => toggleActivity(activity.name)}
@@ -369,43 +216,28 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
             </button>
           ))}
           
-          {userActivities.map(activity => (
+          {customActivities.map((activity: CustomActivity) => (
             <button
-              key={`custom-${activity}`}
-              onClick={() => toggleActivity(activity)}
+              key={`custom-${activity.name}`}
+              onClick={() => toggleActivity(activity.name)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center activity-tag ${
-                selectedActivities.includes(activity)
+                selectedActivities.includes(activity.name)
                   ? 'bg-purple-600 text-white scale-105 shadow-sm'
                   : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800'
               }`}
             >
-              <span className="mr-1">📌</span>
-              {activity}
+              <span className="mr-1">{activity.icon}</span>
+              {activity.name}
             </button>
           ))}
         </div>
         
-        <div className="flex">
-          <input
-            type="text"
-            value={customActivity}
-            onChange={(e) => setCustomActivity(e.target.value)}
-            placeholder="Add custom activity..."
-            className="flex-grow p-2 rounded-l-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addCustomActivity();
-              }
-            }}
-          />
-          <button
-            onClick={addCustomActivity}
-            className="px-3 py-2 rounded-r-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors font-medium"
-          >
-            Add
-          </button>
-        </div>
+        {customActivities.length === 0 && (
+          <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+            <p>No custom activities yet.</p>
+            <p>Go to Journal Settings → Activities to add custom activities.</p>
+          </div>
+        )}
       </div>
       
       {selectedActivities.length > 0 && (
@@ -416,7 +248,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
             <div className="flex flex-wrap gap-2">
               {/* Use Array.from(new Set()) to ensure unique activities are displayed */}
-              {Array.from(new Set(selectedActivities)).map(activity => (
+              {Array.from(new Set(selectedActivities)).map((activity: string) => (
                 <div
                   key={`selected-${activity}`}
                   className="px-3 py-1 rounded-full text-sm bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 flex items-center"
@@ -439,42 +271,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
         </div>
       )}
       
-      {/* Activity Insights */}
-      {showInsights && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Activity Insights (Last 30 Days)
-          </h3>
-          <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-            {getTopActivities().length > 0 ? (
-              <div className="space-y-2">
-                {getTopActivities().map(({ activity, count }) => (
-                  <div key={`stat-${activity}`} className="flex items-center">
-                    <span className="mr-2">{getActivityIcon(activity)}</span>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{activity}</span>
-                    <div className="ml-2 flex-grow">
-                      <div className="h-2 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-teal-500 rounded-full"
-                          style={{ width: `${Math.min(100, (count / 30) * 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{count} days</span>
-                  </div>
-                ))}
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  These are your most frequent activities. Consider how they affect your mood and wellbeing.
-                </p>
-              </div>
-            ) : (
-              <p className="text-slate-500 dark:text-slate-400 text-sm italic">
-                Track your activities for a few days to see insights
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+
       
       {saveConfirmation && (
         <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-center text-sm transition-opacity animate-fade-in-out">

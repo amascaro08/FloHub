@@ -16,8 +16,6 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
 }) => {
   const [sleepQuality, setSleepQuality] = useState<string>('');
   const [sleepHours, setSleepHours] = useState<number>(7);
-  const [sleepData, setSleepData] = useState<{date: string, quality: string, hours: number}[]>([]);
-  const [showInsights, setShowInsights] = useState<boolean>(false);
  const { user, isLoading } = useUser();
   const userData = user ? user : null;
 
@@ -47,48 +45,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
           // Default state is already set in useState
         }
         
-        // Fetch sleep data for the last 7 days for insights
-        const sleepEntries: {date: string, quality: string, hours: number}[] = [];
-        const currentDate = new Date();
-        
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date(currentDate);
-          date.setDate(date.getDate() - i);
-          const dateStr = formatDate(date.toISOString(), timezone, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$1-$2');
-          
-          try {
-            const response = await axios.get(`/api/journal/sleep?date=${dateStr}`, {
-              withCredentials: true
-            });
-            if (response.data && response.data.quality) {
-              sleepEntries.push({
-                date: dateStr,
-                quality: response.data.quality,
-                hours: response.data.hours || 0
-              });
-            } else {
-              // Add placeholder for days without sleep data
-              sleepEntries.push({
-                date: dateStr,
-                quality: '',
-                hours: 0
-              });
-            }
-          } catch (error) {
-            // Add placeholder for days without sleep data
-            sleepEntries.push({
-              date: dateStr,
-              quality: '',
-              hours: 0
-            });
-          }
-        }
-        
-        setSleepData(sleepEntries);
+
       }
     };
     
@@ -132,53 +89,17 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
     { quality: 'Terrible', emoji: '😫', description: 'Barely slept, exhausted' }
   ];
   
-  // Helper function to get average sleep hours
-  const getAverageSleepHours = () => {
-    const validEntries = sleepData.filter(entry => entry.hours > 0);
-    if (validEntries.length === 0) return 0;
-    
-    const totalHours = validEntries.reduce((sum, entry) => sum + entry.hours, 0);
-    return (totalHours / validEntries.length).toFixed(1);
-  };
-  
-  // Helper function to get sleep quality trend
-  const getSleepQualityTrend = () => {
-    const qualityMap: {[key: string]: number} = {
-      'Excellent': 5,
-      'Good': 4,
-      'Fair': 3,
-      'Poor': 2,
-      'Terrible': 1
-    };
-    
-    const validEntries = sleepData.filter(entry => entry.quality);
-    if (validEntries.length < 3) return "Not enough data";
-    
-    const scores = validEntries.map(entry => qualityMap[entry.quality] || 0);
-    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    
-    if (avgScore > 4) return "Excellent sleep pattern";
-    if (avgScore > 3) return "Good sleep pattern";
-    if (avgScore > 2) return "Average sleep pattern";
-    if (avgScore > 1) return "Poor sleep pattern";
-    return "Very poor sleep pattern";
-  };
+
   
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sleep Quality</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {sleepQuality ? `${sleepQuality} - ${sleepHours} hours` : 'Track your sleep quality'}
           </p>
         </div>
-        <button
-          onClick={() => setShowInsights(!showInsights)}
-          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-        >
-          {showInsights ? 'Hide Insights' : 'Insights'}
-        </button>
       </div>
       
       <div className="mb-4">
@@ -256,57 +177,7 @@ const SleepTracker: React.FC<SleepTrackerProps> = ({
         </div>
       )}
       
-      {/* Sleep Insights Section - Only shown when insights are toggled */}
-      {showInsights && (
-        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Sleep Insights</h3>
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{getSleepQualityTrend()}</span>
-          </div>
-          
-          {/* Simple sleep visualization */}
-          <div className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Last 7 days</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">Avg: {getAverageSleepHours()} hours</span>
-            </div>
-            
-            <div className="flex items-end h-16 gap-1">
-              {sleepData.map((data, index) => {
-                const qualityColors: {[key: string]: string} = {
-                  'Excellent': 'bg-green-500',
-                  'Good': 'bg-teal-500',
-                  'Fair': 'bg-yellow-500',
-                  'Poor': 'bg-orange-500',
-                  'Terrible': 'bg-red-500'
-                };
-                
-                const height = data.hours ? (data.hours / 12) * 100 : 0;
-                const color = data.quality ? qualityColors[data.quality] : 'bg-slate-300 dark:bg-slate-600';
-                
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center">
-                    <div
-                      className={`w-full rounded-t-sm transition-all ${color}`}
-                      style={{ height: `${height}%` }}
-                    ></div>
-                    <div className="flex flex-col items-center mt-1">
-                      <span className="text-xs">{data.hours || '-'}</span>
-                      <span className="text-[0.6rem] text-slate-500">
-                        {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 1)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-            Consistent sleep patterns are important for overall health and well-being.
-          </p>
-        </div>
-      )}
+
     </div>
   );
 };
