@@ -912,9 +912,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor ul li:has(input[type="checkbox"]) {
           display: flex !important;
           align-items: flex-start !important;
+          justify-content: flex-start !important;
           list-style: none !important;
           padding-left: 0 !important;
           margin: 0.5rem 0 !important;
+          text-align: left !important;
         }
         
         /* Remove list styling from parent ul when it contains task items */
@@ -981,6 +983,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           flex: 1 1 auto !important;
           line-height: 1.6 !important;
           margin: 0 !important;
+          text-align: left !important;
+        }
+        
+        /* Ensure text content doesn't get centered by other styles */
+        .prose-editor ul li:has(input[type="checkbox"]) > *:not(input) {
+          align-self: flex-start !important;
+          width: 100% !important;
         }
         
         /* Strikethrough for completed tasks */
