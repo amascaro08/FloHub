@@ -9,6 +9,8 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { useState, useEffect, useCallback } from 'react';
 import { 
   ListBulletIcon, 
@@ -17,7 +19,8 @@ import {
   PhotoIcon,
   LinkIcon,
   MinusIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  CheckIcon
 } from '@heroicons/react/24/solid';
 
 interface RichTextEditorProps {
@@ -81,6 +84,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       action: (editor) => editor.chain().focus().toggleOrderedList().run(),
     },
     {
+      id: 'taskList',
+      title: 'Task List',
+      description: 'Create a checklist with checkboxes',
+      icon: CheckIcon,
+      action: (editor) => editor.chain().focus().toggleTaskList().run(),
+    },
+    {
       id: 'table',
       title: 'Table',
       description: 'Insert a table',
@@ -136,6 +146,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       TableRow,
       TableHeader,
       TableCell,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -367,19 +381,31 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ListBulletIcon className="w-4 h-4" />
           </button>
           
-                      <button
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              className={`p-2 rounded-lg transition-all ${
-                editor?.isActive('orderedList')
-                  ? 'bg-[#00C9A7] text-white shadow-sm'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}
-              title="Numbered List"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 4h13v2H8V4zM5 3v3h1v1H3V6h1V4H3V3h2zM3 14v-2.5h2V11c0-.55-.45-1-1-1s-1 .45-1 1H2c0-1.1.9-2 2-2s2 .9 2 2v1.5c0 .55-.45 1-1 1h-1V14h2v1H3v-1zm2.25 5.5c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm-.75 1.5h-1v-1h1v1zm-1-2.5v-1h1v1h-1zM8 11h13v2H8v-2zm0 7h13v2H8v-2z" />
-              </svg>
-            </button>
+                                <button
+            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+            className={`p-2 rounded-lg transition-all ${
+              editor?.isActive('orderedList')
+                ? 'bg-[#00C9A7] text-white shadow-sm'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
+            title="Numbered List"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 4h13v2H8V4zM5 3v3h1v1H3V6h1V4H3V3h2zM3 14v-2.5h2V11c0-.55-.45-1-1-1s-1 .45-1 1H2c0-1.1.9-2 2-2s2 .9 2 2v1.5c0 .55-.45 1-1 1h-1V14h2v1H3v-1zm2.25 5.5c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm-.75 1.5h-1v-1h1v1zm-1-2.5v-1h1v1h-1zM8 11h13v2H8v-2zm0 7h13v2H8v-2z" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={() => editor?.chain().focus().toggleTaskList().run()}
+            className={`p-2 rounded-lg transition-all ${
+              editor?.isActive('taskList')
+                ? 'bg-[#00C9A7] text-white shadow-sm'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
+            title="Task List"
+          >
+            <CheckIcon className="w-4 h-4" />
+          </button>
           
           <button
             onClick={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -521,6 +547,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             style={{
               left: Math.max(10, slashMenuPosition.x),
               top: Math.max(10, slashMenuPosition.y),
+              touchAction: 'pan-y',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
             <div className="px-3 py-1 text-xs text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-600 mb-1">
@@ -832,6 +860,101 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         .prose-editor .ProseMirror:focus {
           outline: none;
+        }
+        
+        /* Task List Styles */
+        .prose-editor .ProseMirror ul[data-type="taskList"] {
+          list-style: none;
+          padding-left: 0;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] {
+          display: flex;
+          align-items: flex-start;
+          margin: 0.5rem 0;
+          list-style: none;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label {
+          flex: 0 0 auto;
+          margin-right: 0.5rem;
+          user-select: none;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgb(148 163 184);
+          border-radius: 4px;
+          margin: 0;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.15s ease;
+          background: white;
+        }
+        
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"] {
+          background: rgb(51 65 85);
+          border-color: rgb(100 116 139);
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
+          border-color: #00C9A7;
+          background-color: rgb(236 254 255);
+        }
+        
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:hover {
+          border-color: #00C9A7;
+          background-color: rgb(20 83 75);
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked {
+          background-color: #00C9A7;
+          border-color: #00C9A7;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > label > input[type="checkbox"]:checked:after {
+          content: '';
+          position: absolute;
+          top: 1px;
+          left: 5px;
+          width: 6px;
+          height: 10px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] > div {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
+          text-decoration: line-through;
+          opacity: 0.6;
+          color: rgb(107 114 128);
+        }
+        
+        .dark .prose-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
+          color: rgb(156 163 175);
+        }
+        
+        .prose-editor .ProseMirror li[data-type="taskItem"] ul[data-type="taskList"] {
+          margin-left: 1.5rem;
+          margin-top: 0.5rem;
+        }
+        
+        /* Mobile touch scrolling improvements */
+        .prose-editor .ProseMirror ul[data-type="taskList"],
+        .prose-editor .ProseMirror ol,
+        .prose-editor .ProseMirror ul {
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
         }
       `}</style>
     </div>
