@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from "@/lib/hooks/useUser";
 import RichTextEditor from './RichTextEditor';
 import { getCurrentDate, isToday, getDateStorageKey } from '@/lib/dateUtils';
@@ -18,8 +18,13 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
   const [userSettings, setUserSettings] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const { user, isLoading } = useUser();
   const userData = user ? user : null;
+
+  // Refs for managing timeouts and preventing memory leaks
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const savePromiseRef = useRef<Promise<void> | null>(null);
 
   if (!user) {
     return <div>Loading...</div>; // Or any other fallback UI
@@ -69,6 +74,15 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
       }
     }
   }, [user]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Journaling prompts
   const journalingPrompts = [
@@ -79,6 +93,50 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     { id: 'feeling', question: "How am I feeling right now and why?" },
     { id: 'win', question: "What's one small win I can celebrate today?" }
   ];
+
+  // Auto-save function
+  const autoSave = async (newContent: string) => {
+    if (!user?.primaryEmail || newContent.trim() === savedContent.trim() || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    const timestamp = new Date().toISOString();
+    const entry = { content: newContent, timestamp };
+
+    try {
+      // Cancel any pending save operations
+      if (savePromiseRef.current) {
+        // Let the previous save complete, but don't wait for it
+      }
+
+      // Start new save operation
+      const savePromise = axios.post('/api/journal/entry', {
+        date: entryDate,
+        content: newContent,
+        timestamp
+      }, {
+        withCredentials: true
+      });
+
+      savePromiseRef.current = savePromise;
+      await savePromise;
+
+             // Only update state if this is still the latest save operation
+       if (savePromiseRef.current === savePromise) {
+         setSavedContent(newContent);
+         setLastSaved(timestamp);
+         // Call onSave only for significant content changes (every 50+ characters)
+         if (Math.abs(newContent.length - savedContent.length) > 50) {
+           onSave(entry);
+         }
+       }
+    } catch (error) {
+      console.error('Error saving journal entry:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   // Insert prompt into editor
   const insertPrompt = (question: string) => {
@@ -88,28 +146,7 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     setEditorContent(newContent);
     
     // Auto-save when prompt is inserted
-    setTimeout(async () => {
-      if (user?.primaryEmail) {
-        const timestamp = new Date().toISOString();
-        const entry = { content: newContent, timestamp };
-        
-        try {
-          await axios.post('/api/journal/entry', {
-            date: entryDate,
-            content: newContent,
-            timestamp
-          }, {
-            withCredentials: true
-          });
-          
-          setSavedContent(newContent);
-          setLastSaved(timestamp);
-          onSave(entry);
-        } catch (error) {
-          console.error('Error saving journal entry:', error);
-        }
-      }
-    }, 100);
+    setTimeout(() => autoSave(newContent), 100);
   };
 
   const handleSave = () => {
@@ -144,31 +181,15 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
     setContent(html);
     setEditorContent(html);
     
-    // Auto-save when content changes (debounced)
-    const debounceTimeout = setTimeout(async () => {
-      if (user?.primaryEmail && html.trim() !== savedContent.trim()) {
-        const timestamp = new Date().toISOString();
-        const entry = { content: html, timestamp };
-        
-        try {
-          await axios.post('/api/journal/entry', {
-            date: entryDate,
-            content: html,
-            timestamp
-          }, {
-            withCredentials: true
-          });
-          
-          setSavedContent(html);
-          setLastSaved(timestamp);
-          onSave(entry);
-        } catch (error) {
-          console.error('Error saving journal entry:', error);
-        }
-      }
-    }, 1000); // 1 second debounce
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
     
-    return () => clearTimeout(debounceTimeout);
+    // Set new timeout for auto-save
+    debounceTimeoutRef.current = setTimeout(() => {
+      autoSave(html);
+    }, 2000); // Increased debounce time to 2 seconds for better UX
   };
 
 
@@ -183,11 +204,18 @@ const TodayEntry: React.FC<TodayEntryProps> = ({ onSave, date, timezone, showPro
             timeZone: timezone
           })}
         </h2>
-        {lastSaved && (
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            Auto-saved {new Date(lastSaved).toLocaleTimeString()}
-          </div>
-        )}
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          {isSaving ? (
+            <span className="flex items-center">
+              <div className="animate-spin h-3 w-3 border border-slate-400 rounded-full border-t-transparent mr-1"></div>
+              Saving...
+            </span>
+          ) : lastSaved ? (
+            <span>Auto-saved {new Date(lastSaved).toLocaleTimeString()}</span>
+          ) : (
+            <span>Start writing to auto-save</span>
+          )}
+        </div>
       </div>
       
       {/* Display activities if available */}
