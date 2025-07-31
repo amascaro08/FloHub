@@ -24,8 +24,9 @@
             output.innerHTML = '<p>🔍 Checking VAPID keys...</p>';
 
             try {
-                // Get client-side VAPID key
-                const clientVapidKey = typeof process !== 'undefined' && process.env ? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY : 'UNAVAILABLE';
+                // Get client-side VAPID key - this won't work in static HTML
+                // We need to check what the actual React app sees
+                const clientVapidKey = 'STATIC_HTML_CANNOT_ACCESS_ENV';
                 
                 // Get server VAPID info
                 const response = await fetch('/api/debug-client-vapid');

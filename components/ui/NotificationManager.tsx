@@ -10,6 +10,7 @@ import {
   sendTestNotification
 } from '@/lib/notifications';
 import NotificationDebug from './NotificationDebug';
+import VapidDebugComponent from './VapidDebugComponent';
 
 type NotificationState = {
   isSupported: boolean;
@@ -393,6 +394,9 @@ const NotificationManager: React.FC = () => {
       {showDebug && (
         <div className="mt-4 border-t pt-4">
           <NotificationDebug />
+          <div className="mt-4">
+            <VapidDebugComponent />
+          </div>
         </div>
       )}
     </div>
