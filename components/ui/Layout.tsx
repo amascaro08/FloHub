@@ -254,7 +254,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         }}
       >
         {/* Header */}
-        <div className={`py-[26px] px-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} flex-shrink-0`}>
+        <div className={`p-4 border-b border-neutral-200 dark:border-neutral-700 flex items-center ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} flex-shrink-0`}>
           {!desktopSidebarCollapsed && (
             <Image
               src="/FloHub_Logo_Transparent.png"
