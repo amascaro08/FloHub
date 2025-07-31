@@ -54,6 +54,8 @@ export default async function handler(
       actions: (row.actions as any) || [],
       agenda: retrieveContentFromStorage(row.agenda || ""),
       aiSummary: retrieveContentFromStorage(row.aiSummary || ""),
+      meetingSeries: row.meetingSeries ? retrieveContentFromStorage(row.meetingSeries) : undefined,
+      linkedMeetingIds: (row.linkedMeetingIds as string[]) || undefined,
     }));
 
     return res.status(200).json({ meetingNotes: meetingNotes });

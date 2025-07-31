@@ -11,6 +11,8 @@ import { parseISO } from 'date-fns';
 import AddMeetingNoteModal from "@/components/meetings/AddMeetingNoteModal";
 import MeetingNoteList from "@/components/meetings/MeetingNoteList";
 import MeetingNoteDetail from "@/components/meetings/MeetingNoteDetail";
+import MeetingSeriesView from "@/components/meetings/MeetingSeriesView";
+import AddToSeriesModal from "@/components/meetings/AddToSeriesModal";
 import { useUser } from "@/lib/hooks/useUser";
 import { 
   PlusIcon, 
@@ -93,7 +95,7 @@ function MeetingLinkingModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
         <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -360,6 +362,10 @@ export default function MeetingsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [showLinkingModal, setShowLinkingModal] = useState(false);
+  const [addToSeriesName, setAddToSeriesName] = useState<string>("");
+  const [viewingSeriesName, setViewingSeriesName] = useState<string | null>(null);
+  const [showAddToSeriesModal, setShowAddToSeriesModal] = useState(false);
+  const [addExistingToSeriesName, setAddExistingToSeriesName] = useState<string>("");
 
   // Check if device is mobile
   useEffect(() => {
@@ -416,6 +422,17 @@ export default function MeetingsPage() {
     acc + (note.actions?.filter(action => action.status === 'todo')?.length || 0), 0);
   const upcomingMeetings = workCalendarEvents.filter(event => 
     getEventDate(event.start) > new Date()).length;
+
+  // Extract existing series names for the modal
+  const existingSeriesNames = useMemo(() => {
+    const seriesNames = new Set<string>();
+    meetingNotes.forEach(note => {
+      if (note.meetingSeries) {
+        seriesNames.add(note.meetingSeries);
+      }
+    });
+    return Array.from(seriesNames);
+  }, [meetingNotes]);
 
   // Group meetings by series for series tab (both manual and auto-detected)
   const meetingSeries = useMemo(() => {
@@ -474,7 +491,7 @@ export default function MeetingsPage() {
     { id: 'upcoming', label: 'Upcoming', icon: CalendarDaysIcon, count: upcomingMeetings }
   ];
 
-  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string }) => {
+  const handleSaveMeetingNote = async (note: { title: string; content: string; tags: string[]; eventId?: string; eventTitle?: string; isAdhoc?: boolean; actions?: Action[]; agenda?: string; meetingSeries?: string }) => {
     setIsSaving(true);
     try {
       const response = await fetch("/api/meetings/create", {
@@ -631,26 +648,113 @@ export default function MeetingsPage() {
          }
    };
 
-   const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
-     // For now, just select the most recent note in the series
-     // This could be enhanced to show a dedicated series view
-     if (notes.length > 0) {
-       const mostRecent = notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-       setSelectedNoteId(mostRecent.id);
-     }
-   };
+     const handleViewSeries = (seriesTitle: string, notes: Note[]) => {
+    setViewingSeriesName(seriesTitle);
+    setSelectedNoteId(null); // Clear any selected note when viewing series
+  };
 
-   const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
-     try {
-       // For now, just close the modal and show a success message
-       // TODO: Implement actual linking once database fields are added
-       alert(`Successfully created series "${seriesName}" with ${selectedNoteIds.length} meetings. This feature will be fully functional after database migration.`);
-       setShowLinkingModal(false);
-     } catch (error) {
-       console.error('Error creating meeting series:', error);
-       throw error;
-     }
-   };
+  const handleAddMeetingToSeries = (seriesName: string) => {
+    setAddToSeriesName(seriesName);
+    setShowModal(true);
+  };
+
+  const handleAddExistingMeetingToSeries = (seriesName: string) => {
+    setAddExistingToSeriesName(seriesName);
+    setShowAddToSeriesModal(true);
+  };
+
+  const handleAddExistingMeetings = async (meetingIds: string[]) => {
+    try {
+      const response = await fetch("/api/meetings/series", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName: addExistingToSeriesName,
+          meetingIds: meetingIds,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to add meetings to series");
+      }
+      
+      // Refresh the meeting notes
+      mutate();
+      
+      // Show success message
+      alert(`Successfully added ${meetingIds.length} meeting${meetingIds.length !== 1 ? 's' : ''} to "${addExistingToSeriesName}"!`);
+    } catch (error) {
+      console.error('Error adding meetings to series:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteSeries = async (seriesName: string) => {
+    try {
+      console.log('Deleting series:', seriesName);
+      const response = await fetch("/api/meetings/series", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName: seriesName,
+        }),
+      });
+      
+      console.log('Delete response status:', response.status);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Delete error:', error);
+        throw new Error(error.error || "Failed to delete series");
+      }
+      
+      const result = await response.json();
+      console.log('Delete result:', result);
+      
+      // Refresh the meeting notes and close the series view
+      mutate();
+      setViewingSeriesName(null);
+      
+      // Show success message
+      alert(`Successfully removed the series "${seriesName}". Meetings are now unlinked but not deleted.`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting series:', error);
+      alert('Failed to delete series. Please try again.');
+      return false;
+    }
+  };
+
+  const handleCreateMeetingSeries = async (seriesName: string, selectedNoteIds: string[]) => {
+    try {
+      const response = await fetch("/api/meetings/series", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seriesName,
+          meetingIds: selectedNoteIds,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create meeting series");
+      }
+      
+      const result = await response.json();
+      
+      // Refresh the meeting notes to show the updated series
+      mutate();
+      
+      // Show success message
+      alert(`Successfully created series "${seriesName}" with ${selectedNoteIds.length} meetings!`);
+      setShowLinkingModal(false);
+    } catch (error) {
+      console.error('Error creating meeting series:', error);
+      throw error;
+    }
+  };
 
   // Show loading state if data is still loading
   if ((!meetingNotesResponse && !meetingNotesError) || (!userSettings && !settingsError && shouldFetch)) {
@@ -684,6 +788,7 @@ export default function MeetingsPage() {
       </Head>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Main meetings view */}
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -823,18 +928,31 @@ export default function MeetingsPage() {
                      </div>
                    ) : (
                      meetingSeries.map(([seriesTitle, notes]) => (
-                       <div key={seriesTitle} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                       <div 
+                         key={seriesTitle} 
+                         className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                         onClick={() => handleViewSeries(seriesTitle, notes)}
+                       >
                          <div className="flex items-start justify-between mb-3">
-                           <div>
-                             <h3 className="font-medium text-dark-base dark:text-soft-white mb-1">{seriesTitle}</h3>
+                           <div className="flex-1">
+                             <h3 className="font-medium text-dark-base dark:text-soft-white mb-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{seriesTitle}</h3>
                              <p className="text-sm text-grey-tint">{notes.length} meetings • Last updated {new Date(Math.max(...notes.map(n => new Date(n.createdAt).getTime()))).toLocaleDateString()}</p>
                            </div>
-                           <button
-                             onClick={() => handleViewSeries(seriesTitle, notes)}
-                             className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                           >
-                             View All
-                           </button>
+                           <div className="flex items-center space-x-2">
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleAddMeetingToSeries(seriesTitle);
+                               }}
+                               className="text-xs px-2 py-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                               title="Add meeting to this series"
+                             >
+                               + Add
+                             </button>
+                             <span className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded">
+                               View →
+                             </span>
+                           </div>
                          </div>
                          
                          {/* Meeting Timeline */}
@@ -1014,7 +1132,7 @@ export default function MeetingsPage() {
           </div>
 
           {/* Right Column: Meeting Note Detail */}
-          {selectedNote && (
+          {selectedNote && !viewingSeriesName && (
             <div className={`lg:col-span-2 ${isMobile ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900' : ''}`}>
               {isMobile && (
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -1038,6 +1156,36 @@ export default function MeetingsPage() {
                   isSaving={isSaving}
                   existingTags={allAvailableTags}
                   calendarEvents={calendarEvents || []}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Right Column: Series View */}
+          {viewingSeriesName && (
+            <div className={`lg:col-span-2 ${isMobile ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900' : ''}`}>
+              {isMobile && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setViewingSeriesName(null)}
+                    className="flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Meetings
+                  </button>
+                </div>
+              )}
+              
+              <div className={`${isMobile ? 'p-4' : ''}`}>
+                <MeetingSeriesView
+                  seriesName={viewingSeriesName}
+                  onAddMeeting={handleAddMeetingToSeries}
+                  onAddExistingMeeting={handleAddExistingMeetingToSeries}
+                  onDeleteSeries={handleDeleteSeries}
+                  onClose={() => setViewingSeriesName(null)}
+                  onRefresh={() => mutate()}
                 />
               </div>
             </div>
@@ -1068,12 +1216,17 @@ export default function MeetingsPage() {
         {/* Add Meeting Note Modal */}
         <AddMeetingNoteModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            setAddToSeriesName("");
+          }}
           onSave={handleSaveMeetingNote}
           isSaving={isSaving}
           existingTags={allAvailableTags}
           workCalendarEvents={todaysWorkCalendarEvents}
           calendarLoading={calendarLoading}
+          existingSeries={existingSeriesNames}
+          preSelectedSeries={addToSeriesName}
         />
 
         {/* Meeting Linking Modal */}
@@ -1085,6 +1238,19 @@ export default function MeetingsPage() {
             onSave={handleCreateMeetingSeries}
           />
         )}
+
+        {/* Add To Series Modal */}
+        <AddToSeriesModal
+          isOpen={showAddToSeriesModal}
+          onClose={() => {
+            setShowAddToSeriesModal(false);
+            setAddExistingToSeriesName("");
+          }}
+          seriesName={addExistingToSeriesName}
+          availableMeetings={meetingNotes}
+          onSave={handleAddExistingMeetings}
+          isSaving={isSaving}
+        />
       </div>
     </>
   );
