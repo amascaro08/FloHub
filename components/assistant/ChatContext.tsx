@@ -44,15 +44,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setStatus('loading');
 
     try {
-      // Instead of using the client-side capability matching and OpenAI directly,
-      // we'll make a request to our API endpoint
-      const response = await fetch('/api/assistant', {
+      // Call the chat endpoint directly with the correct format for LocalAssistant
+      const response = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message,
+          userInput: message,
           history: history.map(msg => ({ role: msg.role, content: msg.content }))
         }),
       });

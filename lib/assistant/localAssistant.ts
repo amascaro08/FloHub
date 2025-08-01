@@ -87,6 +87,25 @@ export class LocalAssistant {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    console.log('Loading context for user:', this.userEmail);
+
+    // Check if database is available
+    if (!process.env.NEON_DATABASE_URL) {
+      console.log('No database connection available, using fallback responses');
+      this.context = {
+        userId: this.userEmail,
+        tasks: [],
+        notes: [],
+        habits: [],
+        habitCompletions: [],
+        journalEntries: [],
+        calendarEvents: [],
+        meetings: [],
+        userSettings: null
+      };
+      return;
+    }
+
     try {
       const results = await Promise.allSettled([
         db.select().from(tasks)
@@ -141,6 +160,14 @@ export class LocalAssistant {
         journalEntriesResult, calendarEventsResult, meetingsResult, settingsResult
       ] = results;
 
+      // Log any failures for debugging
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const queryNames = ['tasks', 'notes', 'habits', 'habitCompletions', 'journalEntries', 'calendarEvents', 'meetings', 'settings'];
+          console.warn(`Query failed for ${queryNames[index]}:`, result.reason);
+        }
+      });
+
       this.context = {
         userId: this.userEmail,
         tasks: tasksResult.status === 'fulfilled' ? tasksResult.value : [],
@@ -152,14 +179,36 @@ export class LocalAssistant {
         meetings: meetingsResult.status === 'fulfilled' ? meetingsResult.value : [],
         userSettings: settingsResult.status === 'fulfilled' ? settingsResult.value[0] || null : null
       };
+
+      console.log('Context loaded successfully:', {
+        tasks: this.context.tasks.length,
+        notes: this.context.notes.length,
+        habits: this.context.habits.length,
+        calendarEvents: this.context.calendarEvents.length,
+        meetings: this.context.meetings.length
+      });
+
     } catch (error) {
       console.error('Error loading context:', error);
-      throw error;
+      // Create empty context as fallback
+      this.context = {
+        userId: this.userEmail,
+        tasks: [],
+        notes: [],
+        habits: [],
+        habitCompletions: [],
+        journalEntries: [],
+        calendarEvents: [],
+        meetings: [],
+        userSettings: null
+      };
+      console.log('Using empty context as fallback');
     }
   }
 
   private analyzeIntent(query: string): QueryIntent {
     const lowerQuery = query.toLowerCase();
+    console.log('Analyzing intent for query:', query);
     
     const intent: QueryIntent = {
       type: 'general',
@@ -226,12 +275,13 @@ export class LocalAssistant {
     // Search queries
     else if (lowerQuery.includes('when did i') || lowerQuery.includes('last time') || 
              lowerQuery.includes('find') || lowerQuery.includes('search') ||
-             lowerQuery.includes('show me')) {
+             lowerQuery.includes('show me') || lowerQuery.includes('talk about')) {
       intent.type = 'search';
       intent.confidence = 0.8;
       intent.entities.topic = this.extractSearchTerms(query);
     }
 
+    console.log('Intent analysis result:', intent);
     return intent;
   }
 
@@ -565,11 +615,21 @@ export class LocalAssistant {
 
   private async handleSearchQuery(query: string, intent: QueryIntent): Promise<string> {
     const searchTerms = intent.entities.topic || this.extractSearchTerms(query);
+    console.log('Search query:', query);
+    console.log('Extracted search terms:', searchTerms);
+    
     if (!searchTerms) {
       return "What would you like me to search for?";
     }
 
+    // Check if we have any data to search
+    if (!this.context || (this.context.tasks.length === 0 && this.context.notes.length === 0 && 
+        this.context.calendarEvents.length === 0 && this.context.habits.length === 0)) {
+      return `I don't have any data to search through right now. Once you start adding tasks, notes, calendar events, or habits, I'll be able to help you find information about "${searchTerms}".`;
+    }
+
     const keywords = searchTerms.toLowerCase().split(' ').filter(word => word.length > 2);
+    console.log('Search keywords:', keywords);
     
     // Search across all data types
     const matchingTasks = this.context!.tasks.filter(task => {
@@ -592,10 +652,17 @@ export class LocalAssistant {
       return keywords.some(keyword => habitText.includes(keyword));
     });
 
+    console.log('Search results:', {
+      tasks: matchingTasks.length,
+      notes: matchingNotes.length,
+      events: matchingEvents.length,
+      habits: matchingHabits.length
+    });
+
     const totalMatches = matchingTasks.length + matchingNotes.length + matchingEvents.length + matchingHabits.length;
 
     if (totalMatches === 0) {
-      return `I couldn't find anything related to "${searchTerms}" in your data.`;
+      return `I couldn't find anything related to "${searchTerms}" in your data. Try searching for something else or add some content first.`;
     }
 
     let response = `🔍 **Search Results for "${searchTerms}"**:\n\n`;
@@ -743,18 +810,25 @@ Try asking me something specific about your tasks, notes, meetings, or habits!`;
 
   private extractSearchTerms(query: string): string {
     const patterns = [
+      /(?:when did i|last time i)\s+(?:talk about|discuss|mention|work on)\s+(.+)/i,
       /(?:when did i|last time i)\s+(.+)/i,
-      /(?:find|search|show me)\s+(.+)/i
+      /(?:find|search|show me)\s+(.+)/i,
+      /(?:talk about|discuss|mention)\s+(.+)/i
     ];
     
     for (const pattern of patterns) {
       const match = query.match(pattern);
       if (match && match[1]) {
-        return match[1].trim();
+        const extracted = match[1].trim();
+        console.log('Extracted search terms from pattern:', pattern, 'Result:', extracted);
+        return extracted;
       }
     }
     
-    return query.replace(/^(when did i|last time i|find|search|show me)\s*/i, '').trim();
+    // Fallback: remove common words and extract the rest
+    const fallback = query.replace(/^(when did i|last time i|find|search|show me|talk about|discuss|mention)\s*/i, '').trim();
+    console.log('Fallback search terms extraction:', fallback);
+    return fallback;
   }
 
   private getUserTimezone(): string {
