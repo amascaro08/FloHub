@@ -281,9 +281,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }
 
   return (
-    <div className="rich-text-editor w-full relative">
-      {/* Toolbar */}
-      <div className="toolbar bg-white dark:bg-slate-800 rounded-t-xl p-3 flex flex-wrap gap-1 border border-slate-200 dark:border-slate-600 border-b-0">
+    <div className="rich-text-editor w-full relative h-full flex flex-col">
+              {/* Toolbar */}
+        <div className="toolbar bg-white dark:bg-slate-800 rounded-t-xl p-3 flex flex-wrap gap-1 border border-slate-200 dark:border-slate-600 border-b-0 flex-shrink-0">
         {/* Text formatting */}
         <div className="flex items-center space-x-1">
           <button
@@ -561,16 +561,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       {/* Editor Content */}
-      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative">
-        <EditorContent 
-          editor={editor} 
-          className="prose-editor"
-        />
+      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative flex-1 min-h-0 max-h-full">
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          <EditorContent 
+            editor={editor} 
+            className="prose-editor h-full"
+          />
+        </div>
         
         {/* Slash Command Menu */}
         {showSlashMenu && (
           <div 
-            className="fixed z-[999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
+            className="fixed z-[9999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
             style={{
               left: Math.max(10, slashMenuPosition.x),
               top: Math.max(10, slashMenuPosition.y),
@@ -613,12 +615,38 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       <style jsx global>{`
+        .prose-editor {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        
+        .rich-text-editor {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        
         .prose-editor .ProseMirror {
           min-height: 300px;
+          max-height: 100%;
           outline: none;
           padding: 1.5rem;
           color: rgb(51 65 85);
           line-height: 1.7;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+          height: auto;
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        
+        .prose-editor .ProseMirror:focus {
+          outline: none;
         }
         
         .dark .prose-editor .ProseMirror {
@@ -916,6 +944,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor .ProseMirror ul[data-type="taskList"],
         .prose-editor .ProseMirror ol,
         .prose-editor .ProseMirror ul {
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Enhanced scrolling for the entire editor */
+        .prose-editor {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+        
+        .prose-editor .ProseMirror {
           touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
         }
