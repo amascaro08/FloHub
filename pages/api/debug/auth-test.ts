@@ -3,6 +3,11 @@ import { auth } from '@/lib/auth';
 import { getUserById } from '@/lib/user';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // SECURITY FIX: Disable debug endpoints in production
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
   try {
     const debug = {
       timestamp: new Date().toISOString(),

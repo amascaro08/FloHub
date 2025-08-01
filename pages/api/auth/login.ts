@@ -5,26 +5,10 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { signToken } from '@/lib/auth';
 import { createSecureCookie } from '@/lib/cookieUtils';
+import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { withComprehensiveSecurity } from '@/lib/securityHeaders';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Add CORS headers for cross-domain support
-  const origin = req.headers.origin;
-  if (origin && (
-    origin.includes('flohub.xyz') || 
-    origin.includes('flohub.vercel.app') || 
-    origin.includes('localhost:3000')
-  )) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  }
-
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+async function loginHandler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -89,3 +73,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 }
+
+// Apply comprehensive security and rate limiting to the login endpoint
+export default withComprehensiveSecurity(withRateLimit(RATE_LIMITS.AUTH)(loginHandler));

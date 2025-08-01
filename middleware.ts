@@ -38,24 +38,15 @@ export async function middleware(request: NextRequest) {
     // For all other paths, check if user has auth token
     const token = request.cookies.get('auth-token')?.value;
     
-    // SECURITY FIX: Only log debug info in development
-    if (pathname === '/dashboard' && process.env.NODE_ENV === 'development') {
-      console.log(`[Middleware Debug] Dashboard access attempt:`);
-      console.log(`  Host: ${host}`);
-      console.log(`  Pathname: ${pathname}`);
-      console.log(`  Token present: ${!!token}`);
-      // Don't log actual token values even in development
-      console.log(`  Cookie count: ${Object.keys(request.cookies).length}`);
+    // SECURITY FIX: Only log minimal debug info in development
+    if (process.env.NODE_ENV === 'development' && pathname === '/dashboard') {
+      console.log(`[Middleware] Dashboard access - Token present: ${!!token}`);
     }
     
     if (!token) {
       // Redirect to login with return URL
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
-      
-      if (pathname === '/dashboard' && process.env.NODE_ENV === 'development') {
-        console.log(`[Middleware Debug] Redirecting to login`);
-      }
       
       return NextResponse.redirect(loginUrl);
     }
