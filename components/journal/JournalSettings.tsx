@@ -210,7 +210,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
 
         if (response.ok) {
           // Revalidate the user settings cache
-          await mutate('/api/userSettings');
+          await mutateUserSettings();
           setSaveConfirmation(true);
           setTimeout(() => setSaveConfirmation(false), 3000);
         } else {

@@ -223,7 +223,8 @@ export const isContentEncrypted = (content: any): boolean => {
     isEncrypted: content?.isEncrypted === true,
     hasData: typeof content?.data === 'string',
     hasIv: typeof content?.iv === 'string',
-    result
+    result,
+    content: content
   });
   
   return result;
@@ -281,7 +282,16 @@ export const safeDecryptJSONB = (content: any): any => {
   console.log('safeDecryptJSONB input type:', typeof content);
   console.log('isContentEncrypted:', isContentEncrypted(content));
   
-  if (isContentEncrypted(content)) {
+  // Check if it looks like an encrypted object even if isContentEncrypted returns false
+  const looksEncrypted = typeof content === 'object' && 
+                         content !== null && 
+                         content.isEncrypted === true &&
+                         typeof content.data === 'string' &&
+                         typeof content.iv === 'string';
+  
+  console.log('safeDecryptJSONB looksEncrypted:', looksEncrypted);
+  
+  if (isContentEncrypted(content) || looksEncrypted) {
     const decrypted = decryptJSONB(content);
     console.log('safeDecryptJSONB decrypted:', decrypted);
     return decrypted;
