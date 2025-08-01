@@ -12,6 +12,7 @@ import { processCalendarQuery } from "@/lib/assistant/calendarProcessor";
 import { parseDueDate } from "@/lib/assistant/dateUtils";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { LocalAssistant } from "@/lib/assistant/localAssistant";
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -74,6 +75,53 @@ export default async function handler(
     let response: string;
     let actions: ChatResponse['actions'] = [];
 
+    // NEW: Try LocalAssistant first for all queries
+    try {
+      console.log('Attempting LocalAssistant processing for query:', sanitizedInput);
+      const localAssistant = new LocalAssistant(user.email);
+      response = await localAssistant.processQuery(sanitizedInput);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('LocalAssistant response:', response);
+      }
+      
+      // If LocalAssistant provided a good response, use it
+      if (response && response.length > 10) {
+        console.log('Using LocalAssistant response');
+        clearTimeout(timeoutId);
+        return res.status(200).json({ 
+          reply: response,
+          actions: actions && actions.length > 0 ? actions : undefined
+        });
+      } else {
+        console.log('LocalAssistant response too short, falling back to other methods');
+      }
+    } catch (localError) {
+      console.warn('LocalAssistant failed, falling back to other methods:', localError);
+      
+      // Provide a helpful response when LocalAssistant fails
+      const lowerQuery = sanitizedInput.toLowerCase();
+      if (lowerQuery.includes('when did i') && lowerQuery.includes('talk about')) {
+        const searchTerms = sanitizedInput.replace(/^when did i\s+last\s+talk about\s+/i, '').trim();
+        response = `🔍 **Search Results for "${searchTerms}"**:\n\nI don't have any data to search through right now. Once you start adding tasks, notes, calendar events, or habits, I'll be able to help you find information about "${searchTerms}".`;
+      } else if (lowerQuery.includes('calendar') || lowerQuery.includes('schedule') || lowerQuery.includes('meeting')) {
+        response = "📅 **Your Calendar**:\n\nI don't have any calendar events to show right now. Once you connect your calendar, I'll be able to help you with schedule queries.";
+      } else if (lowerQuery.includes('task')) {
+        response = "📋 **Your Tasks**:\n\nI don't have any tasks to show right now. Once you start adding tasks, I'll be able to help you manage them.";
+      } else if (lowerQuery.includes('habit')) {
+        response = "🔄 **Your Habits**:\n\nI don't have any habits to show right now. Once you start tracking habits, I'll be able to help you analyze your progress.";
+      } else {
+        response = `I understand you're asking: "${sanitizedInput}". I'm designed to help you with:\n\n• Calendar and schedule queries\n• Task management\n• Note searching\n• Habit tracking\n• Productivity insights\n\nTry asking me something specific about your data!`;
+      }
+      
+      clearTimeout(timeoutId);
+      return res.status(200).json({ 
+        reply: response,
+        actions: actions && actions.length > 0 ? actions : undefined
+      });
+    }
+
+    // FALLBACK: Use existing routing logic for complex queries
     // PERFORMANCE FIX: Only route to calendar intent for high-confidence calendar queries
     if (intent.category === 'calendar' && intent.confidence > 0.8) {
       if (process.env.NODE_ENV === 'development') {
