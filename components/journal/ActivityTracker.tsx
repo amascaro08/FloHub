@@ -15,6 +15,7 @@ interface QuickAddModalProps {
   onClose: () => void;
   onActivityAdded: (activity: CustomActivity) => void;
   userSettings: any;
+  mutateUserSettings: () => Promise<any>;
 }
 
 // Comprehensive emoji library with categories
@@ -39,7 +40,7 @@ const emojiLibrary = {
 // Flatten all emojis for search
 const allEmojis = Object.values(emojiLibrary).flat();
 
-const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded, userSettings }) => {
+const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded, userSettings, mutateUserSettings }) => {
   const [activityName, setActivityName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('📌');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,6 +65,8 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
         icon: selectedIcon
       };
 
+      console.log('Creating new activity:', newActivity); // Debug log
+
       // Check if activity already exists
       const existingActivities = userSettings?.journalCustomActivities || [];
       if (existingActivities.some((activity: CustomActivity) => 
@@ -77,6 +80,8 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
       // Update user settings with new activity
       const updatedActivities = [...existingActivities, newActivity];
       
+      console.log('Saving updated activities:', updatedActivities); // Debug log
+      
       const response = await fetch('/api/userSettings', {
         method: 'PUT',
         headers: {
@@ -88,8 +93,8 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
       });
 
       if (response.ok) {
-        // Revalidate the user settings cache
-        await mutate('/api/userSettings');
+        // Force revalidate the user settings cache
+        await mutateUserSettings();
         
         // Call the callback to add the activity to the current selection
         onActivityAdded(newActivity);
@@ -213,14 +218,18 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const { user, isLoading } = useUser();
 
   // Fetch user settings to get custom activities
-  const { data: userSettings } = useSWR(
+  const { data: userSettings, mutate: mutateUserSettings } = useSWR(
     user ? '/api/userSettings' : null,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
-    { revalidateOnFocus: false }
+    { 
+      revalidateOnFocus: false,
+      revalidateOnMount: true,
+      refreshInterval: 0
+    }
   );
   const userData = user ? user : null;
 
