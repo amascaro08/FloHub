@@ -55,23 +55,41 @@ export default async function handler(
     console.warn("No GITHUB_WEBHOOK_SECRET configured, skipping signature verification");
   }
 
-  const { action, issue } = req.body;
+  const { action, issue, comment } = req.body;
+  const eventType = req.headers['x-github-event'] as string;
 
   // Log the webhook event
   console.log("GitHub webhook event:", {
+    eventType,
     action,
     issue: issue ? {
       number: issue.number,
       title: issue.title,
       state: issue.state,
       html_url: issue.html_url
-    } : 'no issue data'
+    } : 'no issue data',
+    comment: comment ? {
+      id: comment.id,
+      body: comment.body?.substring(0, 100) + '...'
+    } : 'no comment data'
   });
 
-  // Only handle issue closed events
-  if (action !== "closed") {
-    console.log(`Ignoring webhook action: ${action}`);
-    return res.status(200).json({ message: "Event ignored" });
+  // Handle different event types
+  if (eventType === 'issues') {
+    // Handle issue events (opened, closed, etc.)
+    if (action !== "closed") {
+      console.log(`Ignoring issue action: ${action}`);
+      return res.status(200).json({ message: "Event ignored" });
+    }
+  } else if (eventType === 'issue_comment') {
+    // Handle comment events (created, edited, deleted)
+    if (action !== "created") {
+      console.log(`Ignoring comment action: ${action}`);
+      return res.status(200).json({ message: "Event ignored" });
+    }
+  } else {
+    console.log(`Ignoring event type: ${eventType}`);
+    return res.status(200).json({ message: "Event type ignored" });
   }
 
   if (!issue || !issue.number) {
@@ -100,19 +118,31 @@ export default async function handler(
       notificationSent: feedbackEntry.notificationSent
     });
 
-    // Update feedback status to completed
-    await db
-      .update(feedback)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-      })
-      .where(eq(feedback.id, feedbackEntry.id));
+    // Handle issue closed events
+    if (eventType === 'issues' && action === "closed") {
+      // Check if notification was already sent first
+      if (feedbackEntry.notificationSent) {
+        console.log("Notification already sent for this feedback");
+        return res.status(200).json({ 
+          message: "Notification already sent",
+          feedbackId: feedbackEntry.id,
+          issueNumber: issue.number
+        });
+      }
 
-    console.log(`Updated feedback ${feedbackEntry.id} to completed status`);
+      // Update feedback status to completed and mark notification as sent atomically
+      await db
+        .update(feedback)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          notificationSent: true, // Mark as sent immediately to prevent duplicates
+        })
+        .where(eq(feedback.id, feedbackEntry.id));
 
-    // Send notification email if not already sent
-    if (!feedbackEntry.notificationSent) {
+      console.log(`Updated feedback ${feedbackEntry.id} to completed status and marked notification as sent`);
+
+      // Send notification email
       const userIdentifier = feedbackEntry.userEmail || feedbackEntry.userId;
       
       if (userIdentifier) {
@@ -121,25 +151,38 @@ export default async function handler(
         const success = await sendFeedbackCompletionEmail(
           userIdentifier,
           issue.title,
-          feedbackEntry.githubIssueUrl || issue.html_url
+          feedbackEntry.githubIssueUrl || issue.html_url,
+          comment?.body // Pass the closing comment if available
         );
 
         if (success) {
-          // Mark notification as sent
-          await db
-            .update(feedback)
-            .set({ notificationSent: true })
-            .where(eq(feedback.id, feedbackEntry.id));
-          
-          console.log("Notification sent and marked as sent");
+          console.log("Notification sent successfully");
         } else {
           console.error("Failed to send notification email");
+          // Note: We don't reset notificationSent here to prevent spam
         }
       } else {
         console.warn("No user identifier found for feedback entry - cannot send notification");
       }
-    } else {
-      console.log("Notification already sent for this feedback");
+    }
+
+    // Handle comment events (for capturing closing comments)
+    if (eventType === 'issue_comment' && action === "created" && comment && comment.body) {
+      console.log("Processing comment for issue:", comment.body.substring(0, 100));
+      
+      // Check if this is a closing comment (issue is closed and this is the last comment)
+      if (issue.state === 'closed') {
+        console.log("Comment received on closed issue - potential closing comment");
+        console.log("Comment details:", {
+          commentId: comment.id,
+          issueNumber: issue.number,
+          commentBody: comment.body.substring(0, 200) + '...',
+          commentAuthor: comment.user?.login
+        });
+        
+        // You could store the comment in the database if needed
+        // For now, we'll just log it for debugging
+      }
     }
 
     return res.status(200).json({ 
@@ -160,9 +203,18 @@ export default async function handler(
 async function sendFeedbackCompletionEmail(
   userEmail: string, 
   issueTitle: string, 
-  issueUrl: string
+  issueUrl: string,
+  closingComment?: string
 ): Promise<boolean> {
   const subject = "Your FloHub Feedback Has Been Completed";
+  
+  // Include the closing comment in the email if available
+  const commentSection = closingComment ? `
+    <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <h4 style="margin-top: 0; color: #1e40af;">Closing Comment:</h4>
+      <p style="margin-bottom: 0; white-space: pre-wrap;">${closingComment}</p>
+    </div>
+  ` : '';
   
   const html = `
     <!DOCTYPE html>
@@ -232,6 +284,8 @@ async function sendFeedbackCompletionEmail(
           <span class="status-badge">Completed</span>
         </div>
         
+        ${commentSection}
+        
         <p>Thank you for helping improve FloHub! Your input is valuable and helps us build a better product for everyone.</p>
         
         <div style="text-align: center;">
@@ -253,7 +307,10 @@ Great news! Your feedback has been completed.
 
 "${issueTitle}"
 
-Thank you for helping improve FloHub! Your input is valuable and helps us build a better product for everyone.
+${closingComment ? `Closing Comment:
+${closingComment}
+
+` : ''}Thank you for helping improve FloHub! Your input is valuable and helps us build a better product for everyone.
 
 View details: ${issueUrl}
 
