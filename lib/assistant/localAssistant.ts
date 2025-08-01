@@ -22,13 +22,14 @@ interface LocalAssistantContext {
   habits: any[];
   habitCompletions: any[];
   journalEntries: any[];
+  journalMoods: any[];
   calendarEvents: any[];
   meetings: any[];
   userSettings: any;
 }
 
 interface QueryIntent {
-  type: 'calendar' | 'task' | 'note' | 'habit' | 'productivity' | 'search' | 'create' | 'general';
+  type: 'calendar' | 'task' | 'note' | 'habit' | 'productivity' | 'search' | 'create' | 'general' | 'journal' | 'meeting';
   action: 'query' | 'create' | 'update' | 'delete';
   entities: {
     timeRef?: string;
@@ -104,6 +105,7 @@ export class LocalAssistant {
         habits: [],
         habitCompletions: [],
         journalEntries: [],
+        journalMoods: [],
         calendarEvents: [],
         meetings: [],
         userSettings: null
@@ -145,6 +147,13 @@ export class LocalAssistant {
           ))
           .orderBy(desc(journalEntries.createdAt)),
 
+        db.select().from(journalMoods)
+          .where(and(
+            eq(journalMoods.user_email, this.userEmail),
+            gte(journalMoods.createdAt, thirtyDaysAgo)
+          ))
+          .orderBy(desc(journalMoods.createdAt)),
+
         db.select().from(calendarEvents)
           .where(eq(calendarEvents.user_email, this.userEmail)),
 
@@ -162,13 +171,13 @@ export class LocalAssistant {
 
       const [
         tasksResult, notesResult, habitsResult, habitCompletionsResult,
-        journalEntriesResult, calendarEventsResult, meetingsResult, settingsResult
+        journalEntriesResult, journalMoodsResult, calendarEventsResult, meetingsResult, settingsResult
       ] = results;
 
       // Log any failures for debugging
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const queryNames = ['tasks', 'notes', 'habits', 'habitCompletions', 'journalEntries', 'calendarEvents', 'meetings', 'settings'];
+          const queryNames = ['tasks', 'notes', 'habits', 'habitCompletions', 'journalEntries', 'journalMoods', 'calendarEvents', 'meetings', 'settings'];
           console.warn(`Query failed for ${queryNames[index]}:`, result.reason);
         }
       });
@@ -180,6 +189,7 @@ export class LocalAssistant {
         habits: habitsResult.status === 'fulfilled' ? habitsResult.value : [],
         habitCompletions: habitCompletionsResult.status === 'fulfilled' ? habitCompletionsResult.value : [],
         journalEntries: journalEntriesResult.status === 'fulfilled' ? journalEntriesResult.value : [],
+        journalMoods: journalMoodsResult.status === 'fulfilled' ? journalMoodsResult.value : [],
         calendarEvents: calendarEventsResult.status === 'fulfilled' ? calendarEventsResult.value : [],
         meetings: meetingsResult.status === 'fulfilled' ? meetingsResult.value : [],
         userSettings: settingsResult.status === 'fulfilled' ? settingsResult.value[0] || null : null
@@ -203,6 +213,7 @@ export class LocalAssistant {
         habits: [],
         habitCompletions: [],
         journalEntries: [],
+        journalMoods: [],
         calendarEvents: [],
         meetings: [],
         userSettings: null
@@ -438,7 +449,7 @@ export class LocalAssistant {
     }
 
     // If user is asking specifically about meetings, filter for meetings
-    if (lowerQuery.includes('meeting') || lowerQuery.includes('next meeting')) {
+    if (query.toLowerCase().includes('meeting') || query.toLowerCase().includes('next meeting')) {
       const meetingEvents = upcomingEvents.filter(event => {
         const eventText = `${event.summary || ''} ${event.description || ''}`.toLowerCase();
         return eventText.includes('meeting') || eventText.includes('call') || eventText.includes('standup');
@@ -622,7 +633,7 @@ export class LocalAssistant {
       const recentMoods = journalMoods.slice(0, 7);
       const moodCounts: { [mood: string]: number } = {};
       
-      recentMoods.forEach(mood => {
+      recentMoods.forEach((mood: any) => {
         let decryptedMood = mood.mood;
         try {
           if (mood.mood && typeof mood.mood === 'object' && mood.mood.isEncrypted) {

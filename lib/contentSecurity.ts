@@ -14,6 +14,13 @@ const getEncryptionKey = (): Buffer => {
   
   if (!key) {
     console.error('ContentSecurity: CONTENT_ENCRYPTION_KEY environment variable is required');
+    // In production, we should fail gracefully and log the issue
+    if (process.env.NODE_ENV === 'production') {
+      console.error('ContentSecurity: Encryption key missing in production - data will not be encrypted');
+      // Return a fallback key for development/testing
+      const fallbackKey = 'fallback-key-for-missing-encryption-key-in-production';
+      return crypto.pbkdf2Sync(fallbackKey, 'flohub-content-salt', 100000, KEY_LENGTH, 'sha256');
+    }
     throw new Error('CONTENT_ENCRYPTION_KEY environment variable is required');
   }
   
@@ -485,26 +492,45 @@ export const encryptUserSettingsFields = (settings: any) => {
   console.log('encryptUserSettingsFields input:', settings);
   const encrypted = { ...settings };
   
-  if (settings.preferredName) {
-    encrypted.preferredName = prepareContentForStorage(settings.preferredName);
+  try {
+    if (settings.preferredName) {
+      encrypted.preferredName = prepareContentForStorage(settings.preferredName);
+    }
+    
+    // Handle globalTags - support both PostgreSQL arrays and encrypted JSON
+    if (settings.globalTags && Array.isArray(settings.globalTags)) {
+      console.log('Processing globalTags (PostgreSQL array):', settings.globalTags);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.globalTags = settings.globalTags;
+    }
+    
+    // Handle tags - support both PostgreSQL arrays and encrypted JSON
+    if (settings.tags && Array.isArray(settings.tags)) {
+      console.log('Processing tags (PostgreSQL array):', settings.tags);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.tags = settings.tags;
+    }
+    
+    // Handle floCatPersonality - support both PostgreSQL arrays and encrypted JSON
+    if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
+      console.log('Processing floCatPersonality (PostgreSQL array):', settings.floCatPersonality);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.floCatPersonality = settings.floCatPersonality;
+    }
+    
+    if (settings.journalCustomActivities) {
+      console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
+      encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
+      console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
+    }
+    
+    console.log('encryptUserSettingsFields output:', encrypted);
+    return encrypted;
+  } catch (error) {
+    console.error('Error in encryptUserSettingsFields:', error);
+    // Return original settings if encryption fails
+    return settings;
   }
-  
-  if (settings.globalTags) {
-    encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
-  }
-  
-  if (settings.tags) {
-    encrypted.tags = prepareArrayForStorage(settings.tags);
-  }
-  
-  if (settings.journalCustomActivities) {
-    console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
-    encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
-    console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
-  }
-  
-  console.log('encryptUserSettingsFields output:', encrypted);
-  return encrypted;
 };
 
 /**
@@ -514,25 +540,86 @@ export const decryptUserSettingsFields = (settings: any) => {
   console.log('decryptUserSettingsFields input:', settings);
   const decrypted = { ...settings };
   
-  if (settings.preferredName) {
-    decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
+  try {
+    if (settings.preferredName) {
+      decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
+    }
+    
+    // Handle globalTags - support both PostgreSQL arrays and encrypted JSON
+    if (settings.globalTags) {
+      console.log('Processing globalTags from database:', settings.globalTags);
+      console.log('globalTags type:', typeof settings.globalTags);
+      
+      if (Array.isArray(settings.globalTags)) {
+        // PostgreSQL array - no decryption needed
+        console.log('globalTags is PostgreSQL array, using as-is');
+        decrypted.globalTags = settings.globalTags;
+      } else if (typeof settings.globalTags === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('globalTags is encrypted JSON string, decrypting');
+        decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
+      } else {
+        // Fallback
+        console.log('globalTags is unknown format, using empty array');
+        decrypted.globalTags = [];
+      }
+      console.log('Processed globalTags:', decrypted.globalTags);
+    }
+    
+    // Handle tags - support both PostgreSQL arrays and encrypted JSON
+    if (settings.tags) {
+      console.log('Processing tags from database:', settings.tags);
+      console.log('tags type:', typeof settings.tags);
+      
+      if (Array.isArray(settings.tags)) {
+        // PostgreSQL array - no decryption needed
+        console.log('tags is PostgreSQL array, using as-is');
+        decrypted.tags = settings.tags;
+      } else if (typeof settings.tags === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('tags is encrypted JSON string, decrypting');
+        decrypted.tags = retrieveArrayFromStorage(settings.tags);
+      } else {
+        // Fallback
+        console.log('tags is unknown format, using empty array');
+        decrypted.tags = [];
+      }
+      console.log('Processed tags:', decrypted.tags);
+    }
+    
+    // Handle floCatPersonality - support both PostgreSQL arrays and encrypted JSON
+    if (settings.floCatPersonality) {
+      console.log('Processing floCatPersonality from database:', settings.floCatPersonality);
+      console.log('floCatPersonality type:', typeof settings.floCatPersonality);
+      
+      if (Array.isArray(settings.floCatPersonality)) {
+        // PostgreSQL array - no decryption needed
+        console.log('floCatPersonality is PostgreSQL array, using as-is');
+        decrypted.floCatPersonality = settings.floCatPersonality;
+      } else if (typeof settings.floCatPersonality === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('floCatPersonality is encrypted JSON string, decrypting');
+        decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
+      } else {
+        // Fallback
+        console.log('floCatPersonality is unknown format, using empty array');
+        decrypted.floCatPersonality = [];
+      }
+      console.log('Processed floCatPersonality:', decrypted.floCatPersonality);
+    }
+    
+    if (settings.journalCustomActivities) {
+      console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
+      console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
+      decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
+      console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
+    }
+    
+    console.log('decryptUserSettingsFields output:', decrypted);
+    return decrypted;
+  } catch (error) {
+    console.error('Error in decryptUserSettingsFields:', error);
+    // Return original settings if decryption fails
+    return settings;
   }
-  
-  if (settings.globalTags) {
-    decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
-  }
-  
-  if (settings.tags) {
-    decrypted.tags = retrieveArrayFromStorage(settings.tags);
-  }
-  
-  if (settings.journalCustomActivities) {
-    console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
-    console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
-    decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
-    console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
-  }
-  
-  console.log('decryptUserSettingsFields output:', decrypted);
-  return decrypted;
 };

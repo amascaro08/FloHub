@@ -113,19 +113,66 @@ export default async function handler(
       console.log("Decrypted journalCustomActivities:", decryptedData.journalCustomActivities);
       console.log("Full decrypted data:", JSON.stringify(decryptedData, null, 2));
       
+      // Ensure arrays are properly handled with backwards compatibility
+      const ensureArray = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+      
+      // Handle array fields with backwards compatibility
+      const processArrayField = (value: any, fieldName: string): string[] => {
+        console.log(`Processing ${fieldName}:`, value);
+        console.log(`${fieldName} type:`, typeof value);
+        
+        if (!value) return [];
+        
+        if (Array.isArray(value)) {
+          console.log(`${fieldName} is PostgreSQL array, using as-is`);
+          return value;
+        }
+        
+        if (typeof value === 'string') {
+          console.log(`${fieldName} is string, attempting to parse`);
+          try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+              console.log(`${fieldName} parsed as array:`, parsed);
+              return parsed;
+            }
+          } catch (error) {
+            console.log(`${fieldName} parse error:`, error);
+          }
+        }
+        
+        console.log(`${fieldName} fallback to empty array`);
+        return [];
+      };
+      
       const settings: UserSettings = {
-        selectedCals: (decryptedData.selectedCals as string[]) || [], // Ensure it's an array
+        selectedCals: ensureArray(decryptedData.selectedCals),
         defaultView: decryptedData.defaultView as UserSettings['defaultView'] || "month",
-        customRange: (decryptedData.customRange as any) || { start: "", end: "" }, // Ensure it's an object
+        customRange: (decryptedData.customRange as any) || { start: "", end: "" },
         powerAutomateUrl: decryptedData.powerAutomateUrl || "",
-        globalTags: (decryptedData.globalTags as string[]) || [],
-        activeWidgets: (decryptedData.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
-        hiddenWidgets: (decryptedData.hiddenWidgets as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        globalTags: processArrayField(decryptedData.globalTags, 'globalTags'),
+        activeWidgets: ensureArray(decryptedData.activeWidgets) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        hiddenWidgets: ensureArray(decryptedData.hiddenWidgets),
         floCatStyle: decryptedData.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: (decryptedData.floCatPersonality as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        floCatPersonality: processArrayField(decryptedData.floCatPersonality, 'floCatPersonality'),
         preferredName: decryptedData.preferredName || "",
-        tags: (decryptedData.tags as string[]) || [],
-        widgets: (decryptedData.widgets as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        tags: processArrayField(decryptedData.tags, 'tags'),
+        widgets: ensureArray(decryptedData.widgets),
         calendarSettings: (decryptedData.calendarSettings as any) || { calendars: [] },
         notificationSettings: (decryptedData.notificationSettings as any) || { subscribed: false },
         calendarSources: (decryptedData.calendarSources as any) || [],
@@ -203,20 +250,67 @@ export default async function handler(
       // Decrypt the result for the response
       const decryptedResult = decryptUserSettingsFields(result);
 
+      // Ensure arrays are properly handled with backwards compatibility
+      const ensureArray = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
+      // Handle array fields with backwards compatibility
+      const processArrayField = (value: any, fieldName: string): string[] => {
+        console.log(`Processing ${fieldName}:`, value);
+        console.log(`${fieldName} type:`, typeof value);
+        
+        if (!value) return [];
+        
+        if (Array.isArray(value)) {
+          console.log(`${fieldName} is PostgreSQL array, using as-is`);
+          return value;
+        }
+        
+        if (typeof value === 'string') {
+          console.log(`${fieldName} is string, attempting to parse`);
+          try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+              console.log(`${fieldName} parsed as array:`, parsed);
+              return parsed;
+            }
+          } catch (error) {
+            console.log(`${fieldName} parse error:`, error);
+          }
+        }
+        
+        console.log(`${fieldName} fallback to empty array`);
+        return [];
+      };
+      
       // Return the updated settings in the same format as GET
       const updatedSettings: UserSettings = {
-        selectedCals: (decryptedResult.selectedCals as string[]) || [],
+        selectedCals: ensureArray(decryptedResult.selectedCals),
         defaultView: decryptedResult.defaultView as UserSettings['defaultView'] || "month",
         customRange: (decryptedResult.customRange as any) || { start: "", end: "" },
         powerAutomateUrl: decryptedResult.powerAutomateUrl || "",
-        globalTags: (decryptedResult.globalTags as string[]) || [],
-        activeWidgets: (decryptedResult.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
-        hiddenWidgets: (decryptedResult.hiddenWidgets as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        globalTags: processArrayField(decryptedResult.globalTags, 'globalTags'),
+        activeWidgets: ensureArray(decryptedResult.activeWidgets) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        hiddenWidgets: ensureArray(decryptedResult.hiddenWidgets),
         floCatStyle: decryptedResult.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: (decryptedResult.floCatPersonality as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        floCatPersonality: processArrayField(decryptedResult.floCatPersonality, 'floCatPersonality'),
         preferredName: decryptedResult.preferredName || "",
-        tags: (decryptedResult.tags as string[]) || [],
-        widgets: (decryptedResult.widgets as string[]) || [],
+        // Handle both PostgreSQL arrays and encrypted JSON
+        tags: processArrayField(decryptedResult.tags, 'tags'),
+        widgets: ensureArray(decryptedResult.widgets),
         calendarSettings: (decryptedResult.calendarSettings as any) || { calendars: [] },
         notificationSettings: (decryptedResult.notificationSettings as any) || { subscribed: false },
         calendarSources: (decryptedResult.calendarSources as any) || [],
