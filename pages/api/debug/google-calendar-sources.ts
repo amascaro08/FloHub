@@ -34,7 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: eq(userSettings.user_email, authResult.email),
     });
 
-    const calendarSources = userSettingsResult?.calendar_sources || [];
+    const calendarSources = Array.isArray(userSettingsResult?.calendarSources) 
+      ? userSettingsResult.calendarSources 
+      : [];
     
     const diagnostics = {
       timestamp: new Date().toISOString(),

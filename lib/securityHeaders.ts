@@ -79,7 +79,7 @@ export function validateOrigin(req: NextApiRequest): boolean {
 export function addCORSHeaders(req: NextApiRequest, res: NextApiResponse): void {
   const origin = req.headers.origin;
   
-  if (validateOrigin(req)) {
+  if (validateOrigin(req) && origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

@@ -67,8 +67,7 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
       email: emailValidation.sanitized,
       password: hashedPassword,
       name: name.trim(),
-      created_at: new Date(),
-      updated_at: new Date()
+      createdAt: new Date()
     }).returning();
 
     if (!newUser || newUser.length === 0) {
