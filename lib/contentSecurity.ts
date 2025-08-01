@@ -180,6 +180,8 @@ export const encryptJSONB = (data: any): EncryptedContent => {
  */
 export const decryptJSONB = (encryptedData: EncryptedContent | any): any => {
   console.log('ContentSecurity: decryptJSONB input:', encryptedData);
+  console.log('ContentSecurity: decryptJSONB input type:', typeof encryptedData);
+  console.log('ContentSecurity: decryptJSONB isEncrypted:', encryptedData?.isEncrypted);
   
   // Handle legacy unencrypted objects
   if (typeof encryptedData === 'object' && !encryptedData?.isEncrypted) {
@@ -209,11 +211,22 @@ export const decryptJSONB = (encryptedData: EncryptedContent | any): any => {
  * Check if content is encrypted
  */
 export const isContentEncrypted = (content: any): boolean => {
-  return typeof content === 'object' && 
+  const result = typeof content === 'object' && 
          content !== null && 
          content.isEncrypted === true &&
          typeof content.data === 'string' &&
          typeof content.iv === 'string';
+  
+  console.log('isContentEncrypted check:', {
+    isObject: typeof content === 'object',
+    isNotNull: content !== null,
+    isEncrypted: content?.isEncrypted === true,
+    hasData: typeof content?.data === 'string',
+    hasIv: typeof content?.iv === 'string',
+    result
+  });
+  
+  return result;
 };
 
 /**
@@ -265,6 +278,7 @@ export const safeDecryptArray = (content: any): string[] => {
  */
 export const safeDecryptJSONB = (content: any): any => {
   console.log('safeDecryptJSONB input:', content);
+  console.log('safeDecryptJSONB input type:', typeof content);
   console.log('isContentEncrypted:', isContentEncrypted(content));
   
   if (isContentEncrypted(content)) {
@@ -344,6 +358,7 @@ export const retrieveArrayFromStorage = (storedArray: string): string[] => {
  */
 export const retrieveJSONBFromStorage = (storedData: string | any): any => {
   console.log('retrieveJSONBFromStorage input:', storedData);
+  console.log('retrieveJSONBFromStorage input type:', typeof storedData);
   
   if (!storedData) {
     console.log('retrieveJSONBFromStorage: no data, returning null');
