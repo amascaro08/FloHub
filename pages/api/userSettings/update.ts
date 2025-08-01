@@ -115,10 +115,39 @@ export default async function handler(
       return [];
     };
 
+    // Handle array fields with backwards compatibility
+    const processArrayField = (value: any, fieldName: string): string[] => {
+      console.log(`Processing ${fieldName}:`, value);
+      console.log(`${fieldName} type:`, typeof value);
+      
+      if (!value) return [];
+      
+      if (Array.isArray(value)) {
+        console.log(`${fieldName} is PostgreSQL array, using as-is`);
+        return value;
+      }
+      
+      if (typeof value === 'string') {
+        console.log(`${fieldName} is string, attempting to parse`);
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            console.log(`${fieldName} parsed as array:`, parsed);
+            return parsed;
+          }
+        } catch (error) {
+          console.log(`${fieldName} parse error:`, error);
+        }
+      }
+      
+      console.log(`${fieldName} fallback to empty array`);
+      return [];
+    };
+
     // Ensure all array fields are properly formatted
-    settingsData.globalTags = ensureArray(settingsData.globalTags);
-    settingsData.tags = ensureArray(settingsData.tags);
-    settingsData.floCatPersonality = ensureArray(settingsData.floCatPersonality);
+    settingsData.globalTags = processArrayField(settingsData.globalTags, 'globalTags');
+    settingsData.tags = processArrayField(settingsData.tags, 'tags');
+    settingsData.floCatPersonality = processArrayField(settingsData.floCatPersonality, 'floCatPersonality');
     settingsData.selectedCals = ensureArray(settingsData.selectedCals);
     settingsData.activeWidgets = ensureArray(settingsData.activeWidgets);
     settingsData.hiddenWidgets = ensureArray(settingsData.hiddenWidgets);

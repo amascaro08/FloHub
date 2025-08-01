@@ -497,21 +497,21 @@ export const encryptUserSettingsFields = (settings: any) => {
       encrypted.preferredName = prepareContentForStorage(settings.preferredName);
     }
     
-    // Note: globalTags, tags, floCatPersonality are stored as PostgreSQL arrays
-    // They don't need encryption since they're already in array format
-    // The database will handle them as native arrays
+    // Handle globalTags - support both PostgreSQL arrays and encrypted JSON
     if (settings.globalTags && Array.isArray(settings.globalTags)) {
       console.log('Processing globalTags (PostgreSQL array):', settings.globalTags);
       // Keep as array - no encryption needed for PostgreSQL arrays
       encrypted.globalTags = settings.globalTags;
     }
     
+    // Handle tags - support both PostgreSQL arrays and encrypted JSON
     if (settings.tags && Array.isArray(settings.tags)) {
       console.log('Processing tags (PostgreSQL array):', settings.tags);
       // Keep as array - no encryption needed for PostgreSQL arrays
       encrypted.tags = settings.tags;
     }
     
+    // Handle floCatPersonality - support both PostgreSQL arrays and encrypted JSON
     if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
       console.log('Processing floCatPersonality (PostgreSQL array):', settings.floCatPersonality);
       // Keep as array - no encryption needed for PostgreSQL arrays
@@ -545,29 +545,66 @@ export const decryptUserSettingsFields = (settings: any) => {
       decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
     }
     
-    // Note: globalTags, tags, floCatPersonality are stored as PostgreSQL arrays
-    // They come back as arrays from the database, so no decryption needed
+    // Handle globalTags - support both PostgreSQL arrays and encrypted JSON
     if (settings.globalTags) {
-      console.log('Processing globalTags from database (PostgreSQL array):', settings.globalTags);
+      console.log('Processing globalTags from database:', settings.globalTags);
       console.log('globalTags type:', typeof settings.globalTags);
-      // PostgreSQL arrays come back as arrays, no decryption needed
-      decrypted.globalTags = Array.isArray(settings.globalTags) ? settings.globalTags : [];
+      
+      if (Array.isArray(settings.globalTags)) {
+        // PostgreSQL array - no decryption needed
+        console.log('globalTags is PostgreSQL array, using as-is');
+        decrypted.globalTags = settings.globalTags;
+      } else if (typeof settings.globalTags === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('globalTags is encrypted JSON string, decrypting');
+        decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
+      } else {
+        // Fallback
+        console.log('globalTags is unknown format, using empty array');
+        decrypted.globalTags = [];
+      }
       console.log('Processed globalTags:', decrypted.globalTags);
     }
     
+    // Handle tags - support both PostgreSQL arrays and encrypted JSON
     if (settings.tags) {
-      console.log('Processing tags from database (PostgreSQL array):', settings.tags);
+      console.log('Processing tags from database:', settings.tags);
       console.log('tags type:', typeof settings.tags);
-      // PostgreSQL arrays come back as arrays, no decryption needed
-      decrypted.tags = Array.isArray(settings.tags) ? settings.tags : [];
+      
+      if (Array.isArray(settings.tags)) {
+        // PostgreSQL array - no decryption needed
+        console.log('tags is PostgreSQL array, using as-is');
+        decrypted.tags = settings.tags;
+      } else if (typeof settings.tags === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('tags is encrypted JSON string, decrypting');
+        decrypted.tags = retrieveArrayFromStorage(settings.tags);
+      } else {
+        // Fallback
+        console.log('tags is unknown format, using empty array');
+        decrypted.tags = [];
+      }
       console.log('Processed tags:', decrypted.tags);
     }
     
+    // Handle floCatPersonality - support both PostgreSQL arrays and encrypted JSON
     if (settings.floCatPersonality) {
-      console.log('Processing floCatPersonality from database (PostgreSQL array):', settings.floCatPersonality);
+      console.log('Processing floCatPersonality from database:', settings.floCatPersonality);
       console.log('floCatPersonality type:', typeof settings.floCatPersonality);
-      // PostgreSQL arrays come back as arrays, no decryption needed
-      decrypted.floCatPersonality = Array.isArray(settings.floCatPersonality) ? settings.floCatPersonality : [];
+      
+      if (Array.isArray(settings.floCatPersonality)) {
+        // PostgreSQL array - no decryption needed
+        console.log('floCatPersonality is PostgreSQL array, using as-is');
+        decrypted.floCatPersonality = settings.floCatPersonality;
+      } else if (typeof settings.floCatPersonality === 'string') {
+        // Encrypted JSON string - needs decryption
+        console.log('floCatPersonality is encrypted JSON string, decrypting');
+        decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
+      } else {
+        // Fallback
+        console.log('floCatPersonality is unknown format, using empty array');
+        decrypted.floCatPersonality = [];
+      }
       console.log('Processed floCatPersonality:', decrypted.floCatPersonality);
     }
     
