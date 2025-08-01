@@ -438,6 +438,7 @@ export const migrateJSONBToEncrypted = (plainData: any): string => {
  * Utility to encrypt user settings fields
  */
 export const encryptUserSettingsFields = (settings: any) => {
+  console.log('encryptUserSettingsFields input:', settings);
   const encrypted = { ...settings };
   
   if (settings.preferredName) {
@@ -453,9 +454,12 @@ export const encryptUserSettingsFields = (settings: any) => {
   }
   
   if (settings.journalCustomActivities) {
+    console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
     encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
+    console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
   }
   
+  console.log('encryptUserSettingsFields output:', encrypted);
   return encrypted;
 };
 
@@ -463,6 +467,7 @@ export const encryptUserSettingsFields = (settings: any) => {
  * Utility to decrypt user settings fields
  */
 export const decryptUserSettingsFields = (settings: any) => {
+  console.log('decryptUserSettingsFields input:', settings);
   const decrypted = { ...settings };
   
   if (settings.preferredName) {
@@ -478,8 +483,11 @@ export const decryptUserSettingsFields = (settings: any) => {
   }
   
   if (settings.journalCustomActivities) {
+    console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
     decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
+    console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
   }
   
+  console.log('decryptUserSettingsFields output:', decrypted);
   return decrypted;
 };
