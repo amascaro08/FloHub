@@ -8,11 +8,19 @@ const IV_LENGTH = 16;  // 128 bits
 // Environment variable for encryption key
 const getEncryptionKey = (): Buffer => {
   const key = process.env.CONTENT_ENCRYPTION_KEY;
+  console.log('ContentSecurity: Checking encryption key...');
+  console.log('ContentSecurity: Key exists:', !!key);
+  console.log('ContentSecurity: Key length:', key?.length);
+  
   if (!key) {
+    console.error('ContentSecurity: CONTENT_ENCRYPTION_KEY environment variable is required');
     throw new Error('CONTENT_ENCRYPTION_KEY environment variable is required');
   }
+  
   // Derive a consistent key from the secret
-  return crypto.pbkdf2Sync(key, 'flohub-content-salt', 100000, KEY_LENGTH, 'sha256');
+  const derivedKey = crypto.pbkdf2Sync(key, 'flohub-content-salt', 100000, KEY_LENGTH, 'sha256');
+  console.log('ContentSecurity: Derived key length:', derivedKey.length);
+  return derivedKey;
 };
 
 interface EncryptedContent {
@@ -25,7 +33,10 @@ interface EncryptedContent {
  * Encrypt sensitive user content
  */
 export const encryptContent = (content: string): EncryptedContent => {
+  console.log('ContentSecurity: encryptContent input:', content);
+  
   if (!content || content.trim() === '') {
+    console.log('ContentSecurity: encryptContent - empty content, returning unencrypted');
     return {
       data: content,
       iv: '',
@@ -41,13 +52,16 @@ export const encryptContent = (content: string): EncryptedContent => {
     let encrypted = cipher.update(content, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
-    return {
+    const result = {
       data: encrypted,
       iv: iv.toString('hex'),
       isEncrypted: true
     };
+    
+    console.log('ContentSecurity: encryptContent - encrypted result:', result);
+    return result;
   } catch (error) {
-    console.error('Content encryption failed:', error);
+    console.error('ContentSecurity: Content encryption failed:', error);
     // Fallback to unencrypted if encryption fails
     return {
       data: content,
@@ -61,13 +75,17 @@ export const encryptContent = (content: string): EncryptedContent => {
  * Decrypt sensitive user content
  */
 export const decryptContent = (encryptedData: EncryptedContent | string): string => {
+  console.log('ContentSecurity: decryptContent input:', encryptedData);
+  
   // Handle legacy unencrypted content (backward compatibility)
   if (typeof encryptedData === 'string') {
+    console.log('ContentSecurity: decryptContent - string input, returning as-is');
     return encryptedData;
   }
 
   // Handle unencrypted content marked as such
   if (!encryptedData.isEncrypted || !encryptedData.data) {
+    console.log('ContentSecurity: decryptContent - unencrypted content, returning data');
     return encryptedData.data || '';
   }
 
@@ -79,9 +97,10 @@ export const decryptContent = (encryptedData: EncryptedContent | string): string
     let decrypted = decipher.update(encryptedData.data, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     
+    console.log('ContentSecurity: decryptContent - decrypted result:', decrypted);
     return decrypted;
   } catch (error) {
-    console.error('Content decryption failed:', error);
+    console.error('ContentSecurity: Content decryption failed:', error);
     // Return the raw data if decryption fails (might be corrupted or legacy format)
     return encryptedData.data || '';
   }
@@ -160,17 +179,28 @@ export const encryptJSONB = (data: any): EncryptedContent => {
  * Decrypt JSONB data
  */
 export const decryptJSONB = (encryptedData: EncryptedContent | any): any => {
+  console.log('ContentSecurity: decryptJSONB input:', encryptedData);
+  
   // Handle legacy unencrypted objects
   if (typeof encryptedData === 'object' && !encryptedData?.isEncrypted) {
+    console.log('ContentSecurity: decryptJSONB - unencrypted object, returning as-is');
     return encryptedData;
   }
 
   try {
     const decrypted = decryptContent(encryptedData as EncryptedContent);
-    if (!decrypted) return null;
-    return JSON.parse(decrypted);
+    console.log('ContentSecurity: decryptJSONB - decrypted content:', decrypted);
+    
+    if (!decrypted) {
+      console.log('ContentSecurity: decryptJSONB - no decrypted content, returning null');
+      return null;
+    }
+    
+    const parsed = JSON.parse(decrypted);
+    console.log('ContentSecurity: decryptJSONB - parsed result:', parsed);
+    return parsed;
   } catch (error) {
-    console.error('JSONB decryption failed:', error);
+    console.error('ContentSecurity: JSONB decryption failed:', error);
     return encryptedData;
   }
 };
@@ -234,10 +264,16 @@ export const safeDecryptArray = (content: any): string[] => {
  * Safely handle JSONB that might be encrypted or plain objects
  */
 export const safeDecryptJSONB = (content: any): any => {
+  console.log('safeDecryptJSONB input:', content);
+  console.log('isContentEncrypted:', isContentEncrypted(content));
+  
   if (isContentEncrypted(content)) {
-    return decryptJSONB(content);
+    const decrypted = decryptJSONB(content);
+    console.log('safeDecryptJSONB decrypted:', decrypted);
+    return decrypted;
   }
   
+  console.log('safeDecryptJSONB returning content as-is:', content);
   return content;
 };
 
@@ -306,22 +342,46 @@ export const retrieveArrayFromStorage = (storedArray: string): string[] => {
 /**
  * Retrieve JSONB from database storage
  */
-export const retrieveJSONBFromStorage = (storedData: string): any => {
+export const retrieveJSONBFromStorage = (storedData: string | any): any => {
+  console.log('retrieveJSONBFromStorage input:', storedData);
+  
   if (!storedData) {
+    console.log('retrieveJSONBFromStorage: no data, returning null');
     return null;
   }
   
-  try {
-    const parsed = JSON.parse(storedData);
-    return safeDecryptJSONB(parsed);
-  } catch {
-    // If parsing fails, treat as legacy plain object
+  // If it's already an object (from JSONB column), handle it directly
+  if (typeof storedData === 'object') {
+    console.log('retrieveJSONBFromStorage: object input, handling directly');
+    const result = safeDecryptJSONB(storedData);
+    console.log('retrieveJSONBFromStorage result:', result);
+    return result;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof storedData === 'string') {
     try {
-      return JSON.parse(storedData);
-    } catch {
-      return null;
+      const parsed = JSON.parse(storedData);
+      console.log('retrieveJSONBFromStorage parsed:', parsed);
+      const result = safeDecryptJSONB(parsed);
+      console.log('retrieveJSONBFromStorage result:', result);
+      return result;
+    } catch (error) {
+      console.log('retrieveJSONBFromStorage parse error:', error);
+      // If parsing fails, treat as legacy plain object
+      try {
+        const legacyResult = JSON.parse(storedData);
+        console.log('retrieveJSONBFromStorage legacy result:', legacyResult);
+        return legacyResult;
+      } catch (legacyError) {
+        console.log('retrieveJSONBFromStorage legacy parse error:', legacyError);
+        return null;
+      }
     }
   }
+  
+  console.log('retrieveJSONBFromStorage: unexpected type, returning null');
+  return null;
 };
 
 /**
@@ -422,6 +482,7 @@ export const migrateJSONBToEncrypted = (plainData: any): string => {
  * Utility to encrypt user settings fields
  */
 export const encryptUserSettingsFields = (settings: any) => {
+  console.log('encryptUserSettingsFields input:', settings);
   const encrypted = { ...settings };
   
   if (settings.preferredName) {
@@ -437,9 +498,12 @@ export const encryptUserSettingsFields = (settings: any) => {
   }
   
   if (settings.journalCustomActivities) {
+    console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
     encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
+    console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
   }
   
+  console.log('encryptUserSettingsFields output:', encrypted);
   return encrypted;
 };
 
@@ -447,6 +511,7 @@ export const encryptUserSettingsFields = (settings: any) => {
  * Utility to decrypt user settings fields
  */
 export const decryptUserSettingsFields = (settings: any) => {
+  console.log('decryptUserSettingsFields input:', settings);
   const decrypted = { ...settings };
   
   if (settings.preferredName) {
@@ -462,8 +527,12 @@ export const decryptUserSettingsFields = (settings: any) => {
   }
   
   if (settings.journalCustomActivities) {
+    console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
+    console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
     decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
+    console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
   }
   
+  console.log('decryptUserSettingsFields output:', decrypted);
   return decrypted;
 };
