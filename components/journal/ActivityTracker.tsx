@@ -268,6 +268,9 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Get custom activities from user settings
   const customActivities = userSettings?.journalCustomActivities || [];
   
+  console.log('ActivityTracker: userSettings:', userSettings);
+  console.log('ActivityTracker: customActivities:', customActivities);
+  
   // Get disabled activities from user settings
   const disabledActivities = userSettings?.journalDisabledActivities || [];
   
@@ -489,6 +492,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
           onClose={() => setShowQuickAddModal(false)}
           onActivityAdded={handleQuickAddActivity}
           userSettings={userSettings}
+          mutateUserSettings={mutateUserSettings}
         />
       )}
     </div>

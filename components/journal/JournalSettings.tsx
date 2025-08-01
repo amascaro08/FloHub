@@ -59,14 +59,18 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   const { user } = useUser();
 
   // Fetch user settings from database
-  const { data: userSettings, error: userSettingsError } = useSWR<UserSettings>(
+  const { data: userSettings, error: userSettingsError, mutate: mutateUserSettings } = useSWR<UserSettings>(
     user ? '/api/userSettings' : null,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
-    { revalidateOnFocus: false }
+    { 
+      revalidateOnFocus: false,
+      revalidateOnMount: true,
+      refreshInterval: 0
+    }
   );
 
   // Default activities that come with the app
@@ -130,6 +134,9 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   // Load settings from database when userSettings are loaded
   useEffect(() => {
     if (userSettings && user?.primaryEmail) {
+      console.log('JournalSettings: Loading userSettings:', userSettings);
+      console.log('JournalSettings: Custom activities:', userSettings.journalCustomActivities);
+      
       setSettings({
         reminderEnabled: userSettings.journalReminderEnabled || false,
         reminderTime: userSettings.journalReminderTime || '20:00',
@@ -262,8 +269,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   };
 
   // Add a new custom activity
-  const handleAddActivity = () => {
-    if (!newActivityName.trim()) return;
+  const handleAddActivity = async () => {
+    if (!newActivityName.trim() || !user?.primaryEmail) return;
     
     const newActivity: CustomActivity = {
       name: newActivityName.trim(),
@@ -273,25 +280,81 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     // Check if activity already exists
     const allActivities = [...defaultActivities, ...settings.customActivities];
     if (allActivities.some(activity => activity.name.toLowerCase() === newActivity.name.toLowerCase())) {
+      alert('This activity already exists!');
       return; // Activity already exists
     }
     
-    setSettings({
-      ...settings,
-      customActivities: [...settings.customActivities, newActivity]
-    });
-    
-    setNewActivityName('');
-    setNewActivityIcon('📌');
-    setShowActivityForm(false);
+    try {
+      // Update user settings with new activity
+      const updatedActivities = [...settings.customActivities, newActivity];
+      
+      const response = await fetch('/api/userSettings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          journalCustomActivities: updatedActivities
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setSettings({
+          ...settings,
+          customActivities: updatedActivities
+        });
+        
+        // Force revalidate the cache
+        await mutateUserSettings();
+        
+        setNewActivityName('');
+        setNewActivityIcon('📌');
+        setShowActivityForm(false);
+      } else {
+        console.error('Failed to save custom activity');
+        alert('Failed to save custom activity. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving custom activity:', error);
+      alert('Error saving custom activity. Please try again.');
+    }
   };
 
   // Remove a custom activity
-  const handleRemoveActivity = (activityName: string) => {
-    setSettings({
-      ...settings,
-      customActivities: settings.customActivities.filter(activity => activity.name !== activityName)
-    });
+  const handleRemoveActivity = async (activityName: string) => {
+    if (!user?.primaryEmail) return;
+    
+    try {
+      const updatedActivities = settings.customActivities.filter(activity => activity.name !== activityName);
+      
+      const response = await fetch('/api/userSettings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          journalCustomActivities: updatedActivities
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setSettings({
+          ...settings,
+          customActivities: updatedActivities
+        });
+        
+        // Force revalidate the cache
+        await mutateUserSettings();
+      } else {
+        console.error('Failed to remove custom activity');
+        alert('Failed to remove custom activity. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error removing custom activity:', error);
+      alert('Error removing custom activity. Please try again.');
+    }
   };
 
   // Remove/Hide a default activity (by adding it to a disabled list)
