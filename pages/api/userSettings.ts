@@ -250,6 +250,21 @@ export default async function handler(
       // Decrypt the result for the response
       const decryptedResult = decryptUserSettingsFields(result);
 
+      // Ensure arrays are properly handled with backwards compatibility
+      const ensureArray = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
       // Handle array fields with backwards compatibility
       const processArrayField = (value: any, fieldName: string): string[] => {
         console.log(`Processing ${fieldName}:`, value);
