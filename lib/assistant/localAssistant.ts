@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { eq, and, gte, lte, desc, sql, count, like, or } from "drizzle-orm";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { retrieveContentFromStorage, retrieveArrayFromStorage, retrieveJSONBFromStorage } from "@/lib/contentSecurity";
 
 interface LocalAssistantContext {
   userId: string;
@@ -66,6 +67,10 @@ export class LocalAssistant {
           return await this.handleTaskQuery(query, intent);
         case 'note':
           return await this.handleNoteQuery(query, intent);
+        case 'journal':
+          return await this.handleJournalQuery(query, intent);
+        case 'meeting':
+          return await this.handleMeetingQuery(query, intent);
         case 'habit':
           return await this.handleHabitQuery(query, intent);
         case 'productivity':
@@ -258,6 +263,22 @@ export class LocalAssistant {
       }
     }
 
+    // Journal queries
+    else if (lowerQuery.includes('journal') || lowerQuery.includes('insight') || 
+             lowerQuery.includes('mood') || lowerQuery.includes('entry')) {
+      intent.type = 'journal';
+      intent.confidence = 0.8;
+    }
+
+    // Meeting queries (specific to meeting notes)
+    else if (lowerQuery.includes('meeting') && (lowerQuery.includes('talk') || 
+             lowerQuery.includes('discuss') || lowerQuery.includes('last') || 
+             lowerQuery.includes('what'))) {
+      intent.type = 'meeting';
+      intent.confidence = 0.9;
+      intent.entities.topic = this.extractMeetingSearchTerms(query);
+    }
+
     // Habit queries
     else if (lowerQuery.includes('habit') || lowerQuery.includes('streak') || 
              lowerQuery.includes('routine')) {
@@ -416,6 +437,38 @@ export class LocalAssistant {
       return "You have no upcoming events scheduled.";
     }
 
+    // If user is asking specifically about meetings, filter for meetings
+    if (lowerQuery.includes('meeting') || lowerQuery.includes('next meeting')) {
+      const meetingEvents = upcomingEvents.filter(event => {
+        const eventText = `${event.summary || ''} ${event.description || ''}`.toLowerCase();
+        return eventText.includes('meeting') || eventText.includes('call') || eventText.includes('standup');
+      });
+
+      if (meetingEvents.length === 0) {
+        return "You have no upcoming meetings scheduled.";
+      }
+
+      if (meetingEvents.length === 1) {
+        const event = meetingEvents[0];
+        const eventDate = new Date(event.start || event.date);
+        const dayName = formatInTimeZone(eventDate, this.getUserTimezone(), 'eeee');
+        const dateStr = formatInTimeZone(eventDate, this.getUserTimezone(), 'MMM d');
+        const time = formatInTimeZone(eventDate, this.getUserTimezone(), 'h:mm a');
+        
+        return `📅 **Your Next Meeting**:\n\n**${event.summary}**\n📅 ${dayName}, ${dateStr} at ${time}${event.location ? `\n📍 ${event.location}` : ''}`;
+      } else {
+        let response = `📅 **Your Upcoming Meetings** (${meetingEvents.length}):\n\n`;
+        meetingEvents.forEach((event, index) => {
+          const eventDate = new Date(event.start || event.date);
+          const dayName = formatInTimeZone(eventDate, this.getUserTimezone(), 'eeee');
+          const dateStr = formatInTimeZone(eventDate, this.getUserTimezone(), 'MMM d');
+          const time = formatInTimeZone(eventDate, this.getUserTimezone(), 'h:mm a');
+          response += `${index + 1}. **${event.summary}** - ${dayName}, ${dateStr} at ${time}${event.location ? ` (${event.location})` : ''}\n`;
+        });
+        return response;
+      }
+    }
+
     const eventList = upcomingEvents.map(event => {
       const eventDate = new Date(event.start || event.date);
       const dayName = formatInTimeZone(eventDate, this.getUserTimezone(), 'eeee');
@@ -500,7 +553,7 @@ export class LocalAssistant {
       }
     }
 
-    // Show recent notes
+    // Show recent notes with decryption
     const recentNotes = this.context!.notes.slice(0, 5);
     if (recentNotes.length === 0) {
       return "You don't have any notes yet.";
@@ -509,10 +562,151 @@ export class LocalAssistant {
     const noteList = recentNotes.map(note => {
       const created = new Date(note.createdAt);
       const timeAgo = this.formatTimeAgo(created);
-      return `• **${note.title}** (${timeAgo})`;
+      
+      // Decrypt note content
+      let decryptedTitle = note.title;
+      let decryptedContent = note.content;
+      
+      try {
+        if (note.title && typeof note.title === 'object' && note.title.isEncrypted) {
+          decryptedTitle = retrieveContentFromStorage(note.title);
+        }
+        if (note.content && typeof note.content === 'object' && note.content.isEncrypted) {
+          decryptedContent = retrieveContentFromStorage(note.content);
+        }
+      } catch (error) {
+        console.error('Error decrypting note:', error);
+      }
+      
+      return `• **${decryptedTitle}** (${timeAgo})`;
     }).join('\n');
 
     return `📝 **Your Recent Notes**:\n\n${noteList}`;
+  }
+
+  private async handleJournalQuery(query: string, intent: QueryIntent): Promise<string> {
+    const journalEntries = this.context!.journalEntries;
+    const journalMoods = this.context!.journalMoods;
+
+    if (journalEntries.length === 0 && journalMoods.length === 0) {
+      return "You don't have any journal entries yet. Start journaling to get insights about your mood and activities!";
+    }
+
+    let response = "📔 **Your Journal Insights**:\n\n";
+
+    // Show recent journal entries
+    if (journalEntries.length > 0) {
+      const recentEntries = journalEntries.slice(0, 3);
+      response += "📝 **Recent Entries**:\n";
+      recentEntries.forEach(entry => {
+        const created = new Date(entry.createdAt);
+        const timeAgo = this.formatTimeAgo(created);
+        
+        // Decrypt entry content
+        let decryptedContent = entry.content;
+        try {
+          if (entry.content && typeof entry.content === 'object' && entry.content.isEncrypted) {
+            decryptedContent = retrieveContentFromStorage(entry.content);
+          }
+        } catch (error) {
+          console.error('Error decrypting journal entry:', error);
+        }
+        
+        response += `• ${timeAgo}: ${decryptedContent.substring(0, 100)}${decryptedContent.length > 100 ? '...' : ''}\n`;
+      });
+      response += '\n';
+    }
+
+    // Show mood insights
+    if (journalMoods.length > 0) {
+      const recentMoods = journalMoods.slice(0, 7);
+      const moodCounts: { [mood: string]: number } = {};
+      
+      recentMoods.forEach(mood => {
+        let decryptedMood = mood.mood;
+        try {
+          if (mood.mood && typeof mood.mood === 'object' && mood.mood.isEncrypted) {
+            decryptedMood = retrieveContentFromStorage(mood.mood);
+          }
+        } catch (error) {
+          console.error('Error decrypting mood:', error);
+        }
+        
+        moodCounts[decryptedMood] = (moodCounts[decryptedMood] || 0) + 1;
+      });
+
+      const mostCommonMood = Object.entries(moodCounts)
+        .sort(([,a], [,b]) => b - a)[0];
+
+      if (mostCommonMood) {
+        response += `😊 **Mood Trend**: Your most common mood recently has been "${mostCommonMood[0]}" (${mostCommonMood[1]} times)\n\n`;
+      }
+    }
+
+    response += "💡 **Tip**: Regular journaling helps track patterns in your mood and productivity!";
+
+    return response;
+  }
+
+  private async handleMeetingQuery(query: string, intent: QueryIntent): Promise<string> {
+    // Look for meeting notes specifically
+    const meetingNotes = this.context!.notes.filter(note => 
+      note.eventId || note.isAdhoc || 
+      (note.title && note.title.toLowerCase().includes('meeting'))
+    );
+
+    if (meetingNotes.length === 0) {
+      return "You don't have any meeting notes yet. Start taking notes during meetings to track what was discussed!";
+    }
+
+    // Sort by creation date (most recent first)
+    const sortedNotes = meetingNotes.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const lastMeeting = sortedNotes[0];
+    const created = new Date(lastMeeting.createdAt);
+    const timeAgo = this.formatTimeAgo(created);
+
+    // Decrypt meeting content
+    let decryptedTitle = lastMeeting.title;
+    let decryptedContent = lastMeeting.content;
+    
+    try {
+      if (lastMeeting.title && typeof lastMeeting.title === 'object' && lastMeeting.title.isEncrypted) {
+        decryptedTitle = retrieveContentFromStorage(lastMeeting.title);
+      }
+      if (lastMeeting.content && typeof lastMeeting.content === 'object' && lastMeeting.content.isEncrypted) {
+        decryptedContent = retrieveContentFromStorage(lastMeeting.content);
+      }
+    } catch (error) {
+      console.error('Error decrypting meeting note:', error);
+    }
+
+    let response = `📅 **Your Last Meeting** (${timeAgo}):\n\n`;
+    response += `**${decryptedTitle}**\n\n`;
+    
+    // Show content summary
+    if (decryptedContent && decryptedContent.length > 0) {
+      const summary = decryptedContent.length > 300 
+        ? decryptedContent.substring(0, 300) + '...' 
+        : decryptedContent;
+      response += `**Discussion**: ${summary}\n\n`;
+    }
+
+    // Show actions if available
+    if (lastMeeting.actions && Array.isArray(lastMeeting.actions)) {
+      const actions = lastMeeting.actions;
+      if (actions.length > 0) {
+        response += `**Actions**:\n`;
+        actions.forEach((action: any, index: number) => {
+          response += `${index + 1}. ${action.text || action}\n`;
+        });
+        response += '\n';
+      }
+    }
+
+    return response;
   }
 
   private async handleHabitQuery(query: string, intent: QueryIntent): Promise<string> {
@@ -631,14 +825,32 @@ export class LocalAssistant {
     const keywords = searchTerms.toLowerCase().split(' ').filter(word => word.length > 2);
     console.log('Search keywords:', keywords);
     
-    // Search across all data types
+    // Search across all data types with decryption
     const matchingTasks = this.context!.tasks.filter(task => {
       const taskText = task.text.toLowerCase();
       return keywords.some(keyword => taskText.includes(keyword));
     });
 
     const matchingNotes = this.context!.notes.filter(note => {
-      const noteText = `${note.title} ${note.content}`.toLowerCase();
+      let noteText = '';
+      try {
+        // Decrypt note content for search
+        let decryptedTitle = note.title;
+        let decryptedContent = note.content;
+        
+        if (note.title && typeof note.title === 'object' && note.title.isEncrypted) {
+          decryptedTitle = retrieveContentFromStorage(note.title);
+        }
+        if (note.content && typeof note.content === 'object' && note.content.isEncrypted) {
+          decryptedContent = retrieveContentFromStorage(note.content);
+        }
+        
+        noteText = `${decryptedTitle} ${decryptedContent}`.toLowerCase();
+      } catch (error) {
+        console.error('Error decrypting note for search:', error);
+        noteText = `${note.title} ${note.content}`.toLowerCase();
+      }
+      
       return keywords.some(keyword => noteText.includes(keyword));
     });
 
@@ -680,7 +892,18 @@ export class LocalAssistant {
       response += `📝 **Notes** (${matchingNotes.length}):\n`;
       matchingNotes.slice(0, 3).forEach(note => {
         const timeAgo = this.formatTimeAgo(new Date(note.createdAt));
-        response += `• "${note.title}" (${timeAgo})\n`;
+        
+        // Decrypt note title for display
+        let decryptedTitle = note.title;
+        try {
+          if (note.title && typeof note.title === 'object' && note.title.isEncrypted) {
+            decryptedTitle = retrieveContentFromStorage(note.title);
+          }
+        } catch (error) {
+          console.error('Error decrypting note title:', error);
+        }
+        
+        response += `• "${decryptedTitle}" (${timeAgo})\n`;
       });
       response += '\n';
     }
@@ -829,6 +1052,26 @@ Try asking me something specific about your tasks, notes, meetings, or habits!`;
     const fallback = query.replace(/^(when did i|last time i|find|search|show me|talk about|discuss|mention)\s*/i, '').trim();
     console.log('Fallback search terms extraction:', fallback);
     return fallback;
+  }
+
+  private extractMeetingSearchTerms(query: string): string {
+    const patterns = [
+      /(?:what did i|what was|what did we)\s+(?:talk about|discuss|mention)\s+(?:in my|in the|in our)\s+(?:last|recent|latest)\s+(?:meeting|call)/i,
+      /(?:what did i|what was|what did we)\s+(?:talk about|discuss|mention)\s+(?:in my|in the|our)\s+(?:meeting|call)/i,
+      /(?:my|the|our)\s+(?:last|recent|latest)\s+(?:meeting|call)\s+(?:was about|discussed|talked about)\s+(.+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match && match[1]) {
+        const extracted = match[1].trim();
+        console.log('Extracted meeting search terms from pattern:', pattern, 'Result:', extracted);
+        return extracted;
+      }
+    }
+    
+    // If no specific pattern matches, return empty to indicate general meeting query
+    return '';
   }
 
   private getUserTimezone(): string {
