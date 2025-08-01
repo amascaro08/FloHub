@@ -581,7 +581,6 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const isCompactLayout = isCompact || size === 'small';
   const showFloCatHeader = !isCompactLayout;
   const showSuggestions = !isCompactLayout;
-  const showNextMeeting = !isCompactLayout;
 
   return (
     <div className={`h-full flex flex-col ${isCompactLayout ? 'space-y-2' : 'space-y-4'}`}>
@@ -627,7 +626,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
           {/* Quick Stats - Only show cards with data */}
           <div className={`grid gap-3 ${
             isWideLayout 
-              ? 'grid-cols-2' 
+              ? 'grid-cols-3' 
               : isCompactLayout 
                 ? 'grid-cols-2' 
                 : 'grid-cols-3'
@@ -672,8 +671,8 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
             )}
           </div>
 
-          {/* Next Meeting - Only show in non-compact layouts */}
-          {showNextMeeting && data?.events?.next && (
+          {/* Next Meeting - Show in all layouts except when no next meeting */}
+          {data?.events?.next && (
             <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-xl">
@@ -704,10 +703,10 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
             {data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0 ? (
               <div className={`grid gap-2 ${
                 isWideLayout 
-                  ? 'grid-cols-1' 
+                  ? 'grid-cols-2' 
                   : 'grid-cols-1 md:grid-cols-2'
               }`}>
-                {data.suggestions.slice(0, isWideLayout ? 6 : 4).map((suggestion: SmartInsight, index: number) => (
+                {data.suggestions.slice(0, isWideLayout ? 4 : 4).map((suggestion: SmartInsight, index: number) => (
                   <div
                     key={index}
                     className={`p-3 rounded-xl border ${
