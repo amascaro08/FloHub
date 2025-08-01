@@ -98,6 +98,10 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
                       minHeight: '40px',
                       fontSize: '0.875rem',
                     }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 9999,
+                    }),
                     multiValue: (base) => ({
                       ...base,
                       backgroundColor: 'rgb(240 253 250)',
@@ -168,7 +172,7 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
 
       {/* Rich Text Editor */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full">
+        <div className="h-full flex flex-col">
           <RichTextEditor
             content={content}
             onChange={setContent}

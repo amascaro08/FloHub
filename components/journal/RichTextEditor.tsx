@@ -562,15 +562,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       
       {/* Editor Content */}
       <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative">
-        <EditorContent 
-          editor={editor} 
-          className="prose-editor"
-        />
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          <EditorContent 
+            editor={editor} 
+            className="prose-editor"
+          />
+        </div>
         
         {/* Slash Command Menu */}
         {showSlashMenu && (
           <div 
-            className="fixed z-[999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
+            className="fixed z-[9999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl py-2 min-w-[280px] max-h-[300px] overflow-y-auto"
             style={{
               left: Math.max(10, slashMenuPosition.x),
               top: Math.max(10, slashMenuPosition.y),
@@ -615,10 +617,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <style jsx global>{`
         .prose-editor .ProseMirror {
           min-height: 300px;
+          max-height: none;
           outline: none;
           padding: 1.5rem;
           color: rgb(51 65 85);
           line-height: 1.7;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+          height: auto;
         }
         
         .dark .prose-editor .ProseMirror {
@@ -916,6 +923,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .prose-editor .ProseMirror ul[data-type="taskList"],
         .prose-editor .ProseMirror ol,
         .prose-editor .ProseMirror ul {
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Enhanced scrolling for the entire editor */
+        .prose-editor {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+        
+        .prose-editor .ProseMirror {
           touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
         }
