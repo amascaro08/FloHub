@@ -53,7 +53,6 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   const [newActivityName, setNewActivityName] = useState<string>('');
   const [newActivityIcon, setNewActivityIcon] = useState<string>('📌');
   const [showActivityForm, setShowActivityForm] = useState<boolean>(false);
-  const [emojiSearchQuery, setEmojiSearchQuery] = useState<string>('');
   const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('Activities');
   
   const { user } = useUser();
@@ -62,9 +61,12 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   const { data: userSettings, error: userSettingsError, mutate: mutateUserSettings } = useSWR<UserSettings>(
     user ? '/api/userSettings' : null,
     async (url) => {
+      console.log('JournalSettings: Fetching user settings...');
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
+      const data = await res.json();
+      console.log('JournalSettings: Received user settings:', data);
+      return data;
     },
     { 
       revalidateOnFocus: false,
@@ -116,9 +118,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     "Symbols & Misc": ['⭐', '🌟', '✨', '⚡', '💫', '🔥', '💎', '💍', '📌', '📍', '🔖', '📎', '📐', '📏', '✂️', '🗂️', '📁', '📂', '🗄️', '🗑️', '🎯', '🎪', '🎭', '🎨']
   };
 
-  // Flatten all emojis for search
-  const allEmojis = Object.values(emojiLibrary).flat();
-  const emojiOptions = allEmojis;
+
 
   if (!user) {
     return (
@@ -831,23 +831,9 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
                               </select>
                             </div>
 
-                            {/* Search */}
-                            <div className="mb-3">
-                              <input
-                                type="text"
-                                value={emojiSearchQuery}
-                                onChange={(e) => setEmojiSearchQuery(e.target.value)}
-                                placeholder="Search emojis..."
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
-                              />
-                            </div>
-
                             {/* Emoji Grid */}
                             <div className="grid grid-cols-8 gap-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3">
-                              {(emojiSearchQuery 
-                                ? allEmojis.filter(emoji => emoji.includes(emojiSearchQuery))
-                                : emojiLibrary[selectedEmojiCategory as keyof typeof emojiLibrary] || []
-                              ).map((emoji, index) => (
+                              {(emojiLibrary[selectedEmojiCategory as keyof typeof emojiLibrary] || []).map((emoji, index) => (
                                 <button
                                   key={index}
                                   onClick={() => setNewActivityIcon(emoji)}

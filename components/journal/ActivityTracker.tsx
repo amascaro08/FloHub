@@ -37,21 +37,17 @@ const emojiLibrary = {
   "Symbols & Misc": ['⭐', '🌟', '✨', '⚡', '💫', '🔥', '💎', '💍', '📌', '📍', '🔖', '📎', '📐', '📏', '✂️', '🗂️', '📁', '📂', '🗄️', '🗑️', '🎯', '🎪', '🎭', '🎨']
 };
 
-// Flatten all emojis for search
-const allEmojis = Object.values(emojiLibrary).flat();
+
 
 const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded, userSettings, mutateUserSettings }) => {
   const [activityName, setActivityName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('📌');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Activities');
   const { user } = useUser();
 
-  // Filter emojis based on search query
-  const filteredEmojis = searchQuery 
-    ? allEmojis.filter(emoji => emoji.includes(searchQuery) || emoji.includes(searchQuery.toLowerCase()))
-    : emojiLibrary[selectedCategory as keyof typeof emojiLibrary] || [];
+  // Get emojis for selected category
+  const categoryEmojis = emojiLibrary[selectedCategory as keyof typeof emojiLibrary] || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,20 +158,9 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
               </select>
             </div>
 
-            {/* Search */}
-            <div className="mb-3">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search emojis..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-
             {/* Emoji Grid */}
             <div className="grid grid-cols-8 gap-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3">
-              {filteredEmojis.map((emoji, index) => (
+              {categoryEmojis.map((emoji, index) => (
                 <button
                   key={index}
                   type="button"
@@ -222,9 +207,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   const { data: userSettings, mutate: mutateUserSettings } = useSWR(
     user ? '/api/userSettings' : null,
     async (url) => {
+      console.log('ActivityTracker: Fetching user settings...');
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
+      const data = await res.json();
+      console.log('ActivityTracker: Received user settings:', data);
+      return data;
     },
     { 
       revalidateOnFocus: false,

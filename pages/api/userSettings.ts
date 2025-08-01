@@ -106,10 +106,12 @@ export default async function handler(
       console.log("selectedCals type:", typeof data.selectedCals);
       
       // Decrypt sensitive fields
+      console.log("=== GET REQUEST DEBUG ===");
+      console.log("Raw data from DB:", JSON.stringify(data, null, 2));
       const decryptedData = decryptUserSettingsFields(data);
       console.log("Raw journalCustomActivities from DB:", data.journalCustomActivities);
       console.log("Decrypted journalCustomActivities:", decryptedData.journalCustomActivities);
-      console.log("Full decrypted data:", decryptedData);
+      console.log("Full decrypted data:", JSON.stringify(decryptedData, null, 2));
       
       const settings: UserSettings = {
         selectedCals: (decryptedData.selectedCals as string[]) || [], // Ensure it's an array
@@ -169,7 +171,10 @@ export default async function handler(
       });
 
       // Encrypt sensitive fields before saving
+      console.log("=== PUT/PATCH REQUEST DEBUG ===");
+      console.log("Updates received:", JSON.stringify(updates, null, 2));
       const encryptedUpdates = encryptUserSettingsFields(updates);
+      console.log("Encrypted updates:", JSON.stringify(encryptedUpdates, null, 2));
 
       // Prepare updates with proper timezone handling
       const preparedUpdates = {
