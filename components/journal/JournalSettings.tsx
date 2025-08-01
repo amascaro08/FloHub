@@ -53,6 +53,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   const [newActivityName, setNewActivityName] = useState<string>('');
   const [newActivityIcon, setNewActivityIcon] = useState<string>('📌');
   const [showActivityForm, setShowActivityForm] = useState<boolean>(false);
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState<string>('');
+  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('Activities');
   
   const { user } = useUser();
 
@@ -91,8 +93,28 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
     { name: 'Writing', icon: '✍️' }
   ];
 
-  // Common emoji options for custom activities
-  const emojiOptions = ['📌', '🎯', '⭐', '💡', '🚀', '🎨', '🔥', '💎', '🌟', '⚡', '🎪', '🎭', '🎸', '🎲', '🎊', '🎁', '🌈', '☀️', '🌙', '⭕', '💫', '🔮', '🎈', '🎀'];
+  // Comprehensive emoji library with categories
+  const emojiLibrary = {
+    "Activities": ['🏃', '🚶', '🏋️', '🧘', '🏊', '🚴', '⛷️', '🏂', '🏄', '🎯', '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🏑', '🎮', '🎲'],
+    "Work & Study": ['💼', '👔', '👨‍💼', '👩‍💼', '💻', '🖥️', '📱', '📞', '📧', '📨', '📩', '📬', '📊', '📈', '📉', '📋', '📑', '📄', '📃', '📜', '📋', '📁', '📂', '🗂️'],
+    "Food & Drink": ['🍳', '🍽️', '🍴', '🥄', '🥢', '🥣', '🥡', '🥧', '🧁', '🎂', '🍰', '🍪', '🍕', '🍔', '🌭', '🌮', '🌯', '🥙', '🥪', '🥨', '🥯', '🥖', '🥐', '🥞'],
+    "Social & Family": ['👥', '👨‍👩‍👧‍👦', '👨‍👩‍👦‍👦', '👨‍👩‍👧‍👧', '👨‍👩‍👦', '👨‍👩‍👧', '👨‍👦', '👨‍👧', '👩‍👦', '👩‍👧', '💑', '💏', '👫', '👬', '👭', '👯‍♀️', '👯‍♂️'],
+    "Travel & Transport": ['✈️', '🚁', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚋', '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘'],
+    "Nature & Outdoors": ['🌳', '🌲', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🌺', '🌸', '🌼', '🌻', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘'],
+    "Health & Wellness": ['😴', '💤', '😪', '😵', '😵‍💫', '🥴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '😇', '🥳', '😎', '🤩', '🥺', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵'],
+    "Hobbies & Creative": ['🎨', '🖼️', '🎭', '🎪', '🎟️', '🎫', '🎬', '🎤', '🎧', '🎼', '🎹', '🎸', '🎻', '🎺', '🎷', '🪗', '🪕', '🎺', '🎻', '🎼', '🎵', '🎶', '🎤', '🎧'],
+    "Shopping & Commerce": ['🛒', '🛍️', '🛏️', '🛋️', '🪑', '🪞', '🪟', '🛁', '🛀', '🧼', '🫧', '🪒', '🧽', '🪣', '🧴', '🫙', '🧂', '🫗', '🫖', '🫕', '🫔', '🫓', '🫒', '🫑'],
+    "Home & Life": ['🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '⛪', '🕌', '🛕'],
+    "Technology": ['💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📺', '📻', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋'],
+    "Sports & Games": ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🏑', '🏒', '🏓', '🏸', '🏊', '🏊‍♀️', '🏊‍♂️', '🚣', '🚣‍♀️', '🚣‍♂️'],
+    "Emotions & Expressions": ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜'],
+    "Objects & Tools": ['🔧', '🔨', '🔩', '⚙️', '🔗', '⛓️', '🔪', '🗡️', '⚔️', '🛡️', '🔫', '🏹', '🪃', '🪄', '🪅', '🪆', '🪇', '🪈', '🪉', '🪊', '🪋', '🪌', '🪍', '🪎'],
+    "Symbols & Misc": ['⭐', '🌟', '✨', '⚡', '💫', '🔥', '💎', '💍', '📌', '📍', '🔖', '📎', '📐', '📏', '✂️', '🗂️', '📁', '📂', '🗄️', '🗑️', '🎯', '🎪', '🎭', '🎨']
+  };
+
+  // Flatten all emojis for search
+  const allEmojis = Object.values(emojiLibrary).flat();
+  const emojiOptions = allEmojis;
 
   if (!user) {
     return (
@@ -733,10 +755,38 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
                             {newActivityIcon}
                           </div>
                           <div className="flex-1">
-                            <div className="grid grid-cols-8 gap-2">
-                              {emojiOptions.map((emoji) => (
+                            {/* Category Selector */}
+                            <div className="mb-3">
+                              <select
+                                value={selectedEmojiCategory}
+                                onChange={(e) => setSelectedEmojiCategory(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
+                              >
+                                {Object.keys(emojiLibrary).map(category => (
+                                  <option key={category} value={category}>{category}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Search */}
+                            <div className="mb-3">
+                              <input
+                                type="text"
+                                value={emojiSearchQuery}
+                                onChange={(e) => setEmojiSearchQuery(e.target.value)}
+                                placeholder="Search emojis..."
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
+                              />
+                            </div>
+
+                            {/* Emoji Grid */}
+                            <div className="grid grid-cols-8 gap-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                              {(emojiSearchQuery 
+                                ? allEmojis.filter(emoji => emoji.includes(emojiSearchQuery))
+                                : emojiLibrary[selectedEmojiCategory as keyof typeof emojiLibrary] || []
+                              ).map((emoji, index) => (
                                 <button
-                                  key={emoji}
+                                  key={index}
                                   onClick={() => setNewActivityIcon(emoji)}
                                   className={`p-2 rounded-lg text-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors ${
                                     newActivityIcon === emoji ? 'bg-teal-100 dark:bg-teal-900/30 ring-2 ring-teal-500' : ''
