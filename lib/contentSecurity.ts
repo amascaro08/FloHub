@@ -342,7 +342,7 @@ export const retrieveArrayFromStorage = (storedArray: string): string[] => {
 /**
  * Retrieve JSONB from database storage
  */
-export const retrieveJSONBFromStorage = (storedData: string): any => {
+export const retrieveJSONBFromStorage = (storedData: string | any): any => {
   console.log('retrieveJSONBFromStorage input:', storedData);
   
   if (!storedData) {
@@ -350,24 +350,38 @@ export const retrieveJSONBFromStorage = (storedData: string): any => {
     return null;
   }
   
-  try {
-    const parsed = JSON.parse(storedData);
-    console.log('retrieveJSONBFromStorage parsed:', parsed);
-    const result = safeDecryptJSONB(parsed);
+  // If it's already an object (from JSONB column), handle it directly
+  if (typeof storedData === 'object') {
+    console.log('retrieveJSONBFromStorage: object input, handling directly');
+    const result = safeDecryptJSONB(storedData);
     console.log('retrieveJSONBFromStorage result:', result);
     return result;
-  } catch (error) {
-    console.log('retrieveJSONBFromStorage parse error:', error);
-    // If parsing fails, treat as legacy plain object
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof storedData === 'string') {
     try {
-      const legacyResult = JSON.parse(storedData);
-      console.log('retrieveJSONBFromStorage legacy result:', legacyResult);
-      return legacyResult;
-    } catch (legacyError) {
-      console.log('retrieveJSONBFromStorage legacy parse error:', legacyError);
-      return null;
+      const parsed = JSON.parse(storedData);
+      console.log('retrieveJSONBFromStorage parsed:', parsed);
+      const result = safeDecryptJSONB(parsed);
+      console.log('retrieveJSONBFromStorage result:', result);
+      return result;
+    } catch (error) {
+      console.log('retrieveJSONBFromStorage parse error:', error);
+      // If parsing fails, treat as legacy plain object
+      try {
+        const legacyResult = JSON.parse(storedData);
+        console.log('retrieveJSONBFromStorage legacy result:', legacyResult);
+        return legacyResult;
+      } catch (legacyError) {
+        console.log('retrieveJSONBFromStorage legacy parse error:', legacyError);
+        return null;
+      }
     }
   }
+  
+  console.log('retrieveJSONBFromStorage: unexpected type, returning null');
+  return null;
 };
 
 /**
@@ -514,6 +528,7 @@ export const decryptUserSettingsFields = (settings: any) => {
   
   if (settings.journalCustomActivities) {
     console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
+    console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
     decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
     console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
   }
