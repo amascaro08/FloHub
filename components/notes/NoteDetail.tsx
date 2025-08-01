@@ -10,6 +10,7 @@ import {
   TrashIcon, 
   CheckIcon 
 } from '@heroicons/react/24/solid';
+import { createPortal } from 'react-dom';
 
 type NoteDetailProps = {
   note: Note;
@@ -55,7 +56,7 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative z-10">
       {/* Header */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-700/50 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm">
         <div className="p-6">
@@ -90,6 +91,7 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
                   placeholder="Add tags..."
                   classNamePrefix="react-select"
                   className="text-sm"
+                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                   styles={{
                     control: (base) => ({
                       ...base,
@@ -100,7 +102,12 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
                     }),
                     menu: (base) => ({
                       ...base,
-                      zIndex: 9999,
+                      zIndex: 99999,
+                      position: 'absolute',
+                    }),
+                    menuPortal: (base) => ({
+                      ...base,
+                      zIndex: 99999,
                     }),
                     multiValue: (base) => ({
                       ...base,
@@ -171,7 +178,7 @@ export default function NoteDetail({ note, onSave, onDelete, isSaving, existingT
       </div>
 
       {/* Rich Text Editor */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         <div className="h-full flex flex-col">
           <RichTextEditor
             content={content}

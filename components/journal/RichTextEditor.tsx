@@ -281,9 +281,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }
 
   return (
-    <div className="rich-text-editor w-full relative">
-      {/* Toolbar */}
-      <div className="toolbar bg-white dark:bg-slate-800 rounded-t-xl p-3 flex flex-wrap gap-1 border border-slate-200 dark:border-slate-600 border-b-0">
+    <div className="rich-text-editor w-full relative h-full flex flex-col">
+              {/* Toolbar */}
+        <div className="toolbar bg-white dark:bg-slate-800 rounded-t-xl p-3 flex flex-wrap gap-1 border border-slate-200 dark:border-slate-600 border-b-0 flex-shrink-0">
         {/* Text formatting */}
         <div className="flex items-center space-x-1">
           <button
@@ -561,11 +561,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       {/* Editor Content */}
-      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative">
+      <div className="border border-slate-200 dark:border-slate-600 border-t-0 rounded-b-xl bg-white dark:bg-slate-800 overflow-hidden relative flex-1 min-h-0 max-h-full">
         <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
           <EditorContent 
             editor={editor} 
-            className="prose-editor"
+            className="prose-editor h-full"
           />
         </div>
         
@@ -615,9 +615,23 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       <style jsx global>{`
+        .prose-editor {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        
+        .rich-text-editor {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        
         .prose-editor .ProseMirror {
           min-height: 300px;
-          max-height: none;
+          max-height: 100%;
           outline: none;
           padding: 1.5rem;
           color: rgb(51 65 85);
@@ -626,6 +640,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           word-wrap: break-word;
           word-break: break-word;
           height: auto;
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        
+        .prose-editor .ProseMirror:focus {
+          outline: none;
         }
         
         .dark .prose-editor .ProseMirror {
