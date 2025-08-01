@@ -69,12 +69,12 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
     events: calendarEvents,
   } = useCalendarContext();
 
-  // Generate FloCat message based on data analysis and user personality settings
+      // Generate FloCat message based on data analysis and user personality settings
   const generateFloCatMessage = useCallback((tasks: Task[], events: CalendarEvent[]): FloCatMessage => {
     const now = new Date();
     const hour = now.getHours();
     const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-    const preferredName = user?.name || user?.email?.split('@')[0] || 'there';
+    const preferredName = userSettings?.preferredName || user?.name || user?.email?.split('@')[0] || 'there';
 
     // Get FloCat personality settings
     const floCatStyle = userSettings?.floCatStyle || 'default';
@@ -82,10 +82,17 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
 
     // Analyze the day
     const incompleteTasks = tasks.filter(task => task && !task.done);
-    const urgentTasks = incompleteTasks.filter(() => {
-      // For now, consider all incomplete tasks as potentially urgent
-      // since the Task type doesn't include dueDate
-      return true;
+    const urgentTasks = incompleteTasks.filter(task => {
+      if (!task.dueDate) return false;
+      
+      const dueDate = new Date(task.dueDate);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Check if due date is today or tomorrow
+      return dueDate >= today && dueDate < tomorrow;
     });
 
     const todayEvents = events.filter(event => {
@@ -105,7 +112,20 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       return eventDate >= today && eventDate < tomorrow;
     });
 
-    const workEvents = todayEvents.filter(event => 
+    // Get remaining events for today (events that haven't started yet)
+    const remainingEvents = todayEvents.filter(event => {
+      let eventStart: Date;
+      if (event.start instanceof Date) {
+        eventStart = event.start;
+      } else if (event.start?.dateTime) {
+        eventStart = new Date(event.start.dateTime);
+      } else {
+        return false; // Skip all-day events for remaining count
+      }
+      return eventStart > now;
+    });
+
+    const workEvents = remainingEvents.filter(event => 
       event.summary?.toLowerCase().includes('meeting') ||
       event.summary?.toLowerCase().includes('standup') ||
       event.summary?.toLowerCase().includes('review') ||
@@ -114,7 +134,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       event.description?.includes('zoom.us')
     );
 
-    const personalEvents = todayEvents.filter(event => !workEvents.includes(event));
+    const personalEvents = remainingEvents.filter(event => !workEvents.includes(event));
 
     // Determine mood and generate insights
     let mood: FloCatMessage['mood'] = 'calm';
@@ -125,23 +145,26 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       insights.push(`🚨 You have ${urgentTasks.length} urgent task${urgentTasks.length > 1 ? 's' : ''} that need immediate attention!`);
     }
 
-    if (todayEvents.length > 3) {
-      mood = todayEvents.length > 5 ? 'concerned' : 'excited';
-      insights.push(`📅 Busy day ahead with ${todayEvents.length} events. Consider blocking 15-min buffers between meetings.`);
+    if (remainingEvents.length > 3) {
+      mood = remainingEvents.length > 5 ? 'concerned' : 'excited';
+      insights.push(`📅 Still ${remainingEvents.length} events left today. Consider blocking 15-min buffers between meetings.`);
+    } else if (todayEvents.length > 0 && remainingEvents.length === 0) {
+      mood = 'calm';
+      insights.push(`✅ All events for today are complete! Great job staying on schedule.`);
     }
 
     if (workEvents.length > 0 && personalEvents.length > 0) {
       mood = 'happy';
-      insights.push(`⚖️ Nice balance: ${workEvents.length} work and ${personalEvents.length} personal events today!`);
+      insights.push(`⚖️ Nice balance: ${workEvents.length} work and ${personalEvents.length} personal events remaining!`);
     }
 
-    if (urgentTasks.length === 0 && todayEvents.length === 0) {
+    if (urgentTasks.length === 0 && remainingEvents.length === 0) {
       mood = 'focused';
-      insights.push(`🎯 Clear schedule today - perfect for deep work on your ${incompleteTasks.length} pending tasks!`);
+      insights.push(`🎯 Clear schedule for the rest of today - perfect for deep work on your ${incompleteTasks.length} pending tasks!`);
     }
 
     // Next event timing
-    const nextEvent = todayEvents.find(event => {
+    const nextEvent = remainingEvents.find(event => {
       let eventTime: Date;
       if (event.start instanceof Date) {
         eventTime = event.start;
@@ -207,6 +230,29 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
     };
   }, [user, userSettings]);
 
+  // Helper functions
+  const formatTimeUntil = (date: Date): string => {
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+    if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''}`;
+    return 'Now';
+  };
+
+  const isUrgentMeeting = (event: CalendarEvent): boolean => {
+    if (!event.start) return false;
+    const startTime = event.start instanceof Date ? event.start : new Date(event.start.dateTime || '');
+    const now = new Date();
+    const diffMs = startTime.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    return diffMins <= 30 && diffMins >= 0;
+  };
+
   // Smart data analysis functions - memoized to prevent re-creation
   const analyzeData = useCallback((tasks: Task[], events: CalendarEvent[], habits: Habit[], habitCompletions: HabitCompletion[]) => {
     try {
@@ -224,6 +270,18 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       // Filter incomplete tasks (using correct Task type with 'done' property)
       const incompleteTasks = safeTasks.filter(task => task && !task.done);
 
+      // Get urgent tasks (due today or tomorrow)
+      const urgentTasks = incompleteTasks.filter(task => {
+        if (!task.dueDate) return false;
+        
+        const dueDate = new Date(task.dueDate);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        return dueDate >= today && dueDate < tomorrow;
+      });
+
       // Get today's events
       const todayEvents = safeEvents.filter(event => {
         let eventDate: Date;
@@ -237,6 +295,19 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
           return false;
         }
         return eventDate >= today && eventDate < tomorrow;
+      });
+
+      // Get remaining events for today (events that haven't started yet)
+      const remainingEvents = todayEvents.filter(event => {
+        let eventStart: Date;
+        if (event.start instanceof Date) {
+          eventStart = event.start;
+        } else if (event.start?.dateTime) {
+          eventStart = new Date(event.start.dateTime);
+        } else {
+          return false; // Skip all-day events for remaining count
+        }
+        return eventStart > now;
       });
 
       // Get next meeting
@@ -288,36 +359,28 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       const suggestions: SmartInsight[] = [];
 
       // Task-based suggestions
-      if (incompleteTasks.length > 0) {
-        const urgentTasks = incompleteTasks.filter(() => {
-          // For now, consider all incomplete tasks as potentially urgent
-          // since the Task type doesn't include dueDate
-          return true;
+      if (urgentTasks.length > 0) {
+        suggestions.push({
+          type: 'urgent',
+          title: 'Urgent Tasks Due',
+          message: `${urgentTasks.length} task${urgentTasks.length > 1 ? 's' : ''} due today or tomorrow`,
+          icon: <AlertTriangle className="w-4 h-4" />,
+          actionable: true,
+          action: () => window.location.href = '/dashboard/tasks',
+          actionLabel: 'View Tasks'
         });
+      }
 
-        if (urgentTasks.length > 0) {
-          suggestions.push({
-            type: 'urgent',
-            title: 'Urgent Tasks Due',
-            message: `${urgentTasks.length} task${urgentTasks.length > 1 ? 's' : ''} due today or tomorrow`,
-            icon: <AlertTriangle className="w-4 h-4" />,
-            actionable: true,
-            action: () => window.location.href = '/dashboard/tasks',
-            actionLabel: 'View Tasks'
-          });
-        }
-
-        if (incompleteTasks.length > 5) {
-          suggestions.push({
-            type: 'warning',
-            title: 'Many Pending Tasks',
-            message: `You have ${incompleteTasks.length} incomplete tasks - consider prioritizing the most important ones`,
-            icon: <CheckSquare className="w-4 h-4" />,
-            actionable: true,
-            action: () => window.location.href = '/dashboard/tasks',
-            actionLabel: 'Review Tasks'
-          });
-        }
+      if (incompleteTasks.length > 5) {
+        suggestions.push({
+          type: 'warning',
+          title: 'Many Pending Tasks',
+          message: `You have ${incompleteTasks.length} incomplete tasks - consider prioritizing the most important ones`,
+          icon: <CheckSquare className="w-4 h-4" />,
+          actionable: true,
+          action: () => window.location.href = '/dashboard/tasks',
+          actionLabel: 'Review Tasks'
+        });
       }
 
       // Meeting insights
@@ -396,11 +459,11 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       }
 
       // Proactive suggestions based on day analysis
-      if (todayEvents.length > 3) {
+      if (remainingEvents.length > 3) {
         suggestions.push({
           type: 'suggestion',
           title: 'Busy Day Ahead',
-          message: 'Consider blocking time for focused work between meetings',
+          message: `Still ${remainingEvents.length} events remaining - consider blocking time for focused work`,
           icon: <Timer className="w-4 h-4" />,
           actionable: true,
           action: () => window.location.href = '/dashboard/calendar',
@@ -408,11 +471,11 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
         });
       }
 
-      if (incompleteTasks.length > 3 && todayEvents.length < 2) {
+      if (incompleteTasks.length > 3 && remainingEvents.length < 2) {
         suggestions.push({
           type: 'opportunity',
           title: 'Focus Opportunity',
-          message: 'Clear schedule - perfect time to tackle your pending tasks',
+          message: 'Clear schedule for the rest of today - perfect time to tackle your pending tasks',
           icon: <BookOpen className="w-4 h-4" />,
           actionable: true,
           action: () => window.location.href = '/dashboard/tasks',
@@ -424,14 +487,10 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
         tasks: {
           total: safeTasks.length,
           incomplete: incompleteTasks.length,
-          urgent: incompleteTasks.filter(() => {
-            // For now, consider all incomplete tasks as potentially urgent
-            // since the Task type doesn't include dueDate
-            return true;
-          }).length
+          urgent: urgentTasks.length
         },
         events: {
-          today: todayEvents.length,
+          today: remainingEvents.length,
           next: nextMeeting
         },
         habits: {
@@ -458,29 +517,6 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       };
     }
   }, [generateFloCatMessage]);
-
-  // Helper functions
-  const formatTimeUntil = (date: Date): string => {
-    const now = new Date();
-    const diffMs = date.getTime() - now.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
-    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''}`;
-    if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''}`;
-    return 'Now';
-  };
-
-  const isUrgentMeeting = (event: CalendarEvent): boolean => {
-    if (!event.start) return false;
-    const startTime = event.start instanceof Date ? event.start : new Date(event.start.dateTime || '');
-    const now = new Date();
-    const diffMs = startTime.getTime() - now.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    return diffMins <= 30 && diffMins >= 0;
-  };
 
   // Load data with enhanced error handling
   useEffect(() => {
@@ -653,7 +689,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
                 <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
                   {data?.events?.today ?? 0}
                 </p>
-                <p className="text-xs text-grey-tint">Events</p>
+                <p className="text-xs text-grey-tint">Remaining</p>
               </div>
             )}
             
