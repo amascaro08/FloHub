@@ -210,37 +210,39 @@ const FeedbackPage: NextPage = () => {
             </button>
           </div>
         ) : (
-          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
-            <button
-              onClick={() => {
-                setActiveTab('submit');
-                setSelectedFeedback(null);
-              }}
-              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === 'submit'
-                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
-                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
-              }`}
-            >
-              <PlusIcon className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Submit Feedback</span>
-              <span className="sm:hidden">Submit</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('history');
-                setSelectedFeedback(null);
-              }}
-              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === 'history'
-                  ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
-                  : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
-              }`}
-            >
-              <ClipboardDocumentListIcon className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Your Feedback</span>
-              <span className="sm:hidden">History</span>
-            </button>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 shadow-md">
+            <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
+              <button
+                onClick={() => {
+                  setActiveTab('submit');
+                  setSelectedFeedback(null);
+                }}
+                className={`flex-shrink-0 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  activeTab === 'submit'
+                    ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                    : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
+                }`}
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Submit Feedback</span>
+                <span className="sm:hidden">Submit</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('history');
+                  setSelectedFeedback(null);
+                }}
+                className={`flex-shrink-0 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  activeTab === 'history'
+                    ? 'bg-soft-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-lg'
+                    : 'text-grey-tint hover:text-dark-base dark:hover:text-soft-white hover:bg-gray-50 dark:hover:bg-gray-750'
+                }`}
+              >
+                <ClipboardDocumentListIcon className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Your Feedback</span>
+                <span className="sm:hidden">History</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

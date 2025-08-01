@@ -474,23 +474,25 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
         </div>
         
         {/* Tab Navigation */}
-        <div className="flex mt-6 space-x-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <div className="flex items-center justify-center">
-                <span className="text-base mr-2">{tab.icon}</span>
-                {tab.label}
-              </div>
-            </button>
-          ))}
+        <div className="mt-6 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+          <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <div className="flex items-center justify-center">
+                  <span className="text-base mr-2">{tab.icon}</span>
+                  {tab.label}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
