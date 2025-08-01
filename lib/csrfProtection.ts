@@ -16,11 +16,12 @@ const csrfTokens = new Map<string, CSRFToken>();
 // Clean up expired tokens every 5 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, token] of csrfTokens.entries()) {
+  // SECURITY FIX: Use Array.from() for compatibility with older TypeScript targets
+  Array.from(csrfTokens.entries()).forEach(([key, token]) => {
     if (token.expiresAt < now) {
       csrfTokens.delete(key);
     }
-  }
+  });
 }, 5 * 60 * 1000);
 
 /**

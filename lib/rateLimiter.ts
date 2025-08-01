@@ -26,11 +26,12 @@ class RateLimiter {
 
   private cleanup() {
     const now = Date.now();
-    for (const [key, entry] of this.requests.entries()) {
+    // SECURITY FIX: Use Array.from() for compatibility with older TypeScript targets
+    Array.from(this.requests.entries()).forEach(([key, entry]) => {
       if (entry.resetTime < now) {
         this.requests.delete(key);
       }
-    }
+    });
   }
 
   private getKey(req: any, config: RateLimitConfig): string {
