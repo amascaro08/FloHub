@@ -5,6 +5,7 @@ import { db } from "../../lib/drizzle";
 import { userSettings } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { UserSettings } from "../../types/app"; // Import UserSettings from typese
+import { encryptUserSettingsFields, decryptUserSettingsFields } from "../../lib/contentSecurity";
 
 type ErrorRes = { error: string };
 
@@ -104,43 +105,46 @@ export default async function handler(
       console.log("selectedCals from database:", data.selectedCals);
       console.log("selectedCals type:", typeof data.selectedCals);
       
+      // Decrypt sensitive fields
+      const decryptedData = decryptUserSettingsFields(data);
+      
       const settings: UserSettings = {
-        selectedCals: (data.selectedCals as string[]) || [], // Ensure it's an array
-        defaultView: data.defaultView as UserSettings['defaultView'] || "month",
-        customRange: (data.customRange as any) || { start: "", end: "" }, // Ensure it's an object
-        powerAutomateUrl: data.powerAutomateUrl || "",
-        globalTags: (data.globalTags as string[]) || [],
-        activeWidgets: (data.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
-        hiddenWidgets: (data.hiddenWidgets as string[]) || [],
-        floCatStyle: data.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: (data.floCatPersonality as string[]) || [],
-        preferredName: data.preferredName || "",
-        tags: (data.tags as string[]) || [],
-        widgets: (data.widgets as string[]) || [],
-        calendarSettings: (data.calendarSettings as any) || { calendars: [] },
-        notificationSettings: (data.notificationSettings as any) || { subscribed: false },
-        calendarSources: (data.calendarSources as any) || [],
-        timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        floCatSettings: (data.floCatSettings as any) || { enabledCapabilities: [] },
-        layouts: (data.layouts as any) || {},
-        layoutTemplate: data.layoutTemplate || "primary-secondary",
-        slotAssignments: (data.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        selectedCals: (decryptedData.selectedCals as string[]) || [], // Ensure it's an array
+        defaultView: decryptedData.defaultView as UserSettings['defaultView'] || "month",
+        customRange: (decryptedData.customRange as any) || { start: "", end: "" }, // Ensure it's an object
+        powerAutomateUrl: decryptedData.powerAutomateUrl || "",
+        globalTags: (decryptedData.globalTags as string[]) || [],
+        activeWidgets: (decryptedData.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        hiddenWidgets: (decryptedData.hiddenWidgets as string[]) || [],
+        floCatStyle: decryptedData.floCatStyle as UserSettings['floCatStyle'] || "default",
+        floCatPersonality: (decryptedData.floCatPersonality as string[]) || [],
+        preferredName: decryptedData.preferredName || "",
+        tags: (decryptedData.tags as string[]) || [],
+        widgets: (decryptedData.widgets as string[]) || [],
+        calendarSettings: (decryptedData.calendarSettings as any) || { calendars: [] },
+        notificationSettings: (decryptedData.notificationSettings as any) || { subscribed: false },
+        calendarSources: (decryptedData.calendarSources as any) || [],
+        timezone: decryptedData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        floCatSettings: (decryptedData.floCatSettings as any) || { enabledCapabilities: [] },
+        layouts: (decryptedData.layouts as any) || {},
+        layoutTemplate: decryptedData.layoutTemplate || "primary-secondary",
+        slotAssignments: (decryptedData.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
         // Journal settings
-        journalReminderEnabled: data.journalReminderEnabled ?? false,
-        journalReminderTime: data.journalReminderTime || '20:00',
-        journalPinProtection: data.journalPinProtection ?? false,
-        journalPinHash: data.journalPinHash || undefined,
-        journalExportFormat: (data.journalExportFormat as 'json' | 'csv') || 'json',
-        journalAutoSave: data.journalAutoSave ?? true,
-        journalDailyPrompts: data.journalDailyPrompts ?? true,
-        journalMoodTracking: data.journalMoodTracking ?? true,
-        journalActivityTracking: data.journalActivityTracking ?? true,
-        journalSleepTracking: data.journalSleepTracking ?? true,
-        journalWeeklyReflections: data.journalWeeklyReflections ?? false,
-        journalCustomActivities: (data.journalCustomActivities as any) || [],
-        journalDisabledActivities: (data.journalDisabledActivities as any) || [],
+        journalReminderEnabled: decryptedData.journalReminderEnabled ?? false,
+        journalReminderTime: decryptedData.journalReminderTime || '20:00',
+        journalPinProtection: decryptedData.journalPinProtection ?? false,
+        journalPinHash: decryptedData.journalPinHash || undefined,
+        journalExportFormat: (decryptedData.journalExportFormat as 'json' | 'csv') || 'json',
+        journalAutoSave: decryptedData.journalAutoSave ?? true,
+        journalDailyPrompts: decryptedData.journalDailyPrompts ?? true,
+        journalMoodTracking: decryptedData.journalMoodTracking ?? true,
+        journalActivityTracking: decryptedData.journalActivityTracking ?? true,
+        journalSleepTracking: decryptedData.journalSleepTracking ?? true,
+        journalWeeklyReflections: decryptedData.journalWeeklyReflections ?? false,
+        journalCustomActivities: (decryptedData.journalCustomActivities as any) || [],
+        journalDisabledActivities: (decryptedData.journalDisabledActivities as any) || [],
         // Notes settings
-        notesGrouping: (data.notesGrouping as any) || 'month',
+        notesGrouping: (decryptedData.notesGrouping as any) || 'month',
       };
 
       console.log("User settings loaded for", user_email, settings);
@@ -161,9 +165,12 @@ export default async function handler(
         where: eq(userSettings.user_email, user_email),
       });
 
+      // Encrypt sensitive fields before saving
+      const encryptedUpdates = encryptUserSettingsFields(updates);
+
       // Prepare updates with proper timezone handling
       const preparedUpdates = {
-        ...updates,
+        ...encryptedUpdates,
         // Ensure timezone is never null due to NOT NULL constraint
         timezone: updates.timezone || existingSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
@@ -185,44 +192,47 @@ export default async function handler(
           .returning();
       }
 
+      // Decrypt the result for the response
+      const decryptedResult = decryptUserSettingsFields(result);
+
       // Return the updated settings in the same format as GET
       const updatedSettings: UserSettings = {
-        selectedCals: (result.selectedCals as string[]) || [],
-        defaultView: result.defaultView as UserSettings['defaultView'] || "month",
-        customRange: (result.customRange as any) || { start: "", end: "" },
-        powerAutomateUrl: result.powerAutomateUrl || "",
-        globalTags: (result.globalTags as string[]) || [],
-        activeWidgets: (result.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
-        hiddenWidgets: (result.hiddenWidgets as string[]) || [],
-        floCatStyle: result.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: (result.floCatPersonality as string[]) || [],
-        preferredName: result.preferredName || "",
-        tags: (result.tags as string[]) || [],
-        widgets: (result.widgets as string[]) || [],
-        calendarSettings: (result.calendarSettings as any) || { calendars: [] },
-        notificationSettings: (result.notificationSettings as any) || { subscribed: false },
-        calendarSources: (result.calendarSources as any) || [],
-        timezone: result.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        floCatSettings: (result.floCatSettings as any) || { enabledCapabilities: [] },
-        layouts: (result.layouts as any) || {},
-        layoutTemplate: result.layoutTemplate || "primary-secondary",
-        slotAssignments: (result.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        selectedCals: (decryptedResult.selectedCals as string[]) || [],
+        defaultView: decryptedResult.defaultView as UserSettings['defaultView'] || "month",
+        customRange: (decryptedResult.customRange as any) || { start: "", end: "" },
+        powerAutomateUrl: decryptedResult.powerAutomateUrl || "",
+        globalTags: (decryptedResult.globalTags as string[]) || [],
+        activeWidgets: (decryptedResult.activeWidgets as string[]) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
+        hiddenWidgets: (decryptedResult.hiddenWidgets as string[]) || [],
+        floCatStyle: decryptedResult.floCatStyle as UserSettings['floCatStyle'] || "default",
+        floCatPersonality: (decryptedResult.floCatPersonality as string[]) || [],
+        preferredName: decryptedResult.preferredName || "",
+        tags: (decryptedResult.tags as string[]) || [],
+        widgets: (decryptedResult.widgets as string[]) || [],
+        calendarSettings: (decryptedResult.calendarSettings as any) || { calendars: [] },
+        notificationSettings: (decryptedResult.notificationSettings as any) || { subscribed: false },
+        calendarSources: (decryptedResult.calendarSources as any) || [],
+        timezone: decryptedResult.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        floCatSettings: (decryptedResult.floCatSettings as any) || { enabledCapabilities: [] },
+        layouts: (decryptedResult.layouts as any) || {},
+        layoutTemplate: decryptedResult.layoutTemplate || "primary-secondary",
+        slotAssignments: (decryptedResult.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
         // Journal settings
-        journalReminderEnabled: result.journalReminderEnabled ?? false,
-        journalReminderTime: result.journalReminderTime || '20:00',
-        journalPinProtection: result.journalPinProtection ?? false,
-        journalPinHash: result.journalPinHash || undefined,
-        journalExportFormat: (result.journalExportFormat as 'json' | 'csv') || 'json',
-        journalAutoSave: result.journalAutoSave ?? true,
-        journalDailyPrompts: result.journalDailyPrompts ?? true,
-        journalMoodTracking: result.journalMoodTracking ?? true,
-        journalActivityTracking: result.journalActivityTracking ?? true,
-        journalSleepTracking: result.journalSleepTracking ?? true,
-        journalWeeklyReflections: result.journalWeeklyReflections ?? false,
-        journalCustomActivities: (result.journalCustomActivities as any) || [],
-        journalDisabledActivities: (result.journalDisabledActivities as any) || [],
+        journalReminderEnabled: decryptedResult.journalReminderEnabled ?? false,
+        journalReminderTime: decryptedResult.journalReminderTime || '20:00',
+        journalPinProtection: decryptedResult.journalPinProtection ?? false,
+        journalPinHash: decryptedResult.journalPinHash || undefined,
+        journalExportFormat: (decryptedResult.journalExportFormat as 'json' | 'csv') || 'json',
+        journalAutoSave: decryptedResult.journalAutoSave ?? true,
+        journalDailyPrompts: decryptedResult.journalDailyPrompts ?? true,
+        journalMoodTracking: decryptedResult.journalMoodTracking ?? true,
+        journalActivityTracking: decryptedResult.journalActivityTracking ?? true,
+        journalSleepTracking: decryptedResult.journalSleepTracking ?? true,
+        journalWeeklyReflections: decryptedResult.journalWeeklyReflections ?? false,
+        journalCustomActivities: (decryptedResult.journalCustomActivities as any) || [],
+        journalDisabledActivities: (decryptedResult.journalDisabledActivities as any) || [],
         // Notes settings
-        notesGrouping: (result.notesGrouping as any) || 'month',
+        notesGrouping: (decryptedResult.notesGrouping as any) || 'month',
       };
 
       console.log("User settings updated for", user_email, updatedSettings);
