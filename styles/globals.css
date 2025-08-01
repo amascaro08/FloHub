@@ -94,6 +94,47 @@
   transition: all 0.2s ease-in-out;
 }
 
+/* Mobile-first responsive image sizing */
+.flocat-mobile {
+  width: 160px;
+  height: 160px;
+}
+
+@media (min-width: 640px) {
+  .flocat-mobile {
+    width: 192px;
+    height: 192px;
+  }
+}
+
+@media (min-width: 768px) {
+  .flocat-mobile {
+    width: 256px;
+    height: 256px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .flocat-mobile {
+    width: 288px;
+    height: 288px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .flocat-mobile {
+    width: 320px;
+    height: 320px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .flocat-mobile {
+    width: 384px;
+    height: 384px;
+  }
+}
+
 .glass:hover {
   box-shadow:
     0 6px 8px var(--shadow-color),

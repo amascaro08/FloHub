@@ -79,23 +79,23 @@ function LandingPage() {
         {/* Alpha Testing Banner */}
         <div className="bg-gradient-to-r from-[#00C9A7] to-[#00B396] text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-black/5"></div>
-          <div className="relative max-w-6xl mx-auto px-6 py-4">
-            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4">
-              <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-2">
                   <Image 
                     src="/flocat_flohub.png" 
                     alt="FloCat" 
                     width={28} 
                     height={28} 
-                    className="rounded-full bg-white/20 p-1 sm:w-8 sm:h-8" 
+                    className="rounded-full bg-white/20 p-1 w-6 h-6 sm:w-8 sm:h-8" 
                   />
                   <div className="bg-[#FF6B6B] text-white px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold">
                     ALPHA
                   </div>
                 </div>
                 <div className="text-center sm:text-left">
-                  <p className="font-semibold text-base sm:text-lg">Welcome to FloHub Alpha! 🚀</p>
+                  <p className="font-semibold text-sm sm:text-base md:text-lg">Welcome to FloHub Alpha! 🚀</p>
                   <p className="text-xs sm:text-sm opacity-90">
                     <strong>Register now</strong> to test the future of productivity and help us perfect your workflow!
                   </p>
@@ -106,7 +106,7 @@ function LandingPage() {
         </div>
 
         {/* Hero */}
-        <div className="relative flex flex-col-reverse md:flex-row items-center max-w-6xl mx-auto px-6 py-20">
+        <div className="relative flex flex-col-reverse md:flex-row items-center max-w-6xl mx-auto px-6 py-12 md:py-20">
           {/* Hero Left */}
           <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left z-10">
             <Image
@@ -114,31 +114,32 @@ function LandingPage() {
               alt="FloHub Logo"
               width={84}
               height={84}
-              className="mb-6 drop-shadow-xl"
+              className="mb-4 md:mb-6 drop-shadow-xl"
               priority
             />
-            <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight bg-gradient-to-r from-primary-700 via-primary-500 to-teal-500 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 md:mb-6 leading-tight bg-gradient-to-r from-primary-700 via-primary-500 to-teal-500 bg-clip-text text-transparent">
               FloHub<br />
               <span className="text-primary-400 dark:text-primary-300">Work, Life, Together.</span>
             </h1>
-            <p className="mb-8 text-xl md:text-2xl text-neutral-700 dark:text-neutral-200">
+            <p className="mb-6 md:mb-8 text-lg sm:text-xl md:text-2xl text-neutral-700 dark:text-neutral-200">
               The all-in-one, AI-powered productivity platform.<br />
               <span className="text-primary-500 font-medium">Organise everything.</span>  <span className="italic">Finally, for real.</span>
             </p>
             <Link href="/login" passHref>
-              <button className="btn-primary px-8 py-4 text-lg font-bold mb-6 w-full md:w-auto">
+              <button className="btn-primary px-6 py-3 md:px-8 md:py-4 text-base md:text-lg font-bold mb-4 md:mb-6 w-full md:w-auto">
                 Login/Register
               </button>
             </Link>
           
           </div>
           {/* Hero Right - FloCat illustration */}
-          <div className="w-full md:w-1/2 flex justify-center mb-12 md:mb-0">
+          <div className="w-full md:w-1/2 flex justify-center mb-8 md:mb-0">
             <Image
               src="/flocat-sidepeek.png"
               alt="FloCat Mascot"
               width={300}
               height={300}
+              className="flocat-mobile"
               priority
             />
           </div>
