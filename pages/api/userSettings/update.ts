@@ -35,6 +35,7 @@ export default async function handler(
     console.log('📥 Settings data received:', {
       timezone: newSettings.timezone,
       globalTags: newSettings.globalTags,
+      globalTagsLength: newSettings.globalTags?.length || 0,
       tags: newSettings.tags,
       hasCalendarSources: !!newSettings.calendarSources,
       calendarSourcesCount: newSettings.calendarSources?.length || 0,
@@ -52,7 +53,10 @@ export default async function handler(
         where: eq(userSettings.user_email, user_email as string),
       });
       existingSettings = existing || {};
-      console.log('📋 Existing settings loaded for merge');
+      console.log('📋 Existing settings loaded for merge:', {
+        existingGlobalTags: existingSettings.globalTags,
+        existingGlobalTagsLength: existingSettings.globalTags?.length || 0
+      });
     } catch (error) {
       console.log('📋 No existing settings found, using defaults');
     }
@@ -126,6 +130,7 @@ export default async function handler(
     console.log('📝 Prepared settings for database:', {
       timezone: settingsData.timezone,
       globalTagsLength: settingsData.globalTags?.length || 0,
+      globalTags: settingsData.globalTags,
       tagsLength: settingsData.tags?.length || 0,
       calendarSourcesLength: settingsData.calendarSources?.length || 0,
       floCatPersonalityLength: settingsData.floCatPersonality?.length || 0
@@ -159,6 +164,7 @@ export default async function handler(
       console.log('✅ Verification: Settings in database:', {
         timezone: savedData.timezone,
         globalTagsLength: savedGlobalTags?.length || 0,
+        savedGlobalTags: savedGlobalTags,
         tagsLength: savedTags?.length || 0,
         calendarSourcesLength: savedCalendarSources?.length || 0,
         floCatPersonalityLength: savedFloCatPersonality?.length || 0

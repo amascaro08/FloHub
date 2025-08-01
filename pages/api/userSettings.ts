@@ -133,13 +133,16 @@ export default async function handler(
         defaultView: decryptedData.defaultView as UserSettings['defaultView'] || "month",
         customRange: (decryptedData.customRange as any) || { start: "", end: "" },
         powerAutomateUrl: decryptedData.powerAutomateUrl || "",
-        globalTags: ensureArray(decryptedData.globalTags),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        globalTags: Array.isArray(decryptedData.globalTags) ? decryptedData.globalTags : [],
         activeWidgets: ensureArray(decryptedData.activeWidgets) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
         hiddenWidgets: ensureArray(decryptedData.hiddenWidgets),
         floCatStyle: decryptedData.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: ensureArray(decryptedData.floCatPersonality),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        floCatPersonality: Array.isArray(decryptedData.floCatPersonality) ? decryptedData.floCatPersonality : [],
         preferredName: decryptedData.preferredName || "",
-        tags: ensureArray(decryptedData.tags),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        tags: Array.isArray(decryptedData.tags) ? decryptedData.tags : [],
         widgets: ensureArray(decryptedData.widgets),
         calendarSettings: (decryptedData.calendarSettings as any) || { calendars: [] },
         notificationSettings: (decryptedData.notificationSettings as any) || { subscribed: false },
@@ -239,13 +242,16 @@ export default async function handler(
         defaultView: decryptedResult.defaultView as UserSettings['defaultView'] || "month",
         customRange: (decryptedResult.customRange as any) || { start: "", end: "" },
         powerAutomateUrl: decryptedResult.powerAutomateUrl || "",
-        globalTags: ensureArray(decryptedResult.globalTags),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        globalTags: Array.isArray(decryptedResult.globalTags) ? decryptedResult.globalTags : [],
         activeWidgets: ensureArray(decryptedResult.activeWidgets) || ["tasks", "calendar", "ataglance", "quicknote", "habit-tracker"],
         hiddenWidgets: ensureArray(decryptedResult.hiddenWidgets),
         floCatStyle: decryptedResult.floCatStyle as UserSettings['floCatStyle'] || "default",
-        floCatPersonality: ensureArray(decryptedResult.floCatPersonality),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        floCatPersonality: Array.isArray(decryptedResult.floCatPersonality) ? decryptedResult.floCatPersonality : [],
         preferredName: decryptedResult.preferredName || "",
-        tags: ensureArray(decryptedResult.tags),
+        // PostgreSQL arrays come back as arrays, no special processing needed
+        tags: Array.isArray(decryptedResult.tags) ? decryptedResult.tags : [],
         widgets: ensureArray(decryptedResult.widgets),
         calendarSettings: (decryptedResult.calendarSettings as any) || { calendars: [] },
         notificationSettings: (decryptedResult.notificationSettings as any) || { subscribed: false },

@@ -497,22 +497,25 @@ export const encryptUserSettingsFields = (settings: any) => {
       encrypted.preferredName = prepareContentForStorage(settings.preferredName);
     }
     
+    // Note: globalTags, tags, floCatPersonality are stored as PostgreSQL arrays
+    // They don't need encryption since they're already in array format
+    // The database will handle them as native arrays
     if (settings.globalTags && Array.isArray(settings.globalTags)) {
-      console.log('Encrypting globalTags:', settings.globalTags);
-      encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
-      console.log('Encrypted globalTags:', encrypted.globalTags);
+      console.log('Processing globalTags (PostgreSQL array):', settings.globalTags);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.globalTags = settings.globalTags;
     }
     
     if (settings.tags && Array.isArray(settings.tags)) {
-      console.log('Encrypting tags:', settings.tags);
-      encrypted.tags = prepareArrayForStorage(settings.tags);
-      console.log('Encrypted tags:', encrypted.tags);
+      console.log('Processing tags (PostgreSQL array):', settings.tags);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.tags = settings.tags;
     }
     
     if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
-      console.log('Encrypting floCatPersonality:', settings.floCatPersonality);
-      encrypted.floCatPersonality = prepareArrayForStorage(settings.floCatPersonality);
-      console.log('Encrypted floCatPersonality:', encrypted.floCatPersonality);
+      console.log('Processing floCatPersonality (PostgreSQL array):', settings.floCatPersonality);
+      // Keep as array - no encryption needed for PostgreSQL arrays
+      encrypted.floCatPersonality = settings.floCatPersonality;
     }
     
     if (settings.journalCustomActivities) {
@@ -542,25 +545,30 @@ export const decryptUserSettingsFields = (settings: any) => {
       decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
     }
     
+    // Note: globalTags, tags, floCatPersonality are stored as PostgreSQL arrays
+    // They come back as arrays from the database, so no decryption needed
     if (settings.globalTags) {
-      console.log('Decrypting globalTags:', settings.globalTags);
+      console.log('Processing globalTags from database (PostgreSQL array):', settings.globalTags);
       console.log('globalTags type:', typeof settings.globalTags);
-      decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
-      console.log('Decrypted globalTags:', decrypted.globalTags);
+      // PostgreSQL arrays come back as arrays, no decryption needed
+      decrypted.globalTags = Array.isArray(settings.globalTags) ? settings.globalTags : [];
+      console.log('Processed globalTags:', decrypted.globalTags);
     }
     
     if (settings.tags) {
-      console.log('Decrypting tags:', settings.tags);
+      console.log('Processing tags from database (PostgreSQL array):', settings.tags);
       console.log('tags type:', typeof settings.tags);
-      decrypted.tags = retrieveArrayFromStorage(settings.tags);
-      console.log('Decrypted tags:', decrypted.tags);
+      // PostgreSQL arrays come back as arrays, no decryption needed
+      decrypted.tags = Array.isArray(settings.tags) ? settings.tags : [];
+      console.log('Processed tags:', decrypted.tags);
     }
     
     if (settings.floCatPersonality) {
-      console.log('Decrypting floCatPersonality:', settings.floCatPersonality);
+      console.log('Processing floCatPersonality from database (PostgreSQL array):', settings.floCatPersonality);
       console.log('floCatPersonality type:', typeof settings.floCatPersonality);
-      decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
-      console.log('Decrypted floCatPersonality:', decrypted.floCatPersonality);
+      // PostgreSQL arrays come back as arrays, no decryption needed
+      decrypted.floCatPersonality = Array.isArray(settings.floCatPersonality) ? settings.floCatPersonality : [];
+      console.log('Processed floCatPersonality:', decrypted.floCatPersonality);
     }
     
     if (settings.journalCustomActivities) {
