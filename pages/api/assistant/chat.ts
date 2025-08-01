@@ -12,6 +12,7 @@ import { processCalendarQuery } from "@/lib/assistant/calendarProcessor";
 import { parseDueDate } from "@/lib/assistant/dateUtils";
 import { SmartAIAssistant } from "@/lib/aiAssistant";
 import { findMatchingCapability } from "@/lib/floCatCapabilities";
+import { LocalAssistant } from "@/lib/assistant/localAssistant";
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -74,6 +75,28 @@ export default async function handler(
     let response: string;
     let actions: ChatResponse['actions'] = [];
 
+    // NEW: Try LocalAssistant first for all queries
+    try {
+      const localAssistant = new LocalAssistant(user.email);
+      response = await localAssistant.processQuery(sanitizedInput);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('LocalAssistant response:', response);
+      }
+      
+      // If LocalAssistant provided a good response, use it
+      if (response && response.length > 10) {
+        clearTimeout(timeoutId);
+        return res.status(200).json({ 
+          reply: response,
+          actions: actions && actions.length > 0 ? actions : undefined
+        });
+      }
+    } catch (localError) {
+      console.warn('LocalAssistant failed, falling back to other methods:', localError);
+    }
+
+    // FALLBACK: Use existing routing logic for complex queries
     // PERFORMANCE FIX: Only route to calendar intent for high-confidence calendar queries
     if (intent.category === 'calendar' && intent.confidence > 0.8) {
       if (process.env.NODE_ENV === 'development') {
