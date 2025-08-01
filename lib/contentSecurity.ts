@@ -489,12 +489,22 @@ export const encryptUserSettingsFields = (settings: any) => {
     encrypted.preferredName = prepareContentForStorage(settings.preferredName);
   }
   
-  if (settings.globalTags) {
+  if (settings.globalTags && Array.isArray(settings.globalTags)) {
+    console.log('Encrypting globalTags:', settings.globalTags);
     encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
+    console.log('Encrypted globalTags:', encrypted.globalTags);
   }
   
-  if (settings.tags) {
+  if (settings.tags && Array.isArray(settings.tags)) {
+    console.log('Encrypting tags:', settings.tags);
     encrypted.tags = prepareArrayForStorage(settings.tags);
+    console.log('Encrypted tags:', encrypted.tags);
+  }
+  
+  if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
+    console.log('Encrypting floCatPersonality:', settings.floCatPersonality);
+    encrypted.floCatPersonality = prepareArrayForStorage(settings.floCatPersonality);
+    console.log('Encrypted floCatPersonality:', encrypted.floCatPersonality);
   }
   
   if (settings.journalCustomActivities) {
@@ -519,11 +529,24 @@ export const decryptUserSettingsFields = (settings: any) => {
   }
   
   if (settings.globalTags) {
+    console.log('Decrypting globalTags:', settings.globalTags);
+    console.log('globalTags type:', typeof settings.globalTags);
     decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
+    console.log('Decrypted globalTags:', decrypted.globalTags);
   }
   
   if (settings.tags) {
+    console.log('Decrypting tags:', settings.tags);
+    console.log('tags type:', typeof settings.tags);
     decrypted.tags = retrieveArrayFromStorage(settings.tags);
+    console.log('Decrypted tags:', decrypted.tags);
+  }
+  
+  if (settings.floCatPersonality) {
+    console.log('Decrypting floCatPersonality:', settings.floCatPersonality);
+    console.log('floCatPersonality type:', typeof settings.floCatPersonality);
+    decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
+    console.log('Decrypted floCatPersonality:', decrypted.floCatPersonality);
   }
   
   if (settings.journalCustomActivities) {

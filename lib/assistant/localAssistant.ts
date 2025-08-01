@@ -28,7 +28,7 @@ interface LocalAssistantContext {
 }
 
 interface QueryIntent {
-  type: 'calendar' | 'task' | 'note' | 'habit' | 'productivity' | 'search' | 'create' | 'general';
+  type: 'calendar' | 'task' | 'note' | 'habit' | 'productivity' | 'search' | 'create' | 'general' | 'journal' | 'meeting';
   action: 'query' | 'create' | 'update' | 'delete';
   entities: {
     timeRef?: string;
