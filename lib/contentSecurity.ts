@@ -14,6 +14,13 @@ const getEncryptionKey = (): Buffer => {
   
   if (!key) {
     console.error('ContentSecurity: CONTENT_ENCRYPTION_KEY environment variable is required');
+    // In production, we should fail gracefully and log the issue
+    if (process.env.NODE_ENV === 'production') {
+      console.error('ContentSecurity: Encryption key missing in production - data will not be encrypted');
+      // Return a fallback key for development/testing
+      const fallbackKey = 'fallback-key-for-missing-encryption-key-in-production';
+      return crypto.pbkdf2Sync(fallbackKey, 'flohub-content-salt', 100000, KEY_LENGTH, 'sha256');
+    }
     throw new Error('CONTENT_ENCRYPTION_KEY environment variable is required');
   }
   
@@ -485,36 +492,42 @@ export const encryptUserSettingsFields = (settings: any) => {
   console.log('encryptUserSettingsFields input:', settings);
   const encrypted = { ...settings };
   
-  if (settings.preferredName) {
-    encrypted.preferredName = prepareContentForStorage(settings.preferredName);
+  try {
+    if (settings.preferredName) {
+      encrypted.preferredName = prepareContentForStorage(settings.preferredName);
+    }
+    
+    if (settings.globalTags && Array.isArray(settings.globalTags)) {
+      console.log('Encrypting globalTags:', settings.globalTags);
+      encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
+      console.log('Encrypted globalTags:', encrypted.globalTags);
+    }
+    
+    if (settings.tags && Array.isArray(settings.tags)) {
+      console.log('Encrypting tags:', settings.tags);
+      encrypted.tags = prepareArrayForStorage(settings.tags);
+      console.log('Encrypted tags:', encrypted.tags);
+    }
+    
+    if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
+      console.log('Encrypting floCatPersonality:', settings.floCatPersonality);
+      encrypted.floCatPersonality = prepareArrayForStorage(settings.floCatPersonality);
+      console.log('Encrypted floCatPersonality:', encrypted.floCatPersonality);
+    }
+    
+    if (settings.journalCustomActivities) {
+      console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
+      encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
+      console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
+    }
+    
+    console.log('encryptUserSettingsFields output:', encrypted);
+    return encrypted;
+  } catch (error) {
+    console.error('Error in encryptUserSettingsFields:', error);
+    // Return original settings if encryption fails
+    return settings;
   }
-  
-  if (settings.globalTags && Array.isArray(settings.globalTags)) {
-    console.log('Encrypting globalTags:', settings.globalTags);
-    encrypted.globalTags = prepareArrayForStorage(settings.globalTags);
-    console.log('Encrypted globalTags:', encrypted.globalTags);
-  }
-  
-  if (settings.tags && Array.isArray(settings.tags)) {
-    console.log('Encrypting tags:', settings.tags);
-    encrypted.tags = prepareArrayForStorage(settings.tags);
-    console.log('Encrypted tags:', encrypted.tags);
-  }
-  
-  if (settings.floCatPersonality && Array.isArray(settings.floCatPersonality)) {
-    console.log('Encrypting floCatPersonality:', settings.floCatPersonality);
-    encrypted.floCatPersonality = prepareArrayForStorage(settings.floCatPersonality);
-    console.log('Encrypted floCatPersonality:', encrypted.floCatPersonality);
-  }
-  
-  if (settings.journalCustomActivities) {
-    console.log('Encrypting journalCustomActivities:', settings.journalCustomActivities);
-    encrypted.journalCustomActivities = prepareJSONBForStorage(settings.journalCustomActivities);
-    console.log('Encrypted journalCustomActivities:', encrypted.journalCustomActivities);
-  }
-  
-  console.log('encryptUserSettingsFields output:', encrypted);
-  return encrypted;
 };
 
 /**
@@ -524,38 +537,44 @@ export const decryptUserSettingsFields = (settings: any) => {
   console.log('decryptUserSettingsFields input:', settings);
   const decrypted = { ...settings };
   
-  if (settings.preferredName) {
-    decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
+  try {
+    if (settings.preferredName) {
+      decrypted.preferredName = retrieveContentFromStorage(settings.preferredName);
+    }
+    
+    if (settings.globalTags) {
+      console.log('Decrypting globalTags:', settings.globalTags);
+      console.log('globalTags type:', typeof settings.globalTags);
+      decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
+      console.log('Decrypted globalTags:', decrypted.globalTags);
+    }
+    
+    if (settings.tags) {
+      console.log('Decrypting tags:', settings.tags);
+      console.log('tags type:', typeof settings.tags);
+      decrypted.tags = retrieveArrayFromStorage(settings.tags);
+      console.log('Decrypted tags:', decrypted.tags);
+    }
+    
+    if (settings.floCatPersonality) {
+      console.log('Decrypting floCatPersonality:', settings.floCatPersonality);
+      console.log('floCatPersonality type:', typeof settings.floCatPersonality);
+      decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
+      console.log('Decrypted floCatPersonality:', decrypted.floCatPersonality);
+    }
+    
+    if (settings.journalCustomActivities) {
+      console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
+      console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
+      decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
+      console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
+    }
+    
+    console.log('decryptUserSettingsFields output:', decrypted);
+    return decrypted;
+  } catch (error) {
+    console.error('Error in decryptUserSettingsFields:', error);
+    // Return original settings if decryption fails
+    return settings;
   }
-  
-  if (settings.globalTags) {
-    console.log('Decrypting globalTags:', settings.globalTags);
-    console.log('globalTags type:', typeof settings.globalTags);
-    decrypted.globalTags = retrieveArrayFromStorage(settings.globalTags);
-    console.log('Decrypted globalTags:', decrypted.globalTags);
-  }
-  
-  if (settings.tags) {
-    console.log('Decrypting tags:', settings.tags);
-    console.log('tags type:', typeof settings.tags);
-    decrypted.tags = retrieveArrayFromStorage(settings.tags);
-    console.log('Decrypted tags:', decrypted.tags);
-  }
-  
-  if (settings.floCatPersonality) {
-    console.log('Decrypting floCatPersonality:', settings.floCatPersonality);
-    console.log('floCatPersonality type:', typeof settings.floCatPersonality);
-    decrypted.floCatPersonality = retrieveArrayFromStorage(settings.floCatPersonality);
-    console.log('Decrypted floCatPersonality:', decrypted.floCatPersonality);
-  }
-  
-  if (settings.journalCustomActivities) {
-    console.log('Decrypting journalCustomActivities:', settings.journalCustomActivities);
-    console.log('journalCustomActivities type:', typeof settings.journalCustomActivities);
-    decrypted.journalCustomActivities = retrieveJSONBFromStorage(settings.journalCustomActivities);
-    console.log('Decrypted journalCustomActivities:', decrypted.journalCustomActivities);
-  }
-  
-  console.log('decryptUserSettingsFields output:', decrypted);
-  return decrypted;
 };

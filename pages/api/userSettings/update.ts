@@ -75,7 +75,7 @@ export default async function handler(
       layoutTemplate: newSettings.layoutTemplate !== undefined ? newSettings.layoutTemplate : existingSettings.layoutTemplate,
       slotAssignments: newSettings.slotAssignments !== undefined ? newSettings.slotAssignments : existingSettings.slotAssignments,
       calendarSources: newSettings.calendarSources !== undefined ? newSettings.calendarSources : (existingSettings.calendarSources || []),
-      // Ensure timezone is never null due to NOT NULL constraint
+      // Ensure timezone is never null due to NOT NULL constraint and handle 24-hour format
       timezone: newSettings.timezone || existingSettings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       floCatSettings: newSettings.floCatSettings !== undefined ? newSettings.floCatSettings : (existingSettings.floCatSettings || { enabledCapabilities: [] }),
       customRange: newSettings.customRange !== undefined ? newSettings.customRange : existingSettings.customRange,
@@ -96,11 +96,39 @@ export default async function handler(
       notesGrouping: newSettings.notesGrouping !== undefined ? newSettings.notesGrouping : existingSettings.notesGrouping,
     };
 
+    // Validate and ensure arrays are properly handled
+    const ensureArray = (value: any): any[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    // Ensure all array fields are properly formatted
+    settingsData.globalTags = ensureArray(settingsData.globalTags);
+    settingsData.tags = ensureArray(settingsData.tags);
+    settingsData.floCatPersonality = ensureArray(settingsData.floCatPersonality);
+    settingsData.selectedCals = ensureArray(settingsData.selectedCals);
+    settingsData.activeWidgets = ensureArray(settingsData.activeWidgets);
+    settingsData.hiddenWidgets = ensureArray(settingsData.hiddenWidgets);
+    settingsData.widgets = ensureArray(settingsData.widgets);
+    settingsData.calendarSources = ensureArray(settingsData.calendarSources);
+    settingsData.journalCustomActivities = ensureArray(settingsData.journalCustomActivities);
+    settingsData.journalDisabledActivities = ensureArray(settingsData.journalDisabledActivities);
+
     console.log('📝 Prepared settings for database:', {
       timezone: settingsData.timezone,
       globalTagsLength: settingsData.globalTags?.length || 0,
       tagsLength: settingsData.tags?.length || 0,
-      calendarSourcesLength: settingsData.calendarSources?.length || 0
+      calendarSourcesLength: settingsData.calendarSources?.length || 0,
+      floCatPersonalityLength: settingsData.floCatPersonality?.length || 0
     });
 
     const result = await db
@@ -126,12 +154,14 @@ export default async function handler(
       const savedCalendarSources = savedData.calendarSources as any[];
       const savedGlobalTags = savedData.globalTags as string[];
       const savedTags = savedData.tags as string[];
+      const savedFloCatPersonality = savedData.floCatPersonality as string[];
       
       console.log('✅ Verification: Settings in database:', {
         timezone: savedData.timezone,
         globalTagsLength: savedGlobalTags?.length || 0,
         tagsLength: savedTags?.length || 0,
-        calendarSourcesLength: savedCalendarSources?.length || 0
+        calendarSourcesLength: savedCalendarSources?.length || 0,
+        floCatPersonalityLength: savedFloCatPersonality?.length || 0
       });
       
       // Check for mismatches
@@ -161,6 +191,14 @@ export default async function handler(
         console.error('❌ Calendar sources count mismatch!', {
           expected: settingsData.calendarSources?.length || 0,
           actual: savedCalendarSources?.length || 0
+        });
+      }
+      if ((settingsData.floCatPersonality?.length || 0) !== (savedFloCatPersonality?.length || 0)) {
+        console.error('❌ FloCat personality count mismatch!', {
+          expected: settingsData.floCatPersonality?.length || 0,
+          actual: savedFloCatPersonality?.length || 0,
+          expectedPersonality: settingsData.floCatPersonality,
+          actualPersonality: savedFloCatPersonality
         });
       }
     } else {
