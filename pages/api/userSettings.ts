@@ -107,6 +107,8 @@ export default async function handler(
       
       // Decrypt sensitive fields
       const decryptedData = decryptUserSettingsFields(data);
+      console.log("Raw journalCustomActivities from DB:", data.journalCustomActivities);
+      console.log("Decrypted journalCustomActivities:", decryptedData.journalCustomActivities);
       
       const settings: UserSettings = {
         selectedCals: (decryptedData.selectedCals as string[]) || [], // Ensure it's an array

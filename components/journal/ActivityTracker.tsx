@@ -50,7 +50,7 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
 
   // Filter emojis based on search query
   const filteredEmojis = searchQuery 
-    ? allEmojis.filter(emoji => emoji.includes(searchQuery))
+    ? allEmojis.filter(emoji => emoji.includes(searchQuery) || emoji.includes(searchQuery.toLowerCase()))
     : emojiLibrary[selectedCategory as keyof typeof emojiLibrary] || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +66,7 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose, onActivityAdded,
       };
 
       console.log('Creating new activity:', newActivity); // Debug log
+      console.log('Selected icon:', selectedIcon); // Debug log
 
       // Check if activity already exists
       const existingActivities = userSettings?.journalCustomActivities || [];
@@ -383,18 +384,31 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   
   // Get icon for an activity
   const getActivityIcon = (activity: string) => {
+    console.log('Getting icon for activity:', activity);
+    console.log('Available custom activities:', customActivities);
+    
     // Check enabled default activities first
     const defaultActivity = enabledDefaultActivities.find((a: CustomActivity) => a.name === activity);
-    if (defaultActivity) return defaultActivity.icon;
+    if (defaultActivity) {
+      console.log('Found in default activities:', defaultActivity.icon);
+      return defaultActivity.icon;
+    }
     
     // Check all default activities (for historical data)
     const allDefaultActivity = defaultActivities.find((a: CustomActivity) => a.name === activity);
-    if (allDefaultActivity) return allDefaultActivity.icon;
+    if (allDefaultActivity) {
+      console.log('Found in all default activities:', allDefaultActivity.icon);
+      return allDefaultActivity.icon;
+    }
     
     // Check custom activities
     const customActivity = customActivities.find((a: CustomActivity) => a.name === activity);
-    if (customActivity) return customActivity.icon;
+    if (customActivity) {
+      console.log('Found in custom activities:', customActivity.icon);
+      return customActivity.icon;
+    }
     
+    console.log('Using fallback icon for:', activity);
     // Fallback icon
     return '📌';
   };

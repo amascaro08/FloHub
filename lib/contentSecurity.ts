@@ -234,10 +234,16 @@ export const safeDecryptArray = (content: any): string[] => {
  * Safely handle JSONB that might be encrypted or plain objects
  */
 export const safeDecryptJSONB = (content: any): any => {
+  console.log('safeDecryptJSONB input:', content);
+  console.log('isContentEncrypted:', isContentEncrypted(content));
+  
   if (isContentEncrypted(content)) {
-    return decryptJSONB(content);
+    const decrypted = decryptJSONB(content);
+    console.log('safeDecryptJSONB decrypted:', decrypted);
+    return decrypted;
   }
   
+  console.log('safeDecryptJSONB returning content as-is:', content);
   return content;
 };
 
@@ -307,18 +313,28 @@ export const retrieveArrayFromStorage = (storedArray: string): string[] => {
  * Retrieve JSONB from database storage
  */
 export const retrieveJSONBFromStorage = (storedData: string): any => {
+  console.log('retrieveJSONBFromStorage input:', storedData);
+  
   if (!storedData) {
+    console.log('retrieveJSONBFromStorage: no data, returning null');
     return null;
   }
   
   try {
     const parsed = JSON.parse(storedData);
-    return safeDecryptJSONB(parsed);
-  } catch {
+    console.log('retrieveJSONBFromStorage parsed:', parsed);
+    const result = safeDecryptJSONB(parsed);
+    console.log('retrieveJSONBFromStorage result:', result);
+    return result;
+  } catch (error) {
+    console.log('retrieveJSONBFromStorage parse error:', error);
     // If parsing fails, treat as legacy plain object
     try {
-      return JSON.parse(storedData);
-    } catch {
+      const legacyResult = JSON.parse(storedData);
+      console.log('retrieveJSONBFromStorage legacy result:', legacyResult);
+      return legacyResult;
+    } catch (legacyError) {
+      console.log('retrieveJSONBFromStorage legacy parse error:', legacyError);
       return null;
     }
   }
