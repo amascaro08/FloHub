@@ -1,4 +1,4 @@
-import { db } from "../drizzle";
+import { db } from "@/lib/drizzle";
 import { 
   tasks, 
   notes, 
@@ -10,7 +10,7 @@ import {
   userSettings,
   calendarEvents,
   meetings 
-} from "../db/schema";
+} from "@/db/schema";
 import { eq, and, gte, lte, desc, sql, count, like, or } from "drizzle-orm";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
