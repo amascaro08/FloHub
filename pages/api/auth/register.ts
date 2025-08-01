@@ -3,52 +3,115 @@ import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { emailService } from '@/lib/emailService';
+import { signToken } from '@/lib/auth';
+import { createSecureCookie } from '@/lib/cookieUtils';
+import { validateEmail, validatePassword } from '@/lib/validation';
+import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
+  // Add CORS headers for cross-domain support
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.includes('flohub.xyz') || 
+    origin.includes('flohub.vercel.app') || 
+    origin.includes('localhost:3000')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { name, email, password } = req.body;
+  const { email, password, name } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: 'Name, email, and password are required' });
+  // SECURITY FIX: Validate inputs
+  const emailValidation = validateEmail(email);
+  if (!emailValidation.isValid) {
+    return res.status(400).json({ message: emailValidation.error });
+  }
+
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    return res.status(400).json({ message: passwordValidation.error });
+  }
+
+  if (!name || typeof name !== 'string' || name.trim().length < 2) {
+    return res.status(400).json({ message: 'Name is required and must be at least 2 characters long' });
   }
 
   try {
+    // Check if user already exists
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: eq(users.email, emailValidation.sanitized),
     });
 
     if (existingUser) {
-      return res.status(409).json({ message: 'User already exists' });
+      return res.status(409).json({ message: 'User already exists with this email' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    await db.insert(users).values({
-      name,
-      email,
+    // Create user
+    const newUser = await db.insert(users).values({
+      email: emailValidation.sanitized,
       password: hashedPassword,
-    });
+      name: name.trim(),
+      created_at: new Date(),
+      updated_at: new Date()
+    }).returning();
 
-    // Send welcome email
-    try {
-      const emailSent = await emailService.sendWelcomeEmail(email, name);
-      if (emailSent) {
-        console.log('Welcome email sent successfully to:', email);
-      } else {
-        console.warn('Failed to send welcome email to:', email);
-      }
-    } catch (error) {
-      console.error('Error sending welcome email:', error);
-      // Don't fail registration if email fails
+    if (!newUser || newUser.length === 0) {
+      return res.status(500).json({ message: 'Failed to create user' });
     }
 
-    res.status(201).json({ message: 'User created successfully' });
+    const user = newUser[0];
+
+    // Create JWT token
+    const token = signToken({ userId: user.id, email: user.email });
+
+    // Set secure cookie
+    const authCookie = createSecureCookie(req, 'auth-token', token, {
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+      rememberMe: true,
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    });
+    
+    res.setHeader('Set-Cookie', authCookie);
+
+    // Add cache control headers
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    res.status(201).json({ 
+      message: 'User registered successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
   }
 }
+
+// Apply rate limiting to the register endpoint
+export default withRateLimit(RATE_LIMITS.AUTH)(registerHandler);
