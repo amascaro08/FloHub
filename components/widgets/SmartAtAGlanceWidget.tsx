@@ -618,34 +618,194 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const showFloCatHeader = !isCompactLayout;
   const showSuggestions = !isCompactLayout;
 
+  // Dynamic layout calculation based on available content
+  const hasTasks = (data?.tasks?.total ?? 0) > 0;
+  const hasEvents = (data?.events?.today ?? 0) > 0;
+  const hasHabits = (data?.habits?.total ?? 0) > 0;
+  const hasNextMeeting = data?.events?.next !== null;
+  const hasSuggestions = data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0;
+
+  // Hero mode optimizations - ensure content fits without scrolling
+  const isHeroMode = isHero || (isWideLayout && colSpan > 6);
+  const useCompactHeroLayout = isHeroMode && (hasTasks || hasEvents || hasHabits || hasNextMeeting || hasSuggestions);
+
+  // Calculate available content count for dynamic grid
+  const availableStatsCards = [hasTasks, hasEvents, hasHabits].filter(Boolean).length;
+  
+  // Determine optimal grid layout based on available content
+  const getStatsGridLayout = () => {
+    if (isWideLayout) {
+      // For wide layouts, use more columns to better utilize horizontal space
+      if (isHeroMode) {
+        // Hero mode: use more columns for better space utilization
+        switch (availableStatsCards) {
+          case 0:
+            return 'grid-cols-1';
+          case 1:
+            return 'grid-cols-2'; // Spread single card across 2 columns
+          case 2:
+            return 'grid-cols-2';
+          case 3:
+            return 'grid-cols-3';
+          default:
+            return 'grid-cols-3';
+        }
+      } else {
+        // Regular wide layout: always use 3 columns
+        return 'grid-cols-3';
+      }
+    }
+    
+    if (isCompactLayout) {
+      // Compact layouts use 2 columns
+      return 'grid-cols-2';
+    }
+    
+    // Dynamic grid based on available content
+    switch (availableStatsCards) {
+      case 0:
+        return 'grid-cols-1'; // Single column for no stats
+      case 1:
+        return 'grid-cols-1'; // Single column for one stat
+      case 2:
+        return 'grid-cols-2'; // Two columns for two stats
+      case 3:
+        return 'grid-cols-3'; // Three columns for three stats
+      default:
+        return 'grid-cols-3'; // Fallback to three columns
+    }
+  };
+
+  // Calculate if we should show a placeholder or adjust spacing
+  const shouldShowPlaceholder = availableStatsCards === 0 && !hasNextMeeting && !hasSuggestions;
+  const shouldExpandCards = availableStatsCards <= 1 && !isCompactLayout; // Make cards larger when fewer items
+
+  // Hero mode spacing and sizing adjustments
+  const getHeroSpacing = () => {
+    if (isHeroMode) {
+      return 'space-y-2'; // Tighter spacing in hero mode
+    }
+    return isCompactLayout ? 'space-y-2' : 'space-y-4';
+  };
+
+  const getHeroPadding = () => {
+    if (isHeroMode) {
+      return 'p-2'; // Smaller padding in hero mode
+    }
+    return 'p-3';
+  };
+
+  const getHeroCardPadding = () => {
+    if (isHeroMode) {
+      return 'p-2'; // Smaller card padding in hero mode
+    }
+    return shouldExpandCards ? 'p-4' : 'p-3';
+  };
+
+  // Optimize layout for hero/wide mode
+  const getHeroLayout = () => {
+    if (!isWideLayout) {
+      return 'flex flex-col space-y-4';
+    }
+    
+    if (isHeroMode) {
+      // Hero mode: use a more flexible layout that adapts to content
+      const hasStats = availableStatsCards > 0;
+      const hasMeeting = hasNextMeeting;
+      const hasSuggestionsContent = hasSuggestions;
+      
+      if (hasStats && hasMeeting && hasSuggestionsContent) {
+        // Full content: 3-column layout
+        return 'grid grid-cols-3 gap-4';
+      } else if (hasStats && (hasMeeting || hasSuggestionsContent)) {
+        // Partial content: 2-column layout
+        return 'grid grid-cols-2 gap-4';
+      } else if (hasStats || hasMeeting || hasSuggestionsContent) {
+        // Single content type: single column with expanded cards
+        return 'flex flex-col space-y-4';
+      } else {
+        // No content: single column placeholder
+        return 'flex flex-col space-y-4';
+      }
+    } else {
+      // Regular wide layout: 2-column grid
+      return 'grid grid-cols-2 gap-4';
+    }
+  };
+
+  // Determine content distribution for hero mode
+  const getHeroContentDistribution = () => {
+    if (!isHeroMode || !isWideLayout) {
+      return null;
+    }
+    
+    const hasStats = availableStatsCards > 0;
+    const hasMeeting = hasNextMeeting;
+    const hasSuggestionsContent = hasSuggestions;
+    
+    if (hasStats && hasMeeting && hasSuggestionsContent) {
+      return {
+        statsColumn: 'col-span-1',
+        meetingColumn: 'col-span-1', 
+        suggestionsColumn: 'col-span-1'
+      };
+    } else if (hasStats && hasMeeting) {
+      return {
+        statsColumn: 'col-span-1',
+        meetingColumn: 'col-span-1',
+        suggestionsColumn: null
+      };
+    } else if (hasStats && hasSuggestionsContent) {
+      return {
+        statsColumn: 'col-span-1',
+        meetingColumn: null,
+        suggestionsColumn: 'col-span-1'
+      };
+    } else if (hasMeeting && hasSuggestionsContent) {
+      return {
+        statsColumn: null,
+        meetingColumn: 'col-span-1',
+        suggestionsColumn: 'col-span-1'
+      };
+    } else {
+      return {
+        statsColumn: 'col-span-2',
+        meetingColumn: null,
+        suggestionsColumn: null
+      };
+    }
+  };
+
+  const heroDistribution = getHeroContentDistribution();
+
   return (
-    <div className={`h-full flex flex-col ${isCompactLayout ? 'space-y-2' : 'space-y-4'}`}>
-      {/* FloCat Header - Only show in non-compact layouts */}
+    <div className={`h-full flex flex-col ${getHeroSpacing()}`}>
+      {/* FloCat Header - Only show in non-compact layouts, but make it more compact in hero mode */}
       {showFloCatHeader && (
-        <div className="flex items-start space-x-3 p-4 bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
+        <div className={`flex items-start space-x-3 ${isHeroMode ? 'p-3' : 'p-4'} bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl border border-primary-100 dark:border-primary-800`}>
           <div className="flex-shrink-0">
             <img 
               src="/flohub_flocat.png" 
               alt="FloCat" 
-              className="w-12 h-12 rounded-full"
+              className={`${isHeroMode ? 'w-10 h-10' : 'w-12 h-12'} rounded-full`}
               onError={(e) => {
                 // Fallback to emoji if image fails to load
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }}
             />
-            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl hidden">
+            <div className={`${isHeroMode ? 'w-10 h-10' : 'w-12 h-12'} bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl hidden`}>
               😺
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white mb-1">
+            <h3 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white mb-1`}>
               {data.floCatMessage?.greeting || 'Hello there! 😸'}
             </h3>
             {data.floCatMessage?.insights && data.floCatMessage.insights.length > 0 && (
               <div className="space-y-1">
-                {data.floCatMessage.insights.map((insight: string, index: number) => (
-                  <p key={index} className="text-xs text-grey-tint">
+                {data.floCatMessage.insights.slice(0, isHeroMode ? 1 : 2).map((insight: string, index: number) => (
+                  <p key={index} className={`${isHeroMode ? 'text-xs' : 'text-xs'} text-grey-tint`}>
                     {insight}
                   </p>
                 ))}
@@ -655,67 +815,64 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
         </div>
       )}
 
-      {/* Main Content - Responsive layout */}
-      <div className={`flex-1 ${isWideLayout ? 'grid grid-cols-2 gap-4' : 'flex flex-col space-y-4'}`}>
-        {/* Left Side - Stats and FloCat (in wide layouts) */}
-        <div className={`${isWideLayout ? '' : 'space-y-4'}`}>
-          {/* Quick Stats - Only show cards with data */}
-          <div className={`grid gap-3 ${
-            isWideLayout 
-              ? 'grid-cols-3' 
-              : isCompactLayout 
-                ? 'grid-cols-2' 
-                : 'grid-cols-3'
-          }`}>
-            {/* Tasks Card - Always show if there are tasks */}
-            {(data?.tasks?.total ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
-                  <CheckSquare className="w-4 h-4 text-primary-500" />
+      {/* Main Content - Optimized layout for hero/landscape mode */}
+      <div className={`flex-1 ${getHeroLayout()}`}>
+        {/* Stats Section - Adapts based on layout mode */}
+        {availableStatsCards > 0 && (
+          <div className={heroDistribution?.statsColumn || ''}>
+            <div className={`grid gap-3 ${getStatsGridLayout()}`}>
+              {/* Tasks Card - Only show if there are tasks */}
+              {hasTasks && (
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
+                    <CheckSquare className="w-4 h-4 text-primary-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.tasks?.incomplete ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Tasks</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.tasks?.incomplete ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Tasks</p>
-              </div>
-            )}
-            
-            {/* Events Card - Always show if there are events */}
-            {(data?.events?.today ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-accent-100 dark:bg-accent-900/30 rounded-lg mx-auto mb-2">
-                  <Calendar className="w-4 h-4 text-accent-500" />
+              )}
+              
+              {/* Events Card - Only show if there are events */}
+              {hasEvents && (
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-accent-100 dark:bg-accent-900/30 rounded-lg mx-auto mb-2">
+                    <Calendar className="w-4 h-4 text-accent-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.events?.today ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Remaining</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.events?.today ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Remaining</p>
-              </div>
-            )}
-            
-            {/* Habits Card - Only show if there are habits */}
-            {(data?.habits?.total ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
-                  <Target className="w-4 h-4 text-primary-500" />
+              )}
+              
+              {/* Habits Card - Only show if there are habits */}
+              {hasHabits && (
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
+                    <Target className="w-4 h-4 text-primary-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.habits?.completed ?? 0}/{data?.habits?.total ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Habits</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.habits?.completed ?? 0}/{data?.habits?.total ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Habits</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+        )}
 
-          {/* Next Meeting - Show in all layouts except when no next meeting */}
-          {data?.events?.next && (
-            <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+        {/* Next Meeting Section - Adapts based on layout mode */}
+        {hasNextMeeting && (
+          <div className={heroDistribution?.meetingColumn || ''}>
+            <div className={`${getHeroPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 h-full`}>
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-xl">
                   <Clock className="w-4 h-4 text-accent-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                  <h4 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white truncate`}>
                     {data?.events?.next?.summary || 'Meeting'}
                   </h4>
                   <p className="text-xs text-grey-tint">
@@ -730,80 +887,93 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
                 </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Right Side - Suggestions (in wide layouts) or below (in standard layouts) */}
-        {showSuggestions && (
-          <div className={`${isWideLayout ? 'space-y-2' : 'space-y-3'}`}>
-            {data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0 ? (
-              <div className={`grid gap-2 ${
-                isWideLayout 
-                  ? 'grid-cols-2' 
-                  : 'grid-cols-1 md:grid-cols-2'
-              }`}>
-                {data.suggestions.slice(0, isWideLayout ? 4 : 4).map((suggestion: SmartInsight, index: number) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-xl border ${
+        {/* Suggestions Section - Adapts based on layout mode */}
+        {showSuggestions && hasSuggestions && (
+          <div className={`${heroDistribution?.suggestionsColumn || ''} ${isWideLayout ? 'space-y-2' : 'space-y-3'}`}>
+            <div className={`grid gap-2 ${
+              isWideLayout 
+                ? 'grid-cols-1' 
+                : 'grid-cols-1 md:grid-cols-2'
+            }`}>
+              {data.suggestions.slice(0, isWideLayout ? (isHeroMode ? 3 : 4) : 4).map((suggestion: SmartInsight, index: number) => (
+                <div
+                  key={index}
+                  className={`${getHeroPadding()} rounded-xl border ${
+                    suggestion.type === 'urgent'
+                      ? 'bg-accent-50 border-accent-200 dark:bg-accent-900/20 dark:border-accent-800'
+                      : suggestion.type === 'celebration'
+                      ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                      : suggestion.type === 'warning'
+                      ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                      : suggestion.type === 'suggestion'
+                      ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                      : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-start space-x-2">
+                    <div className={`p-1 rounded-lg flex-shrink-0 ${
                       suggestion.type === 'urgent'
-                        ? 'bg-accent-50 border-accent-200 dark:bg-accent-900/20 dark:border-accent-800'
+                        ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
                         : suggestion.type === 'celebration'
-                        ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                         : suggestion.type === 'warning'
-                        ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                         : suggestion.type === 'suggestion'
-                        ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-                        : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-start space-x-2">
-                      <div className={`p-1 rounded-lg flex-shrink-0 ${
-                        suggestion.type === 'urgent'
-                          ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
-                          : suggestion.type === 'celebration'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                          : suggestion.type === 'warning'
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                          : suggestion.type === 'suggestion'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                          : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                      }`}>
-                        {suggestion.icon}
-                      </div>
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                    }`}>
+                      {suggestion.icon}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white truncate`}>
+                        {suggestion.title}
+                      </h4>
+                      <p className={`text-xs text-grey-tint mt-1 ${isHeroMode ? 'line-clamp-1' : 'line-clamp-2'}`}>
+                        {suggestion.message}
+                      </p>
                       
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
-                          {suggestion.title}
-                        </h4>
-                        <p className="text-xs text-grey-tint mt-1 line-clamp-2">
-                          {suggestion.message}
-                        </p>
-                        
-                        {suggestion.actionable && suggestion.action && (
-                          <button
-                            onClick={suggestion.action}
-                            className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors flex items-center space-x-1"
-                          >
-                            <span>{suggestion.actionLabel}</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
+                      {suggestion.actionable && suggestion.action && !isHeroMode && (
+                        <button
+                          onClick={suggestion.action}
+                          className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors flex items-center space-x-1"
+                        >
+                          <span>{suggestion.actionLabel}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-6 h-6 text-primary-500" />
                 </div>
-                <p className="text-grey-tint font-body text-sm">
-                  All caught up! No suggestions to show.
-                </p>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Placeholder when no content is available */}
+        {shouldShowPlaceholder && (
+          <div className={`text-center ${isHeroMode ? 'py-4' : 'py-8'} col-span-full`}>
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              All caught up! No tasks, events, or habits for today.
+            </p>
+          </div>
+        )}
+
+        {/* Show suggestions placeholder when no suggestions but other content exists */}
+        {showSuggestions && !hasSuggestions && (hasTasks || hasEvents || hasHabits || hasNextMeeting) && (
+          <div className={`text-center ${isHeroMode ? 'py-4' : 'py-6'} col-span-full`}>
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              All caught up! No suggestions to show.
+            </p>
           </div>
         )}
       </div>
