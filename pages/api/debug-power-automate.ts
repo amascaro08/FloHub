@@ -37,7 +37,7 @@ export default async function handler(
       userEmail: user.email,
       hasSettings: !!settings,
       calendarSources: settings?.calendarSources || [],
-      powerAutomateSources: [],
+      powerAutomateSources: [] as any[],
       existingPowerAutomateEvents: 0,
       syncResults: null as any
     };
