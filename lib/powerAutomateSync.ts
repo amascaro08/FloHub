@@ -355,7 +355,7 @@ export class PowerAutomateSyncService {
           powerAutomateUrl: userSettings.powerAutomateUrl
         })
         .from(userSettings)
-        .where(userSettings.user_email.isNotNull())
+        .where(isNotNull(userSettings.user_email))
         .limit(5); // Limit to 5 users per trigger to avoid timeouts
 
       for (const user of usersToSync) {
