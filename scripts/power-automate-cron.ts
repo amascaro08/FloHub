@@ -19,6 +19,7 @@
 import { db } from '../lib/drizzle';
 import { userSettings } from '../db/schema';
 import { PowerAutomateSyncService } from '../lib/powerAutomateSync';
+import { isNotNull, or } from 'drizzle-orm';
 
 interface SyncJobResult {
   userEmail: string;
@@ -45,8 +46,10 @@ async function syncAllPowerAutomateUsers(): Promise<SyncJobResult[]> {
       .from(userSettings)
       .where(
         // Users with either calendar sources containing Power Automate or legacy powerAutomateUrl
-        // This is a simplified query - you might need to adjust based on your exact schema
-        userSettings.user_email.isNotNull()
+        or(
+          isNotNull(userSettings.powerAutomateUrl),
+          isNotNull(userSettings.calendarSources)
+        )
       );
 
     console.log(`Found ${usersWithPowerAutomate.length} users to process`);
