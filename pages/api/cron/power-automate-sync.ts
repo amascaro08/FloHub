@@ -5,13 +5,25 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Verify this is a Vercel cron request
+  // Verify authorization - support multiple auth methods
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const cronSecret = process.env.CRON_SECRET;
+  const webhookSecret = req.headers['x-webhook-secret'] || req.query.secret;
+  
+  // Check authorization via Bearer token (Vercel style) or webhook secret
+  const isAuthorized = 
+    (authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    (webhookSecret && cronSecret && webhookSecret === cronSecret);
+
+  if (!isAuthorized) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Please provide valid authorization via Bearer token or webhook secret'
+    });
   }
 
-  if (req.method !== 'POST') {
+  // Support both GET and POST methods for flexibility with different cron services
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 

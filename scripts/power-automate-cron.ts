@@ -6,14 +6,16 @@
  * This script can be run periodically (e.g., every 6 hours) to sync
  * Power Automate events for all users. It can be scheduled using:
  * 
- * - Vercel Cron Jobs (recommended)
- * - System cron
- * - GitHub Actions
- * - Any other cron service
+ * - GitHub Actions (recommended for free usage)
+ * - External webhook cron services (cron-job.org, EasyCron, etc.)
+ * - System cron (for self-hosted deployments)
+ * - Vercel Cron Jobs (requires Vercel Pro)
  * 
  * Usage:
- * - For Vercel: Add to vercel.json
- * - For local: Run with tsx scripts/power-automate-cron.ts
+ * - For GitHub Actions: See .github/workflows/power-automate-sync.yml
+ * - For webhook services: Call /api/cron/power-automate-sync endpoint
+ * - For local: Run with npx tsx scripts/power-automate-cron.ts
+ * - See docs/POWER_AUTOMATE_CRON_SETUP.md for detailed setup instructions
  */
 
 import { db } from '../lib/drizzle';
