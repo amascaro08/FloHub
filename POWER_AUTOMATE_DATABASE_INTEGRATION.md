@@ -80,10 +80,20 @@ Automated sync endpoint called by Vercel cron jobs.
 **File**: `scripts/power-automate-cron.ts`
 
 Standalone script for periodic synchronization that can be run:
-- Via Vercel cron jobs (recommended)
+- Via Vercel cron jobs (daily at 6 AM)
 - System cron
 - GitHub Actions
 - Any other cron service
+
+### 6. Client-Side Polling Service
+
+**File**: `lib/powerAutomatePolling.ts`
+
+Client-side polling service that provides more frequent updates:
+- Polls every 2 hours when users are active
+- Syncs on page load and user activity
+- Respects daily sync limits (5 syncs per day)
+- Works within Hobby plan limitations
 
 ## Usage
 
@@ -132,6 +142,46 @@ const result = await syncService.syncUserEvents(
 const status = await syncService.getSyncStatus('user@example.com', 'default');
 ```
 
+### React Hook Usage
+
+```typescript
+import { usePowerAutomateSync } from '@/hooks/usePowerAutomateSync';
+
+function MyComponent() {
+  const { status, triggerManualSync, isLoading } = usePowerAutomateSync({
+    enabled: true,
+    intervalMinutes: 120, // 2 hours
+    maxSyncsPerDay: 5,
+    syncOnPageLoad: true,
+    syncOnUserActivity: true
+  });
+
+  return (
+    <div>
+      <p>Last sync: {status.lastSync ? status.lastSync.toLocaleString() : 'Never'}</p>
+      <button onClick={() => triggerManualSync()}>Sync Now</button>
+    </div>
+  );
+}
+```
+
+### React Component Usage
+
+```typescript
+import { PowerAutomateSyncStatus } from '@/components/PowerAutomateSyncStatus';
+
+function SettingsPage() {
+  return (
+    <div>
+      <PowerAutomateSyncStatus 
+        userEmail="user@example.com"
+        showControls={true}
+      />
+    </div>
+  );
+}
+```
+
 ## Database Queries
 
 ### Get Power Automate Events for User
@@ -176,18 +226,20 @@ CRON_SECRET=your-secret-key-here
 
 ### Vercel Configuration
 
-The `vercel.json` file configures cron jobs to run every 6 hours:
+The `vercel.json` file configures cron jobs to run daily at 6 AM (Hobby plan limitation):
 
 ```json
 {
   "crons": [
     {
       "path": "/api/cron/power-automate-sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
 ```
+
+**Note**: Hobby accounts are limited to daily cron jobs. For more frequent updates, the system uses client-side polling when users are active.
 
 ## Benefits
 
