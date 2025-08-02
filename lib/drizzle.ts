@@ -12,6 +12,8 @@ if (typeof window !== 'undefined') {
 // provided that the NEON_DATABASE_URL environment variable is set correctly in the Vercel project settings.
 const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
 
+let db: any;
+
 if (!databaseUrl || databaseUrl === 'postgresql://username:password@host:port/database') {
   console.warn('⚠️  No valid database URL provided. Using mock database for development.');
   // Create a mock database for development
@@ -43,8 +45,10 @@ if (!databaseUrl || databaseUrl === 'postgresql://username:password@host:port/da
     }),
   };
   
-  export const db = mockDb as any;
+  db = mockDb;
 } else {
   const sql = neon(databaseUrl);
-  export const db = drizzle(sql, { schema });
+  db = drizzle(sql, { schema });
 }
+
+export { db };

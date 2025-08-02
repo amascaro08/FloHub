@@ -79,5 +79,5 @@ async function loginHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Temporarily disable security middleware for debugging
-export default loginHandler;
+// Apply comprehensive security to the login endpoint
+export default withAuthSecurity(loginHandler);
