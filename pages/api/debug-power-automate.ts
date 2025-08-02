@@ -5,6 +5,7 @@ import { db } from '../../lib/drizzle';
 import { userSettings, calendarEvents } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { PowerAutomateSyncService } from '../../lib/powerAutomateSync';
+import { retrieveContentFromStorage, retrieveArrayFromStorage } from '../../lib/contentSecurity';
 
 export default async function handler(
   req: NextApiRequest,
@@ -116,11 +117,14 @@ export default async function handler(
       message: 'Power Automate debug completed',
       eventsInDatabase: eventsAfterSync.map(event => ({
         id: event.id,
-        summary: event.summary,
+        summary: retrieveContentFromStorage(event.summary || ''),
+        description: retrieveContentFromStorage(event.description || ''),
+        location: retrieveContentFromStorage(event.location || ''),
         start: event.start,
         syncStatus: event.syncStatus,
         externalSource: event.externalSource,
-        externalId: event.externalId
+        externalId: event.externalId,
+        tags: event.tags ? retrieveArrayFromStorage(event.tags as any) : []
       }))
     });
 

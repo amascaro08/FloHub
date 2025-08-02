@@ -2,6 +2,7 @@ import { db } from './drizzle';
 import { calendarEvents } from '../db/schema';
 import { eq, and, or, isNull, isNotNull, gte } from 'drizzle-orm';
 import { parseISO, addDays, subDays } from 'date-fns';
+import { prepareContentForStorage, prepareArrayForStorage, retrieveContentFromStorage, retrieveArrayFromStorage } from './contentSecurity';
 
 export interface PowerAutomateEvent {
   id: string;
@@ -189,9 +190,9 @@ export class PowerAutomateSyncService {
             id: eventId,
             user_email: userEmail,
             user_id: userEmail, // Use email as user_id for consistency
-            summary: event.title,
-            description: event.description || '',
-            location: event.location || '',
+            summary: prepareContentForStorage(event.title),
+            description: prepareContentForStorage(event.description || ''),
+            location: prepareContentForStorage(event.location || ''),
             start: {
               dateTime: event.startTime,
               date: event.startTime.includes('T') ? undefined : event.startTime
@@ -202,7 +203,7 @@ export class PowerAutomateSyncService {
             } : undefined,
             calendarId: `powerautomate_${sourceId}`,
             source: 'powerautomate',
-            tags: ['work', 'powerautomate'],
+            tags: prepareArrayForStorage(['work', 'powerautomate']),
             isRecurring: event.isRecurring || false,
             seriesMasterId: event.seriesMasterId,
             instanceIndex: event.instanceIndex,
