@@ -219,7 +219,15 @@ async function handleCalendarIntent(userInput: string, context: AssistantContext
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar`, {
+        // Calculate date range for calendar events (today + next 7 days)
+        const now = new Date();
+        const startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(now);
+        endDate.setDate(now.getDate() + 7);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}&useCalendarSources=true`, {
           headers: { 
             'Cookie': context.cookies,
             'Content-Type': 'application/json'

@@ -55,9 +55,18 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
   useEffect(() => {
     const loadUserStats = async () => {
       try {
+        // Calculate date range for calendar events (this week)
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
         const [tasksRes, eventsRes, habitsRes] = await Promise.allSettled([
           fetch('/api/tasks'),
-          fetch('/api/calendar'),
+          fetch(`/api/calendar?timeMin=${startOfWeek.toISOString()}&timeMax=${endOfWeek.toISOString()}&useCalendarSources=true`),
           fetch('/api/habits')
         ]);
 
