@@ -46,13 +46,11 @@ async function syncAllPowerAutomateUsers(): Promise<SyncJobResult[]> {
     const usersWithPowerAutomate = await db
       .select({
         user_email: userSettings.user_email,
-        calendarSources: userSettings.calendarSources,
-        powerAutomateUrl: userSettings.powerAutomateUrl
+        calendarSources: userSettings.calendarSources
       })
       .from(userSettings)
       .where(
-        // Users with either calendar sources containing Power Automate or legacy powerAutomateUrl
-        // This is a simplified query - you might need to adjust based on your exact schema
+        // Users with Power Automate calendar sources
         isNotNull(userSettings.user_email)
       );
 
@@ -82,14 +80,6 @@ async function syncAllPowerAutomateUsers(): Promise<SyncJobResult[]> {
                 connectionData: source.connectionData
               });
             }
-          });
-        }
-
-        // Check legacy powerAutomateUrl
-        if (user.powerAutomateUrl && !powerAutomateSources.some(s => s.id === 'default')) {
-          powerAutomateSources.push({
-            id: 'default',
-            connectionData: user.powerAutomateUrl
           });
         }
 

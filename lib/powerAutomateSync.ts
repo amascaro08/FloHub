@@ -351,8 +351,7 @@ export class PowerAutomateSyncService {
       const usersToSync = await db
         .select({
           user_email: userSettings.user_email,
-          calendarSources: userSettings.calendarSources,
-          powerAutomateUrl: userSettings.powerAutomateUrl
+          calendarSources: userSettings.calendarSources
         })
         .from(userSettings)
         .where(isNotNull(userSettings.user_email))
@@ -389,14 +388,6 @@ export class PowerAutomateSyncService {
                   connectionData: source.connectionData
                 });
               }
-            });
-          }
-
-          // Check legacy powerAutomateUrl
-          if (user.powerAutomateUrl && !powerAutomateSources.some(s => s.id === 'default')) {
-            powerAutomateSources.push({
-              id: 'default',
-              connectionData: user.powerAutomateUrl
             });
           }
 

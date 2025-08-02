@@ -260,8 +260,7 @@ export default async function handler(
           hasCalendarSources: !!userSettingsData?.calendarSources,
           calendarSourcesCount: Array.isArray(userSettingsData?.calendarSources) ? userSettingsData.calendarSources.length : 0,
           hasSelectedCals: !!userSettingsData?.selectedCals,
-          selectedCalsCount: Array.isArray(userSettingsData?.selectedCals) ? userSettingsData.selectedCals.length : 0,
-          hasPowerAutomateUrl: !!userSettingsData?.powerAutomateUrl
+          selectedCalsCount: Array.isArray(userSettingsData?.selectedCals) ? userSettingsData.selectedCals.length : 0
         });
         
         if (Array.isArray(userSettingsData?.calendarSources) && userSettingsData.calendarSources.length > 0) {
@@ -271,8 +270,8 @@ export default async function handler(
         } else {
           // Fall back to legacy settings
           legacyCalendarIds = Array.isArray(calendarId) ? calendarId : [calendarId];
-          legacyO365Url = userSettingsData?.powerAutomateUrl || null;
-          console.log('Using legacy settings:', { legacyCalendarIds, hasLegacyO365Url: !!legacyO365Url });
+          legacyO365Url = null; // No longer using legacy Power Automate URLs
+          console.log('Using legacy settings:', { legacyCalendarIds });
         }
       } catch (e) {
         console.error("Error fetching user settings:", e);
@@ -335,11 +334,6 @@ export default async function handler(
         .map(source => source.connectionData)
         .filter((url): url is string => typeof url === "string");
     }
-    
-    // Also check legacy powerAutomateUrl from settings
-    if (powerAutomateUrls.length === 0 && userSettingsRecord?.powerAutomateUrl && userSettingsRecord.powerAutomateUrl.startsWith("http")) {
-      powerAutomateUrls.push(userSettingsRecord.powerAutomateUrl);
-    }
 
     console.log('Power Automate URLs to process:', powerAutomateUrls);
 
@@ -380,7 +374,7 @@ export default async function handler(
     }
 
     // Fetch Power Automate events from database and trigger sync if needed
-    if (powerAutomateUrls.length > 0 || userSettingsRecord?.powerAutomateUrl) {
+    if (powerAutomateUrls.length > 0) {
       console.log("Fetching Power Automate events from database...");
       try {
         // Import here to avoid circular dependencies
@@ -462,12 +456,6 @@ export default async function handler(
             syncService.syncUserEvents(user.email, url, sourceId, false)
               .catch(error => console.warn(`Power Automate sync failed for ${sourceId}:`, error));
           });
-          
-          // Also check legacy URL
-          if (userSettingsRecord?.powerAutomateUrl && !powerAutomateUrls.includes(userSettingsRecord.powerAutomateUrl)) {
-            syncService.syncUserEvents(user.email, userSettingsRecord.powerAutomateUrl, 'legacy', false)
-              .catch(error => console.warn('Power Automate sync failed for legacy URL:', error));
-          }
         }
 
       } catch (error) {
