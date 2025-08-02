@@ -27,16 +27,38 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>('auto')
   const [isDark, setIsDark] = useState(false)
 
-  // Initialize theme from localStorage or system preference
+  // Initialize theme from localStorage, user settings, or system preference
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as ThemeMode
-    if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
-      setThemeState(savedTheme)
-    } else {
-      // Default to auto if no saved preference
-      setThemeState('auto')
-    }
+    const initializeTheme = async () => {
+      try {
+        // First try to get theme from user settings
+        const response = await fetch('/api/userSettings');
+        if (response.ok) {
+          const userSettings = await response.json();
+          if (userSettings.theme && ['light', 'dark', 'auto'].includes(userSettings.theme)) {
+            setThemeState(userSettings.theme);
+            localStorage.setItem('theme', userSettings.theme);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Could not fetch user settings for theme:', error);
+      }
+
+      // Fallback to localStorage
+      const savedTheme = localStorage.getItem('theme') as ThemeMode
+      if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
+        setThemeState(savedTheme)
+      } else {
+        // Default to auto if no saved preference
+        setThemeState('auto')
+      }
+    };
+
+    initializeTheme();
   }, [])
+
+
 
   // Apply theme changes
   useEffect(() => {
@@ -69,6 +91,26 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme)
+    
+    // Also save to user settings if we're authenticated
+    const saveToUserSettings = async () => {
+      try {
+        const response = await fetch('/api/userSettings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ theme: newTheme }),
+        });
+        if (!response.ok) {
+          console.log('Could not save theme to user settings');
+        }
+      } catch (error) {
+        console.log('Error saving theme to user settings:', error);
+      }
+    };
+
+    saveToUserSettings();
   }
 
   return (

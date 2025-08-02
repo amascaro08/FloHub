@@ -121,6 +121,7 @@ export const userSettings = pgTable("user_settings", {
   layouts: jsonb("layouts"),
   layoutTemplate: varchar("layout_template", { length: 50 }),
   slotAssignments: jsonb("slot_assignments"),
+  sidebarPreferences: jsonb("sidebar_preferences").default('{}'),
   // Journal Settings
   journalReminderEnabled: boolean("journal_reminder_enabled").default(false),
   journalReminderTime: varchar("journal_reminder_time", { length: 8 }).default('20:00'),
@@ -137,6 +138,7 @@ export const userSettings = pgTable("user_settings", {
   journalDisabledActivities: jsonb("journal_disabled_activities").default('[]'),
   // Notes Settings
   notesGrouping: varchar("notes_grouping", { length: 10 }).default('month'),
+  defaultCalendarView: varchar("default_calendar_view", { length: 20 }).default('month'),
 });
 
 // NOTES TABLE
