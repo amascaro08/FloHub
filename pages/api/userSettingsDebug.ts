@@ -23,7 +23,7 @@ export default async function handler(
     const docs = rows.map(row => ({ id: row.user_email, data: row }));
     return res.status(200).json({ documents: docs });
   } catch (error) {
-    console.error("Error listing user settings documents for", user_email, error);
+    console.error("Error listing user settings documents:", error);
     return res.status(500).json({ error: "Failed to list user settings documents" });
   }
 }

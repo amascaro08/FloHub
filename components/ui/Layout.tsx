@@ -71,7 +71,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     const loadSidebarPrefs = async () => {
       if (user?.email) {
         try {
-          console.log('Loading sidebar preferences for user:', user.email);
+          console.log('Loading sidebar preferences for user: [SANITIZED]');
           const response = await fetch(`/api/user/sidebar-preferences?userId=${user.email}&t=${Date.now()}`);
           if (response.ok) {
             const prefs = await response.json();

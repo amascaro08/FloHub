@@ -189,9 +189,9 @@ export default function MeetingNoteDetail({
 
     console.log("MeetingNoteDetail - Submitting update with:", {
       noteId: note.id,
-      title,
-      content,
-      selectedTags,
+      title: '[SANITIZED]',
+      content: '[SANITIZED]',
+      selectedTags: selectedTags.length,
       selectedEventId,
       selectedEventTitle,
       isAdhoc,

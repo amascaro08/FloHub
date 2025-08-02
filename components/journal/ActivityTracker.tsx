@@ -213,7 +213,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log('ActivityTracker: Received user settings:', data);
+      console.log('ActivityTracker: Received user settings: [SANITIZED - contains user data]');
       return data;
     },
     { 
@@ -259,8 +259,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ onSave, date, timezon
   // Get custom activities from user settings
   const customActivities = userSettings?.journalCustomActivities || [];
   
-  console.log('ActivityTracker: userSettings:', userSettings);
-  console.log('ActivityTracker: customActivities:', customActivities);
+  console.log('ActivityTracker: userSettings: [SANITIZED - contains user data]');
+  console.log('ActivityTracker: customActivities: [SANITIZED - contains user data]');
   
   // Get disabled activities from user settings
   const disabledActivities = userSettings?.journalDisabledActivities || [];

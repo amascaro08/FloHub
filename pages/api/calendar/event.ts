@@ -32,7 +32,7 @@ export default async function handler(
   const googleAccount = user.accounts?.find(account => account.provider === 'google');
   const accessToken = googleAccount?.access_token;
   
-  console.log("[API] User:", user.email);
+  console.log("[API] User: [SANITIZED]");
   console.log("[API] Google account found:", !!googleAccount);
   console.log("[API] Access token exists:", !!accessToken);
   console.log("[API] Access token length:", accessToken?.length);
@@ -329,7 +329,7 @@ export default async function handler(
 
     // Check if user has permission to create events in this calendar
     console.log("[API] Creating event in calendar:", calendarId);
-    console.log("[API] User email:", user.email);
+    console.log("[API] User email: [SANITIZED]");
     console.log("[API] Is primary calendar:", calendarId === 'primary');
     console.log("[API] Is user's own calendar:", calendarId === user.email);
     
@@ -416,7 +416,7 @@ export default async function handler(
     // Call Google API to create event
     console.log("[API] Calling Google Calendar API with URL:", url);
     console.log("[API] Payload:", JSON.stringify(payload, null, 2));
-    console.log("[API] Access token (first 20 chars):", accessToken?.substring(0, 20) + "...");
+    console.log("[API] Access token: [SANITIZED]");
     
     try {
       const apiRes = await fetch(url, {

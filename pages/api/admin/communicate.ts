@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
           return { email: targetUser.email, success };
         } catch (error) {
-          console.error(`Failed to send email to ${targetUser.email}:`, error);
+          console.error(`Failed to send email to [SANITIZED]:`, error);
           return { email: targetUser.email, success: false, error: error instanceof Error ? error.message : String(error) };
         }
       })
