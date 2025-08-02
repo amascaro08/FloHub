@@ -397,7 +397,7 @@ export default async function handler(
         console.log(`Found ${powerAutomateEvents.length} Power Automate events in database`);
 
         // Import decryption functions
-        const { retrieveContentFromStorage, retrieveArrayFromStorage } = await import('../../lib/contentSecurity');
+        const { retrieveContentFromStorage } = await import('../../lib/contentSecurity');
 
         // Filter events by date range and convert to calendar event format
         const minDateTime = new Date(safeTimeMin);
@@ -432,7 +432,7 @@ export default async function handler(
               start: startData,
               end: endData,
               source: 'powerautomate',
-              tags: event.tags ? retrieveArrayFromStorage(event.tags as any) : ['work', 'powerautomate'],
+              tags: event.tags || ['work', 'powerautomate'],
               calendar: {
                 id: event.calendarId || 'powerautomate',
                 name: 'Power Automate',
