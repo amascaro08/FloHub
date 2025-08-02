@@ -190,7 +190,7 @@ export class PowerAutomateSyncService {
             id: eventId,
             user_email: userEmail,
             user_id: userEmail, // Use email as user_id for consistency
-            summary: prepareContentForStorage(event.title),
+            summary: prepareContentForStorage(event.title || 'Untitled Event'),
             description: prepareContentForStorage(event.description || ''),
             location: prepareContentForStorage(event.location || ''),
             start: {

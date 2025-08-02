@@ -84,10 +84,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ onClose }) => {
         }
 
         if (eventsRes.status === 'fulfilled' && eventsRes.value.ok) {
-          const events = await eventsRes.value.json();
+          const eventsData = await eventsRes.value.json();
+          const events = eventsData.events || []; // Extract events array from response
           const today = new Date();
           stats.todayEvents = events.filter((e: any) => {
-            const eventDate = new Date(e.start || e.date);
+            const eventDate = new Date(e.start?.dateTime || e.start?.date || e.date);
             return eventDate.toDateString() === today.toDateString();
           }).length;
         }
