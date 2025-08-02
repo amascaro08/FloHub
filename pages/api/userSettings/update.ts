@@ -115,6 +115,37 @@ export default async function handler(
       return [];
     };
 
+    // Special handler for custom activities to preserve object structure
+    const ensureCustomActivitiesArray = (value: any): any[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) {
+        // Validate that each item has name and icon properties
+        return value.filter(item => 
+          item && 
+          typeof item === 'object' && 
+          typeof item.name === 'string' && 
+          typeof item.icon === 'string'
+        );
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(item => 
+              item && 
+              typeof item === 'object' && 
+              typeof item.name === 'string' && 
+              typeof item.icon === 'string'
+            );
+          }
+          return [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
     // Handle array fields with backwards compatibility
     const processArrayField = (value: any, fieldName: string): string[] => {
       console.log(`Processing ${fieldName}:`, value);
@@ -153,7 +184,7 @@ export default async function handler(
     settingsData.hiddenWidgets = ensureArray(settingsData.hiddenWidgets);
     settingsData.widgets = ensureArray(settingsData.widgets);
     settingsData.calendarSources = ensureArray(settingsData.calendarSources);
-    settingsData.journalCustomActivities = ensureArray(settingsData.journalCustomActivities);
+    settingsData.journalCustomActivities = ensureCustomActivitiesArray(settingsData.journalCustomActivities);
     settingsData.journalDisabledActivities = ensureArray(settingsData.journalDisabledActivities);
 
     console.log('📝 Prepared settings for database:', {
@@ -189,6 +220,7 @@ export default async function handler(
       const savedGlobalTags = savedData.globalTags as string[];
       const savedTags = savedData.tags as string[];
       const savedFloCatPersonality = savedData.floCatPersonality as string[];
+      const savedCustomActivities = savedData.journalCustomActivities as any[];
       
       console.log('✅ Verification: Settings in database:', {
         timezone: savedData.timezone,
@@ -196,7 +228,9 @@ export default async function handler(
         savedGlobalTags: savedGlobalTags,
         tagsLength: savedTags?.length || 0,
         calendarSourcesLength: savedCalendarSources?.length || 0,
-        floCatPersonalityLength: savedFloCatPersonality?.length || 0
+        floCatPersonalityLength: savedFloCatPersonality?.length || 0,
+        customActivitiesLength: savedCustomActivities?.length || 0,
+        savedCustomActivities: savedCustomActivities
       });
       
       // Check for mismatches
@@ -234,6 +268,14 @@ export default async function handler(
           actual: savedFloCatPersonality?.length || 0,
           expectedPersonality: settingsData.floCatPersonality,
           actualPersonality: savedFloCatPersonality
+        });
+      }
+      if ((settingsData.journalCustomActivities?.length || 0) !== (savedCustomActivities?.length || 0)) {
+        console.error('❌ Custom activities count mismatch!', {
+          expected: settingsData.journalCustomActivities?.length || 0,
+          actual: savedCustomActivities?.length || 0,
+          expectedActivities: settingsData.journalCustomActivities,
+          actualActivities: savedCustomActivities
         });
       }
     } else {

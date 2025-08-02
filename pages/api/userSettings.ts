@@ -113,7 +113,10 @@ export default async function handler(
       console.log("Raw data from DB:", JSON.stringify(data, null, 2));
       const decryptedData = decryptUserSettingsFields(data);
       console.log("Raw journalCustomActivities from DB:", data.journalCustomActivities);
+      console.log("Raw journalCustomActivities type:", typeof data.journalCustomActivities);
       console.log("Decrypted journalCustomActivities:", decryptedData.journalCustomActivities);
+      console.log("Decrypted journalCustomActivities type:", typeof decryptedData.journalCustomActivities);
+      console.log("Decrypted journalCustomActivities length:", Array.isArray(decryptedData.journalCustomActivities) ? decryptedData.journalCustomActivities.length : 'not array');
       console.log("Full decrypted data:", JSON.stringify(decryptedData, null, 2));
       
       // Ensure arrays are properly handled with backwards compatibility

@@ -122,11 +122,12 @@ class PowerAutomatePollingService {
       // Get current user email if not provided
       if (!userEmail) {
         // This would need to be implemented based on your auth system
-        userEmail = await this.getCurrentUserEmail();
-        if (!userEmail) {
+        const currentUserEmail = await this.getCurrentUserEmail();
+        if (!currentUserEmail) {
           console.log('No user email available for sync');
           return false;
         }
+        userEmail = currentUserEmail;
       }
 
       console.log(`Triggering Power Automate sync (${triggerType}) for user: ${userEmail}`);
