@@ -618,6 +618,10 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const showFloCatHeader = !isCompactLayout;
   const showSuggestions = !isCompactLayout;
 
+  // Hero mode optimizations - ensure content fits without scrolling
+  const isHeroMode = isHero || (isWideLayout && colSpan > 6);
+  const useCompactHeroLayout = isHeroMode && (hasTasks || hasEvents || hasHabits || hasNextMeeting || hasSuggestions);
+
   // Dynamic layout calculation based on available content
   const hasTasks = (data?.tasks?.total ?? 0) > 0;
   const hasEvents = (data?.events?.today ?? 0) > 0;
@@ -659,34 +663,56 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const shouldShowPlaceholder = availableStatsCards === 0 && !hasNextMeeting && !hasSuggestions;
   const shouldExpandCards = availableStatsCards <= 1 && !isCompactLayout; // Make cards larger when fewer items
 
+  // Hero mode spacing and sizing adjustments
+  const getHeroSpacing = () => {
+    if (isHeroMode) {
+      return 'space-y-2'; // Tighter spacing in hero mode
+    }
+    return isCompactLayout ? 'space-y-2' : 'space-y-4';
+  };
+
+  const getHeroPadding = () => {
+    if (isHeroMode) {
+      return 'p-2'; // Smaller padding in hero mode
+    }
+    return 'p-3';
+  };
+
+  const getHeroCardPadding = () => {
+    if (isHeroMode) {
+      return 'p-2'; // Smaller card padding in hero mode
+    }
+    return shouldExpandCards ? 'p-4' : 'p-3';
+  };
+
   return (
-    <div className={`h-full flex flex-col ${isCompactLayout ? 'space-y-2' : 'space-y-4'}`}>
-      {/* FloCat Header - Only show in non-compact layouts */}
+    <div className={`h-full flex flex-col ${getHeroSpacing()}`}>
+      {/* FloCat Header - Only show in non-compact layouts, but make it more compact in hero mode */}
       {showFloCatHeader && (
-        <div className="flex items-start space-x-3 p-4 bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
+        <div className={`flex items-start space-x-3 ${isHeroMode ? 'p-3' : 'p-4'} bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl border border-primary-100 dark:border-primary-800`}>
           <div className="flex-shrink-0">
             <img 
               src="/flohub_flocat.png" 
               alt="FloCat" 
-              className="w-12 h-12 rounded-full"
+              className={`${isHeroMode ? 'w-10 h-10' : 'w-12 h-12'} rounded-full`}
               onError={(e) => {
                 // Fallback to emoji if image fails to load
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }}
             />
-            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl hidden">
+            <div className={`${isHeroMode ? 'w-10 h-10' : 'w-12 h-12'} bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl hidden`}>
               😺
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-dark-base dark:text-soft-white mb-1">
+            <h3 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white mb-1`}>
               {data.floCatMessage?.greeting || 'Hello there! 😸'}
             </h3>
             {data.floCatMessage?.insights && data.floCatMessage.insights.length > 0 && (
               <div className="space-y-1">
-                {data.floCatMessage.insights.map((insight: string, index: number) => (
-                  <p key={index} className="text-xs text-grey-tint">
+                {data.floCatMessage.insights.slice(0, isHeroMode ? 1 : 2).map((insight: string, index: number) => (
+                  <p key={index} className={`${isHeroMode ? 'text-xs' : 'text-xs'} text-grey-tint`}>
                     {insight}
                   </p>
                 ))}
@@ -696,7 +722,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
         </div>
       )}
 
-      {/* Main Content - Responsive layout */}
+      {/* Main Content - Responsive layout with hero optimizations */}
       <div className={`flex-1 ${isWideLayout ? 'grid grid-cols-2 gap-4' : 'flex flex-col space-y-4'}`}>
         {/* Left Side - Stats and FloCat (in wide layouts) */}
         <div className={`${isWideLayout ? '' : 'space-y-4'}`}>
@@ -705,7 +731,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
             <div className={`grid gap-3 ${getStatsGridLayout()}`}>
               {/* Tasks Card - Only show if there are tasks */}
               {hasTasks && (
-                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
                   <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
                     <CheckSquare className="w-4 h-4 text-primary-500" />
                   </div>
@@ -718,7 +744,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
               
               {/* Events Card - Only show if there are events */}
               {hasEvents && (
-                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
                   <div className="flex items-center justify-center w-8 h-8 bg-accent-100 dark:bg-accent-900/30 rounded-lg mx-auto mb-2">
                     <Calendar className="w-4 h-4 text-accent-500" />
                   </div>
@@ -731,7 +757,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
               
               {/* Habits Card - Only show if there are habits */}
               {hasHabits && (
-                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                <div className={`text-center ${getHeroCardPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
                   <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
                     <Target className="w-4 h-4 text-primary-500" />
                   </div>
@@ -746,13 +772,13 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
 
           {/* Next Meeting - Show in all layouts except when no next meeting */}
           {hasNextMeeting && (
-            <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+            <div className={`${getHeroPadding()} bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700`}>
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-xl">
                   <Clock className="w-4 h-4 text-accent-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                  <h4 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white truncate`}>
                     {data?.events?.next?.summary || 'Meeting'}
                   </h4>
                   <p className="text-xs text-grey-tint">
@@ -771,7 +797,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
 
           {/* Placeholder when no content is available */}
           {shouldShowPlaceholder && (
-            <div className="text-center py-8">
+            <div className={`text-center ${isHeroMode ? 'py-4' : 'py-8'}`}>
               <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-6 h-6 text-primary-500" />
               </div>
@@ -790,10 +816,10 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
                 ? 'grid-cols-2' 
                 : 'grid-cols-1 md:grid-cols-2'
             }`}>
-              {data.suggestions.slice(0, isWideLayout ? 4 : 4).map((suggestion: SmartInsight, index: number) => (
+              {data.suggestions.slice(0, isWideLayout ? (isHeroMode ? 2 : 4) : 4).map((suggestion: SmartInsight, index: number) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-xl border ${
+                  className={`${getHeroPadding()} rounded-xl border ${
                     suggestion.type === 'urgent'
                       ? 'bg-accent-50 border-accent-200 dark:bg-accent-900/20 dark:border-accent-800'
                       : suggestion.type === 'celebration'
@@ -821,14 +847,14 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                      <h4 className={`${isHeroMode ? 'text-xs' : 'text-sm'} font-medium text-dark-base dark:text-soft-white truncate`}>
                         {suggestion.title}
                       </h4>
-                      <p className="text-xs text-grey-tint mt-1 line-clamp-2">
+                      <p className={`text-xs text-grey-tint mt-1 ${isHeroMode ? 'line-clamp-1' : 'line-clamp-2'}`}>
                         {suggestion.message}
                       </p>
                       
-                      {suggestion.actionable && suggestion.action && (
+                      {suggestion.actionable && suggestion.action && !isHeroMode && (
                         <button
                           onClick={suggestion.action}
                           className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors flex items-center space-x-1"
@@ -847,7 +873,7 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
 
         {/* Show suggestions placeholder when no suggestions but other content exists */}
         {showSuggestions && !hasSuggestions && (hasTasks || hasEvents || hasHabits || hasNextMeeting) && (
-          <div className="text-center py-6">
+          <div className={`text-center ${isHeroMode ? 'py-4' : 'py-6'}`}>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <Sparkles className="w-6 h-6 text-primary-500" />
             </div>
