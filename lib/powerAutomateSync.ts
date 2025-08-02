@@ -366,6 +366,7 @@ export class PowerAutomateSyncService {
    */
   public async triggerBackgroundSyncIfNeeded(): Promise<void> {
     try {
+      console.log('🔄 Starting background sync check...');
       // Import here to avoid circular dependencies
       const { userSettings } = await import('../db/schema');
       
@@ -382,8 +383,12 @@ export class PowerAutomateSyncService {
         .where(isNotNull(userSettings.user_email))
         .limit(5); // Limit to 5 users per trigger to avoid timeouts
 
+      console.log(`📊 Found ${usersToSync.length} users to check for sync`);
+
       for (const user of usersToSync) {
         try {
+          console.log(`👤 Checking sync status for user: ${user.user_email}`);
+          
           // Check if user has synced recently
           const recentSync = await db
             .select({ lastUpdated: calendarEvents.lastUpdated })
@@ -391,13 +396,16 @@ export class PowerAutomateSyncService {
             .where(
               and(
                 eq(calendarEvents.user_email, user.user_email),
-                eq(calendarEvents.externalSource, 'powerautomate'),
+                eq(calendarEvents.source, 'powerautomate'),
                 gte(calendarEvents.lastUpdated, sixHoursAgo)
               )
             )
             .limit(1);
 
+          console.log(`📅 Recent sync check: found ${recentSync.length} recent events for ${user.user_email}`);
+
           if (recentSync.length > 0) {
+            console.log(`⏭️ User ${user.user_email} synced recently, skipping`);
             continue; // User synced recently, skip
           }
 
@@ -416,16 +424,24 @@ export class PowerAutomateSyncService {
             });
           }
 
+          console.log(`🔗 Found ${powerAutomateSources.length} Power Automate sources for ${user.user_email}`);
+
+          if (powerAutomateSources.length === 0) {
+            console.log(`⚠️ No Power Automate sources found for user: ${user.user_email}`);
+            continue;
+          }
+
           // Sync each source (background, don't throw errors)
           for (const source of powerAutomateSources) {
             try {
-              console.log(`Background sync for user: ${user.user_email}, source: ${source.id}`);
-              await this.syncUserEvents(
+              console.log(`🔄 Background sync for user: ${user.user_email}, source: ${source.id}`);
+              const syncResult = await this.syncUserEvents(
                 user.user_email,
                 source.connectionData,
                 source.id,
                 false // Don't force refresh for background sync
               );
+              console.log(`✅ Background sync completed for ${user.user_email}, source: ${source.id}`, syncResult);
             } catch (error) {
               console.warn(`Background sync failed for user ${user.user_email}, source ${source.id}:`, error);
               // Continue with other sources/users
