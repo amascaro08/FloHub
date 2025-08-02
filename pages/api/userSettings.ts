@@ -83,6 +83,7 @@ export default async function handler(
             primary: "calendar",
             secondary: "ataglance"
           },
+          sidebarPreferences: {},
           // Journal settings defaults
           journalReminderEnabled: false,
           journalReminderTime: '20:00',
@@ -97,6 +98,7 @@ export default async function handler(
           journalWeeklyReflections: false,
           journalCustomActivities: [],
           journalDisabledActivities: [],
+          defaultCalendarView: 'month',
         };
         console.log("User settings not found for", user_email, "- returning default settings");
         return res.status(200).json(defaultSettings);
@@ -182,6 +184,7 @@ export default async function handler(
         layouts: (decryptedData.layouts as any) || {},
         layoutTemplate: decryptedData.layoutTemplate || "primary-secondary",
         slotAssignments: (decryptedData.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        sidebarPreferences: (decryptedData.sidebarPreferences as any) || {},
         // Journal settings
         journalReminderEnabled: decryptedData.journalReminderEnabled ?? false,
         journalReminderTime: decryptedData.journalReminderTime || '20:00',
@@ -198,6 +201,7 @@ export default async function handler(
         journalDisabledActivities: (decryptedData.journalDisabledActivities as any) || [],
         // Notes settings
         notesGrouping: (decryptedData.notesGrouping as any) || 'month',
+        defaultCalendarView: decryptedData.defaultCalendarView || 'month',
       };
 
       console.log("User settings loaded for", user_email, settings);
@@ -321,6 +325,7 @@ export default async function handler(
         layouts: (decryptedResult.layouts as any) || {},
         layoutTemplate: decryptedResult.layoutTemplate || "primary-secondary",
         slotAssignments: (decryptedResult.slotAssignments as any) || { primary: "calendar", secondary: "ataglance" },
+        sidebarPreferences: (decryptedResult.sidebarPreferences as any) || {},
         // Journal settings
         journalReminderEnabled: decryptedResult.journalReminderEnabled ?? false,
         journalReminderTime: decryptedResult.journalReminderTime || '20:00',
@@ -337,6 +342,7 @@ export default async function handler(
         journalDisabledActivities: (decryptedResult.journalDisabledActivities as any) || [],
         // Notes settings
         notesGrouping: (decryptedResult.notesGrouping as any) || 'month',
+        defaultCalendarView: decryptedResult.defaultCalendarView || 'month',
       };
 
       console.log("User settings updated for", user_email, updatedSettings);

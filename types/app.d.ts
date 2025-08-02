@@ -19,7 +19,6 @@ export type UserSettings = {
   hiddenWidgets?: string[];
   calendarSources?: CalendarSource[];
   timezone?: string;
-  theme?: "light" | "dark" | "auto";
   floCatStyle?: "default" | "more_catty" | "less_catty" | "professional";
   floCatPersonality?: string[];
   preferredName?: string;
@@ -37,6 +36,7 @@ export type UserSettings = {
   layouts?: { [key: string]: any };
   layoutTemplate?: string;
   slotAssignments?: { [slotId: string]: string | null };
+  sidebarPreferences?: { [key: string]: any };
   // Journal Settings
   journalReminderEnabled?: boolean;
   journalReminderTime?: string;
@@ -53,6 +53,7 @@ export type UserSettings = {
   journalDisabledActivities?: string[];
   // Notes Settings
   notesGrouping?: GroupingOption;
+  defaultCalendarView?: string;
 };
 
 // Define a type for calendar sources
