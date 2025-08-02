@@ -8,7 +8,7 @@ import Image from 'next/image'
 import ChatSideModal from './ChatSideModal';
 import ChatToggleButton from './ChatToggleButton';
 
-import ThemeToggle from './ThemeToggle'
+
 import { useUser } from '@/lib/hooks/useUser';
 import { useChat } from '../assistant/ChatContext';
 import LogoutButton from './LogoutButton';
@@ -393,10 +393,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             </LogoutButton>
           </div>
 
-          {/* Theme toggle - Hide on mobile for space */}
-          <div className={`hidden md:flex p-4 border-t border-neutral-200 dark:border-neutral-700 items-center justify-center ${desktopSidebarCollapsed ? 'md:hidden' : ''}`}>
-            <ThemeToggle />
-          </div>
+
         </div>
       </aside>
 

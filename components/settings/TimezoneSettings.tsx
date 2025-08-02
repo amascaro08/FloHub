@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserSettings } from '../../types/app';
 import { GlobeAltIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import AccountDeletion from './AccountDeletion';
+import ThemeSettings from './ThemeSettings';
 
 interface TimezoneSettingsProps {
   settings: UserSettings;
@@ -106,6 +107,9 @@ const TimezoneSettings: React.FC<TimezoneSettingsProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Theme Settings */}
+      <ThemeSettings settings={settings} onSettingsChange={onSettingsChange} />
 
       {/* Additional Settings */}
       <div className="bg-[var(--surface)] rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">

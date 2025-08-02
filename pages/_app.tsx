@@ -1,6 +1,7 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { ChatProvider } from '@/components/assistant/ChatContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { useEffect } from 'react';
 import Head from 'next/head';
 import MainLayout from '@/components/ui/MainLayout';
@@ -71,20 +72,22 @@ const App = ({ Component, pageProps }: AppProps) => {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </Head>
-      <ChatProvider>
-        <ProgressBar />
-        <PWAReinstallationHandler>
-          <AuthStateHydrator requiresAuth={requiresAuth}>
-            <PageTransition>
-              <MainLayout requiresAuth={requiresAuth}>
-                <Component {...pageProps} />
-              </MainLayout>
-            </PageTransition>
-          </AuthStateHydrator>
-        </PWAReinstallationHandler>
-        <PWAInstallPrompt />
-        <PWAUpdateManager />
-      </ChatProvider>
+      <ThemeProvider>
+        <ChatProvider>
+          <ProgressBar />
+          <PWAReinstallationHandler>
+            <AuthStateHydrator requiresAuth={requiresAuth}>
+              <PageTransition>
+                <MainLayout requiresAuth={requiresAuth}>
+                  <Component {...pageProps} />
+                </MainLayout>
+              </PageTransition>
+            </AuthStateHydrator>
+          </PWAReinstallationHandler>
+          <PWAInstallPrompt />
+          <PWAUpdateManager />
+        </ChatProvider>
+      </ThemeProvider>
     </>
   );
 };
