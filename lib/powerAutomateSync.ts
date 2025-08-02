@@ -168,8 +168,9 @@ export class PowerAutomateSyncService {
         .where(
           and(
             eq(calendarEvents.user_email, userEmail),
-            eq(calendarEvents.externalSource, 'powerautomate'),
-            eq(calendarEvents.externalId, sourceId)
+            eq(calendarEvents.source, 'powerautomate')
+            // Note: We check all powerautomate events for this user, not filtered by sourceId
+            // because externalId contains the actual event ID, not the sourceId
           )
         );
 
@@ -228,11 +229,20 @@ export class PowerAutomateSyncService {
           } else {
             // Create new event
             console.log(`➕ Creating new event: ${event.title}`);
-            await db.insert(calendarEvents).values({
+            console.log(`🔍 Event data:`, {
+              id: eventData.id,
+              user_email: eventData.user_email,
+              summary: event.title,
+              start: eventData.start,
+              source: eventData.source
+            });
+            
+            const insertResult = await db.insert(calendarEvents).values({
               ...eventData,
               createdAt: new Date()
             });
             
+            console.log(`✅ Successfully inserted event into database`);
             result.eventsCreated++;
           }
 
@@ -262,7 +272,14 @@ export class PowerAutomateSyncService {
       }
 
       result.success = true;
-      console.log(`Power Automate sync completed for user: ${userEmail}`, result);
+      console.log(`✅ Power Automate sync completed for user: ${userEmail}`);
+      console.log(`📊 Sync Results:`, {
+        eventsProcessed: result.eventsProcessed,
+        eventsCreated: result.eventsCreated,
+        eventsUpdated: result.eventsUpdated,
+        eventsDeleted: result.eventsDeleted,
+        errors: result.errors.length
+      });
 
     } catch (error) {
       console.error(`Power Automate sync failed for user: ${userEmail}:`, error);
