@@ -6,6 +6,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseIS
 import { CalendarEvent, CalendarSettings } from '@/types/calendar';
 import { CalendarEventForm } from '@/components/calendar/CalendarEventForm';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { generateCalendarSourcesHash, extractTeamsLink } from '@/lib/calendarUtils';
 import { 
   CalendarDaysIcon, 
@@ -98,6 +99,15 @@ const containsHTML = (content: string): boolean => {
 const CalendarPage = () => {
   const { user } = useUser();
   const status = user ? "authenticated" : "unauthenticated";
+
+  // Enable background sync for Power Automate events
+  useBackgroundSync({
+    enabled: true,
+    intervalMinutes: 30, // Sync if 30+ minutes since last sync
+    onSyncStart: () => console.log('Background Power Automate sync started'),
+    onSyncComplete: () => console.log('Background Power Automate sync completed'),
+    onSyncError: (error) => console.warn('Background Power Automate sync error:', error)
+  });
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentDate, setCurrentDate] = useState(new Date());

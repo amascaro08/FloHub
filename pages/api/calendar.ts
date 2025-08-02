@@ -300,8 +300,13 @@ export default async function handler(
     // Process O365 Calendar sources
     const o365Sources = calendarSources.filter(source => source.type === "o365");
     
+    // Process PowerAutomate sources (separate from O365)
+    const powerAutomateSources = calendarSources.filter(source => source.type === "powerautomate");
+    console.log('Power Automate sources to process:', powerAutomateSources.length);
+    
     // Process PowerAutomate URL sources
     let o365Urls: string[] = [];
+    let powerAutomateUrls: string[] = [];
     
     // First, check calendar sources
     if (o365Sources.length > 0) {
@@ -322,6 +327,21 @@ export default async function handler(
     }
 
     console.log('O365 URLs to process:', o365Urls);
+
+    // Extract Power Automate URLs from sources
+    if (powerAutomateSources.length > 0) {
+      powerAutomateUrls = powerAutomateSources
+        .filter(source => source.connectionData && source.connectionData.startsWith("http"))
+        .map(source => source.connectionData)
+        .filter((url): url is string => typeof url === "string");
+    }
+    
+    // Also check legacy powerAutomateUrl from settings
+    if (powerAutomateUrls.length === 0 && userSettingsRecord?.powerAutomateUrl && userSettingsRecord.powerAutomateUrl.startsWith("http")) {
+      powerAutomateUrls.push(userSettingsRecord.powerAutomateUrl);
+    }
+
+    console.log('Power Automate URLs to process:', powerAutomateUrls);
 
     // Process iCal Calendar sources
     const icalSources = calendarSources.filter(source => source.type === "ical");
@@ -359,8 +379,104 @@ export default async function handler(
       console.error('Error fetching local calendar events:', error);
     }
 
+    // Fetch Power Automate events from database and trigger sync if needed
+    if (powerAutomateUrls.length > 0 || userSettingsRecord?.powerAutomateUrl) {
+      console.log("Fetching Power Automate events from database...");
+      try {
+        // Import here to avoid circular dependencies
+        const { calendarEvents } = await import('../../db/schema');
+        const { db } = await import('../../lib/drizzle');
+        const { eq, and, gte, lte } = await import('drizzle-orm');
+        
+        // Fetch existing Power Automate events from database within date range
+        const powerAutomateEvents = await db
+          .select()
+          .from(calendarEvents)
+          .where(
+            and(
+              eq(calendarEvents.user_email, user.email),
+              eq(calendarEvents.source, 'powerautomate')
+              // Note: We'll filter by date range after fetching since JSONB date comparison is complex
+            )
+          );
+
+        console.log(`Found ${powerAutomateEvents.length} Power Automate events in database`);
+
+        // Filter events by date range and convert to calendar event format
+        const minDateTime = new Date(safeTimeMin);
+        const maxDateTime = new Date(safeTimeMax);
+        
+        const formattedPowerAutomateEvents = powerAutomateEvents
+          .filter(event => {
+            if (event.syncStatus === 'deleted') return false;
+            
+            // Parse the start date from JSONB
+            let eventStartDate: Date;
+            try {
+              const startData = typeof event.start === 'string' ? JSON.parse(event.start) : event.start;
+              eventStartDate = new Date(startData.dateTime || startData.date);
+            } catch (error) {
+              console.warn('Error parsing event start date:', error);
+              return false;
+            }
+            
+            // Check if event is within date range
+            return eventStartDate >= minDateTime && eventStartDate <= maxDateTime;
+          })
+          .map(event => {
+            const startData = typeof event.start === 'string' ? JSON.parse(event.start) : event.start;
+            const endData = typeof event.end === 'string' ? JSON.parse(event.end) : event.end;
+            
+                         return {
+              id: event.id,
+              summary: event.summary,
+              description: event.description || '',
+              location: event.location || '',
+              start: startData,
+              end: endData,
+              source: 'powerautomate',
+              tags: event.tags || ['work', 'powerautomate'],
+              calendar: {
+                id: event.calendarId || 'powerautomate',
+                name: 'Power Automate',
+                color: '#0078d4'
+              }
+            };
+          });
+
+        allEvents.push(...formattedPowerAutomateEvents);
+
+        // If forceRefresh is true or we have few/no events, trigger sync
+        const shouldSync = forceRefresh === "true" || powerAutomateEvents.length === 0;
+        
+        if (shouldSync && powerAutomateUrls.length > 0) {
+          console.log("Triggering Power Automate sync...");
+          
+          // Import and trigger sync (fire and forget - don't block the response)
+          const { PowerAutomateSyncService } = await import('../../lib/powerAutomateSync');
+          const syncService = PowerAutomateSyncService.getInstance();
+          
+          // Trigger sync for each Power Automate URL
+          powerAutomateUrls.forEach((url, index) => {
+            const sourceId = powerAutomateSources[index]?.id || 'default';
+            syncService.syncUserEvents(user.email, url, sourceId, false)
+              .catch(error => console.warn(`Power Automate sync failed for ${sourceId}:`, error));
+          });
+          
+          // Also check legacy URL
+          if (userSettingsRecord?.powerAutomateUrl && !powerAutomateUrls.includes(userSettingsRecord.powerAutomateUrl)) {
+            syncService.syncUserEvents(user.email, userSettingsRecord.powerAutomateUrl, 'legacy', false)
+              .catch(error => console.warn('Power Automate sync failed for legacy URL:', error));
+          }
+        }
+
+      } catch (error) {
+        console.error('Error fetching Power Automate events:', error);
+      }
+    }
+
     // Check if we have any external calendar sources to process
-    if (googleCalendarIds.length === 0 && o365Urls.length === 0 && icalUrls.length === 0) {
+    if (googleCalendarIds.length === 0 && o365Urls.length === 0 && icalUrls.length === 0 && powerAutomateUrls.length === 0) {
       console.log("No external calendar sources found");
       
       // If no access token and no O365 URLs, still return local events if we have them
