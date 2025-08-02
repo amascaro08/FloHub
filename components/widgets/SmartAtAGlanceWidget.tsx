@@ -618,16 +618,16 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const showFloCatHeader = !isCompactLayout;
   const showSuggestions = !isCompactLayout;
 
-  // Hero mode optimizations - ensure content fits without scrolling
-  const isHeroMode = isHero || (isWideLayout && colSpan > 6);
-  const useCompactHeroLayout = isHeroMode && (hasTasks || hasEvents || hasHabits || hasNextMeeting || hasSuggestions);
-
   // Dynamic layout calculation based on available content
   const hasTasks = (data?.tasks?.total ?? 0) > 0;
   const hasEvents = (data?.events?.today ?? 0) > 0;
   const hasHabits = (data?.habits?.total ?? 0) > 0;
   const hasNextMeeting = data?.events?.next !== null;
   const hasSuggestions = data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0;
+
+  // Hero mode optimizations - ensure content fits without scrolling
+  const isHeroMode = isHero || (isWideLayout && colSpan > 6);
+  const useCompactHeroLayout = isHeroMode && (hasTasks || hasEvents || hasHabits || hasNextMeeting || hasSuggestions);
 
   // Calculate available content count for dynamic grid
   const availableStatsCards = [hasTasks, hasEvents, hasHabits].filter(Boolean).length;
