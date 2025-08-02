@@ -412,16 +412,34 @@ export class PowerAutomateSyncService {
           // Find Power Automate sources for this user
           const powerAutomateSources: Array<{ id: string; connectionData: string }> = [];
 
+          console.log(`🔍 Raw calendar sources for ${user.user_email}:`, {
+            calendarSources: user.calendarSources,
+            type: typeof user.calendarSources,
+            isArray: Array.isArray(user.calendarSources),
+            length: user.calendarSources?.length
+          });
+
           // Check calendar sources
           if (user.calendarSources && Array.isArray(user.calendarSources)) {
-            user.calendarSources.forEach((source: any) => {
+            console.log(`📋 Processing ${user.calendarSources.length} calendar sources...`);
+            user.calendarSources.forEach((source: any, index: number) => {
+              console.log(`📎 Source ${index}:`, {
+                id: source.id,
+                type: source.type,
+                name: source.name,
+                hasConnectionData: !!source.connectionData
+              });
+              
               if (source.type === 'powerautomate' && source.connectionData) {
+                console.log(`✅ Found Power Automate source: ${source.id}`);
                 powerAutomateSources.push({
                   id: source.id || 'default',
                   connectionData: source.connectionData
                 });
               }
             });
+          } else {
+            console.log(`❌ Calendar sources not found or not an array for ${user.user_email}`);
           }
 
           console.log(`🔗 Found ${powerAutomateSources.length} Power Automate sources for ${user.user_email}`);
