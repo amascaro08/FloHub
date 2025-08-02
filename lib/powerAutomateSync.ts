@@ -1,6 +1,6 @@
 import { db } from './drizzle';
 import { calendarEvents } from '../db/schema';
-import { eq, and, or, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, or, isNull, isNotNull, gte } from 'drizzle-orm';
 import { parseISO, addDays, subDays } from 'date-fns';
 
 export interface PowerAutomateEvent {
@@ -368,7 +368,7 @@ export class PowerAutomateSyncService {
               and(
                 eq(calendarEvents.user_email, user.user_email),
                 eq(calendarEvents.externalSource, 'powerautomate'),
-                calendarEvents.lastUpdated.gte(sixHoursAgo)
+                gte(calendarEvents.lastUpdated, sixHoursAgo)
               )
             )
             .limit(1);
