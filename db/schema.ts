@@ -215,18 +215,26 @@ export const pushSubscriptions = pgTable("pushSubscriptions", {
 export const calendarEvents = pgTable("calendarEvents", {
   id: text("id").notNull().primaryKey(),
   user_email: varchar("user_email", { length: 255 }).notNull(),
+  user_id: varchar("user_id", { length: 255 }), // Alternative user identifier
   summary: text("summary").notNull(),
   description: text("description"),
   location: text("location"),
   start: jsonb("start").notNull(), // { dateTime?: string; date?: string; timeZone?: string }
   end: jsonb("end"), // { dateTime?: string; date?: string; timeZone?: string }
   calendarId: varchar("calendar_id", { length: 255 }).default("flohub_local"),
-  source: varchar("source", { length: 50 }).default("personal"), // "personal" | "work"
+  source: varchar("source", { length: 50 }).default("personal"), // "personal" | "work" | "flohub_local" | "powerautomate" | "google" | "office365"
   tags: text("tags").array(),
   color: varchar("color", { length: 7 }), // Hex color code (e.g., "#ff0000")
   isRecurring: boolean("is_recurring").default(false),
   seriesMasterId: text("series_master_id"),
   instanceIndex: integer("instance_index"),
+  // External event tracking
+  eventId: varchar("event_id", { length: 255 }), // Unique identifier from external source
+  externalId: varchar("external_id", { length: 255 }), // Original ID from external calendar system
+  externalSource: varchar("external_source", { length: 100 }), // Source system identifier
+  recurrence: jsonb("recurrence"), // Recurrence pattern data
+  syncStatus: varchar("sync_status", { length: 50 }).default("synced"), // "synced" | "pending" | "error" | "deleted"
+  lastUpdated: timestamp("last_updated", { mode: "date" }).defaultNow(), // When event was last updated from external source
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
