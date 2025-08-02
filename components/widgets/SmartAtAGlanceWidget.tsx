@@ -618,6 +618,47 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
   const showFloCatHeader = !isCompactLayout;
   const showSuggestions = !isCompactLayout;
 
+  // Dynamic layout calculation based on available content
+  const hasTasks = (data?.tasks?.total ?? 0) > 0;
+  const hasEvents = (data?.events?.today ?? 0) > 0;
+  const hasHabits = (data?.habits?.total ?? 0) > 0;
+  const hasNextMeeting = data?.events?.next !== null;
+  const hasSuggestions = data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0;
+
+  // Calculate available content count for dynamic grid
+  const availableStatsCards = [hasTasks, hasEvents, hasHabits].filter(Boolean).length;
+  
+  // Determine optimal grid layout based on available content
+  const getStatsGridLayout = () => {
+    if (isWideLayout) {
+      // Wide layouts always use 3 columns
+      return 'grid-cols-3';
+    }
+    
+    if (isCompactLayout) {
+      // Compact layouts use 2 columns
+      return 'grid-cols-2';
+    }
+    
+    // Dynamic grid based on available content
+    switch (availableStatsCards) {
+      case 0:
+        return 'grid-cols-1'; // Single column for no stats
+      case 1:
+        return 'grid-cols-1'; // Single column for one stat
+      case 2:
+        return 'grid-cols-2'; // Two columns for two stats
+      case 3:
+        return 'grid-cols-3'; // Three columns for three stats
+      default:
+        return 'grid-cols-3'; // Fallback to three columns
+    }
+  };
+
+  // Calculate if we should show a placeholder or adjust spacing
+  const shouldShowPlaceholder = availableStatsCards === 0 && !hasNextMeeting && !hasSuggestions;
+  const shouldExpandCards = availableStatsCards <= 1 && !isCompactLayout; // Make cards larger when fewer items
+
   return (
     <div className={`h-full flex flex-col ${isCompactLayout ? 'space-y-2' : 'space-y-4'}`}>
       {/* FloCat Header - Only show in non-compact layouts */}
@@ -659,56 +700,52 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
       <div className={`flex-1 ${isWideLayout ? 'grid grid-cols-2 gap-4' : 'flex flex-col space-y-4'}`}>
         {/* Left Side - Stats and FloCat (in wide layouts) */}
         <div className={`${isWideLayout ? '' : 'space-y-4'}`}>
-          {/* Quick Stats - Only show cards with data */}
-          <div className={`grid gap-3 ${
-            isWideLayout 
-              ? 'grid-cols-3' 
-              : isCompactLayout 
-                ? 'grid-cols-2' 
-                : 'grid-cols-3'
-          }`}>
-            {/* Tasks Card - Always show if there are tasks */}
-            {(data?.tasks?.total ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
-                  <CheckSquare className="w-4 h-4 text-primary-500" />
+          {/* Quick Stats - Dynamic grid based on available content */}
+          {availableStatsCards > 0 ? (
+            <div className={`grid gap-3 ${getStatsGridLayout()}`}>
+              {/* Tasks Card - Only show if there are tasks */}
+              {hasTasks && (
+                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
+                    <CheckSquare className="w-4 h-4 text-primary-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.tasks?.incomplete ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Tasks</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.tasks?.incomplete ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Tasks</p>
-              </div>
-            )}
-            
-            {/* Events Card - Always show if there are events */}
-            {(data?.events?.today ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-accent-100 dark:bg-accent-900/30 rounded-lg mx-auto mb-2">
-                  <Calendar className="w-4 h-4 text-accent-500" />
+              )}
+              
+              {/* Events Card - Only show if there are events */}
+              {hasEvents && (
+                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-accent-100 dark:bg-accent-900/30 rounded-lg mx-auto mb-2">
+                    <Calendar className="w-4 h-4 text-accent-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.events?.today ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Remaining</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.events?.today ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Remaining</p>
-              </div>
-            )}
-            
-            {/* Habits Card - Only show if there are habits */}
-            {(data?.habits?.total ?? 0) > 0 && (
-              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
-                  <Target className="w-4 h-4 text-primary-500" />
+              )}
+              
+              {/* Habits Card - Only show if there are habits */}
+              {hasHabits && (
+                <div className={`text-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 ${shouldExpandCards ? 'p-4' : ''}`}>
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg mx-auto mb-2">
+                    <Target className="w-4 h-4 text-primary-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
+                    {data?.habits?.completed ?? 0}/{data?.habits?.total ?? 0}
+                  </p>
+                  <p className="text-xs text-grey-tint">Habits</p>
                 </div>
-                <p className="text-lg font-semibold text-dark-base dark:text-soft-white">
-                  {data?.habits?.completed ?? 0}/{data?.habits?.total ?? 0}
-                </p>
-                <p className="text-xs text-grey-tint">Habits</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : null}
 
           {/* Next Meeting - Show in all layouts except when no next meeting */}
-          {data?.events?.next && (
+          {hasNextMeeting && (
             <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-xl">
@@ -731,79 +768,92 @@ const SmartAtAGlanceWidget = ({ size = 'medium', colSpan = 4, isCompact = false,
               </div>
             </div>
           )}
+
+          {/* Placeholder when no content is available */}
+          {shouldShowPlaceholder && (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-6 h-6 text-primary-500" />
+              </div>
+              <p className="text-grey-tint font-body text-sm">
+                All caught up! No tasks, events, or habits for today.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Right Side - Suggestions (in wide layouts) or below (in standard layouts) */}
-        {showSuggestions && (
+        {showSuggestions && hasSuggestions && (
           <div className={`${isWideLayout ? 'space-y-2' : 'space-y-3'}`}>
-            {data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0 ? (
-              <div className={`grid gap-2 ${
-                isWideLayout 
-                  ? 'grid-cols-2' 
-                  : 'grid-cols-1 md:grid-cols-2'
-              }`}>
-                {data.suggestions.slice(0, isWideLayout ? 4 : 4).map((suggestion: SmartInsight, index: number) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-xl border ${
+            <div className={`grid gap-2 ${
+              isWideLayout 
+                ? 'grid-cols-2' 
+                : 'grid-cols-1 md:grid-cols-2'
+            }`}>
+              {data.suggestions.slice(0, isWideLayout ? 4 : 4).map((suggestion: SmartInsight, index: number) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-xl border ${
+                    suggestion.type === 'urgent'
+                      ? 'bg-accent-50 border-accent-200 dark:bg-accent-900/20 dark:border-accent-800'
+                      : suggestion.type === 'celebration'
+                      ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                      : suggestion.type === 'warning'
+                      ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                      : suggestion.type === 'suggestion'
+                      ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                      : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-start space-x-2">
+                    <div className={`p-1 rounded-lg flex-shrink-0 ${
                       suggestion.type === 'urgent'
-                        ? 'bg-accent-50 border-accent-200 dark:bg-accent-900/20 dark:border-accent-800'
+                        ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
                         : suggestion.type === 'celebration'
-                        ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                         : suggestion.type === 'warning'
-                        ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                         : suggestion.type === 'suggestion'
-                        ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-                        : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-start space-x-2">
-                      <div className={`p-1 rounded-lg flex-shrink-0 ${
-                        suggestion.type === 'urgent'
-                          ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300'
-                          : suggestion.type === 'celebration'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                          : suggestion.type === 'warning'
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                          : suggestion.type === 'suggestion'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                          : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                      }`}>
-                        {suggestion.icon}
-                      </div>
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                    }`}>
+                      {suggestion.icon}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
+                        {suggestion.title}
+                      </h4>
+                      <p className="text-xs text-grey-tint mt-1 line-clamp-2">
+                        {suggestion.message}
+                      </p>
                       
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-dark-base dark:text-soft-white truncate">
-                          {suggestion.title}
-                        </h4>
-                        <p className="text-xs text-grey-tint mt-1 line-clamp-2">
-                          {suggestion.message}
-                        </p>
-                        
-                        {suggestion.actionable && suggestion.action && (
-                          <button
-                            onClick={suggestion.action}
-                            className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors flex items-center space-x-1"
-                          >
-                            <span>{suggestion.actionLabel}</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
+                      {suggestion.actionable && suggestion.action && (
+                        <button
+                          onClick={suggestion.action}
+                          className="mt-2 text-xs text-primary-500 hover:text-primary-600 transition-colors flex items-center space-x-1"
+                        >
+                          <span>{suggestion.actionLabel}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-6 h-6 text-primary-500" />
                 </div>
-                <p className="text-grey-tint font-body text-sm">
-                  All caught up! No suggestions to show.
-                </p>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Show suggestions placeholder when no suggestions but other content exists */}
+        {showSuggestions && !hasSuggestions && (hasTasks || hasEvents || hasHabits || hasNextMeeting) && (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-6 h-6 text-primary-500" />
+            </div>
+            <p className="text-grey-tint font-body text-sm">
+              All caught up! No suggestions to show.
+            </p>
           </div>
         )}
       </div>
