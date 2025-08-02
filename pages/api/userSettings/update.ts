@@ -187,6 +187,26 @@ export default async function handler(
     settingsData.journalCustomActivities = ensureCustomActivitiesArray(settingsData.journalCustomActivities);
     settingsData.journalDisabledActivities = ensureArray(settingsData.journalDisabledActivities);
 
+    // Migration: Add default colors to calendar sources that don't have them
+    if (settingsData.calendarSources) {
+      settingsData.calendarSources = settingsData.calendarSources.map((source: any) => {
+        if (!source.color) {
+          // Add default color based on tags or type
+          if (source.tags?.includes('work') || source.type === 'o365') {
+            source.color = '#00C9A7'; // Teal for work calendars
+          } else if (source.tags?.includes('personal') || source.sourceId === 'primary') {
+            source.color = '#FF6B6B'; // Red for personal calendars  
+          } else {
+            // Default for shared/other calendars
+            source.color = '#00C9A7'; // Teal for shared calendars
+          }
+        }
+        return source;
+      });
+    }
+
+    // Update settings in database
+
     console.log('📝 Prepared settings for database:', {
       timezone: settingsData.timezone,
       globalTagsLength: settingsData.globalTags?.length || 0,
