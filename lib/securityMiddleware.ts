@@ -131,38 +131,47 @@ function getClientIP(req: NextApiRequest): string {
  * Predefined security configurations for different endpoint types
  */
 export const SECURITY_CONFIGS = {
-  // Authentication endpoints - strict security
+  // Authentication endpoints - API routes (no CSP)
   AUTH: {
-    enableCSP: true,
+    enableCSP: false, // API routes don't need CSP
     enableCSRF: false, // Auth endpoints have their own protection
     enableRateLimit: true,
     rateLimitConfig: RATE_LIMITS.AUTH,
     enableLogging: true
   },
   
-  // API endpoints - standard security
+  // API endpoints - standard security (no CSP)
   API: {
-    enableCSP: true,
+    enableCSP: false, // API routes don't need CSP
     enableCSRF: true,
     enableRateLimit: true,
     rateLimitConfig: RATE_LIMITS.API,
     enableLogging: true
   },
   
-  // Assistant endpoints - moderate security
+  // Assistant endpoints - moderate security (no CSP)
   ASSISTANT: {
-    enableCSP: true,
+    enableCSP: false, // API routes don't need CSP
     enableCSRF: true,
     enableRateLimit: true,
     rateLimitConfig: RATE_LIMITS.API,
     enableLogging: true
   },
   
-  // Read-only endpoints - minimal security
+  // Read-only endpoints - minimal security (no CSP)
   READ_ONLY: {
-    enableCSP: true,
+    enableCSP: false, // API routes don't need CSP
     enableCSRF: false,
     enableRateLimit: true,
+    rateLimitConfig: RATE_LIMITS.API,
+    enableLogging: true
+  },
+  
+  // Page routes - with CSP
+  PAGE: {
+    enableCSP: true,
+    enableCSRF: true,
+    enableRateLimit: false, // Rate limiting handled at API level
     rateLimitConfig: RATE_LIMITS.API,
     enableLogging: true
   }
@@ -173,3 +182,4 @@ export const withAuthSecurity = (handler: Function) => withSecurity(SECURITY_CON
 export const withApiSecurity = (handler: Function) => withSecurity(SECURITY_CONFIGS.API)(handler);
 export const withAssistantSecurity = (handler: Function) => withSecurity(SECURITY_CONFIGS.ASSISTANT)(handler);
 export const withReadOnlySecurity = (handler: Function) => withSecurity(SECURITY_CONFIGS.READ_ONLY)(handler);
+export const withPageSecurity = (handler: Function) => withSecurity(SECURITY_CONFIGS.PAGE)(handler);

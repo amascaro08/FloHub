@@ -8,7 +8,7 @@ export default {
   out: './db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.NEON_DATABASE_URL!,
+    url: process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || '',
   },
   verbose: true,
   strict: true,

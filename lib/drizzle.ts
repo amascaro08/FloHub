@@ -10,6 +10,41 @@ if (typeof window !== 'undefined') {
 // The connection string is passed directly from the environment variable.
 // This ensures that the application will connect to the database when deployed on Vercel,
 // provided that the NEON_DATABASE_URL environment variable is set correctly in the Vercel project settings.
-const sql = neon(process.env.NEON_DATABASE_URL!);
+const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
 
-export const db = drizzle(sql, { schema });
+if (!databaseUrl || databaseUrl === 'postgresql://username:password@host:port/database') {
+  console.warn('⚠️  No valid database URL provided. Using mock database for development.');
+  // Create a mock database for development
+  const mockDb = {
+    query: {
+      users: {
+        findFirst: async () => null,
+      },
+    },
+    insert: () => ({
+      values: () => ({
+        returning: async () => [],
+      }),
+    }),
+    update: () => ({
+      set: () => ({
+        where: () => Promise.resolve(),
+      }),
+    }),
+    delete: () => ({
+      where: () => Promise.resolve(),
+    }),
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          orderBy: () => Promise.resolve([]),
+        }),
+      }),
+    }),
+  };
+  
+  export const db = mockDb as any;
+} else {
+  const sql = neon(databaseUrl);
+  export const db = drizzle(sql, { schema });
+}
