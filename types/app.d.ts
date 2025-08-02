@@ -19,6 +19,7 @@ export type UserSettings = {
   hiddenWidgets?: string[];
   calendarSources?: CalendarSource[];
   timezone?: string;
+  theme?: "light" | "dark" | "auto";
   floCatStyle?: "default" | "more_catty" | "less_catty" | "professional";
   floCatPersonality?: string[];
   preferredName?: string;

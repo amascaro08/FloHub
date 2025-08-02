@@ -1,27 +1,50 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(false)
+  const { theme, setTheme } = useTheme()
 
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved) setDark(saved === 'dark')
-    else setDark(window.matchMedia('(prefers-color-scheme: dark)').matches)
-  }, [])
+  const cycleTheme = () => {
+    const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark', 'auto']
+    const currentIndex = themes.indexOf(theme)
+    const nextIndex = (currentIndex + 1) % themes.length
+    setTheme(themes[nextIndex])
+  }
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
+  const getIcon = () => {
+    switch (theme) {
+      case 'light':
+        return '🌞'
+      case 'dark':
+        return '🌙'
+      case 'auto':
+        return '🔄'
+      default:
+        return '🌞'
+    }
+  }
+
+  const getLabel = () => {
+    switch (theme) {
+      case 'light':
+        return 'Light Mode'
+      case 'dark':
+        return 'Dark Mode'
+      case 'auto':
+        return 'Auto (System)'
+      default:
+        return 'Light Mode'
+    }
+  }
 
   return (
     <button
-      onClick={() => setDark(!dark)}
+      onClick={cycleTheme}
       className="p-2 rounded-full bg-[var(--surface)] hover:opacity-80 transition"
-      aria-label="Toggle theme"
+      aria-label={`Switch to ${getLabel()}`}
+      title={getLabel()}
     >
-      {dark ? '🌞' : '🌙'}
+      {getIcon()}
     </button>
   )
 }

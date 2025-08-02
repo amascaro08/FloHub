@@ -112,6 +112,7 @@ export const userSettings = pgTable("user_settings", {
   hiddenWidgets: text("hidden_widgets").array(),
   calendarSources: jsonb("calendar_sources"),
   timezone: varchar("timezone", { length: 50 }).notNull().default('UTC'),
+  theme: varchar("theme", { length: 10 }).default('auto'),
   tags: text("tags").array(),
   widgets: text("widgets").array(),
   calendarSettings: jsonb("calendar_settings"),
