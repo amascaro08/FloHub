@@ -5,6 +5,8 @@ import { db } from "@/lib/drizzle";
 import { userSettings, calendarEvents } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { withAssistantSecurity } from '@/lib/securityMiddleware';
+import { logger } from '@/lib/logger';
 
 type CalendarAction = 'create' | 'update' | 'delete' | 'list' | 'search';
 
@@ -199,7 +201,7 @@ function parseDateFromMatch(match: RegExpMatchArray, userTimezone: string): Date
   return undefined;
 }
 
-export default async function handler(
+async function calendarHandler(
   req: NextApiRequest,
   res: NextApiResponse<CalendarResponse>
 ) {
@@ -248,7 +250,13 @@ export default async function handler(
         return res.status(400).json({ success: false, error: "Invalid action" });
     }
   } catch (error) {
-    console.error("Calendar API error:", error);
+    logger.error("Calendar API error", { 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      endpoint: '/api/assistant/calendar',
+      method: req.method,
+      action: req.body?.action,
+      userId: decoded?.userId
+    });
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
@@ -380,7 +388,14 @@ async function handleListEvents(
       res.status(500).json({ success: false, error: "Failed to fetch events" });
     }
   } catch (error) {
-    console.error("Error listing events:", error);
+    logger.error("Error listing events", { 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      endpoint: '/api/assistant/calendar',
+      method: req.method,
+      action: 'list',
+      timeMin,
+      timeMax
+    });
     res.status(500).json({ success: false, error: "Failed to fetch events" });
   }
 }
@@ -423,7 +438,16 @@ async function handleSearchEvents(
       res.status(500).json({ success: false, error: "Failed to search events" });
     }
   } catch (error) {
-    console.error("Error searching events:", error);
+    logger.error("Error searching events", { 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      endpoint: '/api/assistant/calendar',
+      method: req.method,
+      action: 'search',
+      query
+    });
     res.status(500).json({ success: false, error: "Failed to search events" });
   }
 }
+
+// Apply comprehensive security to the calendar endpoint
+export default withAssistantSecurity(calendarHandler);

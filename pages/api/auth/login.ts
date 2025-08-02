@@ -2,11 +2,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { signToken } from '@/lib/auth';
 import { createSecureCookie } from '@/lib/cookieUtils';
 import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
-import { withComprehensiveSecurity } from '@/lib/securityHeaders';
+import { withAuthSecurity } from '@/lib/securityMiddleware';
+import { logger } from '@/lib/logger';
 
 async function loginHandler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -66,7 +67,11 @@ async function loginHandler(req: NextApiRequest, res: NextApiResponse) {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error', { 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      endpoint: '/api/auth/login',
+      method: req.method
+    });
     res.status(500).json({ 
       message: 'Internal server error', 
       error: error instanceof Error ? error.message : 'An unknown error occurred'
@@ -74,5 +79,5 @@ async function loginHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Apply comprehensive security and rate limiting to the login endpoint
-export default withComprehensiveSecurity(withRateLimit(RATE_LIMITS.AUTH)(loginHandler));
+// Apply comprehensive security to the login endpoint
+export default withAuthSecurity(loginHandler);

@@ -2,11 +2,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '@/lib/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { signToken } from '@/lib/auth';
 import { createSecureCookie } from '@/lib/cookieUtils';
 import { validateEmail, validatePassword } from '@/lib/validation';
-import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { withAuthSecurity } from '@/lib/securityMiddleware';
+import { logger } from '@/lib/logger';
 
 async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
   // Add CORS headers for cross-domain support
@@ -104,7 +105,11 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error', { 
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      endpoint: '/api/auth/register',
+      method: req.method
+    });
     res.status(500).json({ 
       message: 'Internal server error', 
       error: error instanceof Error ? error.message : 'An unknown error occurred'
@@ -112,5 +117,5 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Apply rate limiting to the register endpoint
-export default withRateLimit(RATE_LIMITS.AUTH)(registerHandler);
+// Apply comprehensive security to the register endpoint
+export default withAuthSecurity(registerHandler);

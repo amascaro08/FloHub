@@ -139,7 +139,7 @@ const nextConfig = {
           { key: "X-XSS-Protection", value: "1; mode=block" },
           { 
             key: "Content-Security-Policy", 
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://*.googleapis.com https://*.vercel.app https://fonts.gstatic.com https://fonts.googleapis.com;"
+            value: "default-src 'self'; script-src 'self' 'strict-dynamic' https://vercel.live; style-src 'self' 'strict-dynamic' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://*.googleapis.com https://*.vercel.app https://fonts.gstatic.com https://fonts.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
           },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],

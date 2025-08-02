@@ -6,6 +6,8 @@ import { getUserById } from "@/lib/user";
 import { db } from "@/lib/drizzle";
 import { tasks } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { withApiSecurity } from '@/lib/securityMiddleware';
+import { logger } from '@/lib/logger';
 
 type Task = {
   id:        string;
@@ -16,7 +18,7 @@ type Task = {
   source?:   "personal" | "work"; // Add source tag
 };
 
-export default async function handler(
+async function tasksHandler(
   req: NextApiRequest,
   res: NextApiResponse<Task[] | Task | { id: string; done?: boolean; source?: string } | { error: string }>
 ) {
@@ -144,7 +146,15 @@ export default async function handler(
     res.setHeader("Allow", ["GET", "POST", "PATCH", "PUT", "DELETE"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err: any) {
-    console.error("Error in /api/tasks:", err);
+    logger.error("Error in tasks API", { 
+      error: err.message,
+      endpoint: '/api/tasks',
+      method: req.method,
+      userId: decoded?.userId
+    });
     return res.status(500).json({ error: err.message });
   }
 }
+
+// Apply comprehensive security to the tasks endpoint
+export default withApiSecurity(tasksHandler);
