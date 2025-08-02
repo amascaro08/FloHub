@@ -416,7 +416,7 @@ export class PowerAutomateSyncService {
             calendarSources: user.calendarSources,
             type: typeof user.calendarSources,
             isArray: Array.isArray(user.calendarSources),
-            length: user.calendarSources?.length
+            length: Array.isArray(user.calendarSources) ? user.calendarSources.length : 'N/A'
           });
 
           // Check calendar sources
