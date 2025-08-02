@@ -49,8 +49,8 @@ export default async function handler(
       });
     }
 
-    console.log(`🔧 Admin API: Deleting accounts for user: ${userEmail}`);
-    console.log(`🔧 Requested by: ${requestingUser.email}`);
+    console.log(`🔧 Admin API: Deleting accounts for user: [SANITIZED]`);
+    console.log(`🔧 Requested by: [SANITIZED]`);
     console.log(`🔧 Options:`, { deleteAllAccounts, clearUserSettings, clearSessions });
 
     // Execute the deletion
@@ -62,14 +62,14 @@ export default async function handler(
     });
 
     if (result.success) {
-      console.log(`✅ Successfully deleted accounts for: ${userEmail}`);
+      console.log(`✅ Successfully deleted accounts for: [SANITIZED]`);
       return res.status(200).json({
         success: true,
         message: result.message,
         deletedAccountsCount: result.deletedAccountsCount,
       });
     } else {
-      console.error(`❌ Failed to delete accounts for: ${userEmail}`, result.error);
+      console.error(`❌ Failed to delete accounts for: [SANITIZED]`, result.error);
       return res.status(500).json({
         success: false,
         error: result.error,

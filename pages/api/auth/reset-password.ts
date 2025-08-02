@@ -54,7 +54,7 @@ export default async function handler(
         
         // In development, still provide the reset URL
         if (process.env.NODE_ENV === 'development') {
-          console.log('Development: Password reset URL (email not configured):', resetUrl);
+          console.log('Development: Password reset URL generated (email not configured)');
         }
         
         // Return success to avoid revealing email existence, but log the issue
@@ -71,19 +71,19 @@ export default async function handler(
       );
       
       if (emailSent) {
-        console.log('Password reset email sent successfully to:', email);
+        console.log('Password reset email sent successfully');
       } else {
-        console.warn('Failed to send password reset email to:', email);
+        console.warn('Failed to send password reset email');
         // For development, log the reset URL
         if (process.env.NODE_ENV === 'development') {
-          console.log('Development: Password reset URL:', resetUrl);
+          console.log('Development: Password reset URL generated');
         }
       }
     } catch (error) {
       console.error('Error sending password reset email:', error);
       // For development, log the reset URL as fallback
       if (process.env.NODE_ENV === 'development') {
-        console.log('Development fallback: Password reset URL:', resetUrl);
+        console.log('Development fallback: Password reset URL generated');
       }
     }
 

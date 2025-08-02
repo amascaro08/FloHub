@@ -156,7 +156,7 @@ export function clearCookie(res: any, name: string, req?: NextApiRequest) {
 // Comprehensive user cache and data cleanup function
 export async function clearUserData(userEmail: string): Promise<void> {
   try {
-    console.log(`🧹 Starting comprehensive data cleanup for user: ${userEmail}`);
+    console.log(`🧹 Starting comprehensive data cleanup for user: [SANITIZED]`);
     
     // Only perform client-side cleanup if we're in the browser
     if (typeof window !== 'undefined') {
@@ -196,7 +196,7 @@ export async function clearUserData(userEmail: string): Promise<void> {
       try {
         const { calendarCache } = await import('./calendarCache');
         await calendarCache.clearUserCache(userEmail);
-        console.log(`🗑️ Cleared calendar IndexedDB for user: ${userEmail}`);
+        console.log(`🗑️ Cleared calendar IndexedDB for user: [SANITIZED]`);
       } catch (error) {
         console.warn('Error clearing calendar cache:', error);
       }
@@ -205,7 +205,7 @@ export async function clearUserData(userEmail: string): Promise<void> {
       try {
         const { clearUserSpecificCache } = await import('./enhancedFetcher');
         clearUserSpecificCache(userEmail);
-        console.log(`🗑️ Cleared enhanced fetcher cache for user: ${userEmail}`);
+        console.log(`🗑️ Cleared enhanced fetcher cache for user: [SANITIZED]`);
       } catch (error) {
         console.warn('Error clearing enhanced fetcher cache:', error);
       }
@@ -214,7 +214,7 @@ export async function clearUserData(userEmail: string): Promise<void> {
       try {
         const { clearUserCache } = await import('./performance');
         await clearUserCache(userEmail);
-        console.log(`🗑️ Cleared performance cache for user: ${userEmail}`);
+        console.log(`🗑️ Cleared performance cache for user: [SANITIZED]`);
       } catch (error) {
         console.warn('Error clearing performance cache:', error);
       }
@@ -223,14 +223,14 @@ export async function clearUserData(userEmail: string): Promise<void> {
       try {
         const { clearCalendarCaches } = await import('./calendarUtils');
         await clearCalendarCaches(userEmail);
-        console.log(`🗑️ Cleared calendar utilities cache for user: ${userEmail}`);
+        console.log(`🗑️ Cleared calendar utilities cache for user: [SANITIZED]`);
       } catch (error) {
         console.warn('Error clearing calendar utilities cache:', error);
       }
     }
     
-    console.log(`✅ Completed comprehensive data cleanup for user: ${userEmail}`);
+    console.log(`✅ Completed comprehensive data cleanup for user: [SANITIZED]`);
   } catch (error) {
-    console.error(`❌ Error during data cleanup for user ${userEmail}:`, error);
+    console.error(`❌ Error during data cleanup for user [SANITIZED]:`, error);
   }
 }

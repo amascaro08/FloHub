@@ -42,7 +42,7 @@ async function deleteUserFromDatabase(email: string, userId: number): Promise<vo
   try {
     await client.query('BEGIN');
     
-    console.log(`🗑️ Starting database cleanup for user: ${email} (ID: ${userId})`);
+    console.log(`🗑️ Starting database cleanup for user: [SANITIZED] (ID: [SANITIZED])`);
     
     // Delete in order to respect foreign key constraints
     
@@ -103,7 +103,7 @@ async function deleteUserFromDatabase(email: string, userId: number): Promise<vo
     console.log('✅ Deleted user record');
     
     await client.query('COMMIT');
-    console.log(`✅ Successfully deleted all data for user: ${email}`);
+    console.log(`✅ Successfully deleted all data for user: [SANITIZED]`);
     
   } catch (error) {
     await client.query('ROLLBACK');
@@ -197,7 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Clear rate limit record on successful deletion
     deleteAttempts.delete(email);
 
-    console.log(`🎉 Account deletion completed successfully for: ${email}`);
+    console.log(`🎉 Account deletion completed successfully for: [SANITIZED]`);
 
     return res.status(200).json({ 
       message: 'Account deleted successfully',

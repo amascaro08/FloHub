@@ -100,24 +100,24 @@ export default async function handler(
           journalDisabledActivities: [],
           defaultCalendarView: 'month',
         };
-        console.log("User settings not found for", user_email, "- returning default settings");
+        console.log("User settings not found - returning default settings");
         return res.status(200).json(defaultSettings);
       }
 
-      console.log("Raw data from database:", data);
-      console.log("selectedCals from database:", data.selectedCals);
+      console.log("Raw data from database (sanitized)");
+      console.log("selectedCals from database (sanitized)");
       console.log("selectedCals type:", typeof data.selectedCals);
       
       // Decrypt sensitive fields
       console.log("=== GET REQUEST DEBUG ===");
-      console.log("Raw data from DB:", JSON.stringify(data, null, 2));
+      console.log("Raw data from DB: [SANITIZED - contains user data]");
       const decryptedData = decryptUserSettingsFields(data);
-      console.log("Raw journalCustomActivities from DB:", data.journalCustomActivities);
+      console.log("Raw journalCustomActivities from DB: [SANITIZED]");
       console.log("Raw journalCustomActivities type:", typeof data.journalCustomActivities);
-      console.log("Decrypted journalCustomActivities:", decryptedData.journalCustomActivities);
+      console.log("Decrypted journalCustomActivities: [SANITIZED]");
       console.log("Decrypted journalCustomActivities type:", typeof decryptedData.journalCustomActivities);
       console.log("Decrypted journalCustomActivities length:", Array.isArray(decryptedData.journalCustomActivities) ? decryptedData.journalCustomActivities.length : 'not array');
-      console.log("Full decrypted data:", JSON.stringify(decryptedData, null, 2));
+      console.log("Full decrypted data: [SANITIZED - contains user data]");
       
       // Ensure arrays are properly handled with backwards compatibility
       const ensureArray = (value: any): string[] => {
@@ -136,7 +136,7 @@ export default async function handler(
       
       // Handle array fields with backwards compatibility
       const processArrayField = (value: any, fieldName: string): string[] => {
-        console.log(`Processing ${fieldName}:`, value);
+        console.log(`Processing ${fieldName}: [SANITIZED]`);
         console.log(`${fieldName} type:`, typeof value);
         
         if (!value) return [];
@@ -151,7 +151,7 @@ export default async function handler(
           try {
             const parsed = JSON.parse(value);
             if (Array.isArray(parsed)) {
-              console.log(`${fieldName} parsed as array:`, parsed);
+              console.log(`${fieldName} parsed as array with ${parsed.length} items`);
               return parsed;
             }
           } catch (error) {
@@ -208,10 +208,10 @@ export default async function handler(
         defaultCalendarView: decryptedData.defaultCalendarView || 'month',
       };
 
-      console.log("User settings loaded for", user_email, settings);
+      console.log("User settings loaded successfully");
       return res.status(200).json(settings);
     } catch (error) {
-      console.error("Error fetching user settings for", user_email, error);
+      console.error("Error fetching user settings:", error);
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
   }
@@ -276,7 +276,7 @@ export default async function handler(
 
       // Handle array fields with backwards compatibility
       const processArrayField = (value: any, fieldName: string): string[] => {
-        console.log(`Processing ${fieldName}:`, value);
+        console.log(`Processing ${fieldName}: [SANITIZED]`);
         console.log(`${fieldName} type:`, typeof value);
         
         if (!value) return [];
@@ -291,7 +291,7 @@ export default async function handler(
           try {
             const parsed = JSON.parse(value);
             if (Array.isArray(parsed)) {
-              console.log(`${fieldName} parsed as array:`, parsed);
+              console.log(`${fieldName} parsed as array with ${parsed.length} items`);
               return parsed;
             }
           } catch (error) {
@@ -349,10 +349,10 @@ export default async function handler(
         defaultCalendarView: decryptedResult.defaultCalendarView || 'month',
       };
 
-      console.log("User settings updated for", user_email, updatedSettings);
+      console.log("User settings updated successfully");
       return res.status(200).json(updatedSettings);
     } catch (error) {
-      console.error("Error updating user settings for", user_email, error);
+      console.error("Error updating user settings:", error);
       return res.status(500).json({ error: "Failed to update user settings" });
     }
   }

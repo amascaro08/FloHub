@@ -74,14 +74,14 @@ export function getGoogleOAuthUrl(state: string, requestOrigin?: string): string
  * Exchange authorization code for tokens with dynamic redirect URI
  */
 export async function getGoogleTokens(code: string, requestOrigin?: string): Promise<any> {
-  console.log('🔄 getGoogleTokens called with code:', code.substring(0, 10) + '...');
+  console.log('🔄 getGoogleTokens called with code: [SANITIZED]');
   
   const { clientId, clientSecret } = GOOGLE_OAUTH_CONFIG;
   const redirectUri = GOOGLE_OAUTH_CONFIG.getRedirectUri(requestOrigin);
   
   console.log('OAuth Config:', {
-    clientId: clientId ? clientId.substring(0, 10) + '...' : 'Not set',
-    clientSecret: clientSecret ? 'Set' : 'Not set',
+    clientId: clientId ? '[PRESENT]' : 'Not set',
+    clientSecret: clientSecret ? '[PRESENT]' : 'Not set',
     redirectUri,
     requestOrigin: requestOrigin || "Not provided"
   });
@@ -117,7 +117,7 @@ export async function getGoogleTokens(code: string, requestOrigin?: string): Pro
  */
 export async function storeGoogleToken(userId: string, accountLabel: string, tokens: any): Promise<void> {
   // In a real implementation, you would store the tokens in your database
-  console.log(`Storing Google tokens for user ${userId} with label ${accountLabel}`);
+  console.log(`Storing Google tokens for user [SANITIZED] with label ${accountLabel}`);
 }
 
 /**
@@ -125,7 +125,7 @@ export async function storeGoogleToken(userId: string, accountLabel: string, tok
  */
 export async function getGoogleToken(userId: string, accountLabel: string): Promise<any | null> {
   // In a real implementation, you would retrieve the tokens from your database
-  console.log(`Getting Google tokens for user ${userId} with label ${accountLabel}`);
+  console.log(`Getting Google tokens for user [SANITIZED] with label ${accountLabel}`);
   return null;
 }
 

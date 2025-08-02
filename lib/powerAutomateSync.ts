@@ -148,7 +148,7 @@ export class PowerAutomateSyncService {
     };
 
     try {
-      console.log(`Starting Power Automate sync for user: ${userEmail}, source: ${sourceId}`);
+      console.log(`Starting Power Automate sync for user: [SANITIZED], source: ${sourceId}`);
 
       // Fetch events from Power Automate
       const rawEvents = await this.fetchPowerAutomateEvents(powerAutomateUrl);
@@ -254,10 +254,10 @@ export class PowerAutomateSyncService {
       }
 
       result.success = true;
-      console.log(`Power Automate sync completed for user: ${userEmail}`, result);
+      console.log(`Power Automate sync completed for user: [SANITIZED]`, result);
 
     } catch (error) {
-      console.error(`Power Automate sync failed for user: ${userEmail}:`, error);
+              console.error(`Power Automate sync failed for user: [SANITIZED]:`, error);
       result.errors.push(error instanceof Error ? error.message : 'Unknown error');
     }
 

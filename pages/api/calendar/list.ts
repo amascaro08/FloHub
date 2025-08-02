@@ -74,7 +74,7 @@ export default async function handler(
       return res.status(401).json({ error: "User not found" });
     }
 
-    console.log('Calendar list API request for user:', user.email);
+    console.log('Calendar list API request for user: [SANITIZED]');
 
     const calendars: Array<{ id: string; summary: string; source?: string }> = [];
 

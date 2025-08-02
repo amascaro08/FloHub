@@ -30,7 +30,7 @@ export default async function handler(
       return res.status(401).json({ error: "User not found" });
     }
 
-    console.log(`🔄 Refreshing calendar sources for: ${user.email}`);
+    console.log(`🔄 Refreshing calendar sources for: [SANITIZED]`);
 
     // Find Google OAuth account - look for the most recent one with a valid token
     const googleAccounts = await db.query.accounts.findMany({
@@ -41,7 +41,7 @@ export default async function handler(
       orderBy: accounts.id // Get most recent first
     });
 
-    console.log(`🔍 Found ${googleAccounts.length} Google account(s) for user ${user.email}`);
+    console.log(`🔍 Found ${googleAccounts.length} Google account(s) for user [SANITIZED]`);
     
     // Find the first account with a valid access token
     const googleAccount = googleAccounts.find(account => account.access_token);
@@ -91,7 +91,7 @@ export default async function handler(
       });
     }
 
-    console.log(`✅ Valid Google token found for: ${user.email}`);
+          console.log(`✅ Valid Google token found for: [SANITIZED]`);
 
     // Fetch Google calendars
     const calendarResponse = await fetch(
@@ -134,7 +134,7 @@ export default async function handler(
 
     // Create settings if they don't exist
     if (!settings) {
-      console.log(`📝 Creating user settings for: ${user.email}`);
+              console.log(`📝 Creating user settings for: [SANITIZED]`);
       await db.insert(userSettings).values({
         user_email: user.email,
         calendarSources: [],
@@ -189,7 +189,7 @@ export default async function handler(
       })
       .where(eq(userSettings.user_email, user.email));
 
-    console.log(`✅ Successfully refreshed Google calendar sources for: ${user.email}`);
+    console.log(`✅ Successfully refreshed Google calendar sources for: [SANITIZED]`);
 
     // Verify the update
     const updatedSettings = await db.query.userSettings.findFirst({

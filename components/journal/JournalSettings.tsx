@@ -65,7 +65,7 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log('JournalSettings: Received user settings:', data);
+      console.log('JournalSettings: Received user settings: [SANITIZED - contains user data]');
       return data;
     },
     { 
@@ -136,8 +136,8 @@ const JournalSettings: React.FC<JournalSettingsProps> = ({ onClose, onJournalCle
   // Load settings from database when userSettings are loaded
   useEffect(() => {
     if (userSettings && user?.primaryEmail) {
-      console.log('JournalSettings: Loading userSettings:', userSettings);
-      console.log('JournalSettings: Custom activities:', userSettings.journalCustomActivities);
+      console.log('JournalSettings: Loading userSettings: [SANITIZED - contains user data]');
+      console.log('JournalSettings: Custom activities: [SANITIZED - contains user data]');
       
       setSettings({
         reminderEnabled: userSettings.journalReminderEnabled || false,

@@ -70,7 +70,7 @@ export default async function handler(
       });
     }
 
-    console.log(`🗑️ Admin: ${requestingUser.email} is deleting user: ${userEmail}`);
+    console.log(`🗑️ Admin: [SANITIZED] is deleting user: [SANITIZED]`);
 
     // Find the user to delete
     const userToDelete = await db.query.users.findFirst({

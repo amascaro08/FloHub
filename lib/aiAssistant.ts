@@ -137,7 +137,7 @@ export class SmartAIAssistant {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    console.log('Loading user context for:', this.userEmail);
+    console.log('Loading user context for: [SANITIZED]');
 
     try {
       // Fetch all user data in parallel for better performance, with individual error handling
@@ -264,7 +264,7 @@ export class SmartAIAssistant {
 
       return this.context;
     } catch (error) {
-      console.error('Error loading user context for user:', this.userEmail);
+      console.error('Error loading user context for user: [SANITIZED]');
       console.error('Detailed error:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw new Error(`Failed to load user context: ${error instanceof Error ? error.message : 'Unknown error'}`);

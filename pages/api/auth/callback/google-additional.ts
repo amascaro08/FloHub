@@ -87,7 +87,7 @@ export default async function handler(
 
     // Use the authenticated user's email (most secure approach)
     const userEmail = currentUser.email;
-    console.log('✅ Using authenticated user email for OAuth:', userEmail);
+    console.log('✅ Using authenticated user email for OAuth: [SANITIZED]');
 
     console.log('🔄 Exchanging authorization code for tokens...');
     // Exchange authorization code for tokens with matching redirect URI
@@ -99,10 +99,10 @@ export default async function handler(
       return res.status(400).json({ error: "Failed to get access token" });
     }
 
-    console.log('🔍 Using authenticated user for OAuth completion:', userEmail);
+    console.log('🔍 Using authenticated user for OAuth completion: [SANITIZED]');
     // SECURITY: Use the authenticated user directly (no lookup by email from state)
     const user = currentUser;
-    console.log('✅ Using authenticated user:', user.id);
+    console.log('✅ Using authenticated user: [SANITIZED]');
 
     // Get Google user info to obtain the proper provider account ID
     console.log('🔍 Fetching Google user profile for proper account identification...');
@@ -115,8 +115,8 @@ export default async function handler(
       if (userInfoResponse.ok) {
         googleUserInfo = await userInfoResponse.json();
         console.log('✅ Google user info received:', {
-          id: googleUserInfo.id,
-          email: googleUserInfo.email,
+          hasId: !!googleUserInfo.id,
+          hasEmail: !!googleUserInfo.email,
           verified_email: googleUserInfo.verified_email
         });
       } else {
@@ -184,11 +184,11 @@ export default async function handler(
         hasToken: !!verifyAccount.access_token,
         hasRefreshToken: !!verifyAccount.refresh_token,
         expiresAt: verifyAccount.expires_at,
-        providerAccountId: verifyAccount.providerAccountId
+        hasProviderAccountId: !!verifyAccount.providerAccountId
       });
     } else {
       console.error('❌ CRITICAL: Access token not found in database after save!');
-      console.error('Database verification result:', verifyAccount);
+      console.error('Database verification result: [SANITIZED - contains sensitive data]');
     }
 
     console.log('🔄 Fetching all available Google calendars for authenticated user...');
