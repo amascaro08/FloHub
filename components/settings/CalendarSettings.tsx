@@ -294,6 +294,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     sourceId: "default",
                     connectionData: powerAutomateUrl.trim(),
                     tags: ["work"],
+                    color: "#00C9A7", // Default teal for work calendars
                     isEnabled: true,
                   };
                   
@@ -378,6 +379,7 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     sourceId: "default",
                     connectionData: processedUrl,
                     tags: defaultTags,
+                    color: defaultTags.includes('work') ? '#00C9A7' : '#FF6B6B', // Default red for personal calendars
                     isEnabled: true,
                   };
                   
@@ -487,6 +489,103 @@ const CalendarSettings: React.FC<CalendarSettingsProps> = ({
                     >
                       Remove
                     </button>
+                  </div>
+                </div>
+                
+                {/* Color Selection */}
+                <div className="mt-3 mb-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Calendar Color:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Current color display */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div 
+                        className="w-6 h-6 rounded-full border-2 border-gray-300"
+                        style={{ 
+                          backgroundColor: source.color || (source.tags?.includes('work') ? '#00C9A7' : '#FF6B6B')
+                        }}
+                      ></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Current: {source.color ? source.color : (source.tags?.includes('work') ? 'Teal (Default Work)' : 'Red (Default Personal)')}
+                      </span>
+                    </div>
+                    
+                    {/* Predefined color options */}
+                    <div className="flex flex-wrap gap-2">
+                      {/* Work colors (Teals/Blues) */}
+                      {['#00C9A7', '#14B8A6', '#0891B2', '#0284C7', '#2563EB', '#7C3AED'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            onSettingsChange({
+                              ...settings,
+                              calendarSources: settings.calendarSources?.map((s, i) => 
+                                i === index ? { ...s, color } : s
+                              )
+                            });
+                          }}
+                          className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
+                            source.color === color ? 'border-gray-800 dark:border-gray-200' : 'border-gray-300'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                      
+                      {/* Personal colors (Reds/Oranges/Pinks) */}
+                      {['#FF6B6B', '#EF4444', '#F97316', '#F59E0B', '#EC4899', '#8B5CF6'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            onSettingsChange({
+                              ...settings,
+                              calendarSources: settings.calendarSources?.map((s, i) => 
+                                i === index ? { ...s, color } : s
+                              )
+                            });
+                          }}
+                          className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
+                            source.color === color ? 'border-gray-800 dark:border-gray-200' : 'border-gray-300'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                      
+                      {/* Other colors */}
+                      {['#10B981', '#84CC16', '#6366F1', '#8B5CF6', '#64748B', '#374151'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            onSettingsChange({
+                              ...settings,
+                              calendarSources: settings.calendarSources?.map((s, i) => 
+                                i === index ? { ...s, color } : s
+                              )
+                            });
+                          }}
+                          className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
+                            source.color === color ? 'border-gray-800 dark:border-gray-200' : 'border-gray-300'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                      
+                      {/* Reset to default button */}
+                      <button
+                        onClick={() => {
+                          onSettingsChange({
+                            ...settings,
+                            calendarSources: settings.calendarSources?.map((s, i) => 
+                              i === index ? { ...s, color: undefined } : s
+                            )
+                          });
+                        }}
+                        className="px-3 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
                   </div>
                 </div>
                 

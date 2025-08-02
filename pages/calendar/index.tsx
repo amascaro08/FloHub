@@ -301,6 +301,7 @@ const CalendarPage = () => {
 
   // Helper function to get event color classes
   const getEventColorClasses = (event: CalendarEvent, type: 'border' | 'background' | 'text' = 'border') => {
+    // First check if event has a custom color
     if (event.color) {
       // Use custom color
       return {
@@ -312,21 +313,52 @@ const CalendarPage = () => {
         },
         className: type === 'border' ? 'border-l-2' : type === 'background' ? 'bg-opacity-20' : '',
       };
-    } else {
-      // Fallback to source-based colors
-      const colorClass = event.source === 'work'
-        ? (type === 'border' ? 'border-l-2 border-primary-500' : 
-           type === 'background' ? 'bg-primary-50 dark:bg-primary-900/20' : 
-           'text-primary-900 dark:text-primary-100')
-        : (type === 'border' ? 'border-l-2 border-accent-500' : 
-           type === 'background' ? 'bg-accent-50 dark:bg-accent-900/20' : 
-           'text-accent-900 dark:text-accent-100');
+    }
+
+    // Look for calendar source color based on calendarId
+    let sourceColor: string | undefined;
+    if (event.calendarId && settings?.calendarSources) {
+      const calendarSource = settings.calendarSources.find(source => {
+        // Match different calendar ID patterns
+        if (source.type === 'google') {
+          return event.calendarId === source.sourceId || event.calendarId === source.id;
+        } else if (source.type === 'o365') {
+          return event.calendarId === `o365_${source.id}` || event.calendarId?.includes(source.id);
+        } else if (source.type === 'ical') {
+          return event.calendarId === `ical_${source.id}` || event.calendarId?.includes(source.id);
+        }
+        return false;
+      });
       
+      sourceColor = calendarSource?.color;
+    }
+
+    // Use source color if available
+    if (sourceColor) {
       return {
-        style: {},
-        className: colorClass,
+        style: {
+          '--event-color': sourceColor,
+          borderLeftColor: type === 'border' ? sourceColor : undefined,
+          backgroundColor: type === 'background' ? `${sourceColor}20` : undefined,
+          color: type === 'text' ? sourceColor : undefined,
+        },
+        className: type === 'border' ? 'border-l-2' : type === 'background' ? 'bg-opacity-20' : '',
       };
     }
+
+    // Fallback to source-based colors (work/personal)
+    const colorClass = event.source === 'work'
+      ? (type === 'border' ? 'border-l-2 border-primary-500' : 
+         type === 'background' ? 'bg-primary-50 dark:bg-primary-900/20' : 
+         'text-primary-900 dark:text-primary-100')
+      : (type === 'border' ? 'border-l-2 border-accent-500' : 
+         type === 'background' ? 'bg-accent-50 dark:bg-accent-900/20' : 
+         'text-accent-900 dark:text-accent-100');
+    
+    return {
+      style: {},
+      className: colorClass,
+    };
   };
 
   const goToPrevious = () => {

@@ -212,6 +212,7 @@ export default async function handler(
             type: "google" as const,
             sourceId: calendar.id,
             tags: calendar.id === "primary" ? ["personal"] : ["shared"],
+            color: calendar.id === "primary" ? "#FF6B6B" : "#00C9A7", // Red for personal, teal for shared/work
             isEnabled: true,
           }));
           
@@ -226,6 +227,7 @@ export default async function handler(
           type: "google" as const,
           sourceId: "primary",
           tags: ["personal"],
+          color: "#FF6B6B", // Red for personal calendars
           isEnabled: true,
         }];
       }
