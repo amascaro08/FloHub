@@ -14,12 +14,7 @@ const ThemeSettings: React.FC<ThemeSettingsProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
 
-  // Sync theme context with settings when settings are loaded
-  React.useEffect(() => {
-    if (settings.theme && settings.theme !== theme) {
-      setTheme(settings.theme);
-    }
-  }, [settings.theme, theme, setTheme]);
+  // No need to sync here since ThemeContext now handles user settings
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'auto') => {
     setTheme(newTheme);
