@@ -148,17 +148,19 @@ export class PowerAutomateSyncService {
     };
 
     try {
-      console.log(`Starting Power Automate sync for user: ${userEmail}, source: ${sourceId}`);
+      console.log(`🔄 Starting Power Automate sync for user: ${userEmail}, source: ${sourceId}`);
+      console.log(`📡 Power Automate URL: ${powerAutomateUrl}`);
 
       // Fetch events from Power Automate
       const rawEvents = await this.fetchPowerAutomateEvents(powerAutomateUrl);
-      console.log(`Fetched ${rawEvents.length} raw events from Power Automate`);
+      console.log(`📥 Fetched ${rawEvents.length} raw events from Power Automate`);
 
       // Expand recurring events
       const expandedEvents = this.expandRecurringEvents(rawEvents);
-      console.log(`Expanded to ${expandedEvents.length} events`);
+      console.log(`🔄 Expanded to ${expandedEvents.length} events`);
 
       // Get existing events for this user and source
+      console.log(`🔍 Checking for existing events in database...`);
       const existingEvents = await db
         .select()
         .from(calendarEvents)
@@ -170,11 +172,14 @@ export class PowerAutomateSyncService {
           )
         );
 
+      console.log(`📊 Found ${existingEvents.length} existing Power Automate events in database`);
+
       const existingEventMap = new Map(
         existingEvents.map(event => [event.externalId, event])
       );
 
       // Process each event
+      console.log(`⚙️ Processing ${expandedEvents.length} events for database storage...`);
       for (const event of expandedEvents) {
         try {
           const eventId = this.generateEventId(event, userEmail, sourceId);
@@ -212,6 +217,7 @@ export class PowerAutomateSyncService {
 
           if (existingEvent) {
             // Update existing event
+            console.log(`🔄 Updating existing event: ${event.title}`);
             await db
               .update(calendarEvents)
               .set(eventData)
@@ -220,6 +226,7 @@ export class PowerAutomateSyncService {
             result.eventsUpdated++;
           } else {
             // Create new event
+            console.log(`➕ Creating new event: ${event.title}`);
             await db.insert(calendarEvents).values({
               ...eventData,
               createdAt: new Date()
