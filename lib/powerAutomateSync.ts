@@ -306,7 +306,23 @@ export class PowerAutomateSyncService {
       : null;
 
     const statusCounts = events.reduce((acc, event) => {
-      acc[event.syncStatus || 'synced']++;
+      const status = event.syncStatus || 'synced';
+      switch (status) {
+        case 'synced':
+          acc.synced++;
+          break;
+        case 'pending':
+          acc.pending++;
+          break;
+        case 'error':
+          acc.error++;
+          break;
+        case 'deleted':
+          acc.deleted++;
+          break;
+        default:
+          acc.synced++; // Default unknown statuses to synced
+      }
       return acc;
     }, { synced: 0, pending: 0, error: 0, deleted: 0 });
 
