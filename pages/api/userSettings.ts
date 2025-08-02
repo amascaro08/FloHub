@@ -180,6 +180,7 @@ export default async function handler(
         notificationSettings: (decryptedData.notificationSettings as any) || { subscribed: false },
         calendarSources: (decryptedData.calendarSources as any) || [],
         timezone: decryptedData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        theme: (decryptedData.theme as 'light' | 'dark' | 'auto') || 'auto',
         floCatSettings: (decryptedData.floCatSettings as any) || { enabledCapabilities: [] },
         layouts: (decryptedData.layouts as any) || {},
         layoutTemplate: decryptedData.layoutTemplate || "primary-secondary",
