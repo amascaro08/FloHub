@@ -1,10 +1,47 @@
-# Power Automate Sync Cron Job Setup
+# Power Automate Sync Setup (No Vercel Pro Required)
 
-This document explains how to set up automated Power Automate sync without requiring Vercel Pro.
+This document explains how to achieve automatic Power Automate sync without requiring Vercel Pro cron jobs. The solution uses intelligent background syncing triggered by user activity.
 
 ## Available Options
 
-### 1. GitHub Actions (Recommended)
+### 1. Intelligent Background Sync (Recommended - No External Setup Required)
+
+This solution automatically syncs Power Automate events based on user activity without requiring any external cron services or Vercel Pro.
+
+**How it works:**
+- When any user performs a Power Automate sync, it triggers background sync for other users who haven't synced in 6+ hours
+- A React hook can be added to trigger sync on user activity (page visits, interactions)
+- Manual trigger endpoint available for on-demand sync
+
+**Setup:**
+1. Add the `useBackgroundSync` hook to your main app component:
+
+```tsx
+import { useBackgroundSync } from '../hooks/useBackgroundSync';
+
+function App() {
+  const { triggerSync, isInProgress } = useBackgroundSync({
+    enabled: true,
+    intervalMinutes: 30, // Minimum time between sync attempts
+    onSyncStart: () => console.log('Background sync started'),
+    onSyncComplete: () => console.log('Background sync completed'),
+    onSyncError: (error) => console.warn('Background sync error:', error)
+  });
+
+  // Your app components...
+}
+```
+
+2. The system automatically syncs users in the background when:
+   - Any user manually syncs their calendar
+   - Users interact with the app (throttled to prevent spam)
+   - Users return to the app tab after being away
+
+**Manual trigger:**
+- Call `/api/trigger-background-sync` endpoint
+- Use the `triggerSync()` function from the hook
+
+### 2. GitHub Actions
 
 The GitHub Actions workflow runs automatically every 6 hours and is completely free for public repositories.
 

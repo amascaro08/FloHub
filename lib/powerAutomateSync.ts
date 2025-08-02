@@ -318,4 +318,97 @@ export class PowerAutomateSyncService {
       errorEvents: statusCounts.error
     };
   }
+
+  /**
+   * Triggers background sync for users who haven't synced recently (6+ hours ago)
+   * This provides automatic periodic syncing without requiring Vercel Pro cron jobs
+   */
+  public async triggerBackgroundSyncIfNeeded(): Promise<void> {
+    try {
+      // Import here to avoid circular dependencies
+      const { userSettings } = await import('../db/schema');
+      
+      // Find users with Power Automate configured who haven't synced in 6+ hours
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+      
+      // Get users with Power Automate URLs who haven't synced recently
+      const usersToSync = await db
+        .select({
+          user_email: userSettings.user_email,
+          calendarSources: userSettings.calendarSources,
+          powerAutomateUrl: userSettings.powerAutomateUrl
+        })
+        .from(userSettings)
+        .where(userSettings.user_email.isNotNull())
+        .limit(5); // Limit to 5 users per trigger to avoid timeouts
+
+      for (const user of usersToSync) {
+        try {
+          // Check if user has synced recently
+          const recentSync = await db
+            .select({ lastUpdated: calendarEvents.lastUpdated })
+            .from(calendarEvents)
+            .where(
+              and(
+                eq(calendarEvents.user_email, user.user_email),
+                eq(calendarEvents.externalSource, 'powerautomate'),
+                calendarEvents.lastUpdated.gte(sixHoursAgo)
+              )
+            )
+            .limit(1);
+
+          if (recentSync.length > 0) {
+            continue; // User synced recently, skip
+          }
+
+          // Find Power Automate sources for this user
+          const powerAutomateSources: Array<{ id: string; connectionData: string }> = [];
+
+          // Check calendar sources
+          if (user.calendarSources && Array.isArray(user.calendarSources)) {
+            user.calendarSources.forEach((source: any) => {
+              if (source.type === 'powerautomate' && source.connectionData) {
+                powerAutomateSources.push({
+                  id: source.id || 'default',
+                  connectionData: source.connectionData
+                });
+              }
+            });
+          }
+
+          // Check legacy powerAutomateUrl
+          if (user.powerAutomateUrl && !powerAutomateSources.some(s => s.id === 'default')) {
+            powerAutomateSources.push({
+              id: 'default',
+              connectionData: user.powerAutomateUrl
+            });
+          }
+
+          // Sync each source (background, don't throw errors)
+          for (const source of powerAutomateSources) {
+            try {
+              console.log(`Background sync for user: ${user.user_email}, source: ${source.id}`);
+              await this.syncUserEvents(
+                user.user_email,
+                source.connectionData,
+                source.id,
+                false // Don't force refresh for background sync
+              );
+            } catch (error) {
+              console.warn(`Background sync failed for user ${user.user_email}, source ${source.id}:`, error);
+              // Continue with other sources/users
+            }
+          }
+
+        } catch (error) {
+          console.warn(`Error processing background sync for user ${user.user_email}:`, error);
+          // Continue with other users
+        }
+      }
+
+    } catch (error) {
+      console.warn('Background sync trigger failed:', error);
+      // Don't throw - this is a background operation
+    }
+  }
 }

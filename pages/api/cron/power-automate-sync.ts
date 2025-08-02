@@ -1,6 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { syncAllPowerAutomateUsers } from '../../../scripts/power-automate-cron';
 
+/**
+ * Legacy cron endpoint - kept for backward compatibility
+ * Recommended to use /api/trigger-background-sync for intelligent syncing
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -28,7 +32,7 @@ export default async function handler(
   }
 
   try {
-    console.log('Starting Power Automate sync cron job...');
+    console.log('Starting Power Automate sync job (legacy endpoint)...');
     
     const results = await syncAllPowerAutomateUsers();
     
@@ -36,11 +40,11 @@ export default async function handler(
     const totalUsers = results.length;
     const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
 
-    console.log(`Cron job completed: ${successfulUsers}/${totalUsers} users synced successfully`);
+    console.log(`Sync job completed: ${successfulUsers}/${totalUsers} users synced successfully`);
 
     return res.status(200).json({
       success: true,
-      message: 'Power Automate sync cron job completed',
+      message: 'Power Automate sync job completed',
       summary: {
         totalUsers,
         successfulUsers,
@@ -51,9 +55,9 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Power Automate sync cron job failed:', error);
+    console.error('Power Automate sync job failed:', error);
     return res.status(500).json({
-      error: 'Cron job failed',
+      error: 'Sync job failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

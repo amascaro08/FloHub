@@ -1,20 +1,24 @@
 #!/usr/bin/env tsx
 
 /**
- * Power Automate Sync Cron Job
+ * Power Automate Sync Job
  * 
- * This script can be run periodically (e.g., every 6 hours) to sync
- * Power Automate events for all users. It can be scheduled using:
+ * This script syncs Power Automate events for all users. It can be triggered by:
  * 
- * - GitHub Actions (recommended for free usage)
- * - External webhook cron services (cron-job.org, EasyCron, etc.)
+ * - Intelligent background sync (recommended - no external setup required)
+ * - Manual execution via API endpoints
+ * - GitHub Actions (for scheduled execution)
+ * - External webhook cron services
  * - System cron (for self-hosted deployments)
- * - Vercel Cron Jobs (requires Vercel Pro)
+ * 
+ * The intelligent background sync approach automatically syncs users when:
+ * - Any user performs a sync (triggers background sync for others)
+ * - Users are active in the app (via useBackgroundSync hook)
+ * - Manual trigger via /api/trigger-background-sync endpoint
  * 
  * Usage:
- * - For GitHub Actions: See .github/workflows/power-automate-sync.yml
- * - For webhook services: Call /api/cron/power-automate-sync endpoint
- * - For local: Run with npx tsx scripts/power-automate-cron.ts
+ * - For intelligent sync: Use triggerBackgroundSyncIfNeeded() method
+ * - For direct execution: Run with npx tsx scripts/power-automate-cron.ts
  * - See docs/POWER_AUTOMATE_CRON_SETUP.md for detailed setup instructions
  */
 
